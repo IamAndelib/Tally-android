@@ -13,8 +13,8 @@
 Open this folder in Android Studio, wait for it to sync, then Build > Build APK(s).
 
 ## Reading PDF statements
-Settings > "Claude for PDF statements": paste an API key from the Claude Console.
-Each PDF read is billed to that API account. CSV import works without a key.
+PDF statements are read entirely on your phone — no internet connection or API key needed.
+CSV import still works best when your bank offers it, since it's the most reliable format.
 
 ## Your data
 Stored only on the phone. Use Settings > Save backup regularly; uninstalling deletes the data.

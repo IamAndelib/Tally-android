@@ -127,9 +127,6 @@ nav .add .i{background:var(--accent);color:var(--accent-ink);width:44px;height:4
 <script>
 (function(){
 "use strict";
-const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-const PDFW="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
 const CATS=[
  {id:"groceries",name:"Groceries",e:"🛒",c:"#2E9E6B"},
  {id:"food",name:"Food & cafe",e:"☕",c:"#E08A2E"},
@@ -317,9 +314,6 @@ function moreView(){
   h+='<h2>Categories</h2><div class="chips">'+S.cats.map(c=>'<span class="chip">'+c.e+" "+esc(c.name)+"</span>").join("")+'</div><div class="row" style="margin-top:10px"><input id="newcat" placeholder="New category name" maxlength="24"><button class="btn ghost" style="flex:0 0 auto;width:auto" data-act="cat-add">Add</button></div>';
   const nr=Object.keys(S.rules).length;
   h+='<h2>Learned sorting</h2><p class="muted small">When you change a category on an imported row, Tally remembers it for that shop. '+nr+" remembered.</p>"+(nr?'<button class="btn ghost" data-act="rules-clear">Forget learned sorting</button>':"");
-  const k=apiKey();
-  h+='<h2>Claude for PDF statements</h2><p class="muted small">Optional. Paste an API key from the Claude Console to let Claude read PDF statements and sort shops. Each use is billed to that API account. The key stays on this phone.</p>'+
-    (k?'<p class="small">Key saved (ends in '+esc(k.slice(-4))+')</p><button class="btn ghost" data-act="key-del">Remove key</button>':'<div class="row"><input id="apikey" type="password" placeholder="sk-ant-…" autocomplete="off"><button class="btn ghost" style="flex:0 0 auto;width:auto" data-act="key-save">Save</button></div>');
   h+='<h2>Your data</h2><p class="muted small">Everything is stored only on this phone. Uninstalling the app deletes it, so save a backup now and then.</p><button class="btn ghost" data-act="backup">Save backup</button><div style="height:10px"></div><label class="btn ghost" style="display:block;text-align:center;position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label><div style="height:10px"></div><button class="btn ghost" data-act="export">Export transactions (CSV)</button><div style="height:10px"></div><button class="btn danger" data-act="wipe">Delete all data</button>';
   return h;
 }
@@ -379,7 +373,7 @@ function importView(){
   if(I.stage==="pick"){
     h+='<label class="f"><span>Which account is this statement from?</span><select data-act="imp-acc">'+S.accounts.map(a=>'<option value="'+a.id+'"'+(a.id===I.acc?" selected":"")+">"+esc(a.name)+"</option>").join("")+"</select></label>";
     h+='<label class="btn" style="display:block;text-align:center;position:relative">Choose statement file<input type="file" id="imp-file" accept=".csv,.txt,.pdf,text/csv,application/pdf" class="vh"></label>';
-    h+='<p class="note">CSV works best: most banks have a “Download transactions” option (choose CSV or Excel CSV). PDF statements are read by Claude using your API key (set it in Settings).</p>';
+    h+='<p class="note">CSV works best: most banks have a “Download transactions” option (choose CSV or Excel CSV). PDF statements are read on this phone — no internet needed.</p>';
     if(I.msg)h+='<p class="err">'+esc(I.msg)+"</p>";
     return h;
   }
@@ -400,9 +394,8 @@ function importView(){
   }
   // review
   const a=acc(I.acc);const on=I.items.filter(x=>x.include);
-  const dups=I.items.filter(x=>x.dup).length;const unc=I.items.filter(x=>x.include&&x.cat==="other").length;
+  const dups=I.items.filter(x=>x.dup).length;
   h+='<p class="muted small">'+I.items.length+" rows found for "+esc(a.name)+"."+(dups?" "+dups+" already added before, left unticked.":"")+" Fix any category; Tally will remember it for that shop next time.</p>";
-  if(unc&&I.canAI)h+='<button class="btn ghost" data-act="ai-sort" style="margin-bottom:10px">Let Claude sort '+unc+" uncategorized</button>";
   h+='<div class="list">'+I.items.map((x,i)=>'<div class="rv'+(x.include?"":" off")+'"><input type="checkbox" data-imp="inc" data-i="'+i+'"'+(x.include?" checked":"")+' aria-label="Include"><div><div class="top2"><span class="small">'+esc(dayLabel(x.date))+(x.dup?'<span class="tag">already added</span>':"")+'</span><b class="'+(x.dir==="out"?"out":"in")+'">'+(x.dir==="out"?"−":"+")+esc(money(x.amount,a.currency))+'</b></div><div class="small" style="word-break:break-word">'+esc(x.desc)+'</div><select data-imp="cat" data-i="'+i+'">'+S.cats.map(c=>'<option value="'+c.id+'"'+(c.id===x.cat?" selected":"")+">"+c.e+" "+esc(c.name)+"</option>").join("")+"</select></div></div>").join("")+"</div>";
   h+='<div class="row" style="margin-top:12px;position:sticky;bottom:calc(70px + env(safe-area-inset-bottom,0px))"><button class="btn ghost" data-act="imp-reset">Cancel</button><button class="btn" data-act="imp-add"'+(on.length?"":" disabled")+">Add "+on.length+" transactions</button></div>";
   return h;
@@ -486,71 +479,100 @@ function buildItems(){
   items.sort((a,b)=>b.date.localeCompare(a.date));
   I.items=items;I.stage="review";I.msg="";return true;
 }
-function mkItem(date,desc,amount,dir,aiCat){
+function mkItem(date,desc,amount,dir){
   const I=V.imp;const it={date,desc,amount,dir,cat:guessCat(desc,dir)};
-  if(aiCat&&!S.rules[ruleKey(desc)]&&S.cats.some(c=>c.id===aiCat))it.cat=aiCat;
   it.dup=isDup(I.acc,it);it.include=!it.dup;return it;
 }
 async function handleFile(file){
   const I=V.imp;I.msg="";
   if(!file)return;
   const isPdf=/\.pdf$/i.test(file.name)||file.type==="application/pdf";
-  if(isPdf)return handlePdf(file);
   I.stage="busy";I.msg="Reading "+file.name+"…";render();
-  const text=await file.text();
-  const rows=parseCSV(text.replace(/^\uFEFF/,""));
+  let rows;
+  try{
+    rows=isPdf
+      ?await extractPdfRows(file,(p,n)=>{I.msg="Reading page "+p+" of "+n;render();})
+      :parseCSV((await file.text()).replace(/^\uFEFF/,""));
+  }catch(e){
+    I.stage="pick";
+    I.msg=isPdf?"Couldn't read that PDF. It may be a scanned image or password-protected. Try your bank's CSV download instead.":"Couldn't read that file.";
+    render();return;
+  }
   if(rows.length<1){I.stage="pick";I.msg="That file has no rows Tally can read. Try the CSV download from your bank.";render();return;}
   const d=detect(rows);
-  Object.assign(I,{stage:"map",data:d.data,width:d.width,map:d.M,header:d.header,canAI:!!(await getSample())});
+  Object.assign(I,{stage:"map",data:d.data,width:d.width,map:d.M,header:d.header});
   render();
 }
-const MODEL_MAIN="claude-sonnet-5",MODEL_QUICK="claude-haiku-4-5-20251001",KEYLS="tally:apikey";
-function apiKey(){try{return (localStorage.getItem(KEYLS)||"").trim();}catch(e){return "";}}
-async function callClaude(content,model,maxTok){
-  let r;
-  try{r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:maxTok,messages:[{role:"user",content}]})});}
-  catch(e){const er=new Error("No internet connection");er.code="offline";throw er;}
-  if(!r.ok){let m="";try{m=(await r.json()).error.message;}catch(e){}const er=new Error(m||("Error "+r.status));er.code=r.status===401||r.status===403?"bad_key":(r.status===429||r.status===529)?"rate_limited":"api";throw er;}
-  const d=await r.json();const txt=(d.content||[]).map(b=>b.type==="text"?b.text:"").join("");
-  const a=txt.indexOf("{"),b=txt.lastIndexOf("}");if(a<0||b<a){const er=new Error("Claude's answer couldn't be read");er.code="api";throw er;}
-  return JSON.parse(txt.slice(a,b+1));
+
+/* ---------- native PDF reading (bundled pdf.js, fully offline) ---------- */
+const PDFJS_MAX_PAGES=60;
+let pdfjsReady=null;
+function loadPdfJs(){
+  if(pdfjsReady)return pdfjsReady;
+  pdfjsReady=new Promise((resolve,reject)=>{
+    if(window.pdfjsLib){resolve(window.pdfjsLib);return;}
+    const s=document.createElement("script");
+    s.src="vendor/pdfjs/pdf.min.js";
+    s.onload=()=>{
+      try{
+        pdfjsLib.GlobalWorkerOptions.workerSrc="vendor/pdfjs/pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      }catch(e){reject(e);}
+    };
+    s.onerror=()=>reject(new Error("Couldn't load the PDF reader"));
+    document.head.appendChild(s);
+  });
+  return pdfjsReady;
 }
-function claudeErr(e){return e&&e.code==="bad_key"?"Your Claude API key was rejected. Check it in Settings.":e&&e.code==="offline"?"No internet connection. Connect and try again.":e&&e.code==="rate_limited"?"Claude is busy right now. Try again in a minute.":"Claude couldn't read it: "+((e&&e.message)||"unknown error");}
-function getSample(){if(!apiKey())return Promise.resolve(null);return Promise.resolve({json:(prompt,opts)=>callClaude([{type:"text",text:prompt}],opts&&opts.modelTier==="quick"?MODEL_QUICK:MODEL_MAIN,8000)});}
-function toB64(buf){const u=new Uint8Array(buf);let out="";for(let i=0;i<u.length;i+=0x8000)out+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(out);}
-async function handlePdf(file){
-  const I=V.imp;
-  if(!apiKey()){I.stage="pick";I.msg="Reading PDFs uses Claude. Add your Claude API key in Settings, or use your bank's CSV download.";render();return;}
-  if(file.size>25*1024*1024){I.stage="pick";I.msg="This PDF is too large (over 25 MB). Try a shorter date range.";render();return;}
-  I.stage="busy";I.msg="Claude is reading your statement… this can take up to a minute.";render();
-  const a=acc(I.acc);const catList=S.cats.map(c=>c.id+" ("+c.name+")").join(", ");
-  const prompt="This is a bank or mobile-wallet statement for the account \""+a.name+"\" ("+(TYPES[a.type]||"account")+", "+a.currency+"). Today is "+today()+".\n"+
-    "Return ONLY JSON, no other text: {\"transactions\":[{\"date\":\"YYYY-MM-DD\",\"description\":\"short merchant or purpose\",\"amount\":12.34,\"direction\":\"out\",\"category\":\"id\"}]}\n"+
-    "Include every real transaction row; skip opening/closing balances, totals, headers and summaries. amount is always positive. direction is \"out\" when money left the account (purchase, fee, withdrawal, money sent, payment) and \"in\" when money arrived. If a year is missing, infer it from the statement period. category must be one of: "+catList+". Use \"transfer\" for moves between the person's own accounts, cash-in/cash-out and card payments; use \"income\" for pay, deposits and refunds.";
-  let out;
-  try{const b64=toB64(await file.arrayBuffer());out=await callClaude([{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:prompt}],MODEL_MAIN,16000);}
-  catch(e){I.stage="pick";I.msg=claudeErr(e);render();return;}
-  const items=[];
-  (out&&Array.isArray(out.transactions)?out.transactions:[]).forEach(t=>{const d=parseDate(t.date,"mdy");const amt=Math.abs(+t.amount);if(!d||!amt)return;items.push(mkItem(d,String(t.description||"").slice(0,120)||"(no description)",r2(amt),t.direction==="in"?"in":"out",t.category));});
-  if(!items.length){I.stage="pick";I.msg="No transactions were found in that PDF.";render();return;}
-  items.sort((x,y)=>y.date.localeCompare(x.date));
-  Object.assign(I,{items,stage:"review",canAI:true,msg:""});render();
+function pageItemsToRows(items){
+  const pts=items.filter(it=>it.str&&it.str.trim()!=="").map(it=>({s:it.str,x:it.transform[4],y:it.transform[5]}));
+  if(!pts.length)return [];
+  pts.sort((a,b)=>b.y-a.y||a.x-b.x);
+  const lines=[];let cur=null,prevY=null;
+  pts.forEach(p=>{
+    if(cur===null||Math.abs(p.y-prevY)>2.5){cur=[];lines.push(cur);}
+    cur.push(p);prevY=p.y;
+  });
+  const xs=[];lines.forEach(l=>l.forEach(p=>xs.push(p.x)));
+  xs.sort((a,b)=>a-b);
+  const clusters=[];
+  xs.forEach(x=>{
+    const last=clusters[clusters.length-1];
+    if(last&&x-last.max<=10){last.xs.push(x);last.max=x;}
+    else clusters.push({xs:[x],max:x});
+  });
+  const minLines=Math.max(3,Math.ceil(lines.length*0.15));
+  let sig=clusters.filter(c=>c.xs.length>=minLines);
+  if(!sig.length)sig=clusters;
+  sig.sort((a,b)=>b.xs.length-a.xs.length);
+  if(sig.length>10)sig=sig.slice(0,10);
+  const bounds=sig.map(c=>c.xs.reduce((a,b)=>a+b,0)/c.xs.length).sort((a,b)=>a-b);
+  if(!bounds.length)return [];
+  const rows=[];
+  lines.forEach(l=>{
+    const cells=bounds.map(()=>[]);
+    l.forEach(p=>{
+      let j=0;for(let k=0;k<bounds.length;k++)if(p.x+1.5>=bounds[k])j=k;
+      cells[j].push(p.s);
+    });
+    const row=cells.map(c=>c.join(" ").replace(/\s+/g," ").trim());
+    if(row.some(c=>c!==""))rows.push(row);
+  });
+  return rows;
 }
-async function aiSort(){
-  const I=V.imp;const sample=await getSample();if(!sample)return;
-  const todo=I.items.map((x,i)=>({x,i})).filter(o=>o.x.include&&o.x.cat==="other");
-  const btn=document.querySelector('[data-act="ai-sort"]');if(btn){btn.disabled=true;btn.textContent="Sorting…";}
-  const ids=S.cats.map(c=>c.id+" ("+c.name+")").join(", ");
-  try{
-    for(let s=0;s<todo.length;s+=120){
-      const part=todo.slice(s,s+120);
-      const prompt="Sort these bank transactions into categories. The person is a university student. Allowed category ids: "+ids+".\nReturn ONLY JSON: {\"categories\":[{\"i\":0,\"category\":\"id\"}]}. Use \"other\" only if nothing fits.\n"+part.map(o=>o.i+" | "+(o.x.dir==="out"?"money out":"money in")+" | "+o.x.desc).join("\n");
-      const out=await sample.json(prompt,{modelTier:"quick"});
-      (out&&out.categories||[]).forEach(r=>{const it=I.items[r.i];if(it&&it.cat==="other"&&S.cats.some(c=>c.id===r.category))it.cat=r.category;});
-    }
-    toast("Sorted");
-  }catch(e){toast(claudeErr(e));}
-  render();
+async function extractPdfRows(file,onProgress){
+  const pdfjsLib=await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf,isEvalSupported:false,cMapUrl:"vendor/pdfjs/cmaps/",cMapPacked:true}).promise;
+  const n=Math.min(pdf.numPages,PDFJS_MAX_PAGES);
+  let rows=[];
+  for(let p=1;p<=n;p++){
+    if(onProgress)onProgress(p,n);
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    rows=rows.concat(pageItemsToRows(tc.items));
+  }
+  return rows;
 }
 
 /* ---------- events ---------- */
@@ -597,7 +619,6 @@ document.addEventListener("click",async ev=>{
     case "map-mode":V.imp.map.mode=v;render();break;
     case "map-go":if(!buildItems())render();else render();window.scrollTo(0,0);break;
     case "imp-reset":V.imp={acc:V.imp.acc,stage:"pick"};render();break;
-    case "ai-sort":aiSort();break;
     case "imp-add":{
       const I=V.imp;const on=I.items.filter(x=>x.include);let n=0;
       on.forEach(x=>{const t={id:newId(),ts:Date.now(),type:x.dir==="out"?"expense":"income",amount:x.amount,account:I.acc,cat:x.cat,date:x.date,note:x.desc,src:"import"};S.txns.push(t);markTx(t);n++;});
@@ -611,8 +632,6 @@ document.addEventListener("click",async ev=>{
       [...S.txns].sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{const a=acc(t.account),to=acc(t.to);lines.push([t.date,t.type,t.amount,a?a.currency:"",q(a?a.name:""),q(to?to.name:""),q(t.type==="transfer"?"":cat(t.cat).name),q(t.note)].join(","));});
       saveOut("tally-transactions-"+today()+".csv","text/csv",lines.join("\n"));break;}
     case "backup":saveOut("tally-backup-"+today()+".json","application/json",JSON.stringify(S));break;
-    case "key-save":{const v=$("#apikey").value.trim();if(!/^sk-ant-/.test(v)){toast("That doesn't look like a Claude API key");return;}try{localStorage.setItem(KEYLS,v);}catch(e){}render();toast("Key saved");break;}
-    case "key-del":try{localStorage.removeItem(KEYLS);}catch(e){}render();toast("Key removed");break;
     case "wipe":if(confirm("Delete every account and transaction? This can't be undone.")){
       S.txns.forEach(markTx);const keep=S.settings;S=blank();S.settings=keep;markState();commit();toast("All data deleted");}break;
   }
