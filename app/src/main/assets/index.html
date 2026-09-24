@@ -553,24 +553,29 @@ function checkCard(b,cur){
     '<button class="btn" data-act="check-ok">'+ic("check")+"All match</button></section>";
 }
 /* ---------- category ring around the donut (shared by Home and the Settings preview) ---------- */
-/* Where n tiles go around the donut: a top row, a bottom row and two side columns, sized so
-   there is never an empty slot. Slots come back in reading order (top-left first). */
+/* Where n tiles go around the donut: evenly spaced (by arc length) on an oval that hugs the donut.
+   Few categories → a circle of big tiles; more → smaller tiles on a slightly taller oval. Never an empty slot.
+   Slots come back clockwise, starting just left of 12 o'clock. */
 function ringLayout(n,W){
-  let best=null;
-  for(let t=1;t<=7;t++)for(const b of [t,t-1]){
-    if(b<0||t+b>n||(b===0&&n>t))continue;
-    const rest=n-t-b,l=Math.ceil(rest/2),r=rest-l;
-    const u=Math.min(W/t,1.2*W/(Math.max(l,r)+2),92);
-    const score=u*(1-.04*(l-r)-.04*(t-b));
-    if(!best||score>=best.score-1e-9)best={t,b,l,r,u,score};
+  const TWO=2*Math.PI,N=720;
+  const oval=(a,b)=>{const pts=[],cum=[0];for(let k=0;k<=N;k++){const t=-Math.PI/2+k/N*TWO;pts.push([a*Math.cos(t),b*Math.sin(t)]);
+    if(k)cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));}return {pts,cum,P:cum[N]};};
+  let u=92,a,b,O;
+  for(;u>=44;u-=1){
+    a=W/2-u/2;let ok=false;
+    for(let k=1;k<=1.3001;k+=.05){b=a*k;O=oval(a,b);if(O.P/n>=u*.96){ok=true;break;}}
+    if(ok)break;
   }
-  const {t,b,l,r,u}=best,H=Math.max(W*.95,(Math.max(l,r)+2)*u),slots=[];
-  const row=(k,y,edge)=>{for(let i=0;i<k;i++)slots.push({x:k===1?W/2:u/2+i*(W-u)/(k-1),y,edge});};
-  const col=(k,x,edge)=>{for(let j=0;j<k;j++)slots.push({x,y:u/2+(j+1)*(H-u)/(k+1),edge});};
-  row(t,u/2,"top");if(b)row(b,H-u/2,"bottom");col(l,u/2,"left");col(r,W-u/2,"right");
-  slots.sort((p,q)=>Math.abs(p.y-q.y)>1?p.y-q.y:p.x-q.x);
-  const cy=b?H/2:(u+H)/2,D=Math.min(l+r?W-2*u:W*.62,b?H-2*u:H-u)*.92;
-  return {W,H,u,slots,cx:W/2,cy,D};
+  if(!O)O=oval(a,b);
+  const step=O.P/n,slots=[];
+  for(let i=0;i<n;i++){
+    let target=((n===1?0:(i-.5)*step)%O.P+O.P)%O.P,k=0;
+    while(k<N&&O.cum[k+1]<target)k++;
+    const f=(target-O.cum[k])/((O.cum[k+1]-O.cum[k])||1),x=O.pts[k][0]+(O.pts[k+1][0]-O.pts[k][0])*f,y=O.pts[k][1]+(O.pts[k+1][1]-O.pts[k][1])*f;
+    slots.push({x:W/2+x,y:b+u/2+y});
+  }
+  const H=2*b+u,D=2*(Math.min(a,b)-.72*u);
+  return {W,H,u,slots,cx:W/2,cy:H/2,D:Math.max(D,90)};
 }
 const TAU=2*Math.PI;
 const circDist=(a,b)=>{const x=((a-b)%1+1)%1;return Math.min(x,1-x);};
@@ -584,7 +589,7 @@ let RE=null; /* the Settings preview's layout + order while it is on screen */
 function ringHTML(cats,o){
   const home=o.mode==="home",W=Math.max(240,$("#app").clientWidth-24),L=ringLayout(Math.max(cats.length,1),W);
   const {u,D,cx,cy,H}=L,d=Math.round(u*(u<70?.5:.56)),f=Math.max(8,Math.min(11.5,u*.125));
-  const pos=cats.map((c,i)=>{const s=L.slots[i];return {c,x:s.x,top:s.y-u/2,edge:s.edge,ix:s.x,iy:s.y-u/2+4+d/2,
+  const pos=cats.map((c,i)=>{const s=L.slots[i];return {c,x:s.x,top:s.y-u/2,ix:s.x,iy:s.y-u/2+4+d/2,
     ang:((Math.atan2(s.y-cy,s.x-cx)/TAU+.25)%1+1)%1};});
   const tile=p=>{const v=home?(o.by[p.c.id]||0):0;
     return '<button class="cat rt'+(home?"":" tile")+'" style="left:'+(p.x-u/2).toFixed(1)+"px;top:"+p.top.toFixed(1)+"px;width:"+u.toFixed(1)+"px;height:"+u.toFixed(1)+"px;--d:"+d+"px;--f:"+f.toFixed(1)+'px" data-act="'+(home?"add-cat":"cat-edit")+'" data-v="'+esc(p.c.id)+'"'+(home?' aria-label="Add '+esc(p.c.name)+'"':"")+">"+
@@ -598,10 +603,15 @@ function ringHTML(cats,o){
     const ent=Object.entries(o.by).filter(([,v])=>v>0).map(([id,v])=>({id,v,w:v/o.spent,p:posOf(id)}))
       .sort((a,b)=>(a.p?a.p.ang:2)-(b.p?b.p.ang:2));
     let off=0;ent.forEach(s=>{s.start=off;off+=s.w;});
-    /* turn the whole donut so each slice sits as close as possible to its category */
+    /* turn the whole donut so each slice sits as close as possible to its category, and never let two lines cross */
+    const segCross=(p,q)=>{const o=(a,b,c)=>Math.sign((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]));
+      return o(p[0],p[1],q[0])*o(p[0],p[1],q[1])<0&&o(q[0],q[1],p[0])*o(q[0],q[1],p[1])<0;};
+    const linked=ent.filter(s=>s.p);
     let phi=0,bestCost=Infinity;
-    for(let k=0;k<720;k++){const ph=k/720;let cost=0;
-      ent.forEach(s=>{if(s.p){const dd=circDist(nearestInSlice(s.p.ang,s.start+ph,s.w),s.p.ang);cost+=dd*dd;}});
+    for(let k=0;k<360;k++){const ph=k/360;let cost=0;
+      const segs=linked.map(s=>{const a=nearestInSlice(s.p.ang,s.start+ph,s.w),dd=circDist(a,s.p.ang),th=a*TAU-TAU/4;cost+=dd*dd;
+        return [[cx+Rout*Math.cos(th),cy+Rout*Math.sin(th)],[s.p.ix,s.p.iy]];});
+      for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++)if(segCross(segs[i],segs[j]))cost+=10;
       if(cost<bestCost-1e-12){bestCost=cost;phi=ph;}}
     rot=phi*360-90;
     const gap=ent.length>1?1.4:0;
@@ -612,7 +622,8 @@ function ringHTML(cats,o){
       const x1=cx+Rout*Math.cos(th),y1=cy+Rout*Math.sin(th),p=s.p;
       let x2,y2;
       const yb=p.top+u-2;
-      if(p.edge==="top"&&y1>yb+2){const k=(yb-y1)/(p.iy-y1);x2=x1+(p.ix-x1)*k;y2=yb;}
+      const kb=y1>yb+2?(yb-y1)/(p.iy-y1):-1,xb=x1+(p.ix-x1)*kb;
+      if(kb>0&&kb<1&&Math.abs(xb-p.x)<u/2-6){x2=xb;y2=yb;} /* coming up from below: stop under the labels */
       else{const dx=p.ix-x1,dy=p.iy-y1,Ln=Math.hypot(dx,dy)||1,rr=d/2+3;x2=p.ix-dx/Ln*rr;y2=p.iy-dy/Ln*rr;}
       if(Math.hypot(x2-x1,y2-y1)<4)return;
       const col=cat(s.id).c;
@@ -630,7 +641,7 @@ function ringHTML(cats,o){
       (!o.spent&&!o.got?'<div class="hint">Tap a category to add</div>':"")+
       (cs.length>1?'<span class="curbtn" data-act="cur-next" role="button">'+esc(o.cur)+" ⇄</span>":"")+"</div></button>";}
   else{RE={L,order:cats.map(c=>c.id)};
-    center='<div class="dwrap" style="'+box+'">'+donut+'<div class="dcenter"><div class="hint">Home screen</div></div></div>';}
+    center='<div class="dwrap" style="'+box+'">'+donut+'<div class="dcenter"><div class="hint">Spending</div></div></div>';}
   return '<div class="ring'+(home?"":" edit")+'"'+(home?' id="ring"':"")+' style="height:'+H.toFixed(1)+'px">'+
     '<svg class="leaders" width="'+W.toFixed(1)+'" height="'+H.toFixed(1)+'" viewBox="0 0 '+W.toFixed(1)+" "+H.toFixed(1)+'" aria-hidden="true">'+lines+"</svg>"+
     center+pos.map(tile).join("")+"</div>";

@@ -38,10 +38,11 @@ Built originally in a claude.ai chat; continue development from here.
     Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
     account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring, balance bar (opens the
     period's entries), − / Transfer / + buttons. New entries default to the day being viewed.
-  - Ring: `ringLayout(n, W)` puts n tiles on a top row, bottom row and two side columns with no empty slot (tiles shrink
-    as n grows); `ringHTML(cats, {mode})` draws tiles, donut and leader lines for Home and the Settings preview.
-    Donut slices are ordered by their category's position (clockwise) and the donut is rotated so each slice faces its
-    category; leader lines are computed from the layout (no DOM measuring), so they don't cross.
+  - Ring: `ringLayout(n, W)` spaces n tiles evenly (by arc length) on an oval around the donut, clockwise from just left
+    of 12 o'clock; tiles shrink and the oval gets slightly taller as n grows, so there is never a gap.
+    `ringHTML(cats, {mode})` draws tiles, donut and leader lines for Home and the Settings preview. Donut slices are ordered
+    by their category's position (clockwise); the donut is rotated to the angle where slices sit nearest their categories
+    with zero line crossings (crossings are heavily penalised). Lines are computed from the layout (no DOM measuring).
   - Sheets are built once and then patched in place (`setPressed`, `trSync`), never re-rendered while open.
     `#sheet2` is a second layer for pickers opened from a sheet (currency picker: search, in use / popular / all ISO currencies).
   - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent.
@@ -51,7 +52,9 @@ Built originally in a claude.ai chat; continue development from here.
   - Every add/edit/delete of entries goes through `withUndo()` (snapshot of `S.txns`, Undo in the snackbar).
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `gradle assembleDebug` (AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24). GitHub Actions workflow in `.github/workflows/build-apk.yml` uploads the debug APK as an artifact
+- Build: `gradle assembleDebug` (AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24). Debug builds are signed with the
+  committed `app/debug.keystore` (android/androiddebugkey/android) and `versionCode` = `GITHUB_RUN_NUMBER`, so every CI APK
+  installs as an update over the previous one. Never replace the keystore: installed copies would stop accepting updates. GitHub Actions workflow in `.github/workflows/build-apk.yml` uploads the debug APK as an artifact
   and also force-pushes it to the `builds` branch as `Tally-<branch>.apk` (one commit, replaced each build).
 - The user tests on their phone: after every push, wait for the build, then fetch the APK
   (`git fetch origin builds && git show origin/builds:Tally-<branch>.apk > file.apk`) and send it to them.

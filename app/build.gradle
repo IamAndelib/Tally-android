@@ -10,11 +10,26 @@ android {
         applicationId 'app.tally.expenses'
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        // CI numbers every build so each APK installs as an update over the last one
+        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+        versionName '1.0.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+    }
+
+    // One committed debug key (not a secret) so every build is signed the same way;
+    // otherwise each CI runner signs with a new random key and Android refuses to update.
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
         }
