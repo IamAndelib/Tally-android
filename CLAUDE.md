@@ -32,13 +32,14 @@ Built originally in a claude.ai chat; continue development from here.
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
 - All app logic is one self-contained file: `app/src/main/assets/index.html` (vanilla JS, no framework, no build step).
   The only other asset is `icons.js` (see Emblems).
-  - State `S = {v:5, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:5, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`.
     `migrate()` upgrades any saved state or backup (v1 included) on load/restore without changing balances
     (v4: emblems; built-in categories still on their old default emoji/colour get the new emblem/colour, user choices are kept).
   - Account: `{id, name, type, currency, opening, archived, i?, e?, c?}` (emblem only stored when customised; else type default).
     `type` is a built-in key (`TYPES`: bank, wallet, cash, card, savings) or the id of a user type in `S.types = [{id, name, i, c}]`
-    ("+ Add new" chip in the account form; hold a custom chip to remove it when unused). Always go through
+    ("+ Add new" chip in the account form). Hold any type chip to remove it when no account uses it: built-ins are only
+    hidden (`settings.hiddenTypes`) and come back when "+ Add new" gets the same name; `visTypes()` / `firstType()`. Always go through
     `typeName/typeIcon/typeCol(k)`. Only the built-in `card` counts as a liability. Accounts with entries are archived, never deleted (deleting would change other accounts' balances through transfers).
   - Category: `{id, name, i, e, c, kind:'out'|'in', hidden?}` (`i` emblem name, `e` emoji fallback, `c` colour). All visible `out` categories (max 24) form the home ring, in reading order.
   - Transaction: `{id, ts, date:'YYYY-MM-DD', type, amount, account, note, ...}` where type is
@@ -52,15 +53,26 @@ Built originally in a claude.ai chat; continue development from here.
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow).
     `reopenLoan()`: a written-off one just reopens; a fully paid one drops its latest payment (user's choice), with Undo.
   - Other assets: `S.assets = [{id, name, i, e, c, value, currency}]` (value only, no entries).
+  - Account sheet (`accOpen`): balance, "Doesn't match?" fix, then [Archive | History] or, when archived, [Show again | History];
+    Edit account below (the edit form has Delete only for accounts without entries; no archive there).
   - Tabs (bottom nav): Home, Assets (net worth, accounts, owed to you, other assets), Liabilities (loans, credit cards).
     Hold a row and drag it between sections: source lists carry `data-src`, rows `data-drag="acc:id|loan:id"`, `ZONE_TO` maps the
     source to a target slot `.dropbox[data-zone]` (an empty dashed slot, shown only while dragging; never outline existing lists or
     rows, that reads as "merge"). Archived ↔ accounts via `setArchived()`, cleared → open via `reopenLoan()`; clearing is never a drop. Archived accounts' sheet has "Show again" (`acc-unarch`).
     History and Settings are two icons in every top bar (`topIcons()`; no ⋮ menu).
   - `balances(before?)` = opening + all entries (optionally only entries dated before a day → "started today with").
+    `runBal()` (cached per render, `RBC`) = each account's balance right after each entry, plus loan-payment status; entry
+    lists show it under the amount (Bluecoins-style), amounts coloured by money direction (spent red, got green, `--xfer` blue),
+    and loan payments carry a "Partly paid" / "Cleared" pill.
+  - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
+    `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
+    day and lower than before). The user chose warn + "Save anyway", not a hard block.
+  - Confirmations use `askDialog(title, text, okText, onOk, {danger, cancel})` in `#pop`; never the browser's `confirm()`.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
     Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
-    account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring, balance bar (opens the
+    account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()`: Days | Weeks | Months bars of spending in the donut's currency,
+    tap a bar for its total, comparison with the one before (daily average for an unfinished week/month), top 3 categories and
+    "Open … on Home"; state `SM`, patched by `smRender()`), balance bar (opens the
     period's entries; a "↺ Today" chip above it whenever Home isn't on today), − / Transfer / + buttons, then Loan / Lend
     function buttons (own pastel tokens `--loan-*` / `--lend-*`, like `--minus-*` / `--plus-*`). New entries default to the day being viewed.
   - Ring: `ringLayout(n, W)` spaces n tiles evenly on a circle around the donut, clockwise from just left of 12 o'clock;
@@ -72,7 +84,8 @@ Built originally in a claude.ai chat; continue development from here.
     Material Symbols Rounded filled (Apache-2.0), generated by `tools/gen_icons.py`. `emblem(o, cls)` draws a filled circle in `o.c`
     with glyph `o.i` (white or near-black, whichever contrasts more) or the emoji `o.e` as fallback. `iconPicker()` (sheet2, search
     matches word starts of name + tags, "Use an emoji instead"), `emblemEditor()` = preview + `PALETTE` swatches in the category /
-    account / asset forms; its last dot "+" opens a hex dialog (`hexDialog/useHex`, `normHex`), remembered in `settings.customCols` (6). `PALETTE`'s first 12 are the default category colours, chosen so ring neighbours stay distinct under
+    account / asset forms; its last dot "+" opens a hex dialog (`hexDialog/useHex`, `normHex`), remembered in `settings.customCols` (6). Hold a dot to remove
+    it (custom → dropped, palette → `settings.hiddenCols`; typing its hex brings it back; things already in that colour keep it). `PALETTE`'s first 12 are the default category colours, chosen so ring neighbours stay distinct under
     colour-blindness simulation (OKLab ΔE ≥ 8, normal vision ≥ 15) on the light and dark surfaces; re-check if you reorder them.
   - Dates/times never use native pickers: `dateField()` renders a field button (`data-v` = YYYY-MM-DD, optional min/max/opt),
     `datePicker()` opens a Material dialog in `#pop` built on `calGrid()` (shared with the period dialog); `timePicker()` for the nudge time.

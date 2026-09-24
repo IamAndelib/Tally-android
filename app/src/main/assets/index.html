@@ -19,7 +19,7 @@
   --spent:#BA1A1A;--spent-container:#FFDAD6;--on-spent-container:#410002;
   --got:#146C2E;--got-container:#A3F5A8;--on-got-container:#002106;
   --minus-bg:#FADCDD;--minus-fg:#9A4550;--plus-bg:#D3F0DC;--plus-fg:#2F6B45;
-  --loan-bg:#E9DDFF;--loan-fg:#4F2D8F;--lend-bg:#D4ECFB;--lend-fg:#0B5A86;
+  --loan-bg:#E9DDFF;--loan-fg:#4F2D8F;--lend-bg:#D4ECFB;--lend-fg:#0B5A86;--xfer:#1565C0;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -31,7 +31,7 @@
   --spent:#FFB4AB;--spent-container:#93000A;--on-spent-container:#FFDAD6;
   --got:#88D990;--got-container:#005320;--on-got-container:#A3F5A8;
   --minus-bg:#4A3236;--minus-fg:#F6C1C6;--plus-bg:#2A4133;--plus-fg:#B5E4C1;
-  --loan-bg:#382F4F;--loan-fg:#D8C8FF;--lend-bg:#1F3A4C;--lend-fg:#B6DDF6;
+  --loan-bg:#382F4F;--loan-fg:#D8C8FF;--lend-bg:#1F3A4C;--lend-fg:#B6DDF6;--xfer:#9ECAFF;
   color-scheme:dark;}}
 :root[data-theme="dark"]{
   --primary:#BAC3FF;--on-primary:#08218A;--primary-container:#293CA0;--on-primary-container:#DEE0FF;
@@ -42,7 +42,7 @@
   --spent:#FFB4AB;--spent-container:#93000A;--on-spent-container:#FFDAD6;
   --got:#88D990;--got-container:#005320;--on-got-container:#A3F5A8;
   --minus-bg:#4A3236;--minus-fg:#F6C1C6;--plus-bg:#2A4133;--plus-fg:#B5E4C1;
-  --loan-bg:#382F4F;--loan-fg:#D8C8FF;--lend-bg:#1F3A4C;--lend-fg:#B6DDF6;
+  --loan-bg:#382F4F;--loan-fg:#D8C8FF;--lend-bg:#1F3A4C;--lend-fg:#B6DDF6;--xfer:#9ECAFF;
   color-scheme:dark;}
 </style>
 <style id="dyn"></style>
@@ -66,7 +66,7 @@ button.pressed:not(:disabled)::before{opacity:.1;transition:none}
 main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .muted{color:var(--on-surface-variant)}
 .small{font-size:.85rem}
-.spent{color:var(--spent)}.got{color:var(--got)}
+.spent{color:var(--spent)}.got{color:var(--got)}.xfer{color:var(--xfer)}
 
 /* top app bar */
 .appbar{display:flex;align-items:center;gap:4px;height:64px;margin:0 -8px}
@@ -143,6 +143,19 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .chip{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--outline-variant);display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:500;color:var(--on-surface-variant);white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
 .chip[aria-pressed="true"]::after{content:"✓";font-size:.8rem}
+.smc{display:flex;align-items:stretch;height:170px;border-bottom:1px solid var(--outline-variant);margin:4px 0 0}
+.smcol{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0 6px;border-radius:12px}
+.smcol .v{font-size:.72rem;color:var(--on-surface-variant);height:1.1em;white-space:nowrap}
+.smcol .bw{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.smcol .b{width:min(60%,26px);border-radius:4px 4px 0 0;background:var(--spent);opacity:.45}
+.smcol .x{font-size:.72rem;color:var(--on-surface-variant);white-space:nowrap}
+.smcol.on .b{opacity:1}.smcol.on .v,.smcol.on .x{color:var(--on-surface);font-weight:700}
+.smd{text-align:center;padding:14px 0 6px}.smd .big{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
+.smtop .tx{padding:10px 14px}
+.pbar{display:block;height:4px;border-radius:2px;background:var(--surface-highest);margin-top:6px;overflow:hidden}.pbar span{display:block;height:100%;border-radius:2px}
+.dlg-t{font-size:1.2rem;font-weight:600;margin:6px 4px 8px}
+.dlg-x{margin:0 4px 8px;color:var(--on-surface-variant);line-height:1.45}
+.btn.text.dng{color:var(--spent)}
 .chip.addnew{border-style:dashed;border-color:var(--outline);color:var(--on-surface-variant);opacity:.8}
 .chip.addnew .ic{width:18px;height:18px}
 .dot.addnew{display:grid;place-items:center;border:2px dashed var(--outline);color:var(--on-surface-variant);background:transparent}
@@ -186,6 +199,8 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .tx .code{font-weight:700;width:44px;flex:none}
 .tx>.ic{color:var(--primary)}
 .tx .a small{display:block;font-weight:400;font-size:.75rem;color:var(--on-surface-variant)}
+.tx .a .rb{display:block;font-weight:500;font-size:.72rem;color:var(--on-surface-variant);max-width:170px;overflow:hidden;text-overflow:ellipsis;margin-left:auto}
+.tx .s .st{margin-right:2px;vertical-align:1px}
 .empty{text-align:center;padding:28px 12px;color:var(--on-surface-variant)}
 .sec{font-size:.85rem;font-weight:600;color:var(--primary);margin:24px 4px 8px}
 .welcome{text-align:center;padding:48px 16px}
@@ -406,6 +421,7 @@ const P={
  schedule:"M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
  history:"M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z",
  settings:"M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z",
+ archive:"M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5 6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z",
  reset:"M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 2.97-2.17 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93 0-4.42-3.58-8-8-8zm-6 8c0-1.65.67-3.15 1.76-4.24L6.34 7.34C4.9 8.79 4 10.79 4 13c0 4.08 3.05 7.44 7 7.93v-2.02c-2.83-.48-5-2.94-5-5.91z",
  edit:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
 };
@@ -430,6 +446,8 @@ function migrate(o){
   if(!o||typeof o!=="object")return s;
   Object.assign(s.settings,o.settings||{});
   s.settings.customCols=(Array.isArray(s.settings.customCols)?s.settings.customCols:[]).filter(c=>/^#[0-9a-f]{6}$/.test(c)).slice(0,6);
+  s.settings.hiddenCols=(Array.isArray(s.settings.hiddenCols)?s.settings.hiddenCols:[]).filter(c=>PALETTE.includes(c));
+  s.settings.hiddenTypes=(Array.isArray(s.settings.hiddenTypes)?s.settings.hiddenTypes:[]).filter(k=>TYPES[k]);
   s.types=(Array.isArray(o.types)?o.types:[]).filter(t=>t&&t.id&&t.name&&!TYPES[t.id]).map(t=>({id:String(t.id),name:String(t.name).slice(0,20),
     i:t.i&&ICONS[t.i]?t.i:"account_balance_wallet",c:/^#[0-9a-f]{6}$/i.test(t.c)?t.c:"#5f7389"}));
   s.accounts=(Array.isArray(o.accounts)?o.accounts:[]).filter(a=>a&&a.id).map(a=>({
@@ -500,6 +518,24 @@ function money(n,cur,short){
   catch(e){return cur+" "+r2(n).toLocaleString();}
 }
 const signed=(n,cur)=>(n>0?"+":n<0?"−":"")+money(Math.abs(n),cur);
+/* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment
+   left the loan partly paid or cleared. Cached until the next render. */
+let RBC=null;
+function runBal(){
+  if(RBC)return RBC;
+  const b={},m={},paid={},amt={};S.accounts.forEach(a=>b[a.id]=+a.opening||0);S.loans.forEach(l=>{amt[l.id]=l.amount;paid[l.id]=0;});
+  S.txns.slice().sort((x,y)=>x.date.localeCompare(y.date)||(x.ts||0)-(y.ts||0)).forEach(t=>{
+    if(!(t.account in b))return;
+    if(t.type==="expense")b[t.account]-=t.amount;
+    else if(t.type==="income"||t.type==="adjust")b[t.account]+=t.amount;
+    else if(t.type==="transfer"){b[t.account]-=t.amount;if(t.to in b)b[t.to]+=(t.toAmount!=null?t.toAmount:t.amount);}
+    else if(t.type==="loan")b[t.account]+=t.dir==="in"?t.amount:-t.amount;
+    const r={a:r2(b[t.account]),t:t.type==="transfer"&&t.to in b?r2(b[t.to]):null};
+    if(t.type==="loan"&&!t.principal&&t.loan in paid){paid[t.loan]+=t.amount;r.ls=r2(amt[t.loan]-paid[t.loan])<=0?"cleared":"partly";}
+    m[t.id]=r;
+  });
+  return RBC=m;
+}
 /* Account balances from starting balance + every entry. With `before`, only entries dated earlier (start of that day). */
 function balances(before){
   const b={};S.accounts.forEach(a=>b[a.id]=+a.opening||0);
@@ -620,7 +656,7 @@ function periodTxns(){const [s,e]=range();return S.txns.filter(t=>t.date>=s&&t.d
 
 /* ---------- render ---------- */
 function render(){
-  const app=$("#app");
+  const app=$("#app");RBC=null;
   if(V.screen!=="history")V.sel=null;
   if(V.screen==="accounts")V.screen="assets";
   if(V.screen==="history")app.innerHTML=historyView();
@@ -656,7 +692,7 @@ const typeName=k=>TYPES[k]||(ctype(k)||{}).name||"Account";
 const typeIcon=k=>TYPE_ICON[k]||(ctype(k)||{}).i||"account_balance_wallet";
 const typeCol=k=>TYPE_COL[k]||(ctype(k)||{}).c||"#5f7389";
 const accEmb=a=>({i:a.i||(a.e?"":typeIcon(a.type)),e:a.e,c:a.c||typeCol(a.type)});
-const typeChip=(k,sel)=>'<button class="chip" data-act="f-type" data-v="'+esc(k)+'"'+(TYPES[k]?"":' data-ctype="1"')+' aria-pressed="'+(sel===k)+'">'+emblem({i:typeIcon(k),c:typeCol(k)},"sm")+esc(typeName(k))+"</button>";
+const typeChip=(k,sel)=>'<button class="chip" data-act="f-type" data-v="'+esc(k)+'" data-ctype="1" aria-pressed="'+(sel===k)+'">'+emblem({i:typeIcon(k),c:typeCol(k)},"sm")+esc(typeName(k))+"</button>";
 /* colours: hex codes the user typed are remembered and offered in every picker */
 function normHex(v){let h=String(v||"").trim().replace(/^#/,"").toLowerCase();if(/^[0-9a-f]{3}$/.test(h))h=h.split("").map(c=>c+c).join("");return /^[0-9a-f]{6}$/.test(h)?"#"+h:null;}
 const colDot=(x,sel)=>'<button class="dot" data-act="f-col" data-v="'+x+'" style="background:'+x+'" aria-pressed="'+(x===sel)+'" aria-label="Colour '+x+'"></button>';
@@ -690,7 +726,7 @@ function emblemEditor(o){
     '<div class="lbl">Colour</div><div class="dots" id="f-dots">'+dotList(String(o.c||"").toLowerCase()).map(x=>colDot(x,String(o.c||"").toLowerCase())).join("")+
     '<button class="dot addnew" data-act="col-new" aria-label="Add your own colour">'+ic("add")+"</button></div>";
 }
-const dotList=cur=>{const l=PALETTE.concat((S.settings.customCols||[]).filter(c=>!PALETTE.includes(c)));if(/^#[0-9a-f]{6}$/.test(cur)&&!l.includes(cur))l.push(cur);return l;};
+const dotList=cur=>{const hid=S.settings.hiddenCols||[];const l=PALETTE.filter(c=>!hid.includes(c)).concat((S.settings.customCols||[]).filter(c=>!PALETTE.includes(c)));if(/^#[0-9a-f]{6}$/.test(cur)&&!l.includes(cur))l.push(cur);return l;};
 const prevUpd=()=>{const el=$("#f-cprev");if(el&&F)el.innerHTML=emblem({i:F.i,e:F.e,c:F.col},"cprev");};
 
 /* month grid shared by the period dialog and the date picker */
@@ -716,6 +752,14 @@ function calGrid(m,o){
   return h+"</div>";
 }
 
+/* ---------- Material confirm (never the browser's confirm(): it shows the page address and looks foreign) ---------- */
+let ASK=null;
+function askDialog(title,text,okText,onOk,o){
+  o=o||{};ASK=onOk;
+  $("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-label="'+esc(title)+'"><h3 class="dlg-t">'+esc(title)+"</h3>"+
+    (text?'<p class="dlg-x">'+esc(text)+"</p>":"")+'<div class="dlg-act"><button class="btn text" data-act="pd-close">'+esc(o.cancel||"Cancel")+"</button>"+
+    '<button class="btn text'+(o.danger?" dng":"")+'" data-act="ask-ok">'+esc(okText)+"</button></div></div></div>";
+}
 /* ---------- small dialogs: new account type, custom colour ---------- */
 const miniDialog=(label,body,okAct,okText)=>{$("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="'+esc(label)+'"><div class="dp-h"><div class="t">'+esc(label)+"</div></div>"+body+
   '<div class="dlg-act"><button class="btn text" data-act="pd-close">Cancel</button><button class="btn text" data-act="'+okAct+'">'+esc(okText)+"</button></div></div></div>";};
@@ -732,22 +776,38 @@ function addType(){
   if(!name){$("#nt-err").textContent="Give it a name";return;}
   const same=Object.keys(TYPES).concat(S.types.map(t=>t.id)).find(k=>typeName(k).toLowerCase()===name.toLowerCase());
   closePop();
-  if(same){pickType(same);return;}
+  if(same){
+    if((S.settings.hiddenTypes||[]).includes(same)){S.settings.hiddenTypes=S.settings.hiddenTypes.filter(k=>k!==same);save();}
+    if(!$('#sheet .chip[data-act="f-type"][data-v="'+same+'"]')){const add=$("#sheet .chip.addnew");if(add)add.insertAdjacentHTML("beforebegin",typeChip(same,""));}
+    pickType(same);return;}
   const used=new Set(Object.values(TYPE_COL).concat(S.types.map(t=>t.c)));
   const t={id:"t"+newId(),name,i:"account_balance_wallet",c:PALETTE.find(c=>!used.has(c))||"#5f7389"};
   S.types.push(t);save();
   const add=$("#sheet .chip.addnew");if(add)add.insertAdjacentHTML("beforebegin",typeChip(t.id,""));
   pickType(t.id);
 }
-function removeType(id){
-  const t=ctype(id);if(!t)return;const n=S.accounts.filter(a=>a.type===id).length;
-  if(n){snack("“"+t.name+"” is used by "+n+(n===1?" account":" accounts"));return;}
-  if(!confirm("Remove the type “"+t.name+"”?"))return;
-  S.types=S.types.filter(x=>x.id!==id);save();
-  const chip=$('#sheet .chip[data-act="f-type"][data-v="'+id+'"]');if(chip)chip.remove();
-  if(F&&F.kind==="accf"&&F.type===id)pickType("bank");
-  snack("Type removed");
+/* hold a colour dot: it leaves every picker (things already in that colour keep it; typing its hex brings it back) */
+function removeColour(c){
+  askDialog("Remove this colour?","It leaves the colour list. Anything already in this colour keeps it.","Remove",()=>{
+    if(PALETTE.includes(c)){S.settings.hiddenCols=(S.settings.hiddenCols||[]).filter(x=>x!==c).concat(c);}
+    else S.settings.customCols=(S.settings.customCols||[]).filter(x=>x!==c);
+    save();const d=$('#f-dots .dot[data-v="'+c+'"]');if(d&&!(F&&F.col===c))d.remove();snack("Colour removed");
+  });
 }
+function removeType(id){
+  const name=typeName(id),n=S.accounts.filter(a=>a.type===id).length;
+  if(!TYPES[id]&&!ctype(id))return;
+  if(n){snack("“"+name+"” is used by "+n+(n===1?" account":" accounts"));return;}
+  askDialog("Remove “"+name+"”?","It leaves the type list. You can add it again with + Add new.","Remove",()=>{
+    if(TYPES[id])S.settings.hiddenTypes=(S.settings.hiddenTypes||[]).filter(k=>k!==id).concat(id);else S.types=S.types.filter(x=>x.id!==id);
+    save();
+    const chip=$('#sheet .chip[data-act="f-type"][data-v="'+id+'"]');if(chip)chip.remove();
+    if(F&&F.kind==="accf"&&F.type===id)pickType(firstType());
+    snack("Type removed");
+  });
+}
+const visTypes=keep=>Object.keys(TYPES).filter(k=>!(S.settings.hiddenTypes||[]).includes(k)||k===keep).concat(S.types.map(t=>t.id));
+const firstType=()=>visTypes()[0]||"bank";
 function hexDialog(){
   if(!F)return;
   miniDialog("Your own colour",'<div style="display:flex;align-items:center;gap:14px;margin-top:10px"><span id="hx-prev">'+emblem({i:F.i,e:F.e,c:F.col},"cprev")+"</span>"+
@@ -761,6 +821,7 @@ function useHex(){
   if(!c){$("#hx-err").textContent="Use a hex code like #1E88E5";return;}
   closePop();if(!F)return;
   if(!PALETTE.includes(c)){S.settings.customCols=[c].concat((S.settings.customCols||[]).filter(x=>x!==c)).slice(0,6);save();}
+  else if((S.settings.hiddenCols||[]).includes(c)){S.settings.hiddenCols=S.settings.hiddenCols.filter(x=>x!==c);save();}
   const dots=$("#f-dots");
   if(dots&&!dots.querySelector('[data-v="'+c+'"]'))dots.querySelector(".addnew").insertAdjacentHTML("beforebegin",colDot(c,""));
   F.col=c;F.cSet=true;setPressed("f-col",c);prevUpd();
@@ -932,7 +993,7 @@ function ringHTML(cats,o){
   const box='left:'+(cx-D/2).toFixed(1)+"px;top:"+(cy-D/2).toFixed(1)+"px;width:"+D.toFixed(1)+"px;height:"+D.toFixed(1)+"px";
   let center;
   if(home){const cs=currencies();
-    center='<button class="dwrap" data-act="entries" aria-label="See entries" style="'+box+'">'+donut+'<div class="dcenter">'+
+    center='<button class="dwrap" data-act="summary" aria-label="Spending summary" style="'+box+'">'+donut+'<div class="dcenter">'+
       (o.got?'<div class="g">+'+esc(money(o.got,o.cur,true))+"</div>":"")+
       '<div class="s'+(o.spent?"":" zero")+'">'+esc(money(o.spent,o.cur,true))+"</div>"+
       (!o.spent&&!o.got?'<div class="hint">Tap a category to add</div>':"")+
@@ -977,7 +1038,7 @@ function loanForm(kind){
   setTimeout(()=>{const el=$("#f-person");if(el)el.focus();},60);
 }
 function loanOpen(id,focusPay){
-  const l=loan(id);if(!l){snack("That loan was deleted");return;}
+  RBC=null;  const l=loan(id);if(!l){snack("That loan was deleted");return;}
   const i=loanInfo(l),lend=l.kind==="lend",pct=l.amount?Math.min(100,Math.round(i.paid/l.amount*100)):0;
   F={kind:"loan",id,account:acc(l.account)&&!acc(l.account).archived?l.account:(activeAccounts().find(a=>a.currency===i.cur)||{}).id};
   const la=acc(l.account);
@@ -997,8 +1058,8 @@ function loanOpen(id,focusPay){
   }
   const hist=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id).sort(byNewest);
   h+='<div class="sec">History</div><div class="list">'+hist.map(t=>{const a=acc(t.account);
-    return '<div class="tx">'+emblem(t.principal?LOAN_EMB[l.kind]:{i:"paid",c:"#15a06f"},"em")+'<span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+'</div></span>'+
-      '<span class="a">'+esc(money(t.amount,i.cur))+"</span>"+(t.principal?"":'<button class="icon" data-act="loanpay-del" data-v="'+t.id+'" aria-label="Delete this payment">'+ic("close")+"</button>")+"</div>";}).join("")+"</div>";
+    return '<div class="tx">'+emblem(t.principal?LOAN_EMB[l.kind]:{i:"paid",c:"#15a06f"},"em")+'<span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+loanPill(t)+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+'</div></span>'+
+      '<span class="a '+(t.dir==="in"?"got":"spent")+'">'+esc(money(t.amount,i.cur))+"</span>"+(t.principal?"":'<button class="icon" data-act="loanpay-del" data-v="'+t.id+'" aria-label="Delete this payment">'+ic("close")+"</button>")+"</div>";}).join("")+"</div>";
   if(l.note)h+='<p class="muted small" style="margin:12px 4px 0">'+esc(l.note)+"</p>";
   h+='<div class="gap"></div><div class="gap"></div>';
   if(i.st==="cleared"&&i.pays.length)h+='<button class="btn tonal" data-act="loan-reopen">'+ic("reset")+"Reopen · undo last payment</button><div class=\"gap\"></div>";
@@ -1015,23 +1076,25 @@ function saveLoan(){
   if(!v.date){snack("Pick a date");return;}
   if(due&&due<v.date){snack("That date is before the loan itself");return;}
   const l={id:newId(),ts:Date.now(),kind:F.lk,person,amount:amt,account:F.account,date:v.date,due,note:(v.note||"").trim(),status:"open"};
-  S.settings.lastAcc=F.account;closeSheet();
-  withUndo((lend?"Lent ":"Borrowed ")+money(amt,acc(l.account).currency)+(lend?" to ":" from ")+person,()=>{
-    S.loans.push(l);
-    S.txns.push({id:newId(),ts:Date.now(),type:"loan",dir:lend?"out":"in",loan:l.id,principal:true,amount:amt,account:l.account,date:l.date,note:""});
-  },{row:l.id});
-  askNotify();
+  const pid=newId();
+  const mutate=()=>{
+    S.loans.push(Object.assign({},l));
+    S.txns.push({id:pid,ts:l.ts,type:"loan",dir:lend?"out":"in",loan:l.id,principal:true,amount:amt,account:l.account,date:l.date,note:""});
+  };
+  guardOverdraw(mutate,l.date,()=>{
+    S.settings.lastAcc=l.account;closeSheet();
+    withUndo((lend?"Lent ":"Borrowed ")+money(amt,acc(l.account).currency)+(lend?" to ":" from ")+person,mutate,{row:l.id});
+    askNotify();
+  });
 }
 function payLoan(){
   const l=loan(F.id);if(!l)return;const i=loanInfo(l),v=readVals(),amt=evalAmt(v.amount),lend=l.kind==="lend";
   if(!(amt>0)){snack("Enter an amount");return;}
   if(amt>i.left+.005){snack("That's more than what's left ("+money(i.left,i.cur)+")");return;}
   if(!acc(F.account)){snack("Pick an account");return;}
-  const id=l.id,account=F.account,date=v.date||today(),done=r2(i.left-amt)<=0;
-  closeSheet();
-  withUndo((lend?"Got back ":"Paid back ")+money(amt,i.cur)+(done?" · all cleared":""),()=>{
-    S.txns.push({id:newId(),ts:Date.now(),type:"loan",dir:lend?"in":"out",loan:id,amount:amt,account,date,note:""});
-  },{row:id});
+  const id=l.id,account=F.account,date=v.date||today(),done=r2(i.left-amt)<=0,pid=newId(),ts=Date.now();
+  const mutate=()=>{S.txns.push({id:pid,ts,type:"loan",dir:lend?"in":"out",loan:id,amount:amt,account,date,note:""});};
+  guardOverdraw(mutate,date,()=>{closeSheet();withUndo((lend?"Got back ":"Paid back ")+money(amt,i.cur)+(done?" · all cleared":""),mutate,{row:id});});
 }
 /* back to open: a written-off one just reopens; a fully paid one drops its latest payment (the user's choice) */
 function reopenLoan(id){
@@ -1146,17 +1209,27 @@ window.tallyResume=function(){
 function txLine(t){
   const a=acc(t.account),cur=a?a.currency:S.settings.cur;
   let em,d,s,amt,cls="";
-  if(t.type==="transfer"){const to=acc(t.to);em={i:"swap_horiz",c:"#5f7389"};d=t.note||"Transfer";s=(a?a.name:"?")+" → "+(to?to.name:"?");
+  if(t.type==="transfer"){const to=acc(t.to);em={i:"swap_horiz",c:"#5f7389"};cls="xfer";d=t.note||"Transfer";s=(a?a.name:"?")+" → "+(to?to.name:"?");
     amt=esc(money(t.amount,cur))+(t.toAmount!=null&&to&&to.currency!==cur?"<small>→ "+esc(money(t.toAmount,to.currency))+"</small>":"");}
-  else if(t.type==="adjust"){em={i:"balance",c:"#7a8190"};d=t.note||"Balance fix";s="Balance fix · "+(a?a.name:"?");amt=esc(signed(t.amount,cur));cls="muted";}
+  else if(t.type==="adjust"){em={i:"balance",c:"#7a8190"};d=t.note||"Balance fix";s="Balance fix · "+(a?a.name:"?");amt=esc(signed(t.amount,cur));cls=t.amount<0?"spent":"got";}
   else if(t.type==="loan"){const l=loan(t.loan),lend=l&&l.kind==="lend",who=l?loanWho(l):"?";em=LOAN_EMB[lend?"lend":"borrow"];
     d=t.principal?(lend?"Lent to ":"Borrowed from ")+who:(lend?who+" paid back":"Paid back "+who);
-    s=(lend?"Lending":"Loan")+" · "+(a?a.name:"?");amt=esc(signed(t.dir==="in"?t.amount:-t.amount,cur));cls="muted";}
+    s=(lend?"Lending":"Loan")+" · "+(a?a.name:"?");amt=esc(signed(t.dir==="in"?t.amount:-t.amount,cur));cls=t.dir==="in"?"got":"spent";}
   else{const k=cat(t.cat),out=t.type==="expense";em=k;d=t.note||k.name;s=k.name+" · "+(a?a.name:"?");
     amt=(out?"−":"+")+esc(money(t.amount,cur));cls=out?"spent":"got";}
   const selMode=!!V.sel&&V.screen==="history",on=selMode&&V.sel.has(t.id);
   return '<button class="tx'+(on?" on":"")+(FX.row===t.id?" flash":"")+'" data-act="'+(selMode?"sel-toggle":"tx-open")+'" data-v="'+t.id+'"'+(selMode?' aria-pressed="'+on+'"':"")+">"+
-    (selMode?'<span class="em pick">'+ic(on?"checked":"unchecked")+"</span>":emblem(em,"em"))+'<span class="mid"><div class="d">'+esc(d)+'</div><div class="s">'+esc(s)+'</div></span><span class="a '+cls+'">'+amt+"</span></button>";
+    (selMode?'<span class="em pick">'+ic(on?"checked":"unchecked")+"</span>":emblem(em,"em"))+'<span class="mid"><div class="d">'+esc(d)+'</div><div class="s">'+loanPill(t)+esc(s)+'</div></span><span class="a '+cls+'">'+amt+rbLines(t)+"</span></button>";
+}
+/* the small grey balance line(s) under an amount: what the account held right after this entry */
+function rbLines(t){
+  const r=runBal()[t.id];if(!r)return "";const a=acc(t.account);
+  if(t.type==="transfer"){const to=acc(t.to);return '<span class="rb">↓ '+esc((a?a.name:"?")+" "+money(r.a,a?a.currency:""))+"</span>"+(to&&r.t!=null?'<span class="rb">↑ '+esc(to.name+" "+money(r.t,to.currency))+"</span>":"");}
+  return a?'<span class="rb">'+esc(a.name+" "+money(r.a,a.currency))+"</span>":"";
+}
+function loanPill(t){
+  const r=t.type==="loan"&&runBal()[t.id];if(!r||!r.ls)return "";
+  return '<span class="st '+r.ls+'">'+(r.ls==="cleared"?"Cleared":"Partly paid")+"</span> ";
 }
 const byNewest=(a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0);
 function dayGroups(list){
@@ -1220,7 +1293,7 @@ function settingsView(){
 }
 
 /* ---------- menus, dialogs + sheets ---------- */
-const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;};
+const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;ASK=null;};
 function openSheet(title,body){
   $("#sheet").innerHTML='<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
 }
@@ -1394,11 +1467,10 @@ function accOpen(id){
   F={kind:"acc",id};
   let h='<div class="hero">'+emblem(accEmb(a),"cprev")+'<div class="t">'+esc(typeName(a.type))+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
     (start!==bal?'<div class="t">Started today with '+esc(money(start,a.currency))+"</div>":"")+"</div>";
-  if(a.archived)h+='<div class="card"><h3>Archived</h3><p class="muted small" style="margin:0">Hidden from Home and the account pickers. Its history is kept.</p><div class="gap"></div><button class="btn" data-act="acc-unarch">'+ic("reset")+"Show again</button></div>";
   h+='<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>'+
     '<div class="amtwrap"><span class="cur">'+esc(a.currency)+'</span><input id="f-actual" inputmode="decimal" autocomplete="off" placeholder="'+esc(r2(bal))+'" aria-label="Actual balance"></div>'+
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
-  h+='<div class="gap"></div><div class="row">'+(a.archived?"":'<button class="btn tonal" data-act="tr-from-acc" data-v="'+a.id+'">'+ic("swap")+"Transfer</button>")+
+  h+='<div class="gap"></div><div class="row">'+(a.archived?'<button class="btn tonal" data-act="acc-unarch">'+ic("reset")+"Show again</button>":'<button class="btn tonal" data-act="acc-arch">'+ic("archive")+"Archive</button>")+
     '<button class="btn tonal" data-act="hist-acc" data-v="'+a.id+'">'+ic("list")+"History</button></div>";
   h+='<div class="gap"></div><button class="btn text" data-act="acc-form" data-v="'+a.id+'">'+ic("edit")+"Edit account</button>";
   openSheet(a.name,h);
@@ -1411,19 +1483,18 @@ function fixPreview(){
   el.textContent=d===0?"Already matches.":(d>0?"Adds ":"Removes ")+money(Math.abs(d),a.currency)+" as a balance fix.";
 }
 function accForm(id){
-  const a=id?acc(id):{name:"",type:"bank",currency:S.settings.cur,opening:""};
+  const a=id?acc(id):{name:"",type:firstType(),currency:S.settings.cur,opening:""};
   const used=id&&S.txns.some(t=>t.account===id||t.to===id);
   F={kind:"accf",id,type:a.type,cur:a.currency,i:a.i||"",e:a.e||"",col:a.c||typeCol(a.type),iSet:!!(a.i||a.e),cSet:!!a.c};
   if(!F.i&&!F.e)F.i=typeIcon(a.type);
   let h=emblemEditor({i:F.i,e:F.e,c:F.col})+'<label class="field"><span>Name</span><input id="f-name" value="'+esc(a.name)+'" placeholder="e.g. RBC Chequing, bKash, Wallet" maxlength="30"></label>';
-  h+='<div class="lbl">Type</div><div class="chips" id="f-types">'+Object.keys(TYPES).concat(S.types.map(t=>t.id)).map(k=>typeChip(k,a.type)).join("")+
+  h+='<div class="lbl">Type</div><div class="chips" id="f-types">'+visTypes(a.type).map(k=>typeChip(k,a.type)).join("")+
     '<button class="chip addnew" data-act="type-new">'+ic("add")+"Add new</button></div>";
   h+='<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"'+(used?" disabled":"")+"><span>"+esc(a.currency)+"</span>"+ic("down")+"</button></div>"+
     '<label class="field"><span>'+(id?"Starting balance":"Balance right now")+'</span><input id="f-open" inputmode="decimal" autocomplete="off" value="'+esc(a.opening===""?"":a.opening)+'" placeholder="0.00"></label></div>';
   h+='<p class="hint">'+(id?"What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead.":"Credit card? Enter what you owe as a negative number.")+(used?" Currency is locked because this account has entries.":"")+"</p>";
   h+='<div class="gap"></div><button class="btn" data-act="acc-save">'+(id?"Save":"Add account")+"</button>";
   if(id){
-    h+='<div class="gap"></div><button class="btn tonal" data-act="acc-arch">'+(a.archived?"Bring back":"Archive (hide, keep history)")+"</button>";
     if(!used)h+='<div class="gap"></div><button class="btn danger" data-act="acc-del">Delete account</button>';
   }
   openSheet(id?"Edit account":"New account",h);
@@ -1440,11 +1511,98 @@ function catForm(id,kind){
   openSheet(id?"Edit category":(c.kind==="in"?"New money-in category":"New spending category"),h);
 }
 function entriesSheet(){
-  const list=periodTxns().sort(byNewest);
+  RBC=null;  const list=periodTxns().sort(byNewest);
   openSheet(periodLabel(),(list.length?dayGroups(list):'<div class="empty">Nothing written down yet.</div>')+'<div class="gap"></div><button class="btn text" data-act="go" data-v="history">Open full history</button>');
 }
 
+/* ---------- spending summary (tap the donut): days / weeks / months as bars ---------- */
+let SM=null;
+const compact=n=>{n=Math.round(n);const a=Math.abs(n);if(a<1000)return String(n);if(a<1e4)return (n/1e3).toFixed(1).replace(/\.0$/,"")+"k";if(a<1e6)return Math.round(n/1e3)+"k";return (n/1e6).toFixed(1).replace(/\.0$/,"")+"M";};
+const weekStart=d=>addDays(d,-((parseISO(d).getDay()+6)%7));
+function summarySheet(){
+  const [,e]=range(),t=today();
+  SM={mode:V.period==="month"?"m":"d",end:e>t?t:e,sel:null,cur:viewCur()};
+  openSheet("Spending"+(currencies().length>1?" · "+SM.cur:""),'<div class="seg">'+[["d","Days"],["w","Weeks"],["m","Months"]].map(([k,l])=>'<button data-act="sm-mode" data-v="'+k+'" aria-pressed="'+(SM.mode===k)+'">'+l+"</button>").join("")+
+    '</div><div id="sm"></div>');
+  smRender();
+}
+/* the buckets on screen, oldest first, plus one before them (for "vs last ...") */
+function smBuckets(){
+  const t=today(),e=SM.end,out=[];
+  if(SM.mode==="d")for(let i=7;i>=0;i--){const d=addDays(e,-i);out.push({s:d,e:d,x:parseISO(d).toLocaleDateString(undefined,{weekday:"short"}),full:d===t?"Today":d===addDays(t,-1)?"Yesterday":dayLabel(d)});}
+  else if(SM.mode==="w"){const w=weekStart(e);for(let i=8;i>=0;i--){const s=addDays(w,-7*i);out.push({s,e:addDays(s,6),x:parseISO(s).toLocaleDateString(undefined,{day:"numeric",month:"short"}),full:"Week of "+parseISO(s).toLocaleDateString(undefined,{day:"numeric",month:"short"})});}}
+  else{const m0=e.slice(0,7);for(let i=6;i>=0;i--){const m=shiftMonth(m0,-i),[y,mo]=m.split("-").map(Number);
+    out.push({s:m+"-01",e:m+"-"+pad(new Date(y,mo,0).getDate()),x:parseISO(m+"-01").toLocaleDateString(undefined,{month:"short"}),full:monthLabel(m)});}}
+  const inCur=x=>{const a=acc(x.account);return a&&a.currency===SM.cur;};
+  const sp=S.txns.filter(x=>x.type==="expense"&&inCur(x));
+  out.forEach(b=>{b.list=sp.filter(x=>x.date>=b.s&&x.date<=b.e);b.v=r2(b.list.reduce((q,x)=>q+x.amount,0));
+    const last=b.e<t?b.e:t;b.days=last<b.s?0:Math.round((parseISO(last)-parseISO(b.s))/864e5)+1;});
+  return out;
+}
+function smRender(){
+  const el=$("#sm");if(!el||!SM)return;
+  const all=smBuckets(),bars=all.slice(1),n=bars.length,t=today();
+  if(SM.sel==null||SM.sel>=n)SM.sel=n-1;
+  const max=Math.max(...bars.map(b=>b.v),0),i=SM.sel,b=bars[i],prev=all[i],cur=SM.cur;
+  const canNext=bars[n-1].e<t;
+  let h='<div class="cal-h"><button class="icon" data-act="sm-nav" data-v="-1" aria-label="Earlier">'+ic("left")+"</button><b>"+esc(smSpan(bars))+
+    '</b><button class="icon" data-act="sm-nav" data-v="1" aria-label="Later"'+(canNext?"":" disabled")+">"+ic("right")+"</button></div>";
+  h+='<div class="smc" role="list">'+bars.map((x,k)=>{const pct=max?x.v/max*100:0,future=x.s>t;
+    return '<button class="smcol'+(k===i?" on":"")+'" role="listitem" data-act="sm-pick" data-v="'+k+'"'+(future?" disabled":"")+' aria-label="'+esc(x.full+": "+money(x.v,cur))+'">'+
+      '<span class="v">'+(x.v?esc(compact(x.v)):"")+'</span><span class="bw"><span class="b" style="height:'+(x.v?Math.max(2,pct):0).toFixed(1)+'%"></span></span><span class="x">'+esc(x.x)+"</span></button>";}).join("")+"</div>";
+  /* details for the chosen bar */
+  const unit={d:"the day before",w:"last week",m:"last month"}[SM.mode];
+  /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
+  const len=x=>Math.round((parseISO(x.e)-parseISO(x.s))/864e5)+1,part=SM.mode!=="d"&&b.days<len(b);
+  let cmp="";if(prev&&prev.v>0&&b.days>0){const p=Math.round(part?((b.v/b.days)/(prev.v/len(prev))-1)*100:(b.v-prev.v)/prev.v*100);
+    cmp=p===0?"Same as "+unit:(p>0?"↑ ":"↓ ")+Math.abs(p)+"% vs "+unit;}
+  const avg=SM.mode!=="d"&&b.days>0&&b.v?"Avg "+money(r2(b.v/b.days),cur)+" a day":"";
+  const byCat={};b.list.forEach(x=>{byCat[x.cat]=(byCat[x.cat]||0)+x.amount;});
+  const top=Object.entries(byCat).sort((p,q)=>q[1]-p[1]).slice(0,3);
+  h+='<div class="smd"><div class="muted small">'+esc(b.full)+'</div><div class="big spent">'+esc(money(b.v,cur))+"</div>"+
+    ((cmp||avg)?'<div class="muted small">'+esc([avg,cmp].filter(Boolean).join(" · "))+"</div>":"")+"</div>";
+  if(top.length)h+='<div class="list smtop">'+top.map(([k,v])=>{const c=cat(k);return '<div class="tx">'+emblem(c,"em")+'<span class="mid"><div class="d">'+esc(c.name)+
+    '</div><span class="pbar"><span style="width:'+(v/b.v*100).toFixed(1)+"%;background:"+c.c+'"></span></span></span><span class="a">'+esc(money(r2(v),cur))+"</span></div>";}).join("")+"</div>";
+  else h+='<div class="empty" style="padding:16px">Nothing spent '+({d:"that day",w:"that week",m:"that month"}[SM.mode])+".</div>";
+  h+='<div class="gap"></div><button class="btn tonal" data-act="sm-open">Open '+({d:"this day",w:"this week",m:"this month"}[SM.mode])+" on Home</button>";
+  el.innerHTML=h;
+}
+/* "18 – 24 Sep", "3 Aug – 27 Sep", "Apr – Sep" (year added when it isn't this year) */
+function smSpan(bars){
+  const s=parseISO(bars[0].s),e=parseISO(bars[bars.length-1].e),y=new Date().getFullYear(),yr=e.getFullYear()!==y?" "+e.getFullYear():"";
+  if(SM.mode==="m")return s.toLocaleDateString(undefined,{month:"short"})+" – "+e.toLocaleDateString(undefined,{month:"short"})+yr;
+  const mo=x=>x.toLocaleDateString(undefined,{month:"short"});
+  return s.getDate()+(s.getMonth()!==e.getMonth()?" "+mo(s):"")+" – "+e.getDate()+" "+mo(e)+yr;
+}
+function smNav(d){
+  const t=today();let e=SM.end;
+  if(SM.mode==="d")e=addDays(e,7*d);else if(SM.mode==="w")e=addDays(e,56*d);
+  else{const m=shiftMonth(e.slice(0,7),6*d),[y,mo]=m.split("-").map(Number);e=m+"-"+pad(new Date(y,mo,0).getDate());}
+  SM.end=e>t?t:e;SM.sel=null;smRender();
+}
+function smOpen(){
+  const b=smBuckets().slice(1)[SM.sel],t=today();if(!b)return;
+  if(SM.mode==="d"){V.period="day";V.anchor=b.s;}
+  else if(SM.mode==="w"){V.period="range";V.rs=b.s;V.re=b.e>t?t:b.e;}
+  else{V.period="month";V.anchor=b.s;}
+  closeSheet();render();
+}
+
 /* ---------- saving ---------- */
+/* Money sources (not credit cards) shouldn't go below zero. Try the change on a copy first; if it would take an account
+   below zero (now, or at the end of that day) and lower than it already was, ask before saving. */
+function guardOverdraw(mutate,date,proceed){
+  const b0=balances(),d0=balances(addDays(date,1)),T=S.txns,L=S.loans;let b1,d1;
+  S.txns=JSON.parse(JSON.stringify(T));S.loans=JSON.parse(JSON.stringify(L));
+  try{mutate();b1=balances();d1=balances(addDays(date,1));}finally{S.txns=T;S.loans=L;}
+  const low=(n,o)=>n<-.004&&n<o-.004;
+  const bad=S.accounts.find(a=>a.type!=="card"&&(low(b1[a.id],b0[a.id])||low(d1[a.id],d0[a.id])));
+  if(!bad){proceed();return;}
+  const now=low(b1[bad.id],b0[bad.id]),had=now?b0[bad.id]:d0[bad.id],will=now?b1[bad.id]:d1[bad.id];
+  askDialog("Not enough in "+bad.name,now?bad.name+" has "+money(had,bad.currency)+". This would make it "+signed(will,bad.currency)+"."
+    :bad.name+" had "+money(had,bad.currency)+" at the end of "+shortDay(date)+". This would make it "+signed(will,bad.currency)+" that day.",
+    "Save anyway",proceed,{cancel:"Go back"});
+}
 function saveTx(){
   const v=readVals(),amt=evalAmt(v.amount);
   if(!F.cat){snack("Pick a category");return;}
@@ -1453,10 +1611,12 @@ function saveTx(){
   if(!v.date){snack("Pick a date");return;}
   const t={type:F.type,amount:amt,account:F.account,cat:F.cat,date:v.date,note:(v.note||"").trim()};
   if(F.type==="income")S.settings.lastAccIn=F.account;else S.settings.lastAcc=F.account;
-  const id=F.id;closeSheet();
-  buzz(10);
-  if(id)withUndo("Saved",()=>{const old=S.txns.find(x=>x.id===id);Object.assign(old,t);},{row:id,cat:t.cat,center:true});
-  else{const nid=newId();withUndo((t.type==="income"?"+":"−")+money(amt,acc(t.account).currency)+" · "+cat(t.cat).name,()=>{S.txns.push(Object.assign({id:nid,ts:Date.now()},t));},{row:nid,cat:t.cat,center:true});}
+  const id=F.id,nid=newId(),ts=Date.now();
+  const mutate=id?()=>{const old=S.txns.find(x=>x.id===id);Object.assign(old,t);}:()=>{S.txns.push(Object.assign({id:nid,ts},t));};
+  guardOverdraw(mutate,t.date,()=>{
+    closeSheet();buzz(10);
+    withUndo(id?"Saved":(t.type==="income"?"+":"−")+money(amt,acc(t.account).currency)+" · "+cat(t.cat).name,mutate,{row:id||nid,cat:t.cat,center:true});
+  });
 }
 function saveTr(){
   const v=readVals(),fa=acc(F.from),ta=acc(F.to);
@@ -1467,20 +1627,20 @@ function saveTr(){
   if(diff){got=evalAmt(v.toAmount);if(!(got>0)){snack("Enter how much arrived in "+ta.currency);return;}}
   const fee=F.showFee?(evalAmt(v.fee)||0):0;if(fee<0){snack("Fee can't be negative");return;}
   if(!v.date){snack("Pick a date");return;}
-  const id=F.id,from=F.from,to=F.to,date=v.date,note=(v.note||"").trim();
-  closeSheet();
-  withUndo(id?"Saved":"Transferred "+money(amt,fa.currency)+" to "+ta.name,()=>{
+  const id=F.id,from=F.from,to=F.to,date=v.date,note=(v.note||"").trim(),nid=newId(),fid=newId(),ts=Date.now();
+  const mutate=()=>{
     let t=id?S.txns.find(x=>x.id===id):null;
-    if(!t){t={id:newId(),ts:Date.now()};S.txns.push(t);}
+    if(!t){t={id:nid,ts};S.txns.push(t);}
     const oldFee=t.feeId?S.txns.find(x=>x.id===t.feeId):null;
     Object.assign(t,{type:"transfer",amount:amt,account:from,to,date,note});
     if(diff)t.toAmount=got;else delete t.toAmount;
     if(fee>0){
-      const f=oldFee||{id:newId(),ts:Date.now()};if(!oldFee)S.txns.push(f);
+      const f=oldFee||{id:fid,ts};if(!oldFee)S.txns.push(f);
       Object.assign(f,{type:"expense",amount:r2(fee),account:from,cat:"fees",date,note:"Transfer fee",feeOf:t.id});
       t.feeId=f.id;
     }else{if(oldFee)S.txns=S.txns.filter(x=>x!==oldFee);delete t.feeId;}
-  });
+  };
+  guardOverdraw(mutate,date,()=>{closeSheet();withUndo(id?"Saved":"Transferred "+money(amt,fa.currency)+" to "+ta.name,mutate,{row:id||nid});});
 }
 /* delete entries by id, keeping transfers + fees and loans + their payments consistent */
 function deleteEntries(ids){
@@ -1540,6 +1700,7 @@ document.addEventListener("click",ev=>{
     case "pd-month":setPeriod({period:"month",anchor:v+"-01"});break;
     case "pd-today":setPeriod({period:PD.tab==="month"?"month":"day",anchor:today()});break;
     case "pd-close":closePop();break;
+    case "ask-ok":{const f=ASK;closePop();if(f)f();break;}
     case "go-today":V.period="day";V.anchor=today();render();break;
     case "prev":shiftPeriod(-1);render();break;
     case "next":if(canNext()){shiftPeriod(1);render();}break;
@@ -1549,6 +1710,11 @@ document.addEventListener("click",ev=>{
     case "undo":if(undoFn){const f=undoFn;undoFn=null;f();}break;
     case "check-ok":S.settings.lastCheck=today();commit();snack("Page started for today");break;
     case "entries":entriesSheet();break;
+    case "summary":summarySheet();break;
+    case "sm-mode":SM.mode=v;SM.sel=null;setPressed("sm-mode",v);smRender();break;
+    case "sm-nav":smNav(+v);break;
+    case "sm-pick":SM.sel=+v;smRender();break;
+    case "sm-open":smOpen();break;
     case "add-out":txSheet(null,"expense");break;
     case "add-in":txSheet(null,"income");break;
     case "add-cat":txSheet(null,"expense",v);break;
@@ -1577,8 +1743,8 @@ document.addEventListener("click",ev=>{
       if(val==null){snack("Type what you have now");return;}
       const d=r2(val-balances()[F.id]);
       if(d===0){snack("Already matches");return;}
-      const id=F.id;closeSheet();
-      withUndo(a.name+" set to "+money(val,a.currency),()=>{S.txns.push({id:newId(),ts:Date.now(),type:"adjust",amount:d,account:id,date:today(),note:"Balance fix"});},{row:id});
+      const id=F.id,xid=newId(),ts=Date.now(),mutate=()=>{S.txns.push({id:xid,ts,type:"adjust",amount:d,account:id,date:today(),note:"Balance fix"});};
+      guardOverdraw(mutate,today(),()=>{closeSheet();withUndo(a.name+" set to "+money(val,a.currency),mutate,{row:id});});
       break;}
     case "hist-acc":closeSheet();V.hAcc=v;Object.assign(HP,{period:"month",anchor:today()});V.screen="history";render();scrollTo(0,0);break;
     case "acc-form":accForm(v);break;
@@ -1603,16 +1769,17 @@ document.addEventListener("click",ev=>{
       const name=$("#f-name").value.trim();if(!name){snack("Give the account a name");return;}
       const raw=$("#f-open").value.trim(),o=raw?evalAmt(raw):0;
       if(o==null){snack("That balance isn't a number");return;}
-      const data={name,type:F.type,currency:F.cur,opening:o,i:F.iSet?F.i:"",e:F.iSet?F.e:"",c:F.cSet?F.col:""};
-      if(F.id)Object.assign(acc(F.id),data);else S.accounts.push(Object.assign({id:newId(),archived:false},data));
-      const was=F.id;closeSheet();commit();snack(was?"Account saved":name+" added");break;}
+      const data={name,type:F.type,currency:F.cur,opening:o,i:F.iSet?F.i:"",e:F.iSet?F.e:"",c:F.cSet?F.col:""},was=F.id;
+      const go=()=>{if(was)Object.assign(acc(was),data);else S.accounts.push(Object.assign({id:newId(),archived:false},data));closeSheet();commit();snack(was?"Account saved":name+" added");};
+      if(o<0&&data.type!=="card"&&!(was&&acc(was).opening===o))askDialog("Start below zero?","Only credit cards usually go below zero. Save "+name+" at "+signed(o,data.currency)+"?","Save anyway",go,{cancel:"Go back"});
+      else go();
+      break;}
     case "acc-arch":{const a=acc(F.id);closeSheet();if(a)setArchived(a.id,!a.archived);break;}
     case "acc-unarch":{const id=F.id;closeSheet();setArchived(id,false);break;}
     case "loan-reopen":{const id=F.id;closeSheet();reopenLoan(id);break;}
     case "acc-del":{
-      if(S.txns.some(t=>t.account===F.id||t.to===F.id))return;
-      if(!confirm("Delete this account?"))return;
-      S.accounts=S.accounts.filter(a=>a.id!==F.id);closeSheet();commit();break;}
+      const id=F.id;if(S.txns.some(t=>t.account===id||t.to===id))return;
+      askDialog("Delete this account?","It has no entries, so nothing else changes.","Delete",()=>{S.accounts=S.accounts.filter(a=>a.id!==id);closeSheet();commit();snack("Account deleted");},{danger:true});break;}
     case "toggle-arch":V.showArchived=!V.showArchived;render();break;
     case "hmon":if(+v<0||canNext(HP)){shiftPeriod(+v,HP);if(V.sel)V.sel=new Set();render();}break;
     case "hacc":V.hAcc=v;if(V.sel)V.sel=new Set();render();break;
@@ -1649,8 +1816,8 @@ document.addEventListener("click",ev=>{
         lines.push([t.date,kind(t),t.amount,a?a.currency:"",q(a?a.name:""),q(to?to.name:""),t.type==="transfer"?(t.toAmount!=null?t.toAmount:t.amount):"",q(t.type==="expense"||t.type==="income"?cat(t.cat).name:""),q(t.note)].join(","));});
       saveOut("tally-entries-"+today()+".csv","text/csv",lines.join("\n"));break;}
     case "backup":saveOut("tally-backup-"+today()+".json","application/json",JSON.stringify(S));break;
-    case "wipe":if(confirm("Delete every account and entry? This can't be undone.")){
-      const keep={cur:S.settings.cur,theme:S.settings.theme,remind:S.settings.remind,notifAsked:S.settings.notifAsked};S=blank();Object.assign(S.settings,keep);commit();snack("All data deleted");}break;
+    case "wipe":askDialog("Delete all data?","Every account and entry on this phone. This can't be undone.","Delete all",()=>{
+      const keep={cur:S.settings.cur,theme:S.settings.theme,remind:S.settings.remind,notifAsked:S.settings.notifAsked};S=blank();Object.assign(S.settings,keep);commit();snack("All data deleted");},{danger:true});break;
   }
 });
 document.addEventListener("input",ev=>{
@@ -1665,8 +1832,7 @@ document.addEventListener("change",ev=>{
   const el=ev.target;
   if(el.id==="restore-file"){const f=el.files[0];el.value="";if(!f)return;f.text().then(t=>{let o;try{o=JSON.parse(t);}catch(e){snack("That isn't a Tally backup file");return;}
     if(!o||!Array.isArray(o.accounts)||!Array.isArray(o.txns)){snack("That isn't a Tally backup file");return;}
-    if(!confirm("Replace everything on this phone with this backup ("+o.accounts.length+" accounts, "+o.txns.length+" entries)?"))return;
-    S=migrate(o);commit();applyTheme();snack("Backup restored");});}
+    askDialog("Restore this backup?","Replaces everything on this phone with "+o.accounts.length+" accounts and "+o.txns.length+" entries.","Restore",()=>{S=migrate(o);commit();applyTheme();snack("Backup restored");});});}
 });
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){if(!window.tallyBack())return;}
@@ -1687,9 +1853,10 @@ function pressStart(x,y,target){
   if(rc){LP=rc.disabled?null:{kind:"range",x,y,from:rc.dataset.v,cur:rc.dataset.v,moved:false};return;}
   const tile=target.closest(".cgrid .tile, .ring.edit .tile"),row=V.screen==="history"&&!V.sel&&target.closest('.tx[data-act="tx-open"]');
   const mv=(V.screen==="assets"||V.screen==="liabs")&&target.closest(".tx[data-drag]");
-  const hold=target.closest('#sheet .chip[data-ctype]');
+  const hold=target.closest('#sheet .chip[data-ctype]')||target.closest('#f-dots .dot[data-act="f-col"]');
   if(hold){LP={x,y,cx:x,cy:y,el:hold,kind:"hold",active:false};
-    LP.timer=setTimeout(()=>{if(!LP)return;LP.active=true;swallowNextClick();buzz(12);const id=LP.el.dataset.v;LP=null;removeType(id);},500);return;}
+    LP.timer=setTimeout(()=>{if(!LP)return;LP.active=true;swallowNextClick();buzz(12);const el=LP.el;LP=null;pressOff(true);
+      if(el.classList.contains("dot"))removeColour(el.dataset.v);else removeType(el.dataset.v);},500);return;}
   if(!tile&&!row&&!mv){LP=null;return;}
   LP={x,y,cx:x,cy:y,el:tile||row||mv,kind:tile?"drag":row?"sel":"move",active:false};
   LP.timer=setTimeout(()=>{
@@ -1787,7 +1954,7 @@ document.addEventListener("touchcancel",()=>{pressOff(true);pressEnd(null,null);
 document.addEventListener("mousedown",e=>{if(e.button===0&&!fromTouch())pressOn(e.target,e.clientX,e.clientY);if(e.button===0&&!fromTouch())pressStart(e.clientX,e.clientY,e.target);});
 document.addEventListener("mousemove",e=>{if(LP&&!fromTouch())pressMove(e.clientX,e.clientY,e);});
 document.addEventListener("mouseup",()=>{if(!fromTouch()){pressOff();pressEnd(null,null);}});
-document.addEventListener("contextmenu",e=>{if(e.target.closest(".tile,.tx,.dd,.chip"))e.preventDefault();});
+document.addEventListener("contextmenu",e=>{if(e.target.closest(".tile,.tx,.dd,.chip,.dot"))e.preventDefault();});
 /* the ring is laid out in px from the screen width: redo it when the width changes (not when the keyboard opens) */
 let lastW=innerWidth;
 addEventListener("resize",()=>{if(innerWidth!==lastW){lastW=innerWidth;if((V.screen==="home"||V.screen==="settings")&&!LP)render();}});
