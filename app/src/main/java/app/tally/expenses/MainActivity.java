@@ -186,6 +186,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        if (web != null) web.destroy();
+        super.onDestroy();
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         web.saveState(out);
@@ -290,6 +296,7 @@ public class MainActivity extends Activity {
                     startActivityForResult(i, SAVE_FILE);
                 } catch (ActivityNotFoundException e) {
                     pendingSave = null;
+                    web.evaluateJavascript("window.tallySaved&&window.tallySaved(false)", null);
                 }
             });
         }

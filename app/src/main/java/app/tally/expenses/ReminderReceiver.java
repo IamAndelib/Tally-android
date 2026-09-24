@@ -174,7 +174,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         return new Notification.Action.Builder(Icon.createWithResource(ctx, R.drawable.ic_launcher), label, pi).build();
     }
 
-    private static void extend(Context ctx, String id, int days) {
+    /** Synchronized with {@link #takeActions}: both rewrite the queued "actions" list. */
+    private static synchronized void extend(Context ctx, String id, int days) {
         if (id == null) return;
         SharedPreferences p = prefs(ctx);
         JSONObject cfg = config(ctx);
