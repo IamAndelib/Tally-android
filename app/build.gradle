@@ -2,6 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
+// CI numbers every build (GITHUB_RUN_NUMBER), so each APK installs as an update over the one before.
+def runNumber = System.getenv('GITHUB_RUN_NUMBER')
+
+// Release signing key: never in the repository. CI decodes it from the RELEASE_KEYSTORE_BASE64 secret and
+// passes its path and password in these variables; without them a release build comes out unsigned.
+def releaseKeystore = System.getenv('TALLY_KEYSTORE')
+
 android {
     namespace 'app.tally.expenses'
     compileSdk 34
@@ -10,9 +17,8 @@ android {
         applicationId 'app.tally.expenses'
         minSdk 24
         targetSdk 34
-        // CI numbers every build so each APK installs as an update over the last one
-        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
-        versionName '1.0.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+        versionCode Integer.parseInt(runNumber ?: '1')
+        versionName project.property('tallyVersion')
     }
 
     // BuildConfig.VERSION_NAME is read by the JS bridge (Bridge.getVersion()) for Settings' About footer
@@ -20,23 +26,39 @@ android {
         buildConfig true
     }
 
-    // One committed debug key (not a secret) so every build is signed the same way;
-    // otherwise each CI runner signs with a new random key and Android refuses to update.
     signingConfigs {
+        // One committed debug key (not a secret) so every debug build is signed the same way; otherwise each CI
+        // runner signs with a new random key and Android refuses to update. Never replace it.
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (releaseKeystore) {
+            release {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv('TALLY_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('TALLY_KEY_ALIAS') ?: 'tally'
+                keyPassword System.getenv('TALLY_KEY_PASSWORD') ?: System.getenv('TALLY_KEYSTORE_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
+        // Test builds: their own app id ("Tally Dev"), so they install next to the release instead of clashing
+        // with its signature, and each CI build updates the previous test build in place.
         debug {
             signingConfig signingConfigs.debug
+            applicationIdSuffix '.dev'
+            versionNameSuffix runNumber ? "-dev.${runNumber}" : '-dev'
         }
         release {
+            // Not minified: the app is a WebView over local files, and R8 gains little while risking the JS bridge.
             minifyEnabled false
+            if (releaseKeystore) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

@@ -1,0 +1,5 @@
+<!-- Debug (test) builds install as a separate app next to the signed release, so they are labelled apart. -->
+<resources>
+    <string name="app_name">Tally Dev</string>
+    <string name="w_name">Tally Dev today</string>
+</resources>
