@@ -57,8 +57,10 @@ button:disabled{opacity:.38;cursor:default}
 [hidden]{display:none!important}
 /* state layer */
 button::before{content:"";position:absolute;inset:0;background:currentColor;opacity:0;transition:opacity .15s;pointer-events:none;border-radius:inherit}
+/* pressed: the state layer shows at once (no delay), then fades out on release. Set from touch events (.pressed),
+   because :active is unreliable for touch in a WebView */
 @media (hover:hover){button:not(:disabled):hover::before{opacity:.08}}
-button:not(:disabled):active::before{opacity:.12}
+button.pressed:not(:disabled)::before{opacity:.1;transition:none}
 :focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .ic{width:24px;height:24px;fill:currentColor;display:block;flex:none}
 main{max-width:520px;margin:0 auto;padding:0 16px 24px}
@@ -141,6 +143,10 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .chip{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--outline-variant);display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:500;color:var(--on-surface-variant);white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
 .chip[aria-pressed="true"]::after{content:"✓";font-size:.8rem}
+.chip.addnew{border-style:dashed;border-color:var(--outline);color:var(--on-surface-variant);opacity:.8}
+.chip.addnew .ic{width:18px;height:18px}
+.dot.addnew{display:grid;place-items:center;border:2px dashed var(--outline);color:var(--on-surface-variant);background:transparent}
+.dot.addnew .ic{width:18px;height:18px}
 .lbl{font-size:.8rem;font-weight:600;color:var(--on-surface-variant);margin:16px 0 8px}
 .field{display:block;margin:12px 0 0}
 .field>span{display:block;font-size:.8rem;font-weight:600;color:var(--on-surface-variant);margin-bottom:6px}
@@ -284,44 +290,17 @@ body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 .tile,.tx{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .tile.placeholder{opacity:.25}
 .tx.placeholder{opacity:.3}
-.ghost.gh-row{transform:scale(1.03);box-shadow:0 8px 20px rgba(0,0,0,.28)}
+.ghost.gh-row{transform:none;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 /* drag between sections (Assets / Liabilities) */
-.dropbox{display:none;align-items:center;justify-content:center;height:56px;margin-top:8px;border:2px dashed var(--outline);border-radius:20px;color:var(--on-surface-variant);font-size:.9rem;font-weight:600}
-.dropbox.dropok{display:flex;border-color:var(--primary);color:var(--primary)}
-.list.dropok{outline:2px dashed var(--primary);outline-offset:3px}
-.dropover{background:var(--primary-container)!important;color:var(--on-primary-container)!important;outline-style:solid!important}
-/* motion: small, quick, transform/opacity only */
-button{transition:transform .12s ease-out}
-.rt{transition:left .2s,top .2s,transform .12s ease-out}
-button:not(:disabled):active{transform:scale(.96)}
-.tx:not(:disabled):active,.balbar:not(:disabled):active{transform:scale(.985)}
-.fab:not(:disabled):active,.fbtn:not(:disabled):active{transform:scale(.93)}
-.dwrap:not(:disabled):active{transform:scale(.98)}
-.emb{position:relative}
-.rip{position:absolute;border-radius:50%;background:currentColor;opacity:.2;transform:scale(0);pointer-events:none;animation:rip .45s ease-out forwards}
-@keyframes rip{to{transform:scale(1);opacity:0}}
-#app.enter{animation:enter .2s cubic-bezier(.2,0,0,1)}
-@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.nav .ind.navpop{animation:navin .28s cubic-bezier(.2,0,0,1)}
-@keyframes navin{from{transform:scaleX(.4);opacity:.3}to{transform:none;opacity:1}}
-.flash{animation:flash 1s ease-out}
-@keyframes flash{from{background:var(--primary-container)}to{background:transparent}}
-.acc.flash{animation:flash2 1s ease-out}
-@keyframes flash2{from{box-shadow:0 0 0 3px var(--primary)}to{box-shadow:0 0 0 0 transparent}}
-.popin .emb{animation:popin .32s cubic-bezier(.2,0,0,1)}
-@keyframes popin{50%{transform:scale(1.14)}}
-.bump{animation:bump .3s cubic-bezier(.2,0,0,1)}
-@keyframes bump{50%{transform:scale(1.08)}}
-.reveal{animation:reveal .22s cubic-bezier(.2,0,0,1)}
-@keyframes reveal{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-.snack{animation:snackin .22s cubic-bezier(.2,0,0,1)}
-.snack.out{animation:snackout .18s ease-in forwards}
-@keyframes snackin{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%)}}
-@keyframes snackout{to{opacity:0;transform:translateX(-50%) translateY(12px)}}
-.sheet.closing{pointer-events:none;animation:fadeout .18s ease-in forwards}
-.sheet.closing .p{animation:down .18s ease-in forwards}
-@keyframes fadeout{to{opacity:0}}
-@keyframes down{to{transform:translateY(48px)}}
+.dropbox{display:none;align-items:center;justify-content:center;gap:8px;height:64px;margin-top:8px;border:2px dashed var(--outline);border-radius:20px;color:var(--on-surface-variant);font-size:.9rem;font-weight:600;opacity:.8}
+.dropbox .ic{width:20px;height:20px}
+.dropbox.dropok{display:flex}
+.dropbox.dropover{border-style:solid;border-color:var(--primary);background:var(--primary-container);color:var(--on-primary-container);opacity:1}
+/* motion: kept deliberately small and cheap: state layer on press, a soft flash on the row that changed, snackbar in */
+.flash{animation:flash .7s ease-out}
+@keyframes flash{from{background:var(--secondary-container)}to{background:transparent}}
+.snack{animation:snackin .2s cubic-bezier(.2,0,0,1)}
+@keyframes snackin{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 .ghost{position:fixed;z-index:30;pointer-events:none;transition:none;transform:scale(1.1);background:var(--surface-high);border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.25);margin:0}
 .tile-add .ci{border:2px dashed var(--outline);color:var(--on-surface-variant)}
@@ -444,14 +423,17 @@ const r2=n=>Math.round(n*100)/100;
 
 /* ---------- state + storage ---------- */
 const LS="tally:v1";
-function blank(){return {v:4,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
+function blank(){return {v:5,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],types:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance. */
 function migrate(o){
   const s=blank();
   if(!o||typeof o!=="object")return s;
   Object.assign(s.settings,o.settings||{});
+  s.settings.customCols=(Array.isArray(s.settings.customCols)?s.settings.customCols:[]).filter(c=>/^#[0-9a-f]{6}$/.test(c)).slice(0,6);
+  s.types=(Array.isArray(o.types)?o.types:[]).filter(t=>t&&t.id&&t.name&&!TYPES[t.id]).map(t=>({id:String(t.id),name:String(t.name).slice(0,20),
+    i:t.i&&ICONS[t.i]?t.i:"account_balance_wallet",c:/^#[0-9a-f]{6}$/i.test(t.c)?t.c:"#5f7389"}));
   s.accounts=(Array.isArray(o.accounts)?o.accounts:[]).filter(a=>a&&a.id).map(a=>({
-    id:String(a.id),name:String(a.name||"Account"),type:TYPES[a.type]?a.type:"bank",
+    id:String(a.id),name:String(a.name||"Account"),type:TYPES[a.type]||s.types.some(t=>t.id===a.type)?a.type:"bank",
     currency:String(a.currency||s.settings.cur),opening:+a.opening||0,archived:!!a.archived,i:a.i&&ICONS[a.i]?a.i:"",e:a.i?"":String(a.e||""),c:/^#[0-9a-f]{6}$/i.test(a.c)?a.c:""}));
   if(Array.isArray(o.cats)){
     const valid=o.cats.filter(c=>c&&c.id&&c.name&&c.id!=="transfer");
@@ -549,14 +531,11 @@ let snackT=null,undoFn=null;
 function snack(msg,undo){
   undoFn=undo||null;
   $("#snack").innerHTML='<div class="snack" role="status"><span>'+esc(msg)+"</span>"+(undo?'<button data-act="undo">Undo</button>':"")+"</div>";
-  clearTimeout(snackT);snackT=setTimeout(()=>{undoFn=null;const el=$("#snack .snack");if(!el)return;
-    if(RM()){$("#snack").innerHTML="";return;}
-    el.classList.add("out");setTimeout(()=>{if($("#snack").firstChild===el)$("#snack").innerHTML="";},190);},undo?5000:2600);
+  clearTimeout(snackT);snackT=setTimeout(()=>{$("#snack").innerHTML="";undoFn=null;},undo?5000:2600);
 }
 /* snapshot entries and loans before a change so Undo can restore them exactly */
-/* FX: one-shot feedback for the next render (row id to flash, category tile to pop, donut centre bump) */
+/* FX: one-shot feedback for the next render (FX.row = id of the row to flash softly) */
 let FX={};
-const RM=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
 const buzz=ms=>{try{if(navigator.vibrate)navigator.vibrate(ms);}catch(e){}};
 function withUndo(msg,change,fx){
   const before=JSON.stringify({txns:S.txns,loans:S.loans,accounts:S.accounts});change();FX=fx||{};commit();FX={};
@@ -640,9 +619,8 @@ function entryDate(){const t=today(),[s,e]=range();if(t>=s&&t<=e)return V.period
 function periodTxns(){const [s,e]=range();return S.txns.filter(t=>t.date>=s&&t.date<=e);}
 
 /* ---------- render ---------- */
-let lastScreen=null;
 function render(){
-  const app=$("#app"),moved=V.screen!==lastScreen;
+  const app=$("#app");
   if(V.screen!=="history")V.sel=null;
   if(V.screen==="accounts")V.screen="assets";
   if(V.screen==="history")app.innerHTML=historyView();
@@ -650,12 +628,10 @@ function render(){
   else if(V.screen==="liabs")app.innerHTML=liabsView();
   else if(V.screen==="settings")app.innerHTML=settingsView();
   else app.innerHTML=homeView();
-  if(moved){lastScreen=V.screen;if(!RM()){app.classList.remove("enter");void app.offsetWidth;app.classList.add("enter");}}
-  V.reveal=null;
   const tabs=["home","assets","liabs"].includes(V.screen)&&activeAccounts().length>0;
   document.body.classList.toggle("hasnav",tabs);
   $("#nav").innerHTML=tabs?'<div class="in">'+[["home","Home","home"],["assets","Assets","wallet"],["liabs","Liabilities","card"]].map(([k,l,i])=>
-    '<button data-act="tab" data-v="'+k+'"'+(V.screen===k?' aria-current="page"':"")+'><span class="ind'+(moved&&V.screen===k?" navpop":"")+'">'+ic(i)+"</span>"+l+"</button>").join("")+"</div>":"";
+    '<button data-act="tab" data-v="'+k+'"'+(V.screen===k?' aria-current="page"':"")+'><span class="ind">'+ic(i)+"</span>"+l+"</button>").join("")+"</div>":"";
 }
 function subBar(title){return '<header class="appbar"><button class="icon" data-act="home" aria-label="Back">'+ic("back")+"</button><h1>"+esc(title)+"</h1></header>";}
 /* category icon circle: tinted, but opaque so leader lines pass underneath cleanly */
@@ -674,7 +650,16 @@ function emblem(o,cls,title){
   return '<span class="'+(cls||"emb")+' emb" style="background:'+c+";color:"+fg+'"'+(title?' title="'+esc(title)+'"':"")+">"+
     (p?'<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="'+p[0]+'"/></svg>':'<span class="emo">'+esc(o&&o.e||"•")+"</span>")+"</span>";
 }
-const accEmb=a=>({i:a.i||(a.e?"":TYPE_ICON[a.type]),e:a.e,c:a.c||TYPE_COL[a.type]});
+/* account types: the built-in five plus the user's own (S.types) */
+const ctype=k=>(S.types||[]).find(t=>t.id===k);
+const typeName=k=>TYPES[k]||(ctype(k)||{}).name||"Account";
+const typeIcon=k=>TYPE_ICON[k]||(ctype(k)||{}).i||"account_balance_wallet";
+const typeCol=k=>TYPE_COL[k]||(ctype(k)||{}).c||"#5f7389";
+const accEmb=a=>({i:a.i||(a.e?"":typeIcon(a.type)),e:a.e,c:a.c||typeCol(a.type)});
+const typeChip=(k,sel)=>'<button class="chip" data-act="f-type" data-v="'+esc(k)+'"'+(TYPES[k]?"":' data-ctype="1"')+' aria-pressed="'+(sel===k)+'">'+emblem({i:typeIcon(k),c:typeCol(k)},"sm")+esc(typeName(k))+"</button>";
+/* colours: hex codes the user typed are remembered and offered in every picker */
+function normHex(v){let h=String(v||"").trim().replace(/^#/,"").toLowerCase();if(/^[0-9a-f]{3}$/.test(h))h=h.split("").map(c=>c+c).join("");return /^[0-9a-f]{6}$/.test(h)?"#"+h:null;}
+const colDot=(x,sel)=>'<button class="dot" data-act="f-col" data-v="'+x+'" style="background:'+x+'" aria-pressed="'+(x===sel)+'" aria-label="Colour '+x+'"></button>';
 const LOAN_EMB={borrow:{i:"handshake",c:"#6a3fb5"},lend:{i:"volunteer_activism",c:"#0288d1"}};
 /* search: every word must match the start of a word in the name or tags; whole-word matches rank first */
 function iconSearch(q){
@@ -702,8 +687,10 @@ function icList(q){
 function emblemEditor(o){
   return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 4px"><button class="cprevbtn" data-act="f-icon" aria-label="Change emblem"><span id="f-cprev">'+emblem(o,"cprev")+
     '</span></button><button class="btn text" data-act="f-icon" style="width:auto;height:36px">'+ic("edit")+"Change emblem</button></div>"+
-    '<div class="lbl">Colour</div><div class="dots">'+PALETTE.map(x=>'<button class="dot" data-act="f-col" data-v="'+x+'" style="background:'+x+'" aria-pressed="'+(x.toLowerCase()===String(o.c).toLowerCase())+'" aria-label="Colour '+x+'"></button>').join("")+"</div>";
+    '<div class="lbl">Colour</div><div class="dots" id="f-dots">'+dotList(String(o.c||"").toLowerCase()).map(x=>colDot(x,String(o.c||"").toLowerCase())).join("")+
+    '<button class="dot addnew" data-act="col-new" aria-label="Add your own colour">'+ic("add")+"</button></div>";
 }
+const dotList=cur=>{const l=PALETTE.concat((S.settings.customCols||[]).filter(c=>!PALETTE.includes(c)));if(/^#[0-9a-f]{6}$/.test(cur)&&!l.includes(cur))l.push(cur);return l;};
 const prevUpd=()=>{const el=$("#f-cprev");if(el&&F)el.innerHTML=emblem({i:F.i,e:F.e,c:F.col},"cprev");};
 
 /* month grid shared by the period dialog and the date picker */
@@ -727,6 +714,56 @@ function calGrid(m,o){
     h+="</div>";
   }
   return h+"</div>";
+}
+
+/* ---------- small dialogs: new account type, custom colour ---------- */
+const miniDialog=(label,body,okAct,okText)=>{$("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="'+esc(label)+'"><div class="dp-h"><div class="t">'+esc(label)+"</div></div>"+body+
+  '<div class="dlg-act"><button class="btn text" data-act="pd-close">Cancel</button><button class="btn text" data-act="'+okAct+'">'+esc(okText)+"</button></div></div></div>";};
+function typeDialog(){
+  miniDialog("New account type",'<label class="field"><span>Name</span><input id="nt-name" maxlength="20" placeholder="e.g. Crypto, Investment" autocomplete="off"></label><p class="hint" id="nt-err"></p>',"nt-add","Add");
+  setTimeout(()=>{const el=$("#nt-name");if(el)el.focus();},60);
+}
+function pickType(v){
+  if(!F||F.kind!=="accf")return;
+  F.type=v;setPressed("f-type",v);if(!F.iSet){F.i=typeIcon(v);F.e="";}if(!F.cSet){F.col=typeCol(v);setPressed("f-col",F.col);}prevUpd();
+}
+function addType(){
+  const el=$("#nt-name");if(!el)return;const name=el.value.trim().replace(/\s+/g," ");
+  if(!name){$("#nt-err").textContent="Give it a name";return;}
+  const same=Object.keys(TYPES).concat(S.types.map(t=>t.id)).find(k=>typeName(k).toLowerCase()===name.toLowerCase());
+  closePop();
+  if(same){pickType(same);return;}
+  const used=new Set(Object.values(TYPE_COL).concat(S.types.map(t=>t.c)));
+  const t={id:"t"+newId(),name,i:"account_balance_wallet",c:PALETTE.find(c=>!used.has(c))||"#5f7389"};
+  S.types.push(t);save();
+  const add=$("#sheet .chip.addnew");if(add)add.insertAdjacentHTML("beforebegin",typeChip(t.id,""));
+  pickType(t.id);
+}
+function removeType(id){
+  const t=ctype(id);if(!t)return;const n=S.accounts.filter(a=>a.type===id).length;
+  if(n){snack("“"+t.name+"” is used by "+n+(n===1?" account":" accounts"));return;}
+  if(!confirm("Remove the type “"+t.name+"”?"))return;
+  S.types=S.types.filter(x=>x.id!==id);save();
+  const chip=$('#sheet .chip[data-act="f-type"][data-v="'+id+'"]');if(chip)chip.remove();
+  if(F&&F.kind==="accf"&&F.type===id)pickType("bank");
+  snack("Type removed");
+}
+function hexDialog(){
+  if(!F)return;
+  miniDialog("Your own colour",'<div style="display:flex;align-items:center;gap:14px;margin-top:10px"><span id="hx-prev">'+emblem({i:F.i,e:F.e,c:F.col},"cprev")+"</span>"+
+    '<label class="field" style="flex:1;margin:0"><span>Hex code</span><input id="hx-in" maxlength="7" placeholder="#1E88E5" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(F.col||"")+'"></label></div>'+
+    '<p class="hint" id="hx-err"></p>',"hx-ok","Use colour");
+  setTimeout(()=>{const el=$("#hx-in");if(el){el.focus();el.select();}},60);
+}
+function hexPreview(){const c=normHex($("#hx-in").value);if(c)$("#hx-prev").innerHTML=emblem({i:F.i,e:F.e,c},"cprev");$("#hx-err").textContent="";}
+function useHex(){
+  const c=normHex($("#hx-in")&&$("#hx-in").value);
+  if(!c){$("#hx-err").textContent="Use a hex code like #1E88E5";return;}
+  closePop();if(!F)return;
+  if(!PALETTE.includes(c)){S.settings.customCols=[c].concat((S.settings.customCols||[]).filter(x=>x!==c)).slice(0,6);save();}
+  const dots=$("#f-dots");
+  if(dots&&!dots.querySelector('[data-v="'+c+'"]'))dots.querySelector(".addnew").insertAdjacentHTML("beforebegin",colDot(c,""));
+  F.col=c;F.cSet=true;setPressed("f-col",c);prevUpd();
 }
 
 /* ---------- date + time fields: Material dialogs instead of the system pickers ---------- */
@@ -783,7 +820,7 @@ function homeView(){
     topIcons()+"</header>";
 
   if(S.settings.lastCheck!==today())h+=checkCard(b,cur);
-  else h+='<div class="strip">'+act.map(a=>'<button class="acc'+(FX.row===a.id?" flash":"")+'" data-act="acc-open" data-v="'+a.id+'"><span class="n">'+emblem(accEmb(a),"sm")+esc(a.name)+'</span><span class="b">'+esc(money(b[a.id],a.currency))+"</span></button>").join("")+
+  else h+='<div class="strip">'+act.map(a=>'<button class="acc" data-act="acc-open" data-v="'+a.id+'"><span class="n">'+emblem(accEmb(a),"sm")+esc(a.name)+'</span><span class="b">'+esc(money(b[a.id],a.currency))+"</span></button>").join("")+
     '<button class="acc add" data-act="acc-form" aria-label="Add account">'+ic("add")+"</button></div>";
 
   const inCur=t=>{const a=acc(t.account);return a&&a.currency===cur;};
@@ -852,7 +889,7 @@ function ringHTML(cats,o){
   const pos=cats.map((c,i)=>{const s=L.slots[i];return {c,x:s.x,top:s.y-u/2,ix:s.x,iy:s.y-u/2+4+d/2,
     ang:((Math.atan2(s.y-cy,s.x-cx)/TAU+.25)%1+1)%1};});
   const tile=p=>{const v=home?(o.by[p.c.id]||0):0;
-    return '<button class="cat rt'+(home?"":" tile")+(home&&FX.cat===p.c.id?" popin":"")+'" style="left:'+(p.x-u/2).toFixed(1)+"px;top:"+p.top.toFixed(1)+"px;width:"+u.toFixed(1)+"px;height:"+u.toFixed(1)+"px;--d:"+d+"px;--f:"+f.toFixed(1)+'px" data-act="'+(home?"add-cat":"cat-edit")+'" data-v="'+esc(p.c.id)+'"'+(home?' aria-label="Add '+esc(p.c.name)+'"':"")+">"+
+    return '<button class="cat rt'+(home?"":" tile")+'" style="left:'+(p.x-u/2).toFixed(1)+"px;top:"+p.top.toFixed(1)+"px;width:"+u.toFixed(1)+"px;height:"+u.toFixed(1)+"px;--d:"+d+"px;--f:"+f.toFixed(1)+'px" data-act="'+(home?"add-cat":"cat-edit")+'" data-v="'+esc(p.c.id)+'"'+(home?' aria-label="Add '+esc(p.c.name)+'"':"")+">"+
       emblem(p.c,"ci")+'<span class="cn">'+esc(p.c.name)+"</span>"+
       (home?'<span class="cp" style="color:'+p.c.c+'">'+(v?Math.max(1,Math.round(v/o.spent*100))+"%":"")+"</span>":"")+"</button>";};
   const R=40,C=2*Math.PI*R,Rout=D/2*.92; /* stroke outer edge: (40+6)/50 of the radius */
@@ -897,7 +934,7 @@ function ringHTML(cats,o){
   if(home){const cs=currencies();
     center='<button class="dwrap" data-act="entries" aria-label="See entries" style="'+box+'">'+donut+'<div class="dcenter">'+
       (o.got?'<div class="g">+'+esc(money(o.got,o.cur,true))+"</div>":"")+
-      '<div class="s'+(o.spent?"":" zero")+(FX.center?" bump":"")+'">'+esc(money(o.spent,o.cur,true))+"</div>"+
+      '<div class="s'+(o.spent?"":" zero")+'">'+esc(money(o.spent,o.cur,true))+"</div>"+
       (!o.spent&&!o.got?'<div class="hint">Tap a category to add</div>':"")+
       (cs.length>1?'<span class="curbtn" data-act="cur-next" role="button">'+esc(o.cur)+" ⇄</span>":"")+"</div></button>";}
   else{RE={L,order:cats.map(c=>c.id)};
@@ -1026,22 +1063,22 @@ function netWorth(){
     S.loans.forEach(l=>{const i=loanInfo(l);if(i.open)add(i.cur,l.kind==="lend"?i.left:-i.left);});
   });
 }
-function accRow(a,b,drag){return '<button class="tx'+(FX.row===a.id?" flash":"")+'" data-act="acc-open" data-v="'+a.id+'"'+(drag?' data-drag="acc:'+a.id+'"':"")+">"+emblem(accEmb(a),"em")+'<span class="mid"><div class="d">'+esc(a.name)+'</div><div class="s">'+esc(TYPES[a.type]+" · "+a.currency)+'</div></span><span class="a">'+esc(money(b[a.id],a.currency))+
+function accRow(a,b,drag){return '<button class="tx'+(FX.row===a.id?" flash":"")+'" data-act="acc-open" data-v="'+a.id+'"'+(drag?' data-drag="acc:'+a.id+'"':"")+">"+emblem(accEmb(a),"em")+'<span class="mid"><div class="d">'+esc(a.name)+'</div><div class="s">'+esc(typeName(a.type)+" · "+a.currency)+'</div></span><span class="a">'+esc(money(b[a.id],a.currency))+
   (a.archived?'<small><span class="st">Archived</span></small>':"")+"</span></button>";}
 /* drag targets: a list with data-zone, or (when that list is empty or collapsed) a drop box that only shows while dragging */
-const dropBox=(z,label)=>'<div class="dropbox" data-zone="'+z+'">'+esc(label)+"</div>";
-const zoneList=(z,rows)=>'<div class="list'+(V.reveal===z?" reveal":"")+'" data-zone="'+z+'">'+rows+"</div>";
-const dragTip=()=>S.settings.dragTip?"":'<p class="hint" style="margin:8px 4px 0">Tip: hold a row and drag it up to bring it back.</p>';
+const dropBox=(z,label,icon)=>'<div class="dropbox" data-zone="'+z+'">'+(icon?ic(icon):"")+esc(label)+"</div>";
+const zoneList=(z,rows)=>'<div class="list" data-src="'+z+'">'+rows+"</div>";
+const dragTip=()=>S.settings.dragTip?"":'<p class="hint" style="margin:8px 4px 0">Tip: hold a row and drag it up to the empty slot to bring it back.</p>';
 function assetsView(){
   const b=balances();let h=tabBar("Assets");
   h+='<div class="sumcard"><div class="t">Net worth</div>'+curLines(netWorth())+'<div class="t small">What you have and are owed, minus what you owe</div></div>';
   const accs=activeAccounts().filter(a=>a.type!=="card"),arch=S.accounts.filter(a=>a.archived);
-  h+='<div class="sec">Accounts</div>'+(accs.length?zoneList("acc",accs.map(a=>accRow(a,b,true)).join("")):'<div class="empty">No accounts yet</div>'+dropBox("acc","Drop to show again"))+
+  h+='<div class="sec">Accounts</div>'+(accs.length?zoneList("acc",accs.map(a=>accRow(a,b,true)).join("")):'<div class="empty">No accounts yet</div>')+dropBox("acc","Drop here to show it again","reset")+
     '<button class="btn text" data-act="acc-form" style="margin-top:4px">'+ic("add")+"Add account</button>";
   if(arch.length)h+='<button class="btn text" data-act="toggle-arch">'+(V.showArchived?"Hide":"Show")+" archived ("+arch.length+")</button>";
-  h+=arch.length&&V.showArchived?zoneList("arch",arch.map(a=>accRow(a,b,true)).join(""))+dragTip():dropBox("arch","Drop to archive");
+  h+=dropBox("arch","Drop here to archive")+(arch.length&&V.showArchived?zoneList("arch",arch.map(a=>accRow(a,b,true)).join(""))+dragTip():"");
   const lends=S.loans.filter(l=>l.kind==="lend"),open=lends.filter(l=>loanInfo(l).open),done=lends.filter(l=>!loanInfo(l).open);
-  h+='<div class="sec">Owed to you</div>'+(open.length?zoneList("lend-open",open.map(l=>loanRow(l)).join("")):'<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>'+dropBox("lend-open","Drop to make it active again"))+
+  h+='<div class="sec">Owed to you</div>'+(open.length?'<div class="list">'+open.map(l=>loanRow(l)).join("")+"</div>":'<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>')+dropBox("lend-open","Drop here to make it active again","reset")+
     '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">'+ic("add")+"Lend money</button>";
   if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
     if(V.showCleared)h+=zoneList("lend-done",done.map(l=>loanRow(l,true)).join(""))+dragTip();}
@@ -1056,7 +1093,7 @@ function liabsView(){
   const cards=activeAccounts().filter(a=>a.type==="card");
   const owed=perCur(add=>{open.forEach(l=>{const i=loanInfo(l);add(i.cur,i.left);});cards.forEach(a=>{if(b[a.id]<0)add(a.currency,-b[a.id]);});});
   h+='<div class="sumcard owe"><div class="t">You owe</div>'+curLines(owed)+"</div>";
-  h+='<div class="sec">Loans</div>'+(open.length?zoneList("borrow-open",open.map(l=>loanRow(l)).join("")):'<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>'+dropBox("borrow-open","Drop to make it active again"))+
+  h+='<div class="sec">Loans</div>'+(open.length?'<div class="list">'+open.map(l=>loanRow(l)).join("")+"</div>":'<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>')+dropBox("borrow-open","Drop here to make it active again","reset")+
     '<button class="btn text" data-act="loan-new" data-v="borrow" style="margin-top:4px">'+ic("add")+"Record a loan</button>";
   if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
     if(V.showCleared)h+=zoneList("borrow-done",done.map(l=>loanRow(l,true)).join(""))+dragTip();}
@@ -1187,15 +1224,7 @@ const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;};
 function openSheet(title,body){
   $("#sheet").innerHTML='<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
 }
-function closeSheet(){
-  const sh=$("#sheet .sheet");
-  if(sh&&!RM()){ /* a copy slides away while the real sheet is gone at once (state stays simple) */
-    const c=sh.cloneNode(true);c.classList.add("closing");
-    [c,...c.querySelectorAll("[data-act],[id]")].forEach(e=>{e.removeAttribute("data-act");e.removeAttribute("id");});
-    document.body.appendChild(c);setTimeout(()=>c.remove(),200);
-  }
-  closeSheet2();$("#sheet").innerHTML="";F=null;
-}
+function closeSheet(){closeSheet2();$("#sheet").innerHTML="";F=null;}
 /* second layer, for pickers opened from inside a sheet */
 function openSheet2(title,body){
   $("#sheet2").innerHTML='<div class="sheet s2" data-act="sheet2-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close2" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
@@ -1363,7 +1392,7 @@ function accOpen(id){
   const a=acc(id);if(!a)return;
   const bal=balances()[id],start=balances(today())[id];
   F={kind:"acc",id};
-  let h='<div class="hero">'+emblem(accEmb(a),"cprev")+'<div class="t">'+esc(TYPES[a.type])+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
+  let h='<div class="hero">'+emblem(accEmb(a),"cprev")+'<div class="t">'+esc(typeName(a.type))+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
     (start!==bal?'<div class="t">Started today with '+esc(money(start,a.currency))+"</div>":"")+"</div>";
   if(a.archived)h+='<div class="card"><h3>Archived</h3><p class="muted small" style="margin:0">Hidden from Home and the account pickers. Its history is kept.</p><div class="gap"></div><button class="btn" data-act="acc-unarch">'+ic("reset")+"Show again</button></div>";
   h+='<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>'+
@@ -1384,10 +1413,11 @@ function fixPreview(){
 function accForm(id){
   const a=id?acc(id):{name:"",type:"bank",currency:S.settings.cur,opening:""};
   const used=id&&S.txns.some(t=>t.account===id||t.to===id);
-  F={kind:"accf",id,type:a.type,cur:a.currency,i:a.i||"",e:a.e||"",col:a.c||TYPE_COL[a.type],iSet:!!(a.i||a.e),cSet:!!a.c};
-  if(!F.i&&!F.e)F.i=TYPE_ICON[a.type];
+  F={kind:"accf",id,type:a.type,cur:a.currency,i:a.i||"",e:a.e||"",col:a.c||typeCol(a.type),iSet:!!(a.i||a.e),cSet:!!a.c};
+  if(!F.i&&!F.e)F.i=typeIcon(a.type);
   let h=emblemEditor({i:F.i,e:F.e,c:F.col})+'<label class="field"><span>Name</span><input id="f-name" value="'+esc(a.name)+'" placeholder="e.g. RBC Chequing, bKash, Wallet" maxlength="30"></label>';
-  h+='<div class="lbl">Type</div><div class="chips">'+Object.entries(TYPES).map(([k,v])=>'<button class="chip" data-act="f-type" data-v="'+k+'" aria-pressed="'+(a.type===k)+'">'+emblem({i:TYPE_ICON[k],c:TYPE_COL[k]},"sm")+v+"</button>").join("")+"</div>";
+  h+='<div class="lbl">Type</div><div class="chips" id="f-types">'+Object.keys(TYPES).concat(S.types.map(t=>t.id)).map(k=>typeChip(k,a.type)).join("")+
+    '<button class="chip addnew" data-act="type-new">'+ic("add")+"Add new</button></div>";
   h+='<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"'+(used?" disabled":"")+"><span>"+esc(a.currency)+"</span>"+ic("down")+"</button></div>"+
     '<label class="field"><span>'+(id?"Starting balance":"Balance right now")+'</span><input id="f-open" inputmode="decimal" autocomplete="off" value="'+esc(a.opening===""?"":a.opening)+'" placeholder="0.00"></label></div>';
   h+='<p class="hint">'+(id?"What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead.":"Credit card? Enter what you owe as a negative number.")+(used?" Currency is locked because this account has entries.":"")+"</p>";
@@ -1479,7 +1509,7 @@ document.addEventListener("click",ev=>{
     case "home":V.screen="home";render();scrollTo(0,0);break;
     case "go":closeSheet();V.screen=v==="accounts"?"assets":v;render();scrollTo(0,0);break;
     case "tab":V.screen=v;render();scrollTo(0,0);break;
-    case "toggle-cleared":V.showCleared=!V.showCleared;V.reveal=V.showCleared?(V.screen==="liabs"?"borrow-done":"lend-done"):null;render();break;
+    case "toggle-cleared":V.showCleared=!V.showCleared;render();break;
     case "loan-new":loanForm(v);break;
     case "loan-save":saveLoan();break;
     case "loan-open":loanOpen(v);break;
@@ -1552,7 +1582,11 @@ document.addEventListener("click",ev=>{
       break;}
     case "hist-acc":closeSheet();V.hAcc=v;Object.assign(HP,{period:"month",anchor:today()});V.screen="history";render();scrollTo(0,0);break;
     case "acc-form":accForm(v);break;
-    case "f-type":F.type=v;setPressed("f-type",v);if(!F.iSet){F.i=TYPE_ICON[v];F.e="";}if(!F.cSet){F.col=TYPE_COL[v];setPressed("f-col",F.col);}prevUpd();break;
+    case "f-type":pickType(v);break;
+    case "type-new":typeDialog();break;
+    case "nt-add":addType();break;
+    case "col-new":hexDialog();break;
+    case "hx-ok":useHex();break;
     case "f-icon":iconPicker(F.i,F.col,r=>{if(r.i){F.i=r.i;F.e="";}else{F.i="";F.e=r.e;}F.iSet=true;prevUpd();});break;
     case "ic-pick":{const f=ICPICK&&ICPICK.onPick;closeSheet2();if(f)f({i:v});break;}
     case "ic-emoji":$("#ic-emo-box").hidden=false;el.hidden=true;$("#ic-emo").focus();break;
@@ -1579,7 +1613,7 @@ document.addEventListener("click",ev=>{
       if(S.txns.some(t=>t.account===F.id||t.to===F.id))return;
       if(!confirm("Delete this account?"))return;
       S.accounts=S.accounts.filter(a=>a.id!==F.id);closeSheet();commit();break;}
-    case "toggle-arch":V.showArchived=!V.showArchived;V.reveal=V.showArchived?"arch":null;render();break;
+    case "toggle-arch":V.showArchived=!V.showArchived;render();break;
     case "hmon":if(+v<0||canNext(HP)){shiftPeriod(+v,HP);if(V.sel)V.sel=new Set();render();}break;
     case "hacc":V.hAcc=v;if(V.sel)V.sel=new Set();render();break;
     case "sel-start":V.sel=new Set();render();break;
@@ -1625,6 +1659,7 @@ document.addEventListener("input",ev=>{
   else if(id==="f-actual")fixPreview();
   else if(id==="cur-q")curList(ev.target.value);
   else if(id==="ic-q")icList(ev.target.value);
+  else if(id==="hx-in")hexPreview();
 });
 document.addEventListener("change",ev=>{
   const el=ev.target;
@@ -1635,6 +1670,7 @@ document.addEventListener("change",ev=>{
 });
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){if(!window.tallyBack())return;}
+  else if(e.key==="Enter"&&(e.target.id==="nt-name"||e.target.id==="hx-in")){e.preventDefault();(e.target.id==="nt-name"?addType:useHex)();}
   else if(e.key==="Enter"&&e.target.id==="cur-q"){const b=$('#curlist [data-act="cur-pick"]');if(b){e.preventDefault();b.click();}}
   else if(e.key==="Enter"&&F&&e.target.tagName==="INPUT"){
     const map={tx:"tx-save",tr:"tr-save",acc:"fix-save",accf:"acc-save",catf:"cat-save",loanf:"loan-save",loan:"loan-pay",assetf:"asset-save"};
@@ -1648,9 +1684,12 @@ function pressStart(x,y,target){
   swallowClick=false;
   sw=target.closest("#ring")?{x,y}:null;
   const rc=PD&&PD.tab==="range"&&target.closest("#pd .dd");
-  if(rc){LP=rc.disabled?null:{kind:"range",from:rc.dataset.v,cur:rc.dataset.v,moved:false};return;}
+  if(rc){LP=rc.disabled?null:{kind:"range",x,y,from:rc.dataset.v,cur:rc.dataset.v,moved:false};return;}
   const tile=target.closest(".cgrid .tile, .ring.edit .tile"),row=V.screen==="history"&&!V.sel&&target.closest('.tx[data-act="tx-open"]');
   const mv=(V.screen==="assets"||V.screen==="liabs")&&target.closest(".tx[data-drag]");
+  const hold=target.closest('#sheet .chip[data-ctype]');
+  if(hold){LP={x,y,cx:x,cy:y,el:hold,kind:"hold",active:false};
+    LP.timer=setTimeout(()=>{if(!LP)return;LP.active=true;swallowNextClick();buzz(12);const id=LP.el.dataset.v;LP=null;removeType(id);},500);return;}
   if(!tile&&!row&&!mv){LP=null;return;}
   LP={x,y,cx:x,cy:y,el:tile||row||mv,kind:tile?"drag":row?"sel":"move",active:false};
   LP.timer=setTimeout(()=>{
@@ -1665,6 +1704,7 @@ function pressMove(x,y,ev){
   if(LP.kind==="range"){
     if(ev.cancelable)ev.preventDefault();
     const hit=document.elementFromPoint(x,y),c=hit&&hit.closest("#pd .dd");
+    if(!LP.moved&&Math.hypot(x-LP.x,y-LP.y)<12)return; /* not a drag yet: finger jitter on a tap */
     if(c&&!c.disabled&&c.dataset.v!==LP.cur){LP.cur=c.dataset.v;LP.moved=true;pdPaint(LP.from<LP.cur?LP.from:LP.cur,LP.from<LP.cur?LP.cur:LP.from);}
     return;
   }
@@ -1688,22 +1728,17 @@ function dragBegin(){
   Object.assign(g.style,{left:r.left+"px",top:r.top+"px",width:r.width+"px",height:r.height+"px"});
   document.body.appendChild(g);el.classList.add("placeholder");
   Object.assign(LP,{ghost:g,dx:LP.cx-r.left,dy:LP.cy-r.top,grid:el.closest(".cgrid"),ring:el.closest(".ring.edit")});
-  if(LP.kind==="move"){g.classList.add("gh-row");LP.to=ZONE_TO[el.closest("[data-zone]").dataset.zone];
-    document.querySelectorAll('[data-zone="'+LP.to+'"]').forEach(z=>z.classList.add("dropok"));}
+  if(LP.kind==="move"){g.classList.add("gh-row");LP.to=ZONE_TO[el.closest("[data-src]").dataset.src];
+    document.querySelectorAll('.dropbox[data-zone="'+LP.to+'"]').forEach(z=>z.classList.add("dropok"));}
 }
-/* where a row may be dropped: archived <-> accounts, cleared -> open (clearing stays an explicit action) */
+/* where a row may be dropped (source list data-src -> slot data-zone): archived <-> accounts, cleared -> open (clearing stays explicit) */
 const ZONE_TO={acc:"arch",arch:"acc","lend-done":"lend-open","borrow-done":"borrow-open"};
 function rowDrop(){
   const L=LP,ok=!!L.over;
   document.querySelectorAll(".dropok,.dropover").forEach(z=>z.classList.remove("dropok","dropover"));
   L.el.classList.remove("placeholder");
-  if(!ok){ /* nothing changes: the row floats back */
-    const r=L.el.getBoundingClientRect(),g=L.ghost;
-    if(RM()){g.remove();return;}
-    Object.assign(g.style,{transition:"left .18s ease-out,top .18s ease-out,opacity .18s",left:r.left+"px",top:r.top+"px",opacity:".4"});
-    setTimeout(()=>g.remove(),200);return;
-  }
   L.ghost.remove();
+  if(!ok)return; /* dropped elsewhere: nothing changes */
   const [type,id]=L.el.dataset.drag.split(":");
   S.settings.dragTip=true;buzz(12);
   if(type==="acc")setArchived(id,L.to==="arch");
@@ -1713,8 +1748,8 @@ function dragMove(x,y){
   const L=LP;L.ghost.style.left=(x-L.dx)+"px";L.ghost.style.top=(y-L.dy)+"px";
   if(y<70)scrollBy(0,-10);else if(y>innerHeight-(document.body.classList.contains("hasnav")?150:70))scrollBy(0,10);
   if(L.kind==="move"){
-    const hit=document.elementFromPoint(x,y),z=hit&&hit.closest("[data-zone]"),ok=!!z&&z.dataset.zone===L.to;
-    if(ok!==!!L.over||(ok&&L.overEl!==z)){document.querySelectorAll(".dropover").forEach(e=>e.classList.remove("dropover"));if(ok){z.classList.add("dropover");buzz(5);}}
+    const hit=document.elementFromPoint(x,y),z=hit&&hit.closest(".dropbox"),ok=!!z&&z.dataset.zone===L.to;
+    if(ok!==!!L.over||(ok&&L.overEl!==z)){document.querySelectorAll(".dropover").forEach(e=>e.classList.remove("dropover"));if(ok)z.classList.add("dropover");}
     L.over=ok;L.overEl=ok?z:null;return;
   }
   if(L.ring){ /* move to the nearest slot of the home-screen layout; other tiles slide over */
@@ -1739,22 +1774,20 @@ function dragEnd(){
   S.cats=pick("out").concat(pick("in"));
   commit();
 }
-document.addEventListener("pointerdown",e=>{
-  if(RM())return;let b=e.target.closest("button");if(!b||b.disabled||b.classList.contains("ghost")||b.classList.contains("sw"))return;
-  if(b.classList.contains("cat")){b=b.querySelector(".emb");if(!b)return;}
-  const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*2.2,sp=document.createElement("span");
-  sp.className="rip";Object.assign(sp.style,{width:d+"px",height:d+"px",left:(e.clientX-r.left-d/2)+"px",top:(e.clientY-r.top-d/2)+"px"});
-  b.appendChild(sp);setTimeout(()=>sp.remove(),480);
-},{passive:true});
 let lastTouch=0;const fromTouch=()=>Date.now()-lastTouch<800;
-document.addEventListener("touchstart",e=>{lastTouch=Date.now();if(e.touches.length===1)pressStart(e.touches[0].clientX,e.touches[0].clientY,e.target);else{sw=null;if(LP){clearTimeout(LP.timer);LP=null;}}},{passive:true});
-document.addEventListener("touchmove",e=>{const t=e.touches[0];if(t)pressMove(t.clientX,t.clientY,e);},{passive:false});
-document.addEventListener("touchend",e=>{lastTouch=Date.now();const t=e.changedTouches[0];pressEnd(t?t.clientX:null,t?t.clientY:null);},{passive:true});
-document.addEventListener("touchcancel",()=>pressEnd(null,null),{passive:true});
-document.addEventListener("mousedown",e=>{if(e.button===0&&!fromTouch())pressStart(e.clientX,e.clientY,e.target);});
+/* pressed look: on at touch-down, off at release (kept ~90ms so a quick tap is still seen), off at once if the finger scrolls */
+let PRESS=null,pressAt=0,pressXY=null;
+function pressOn(t,x,y){pressOff(true);const b=t&&t.closest&&t.closest("button");if(!b||b.disabled)return;PRESS=b;pressAt=Date.now();pressXY=[x,y];b.classList.add("pressed");}
+function pressOff(now){const b=PRESS;if(!b)return;PRESS=null;const w=now?0:Math.max(0,90-(Date.now()-pressAt));if(w)setTimeout(()=>b.classList.remove("pressed"),w);else b.classList.remove("pressed");}
+const pressMoved=(x,y)=>{if(PRESS&&pressXY&&Math.hypot(x-pressXY[0],y-pressXY[1])>10)pressOff(true);};
+document.addEventListener("touchstart",e=>{lastTouch=Date.now();if(e.touches.length===1)pressOn(e.target,e.touches[0].clientX,e.touches[0].clientY);else pressOff(true);if(e.touches.length===1)pressStart(e.touches[0].clientX,e.touches[0].clientY,e.target);else{sw=null;if(LP){clearTimeout(LP.timer);LP=null;}}},{passive:true});
+document.addEventListener("touchmove",e=>{const t=e.touches[0];if(t)pressMoved(t.clientX,t.clientY);if(t)pressMove(t.clientX,t.clientY,e);},{passive:false});
+document.addEventListener("touchend",e=>{lastTouch=Date.now();pressOff();const t=e.changedTouches[0];pressEnd(t?t.clientX:null,t?t.clientY:null);},{passive:true});
+document.addEventListener("touchcancel",()=>{pressOff(true);pressEnd(null,null);},{passive:true});
+document.addEventListener("mousedown",e=>{if(e.button===0&&!fromTouch())pressOn(e.target,e.clientX,e.clientY);if(e.button===0&&!fromTouch())pressStart(e.clientX,e.clientY,e.target);});
 document.addEventListener("mousemove",e=>{if(LP&&!fromTouch())pressMove(e.clientX,e.clientY,e);});
-document.addEventListener("mouseup",()=>{if(!fromTouch())pressEnd(null,null);});
-document.addEventListener("contextmenu",e=>{if(e.target.closest(".tile,.tx,.dd"))e.preventDefault();});
+document.addEventListener("mouseup",()=>{if(!fromTouch()){pressOff();pressEnd(null,null);}});
+document.addEventListener("contextmenu",e=>{if(e.target.closest(".tile,.tx,.dd,.chip"))e.preventDefault();});
 /* the ring is laid out in px from the screen width: redo it when the width changes (not when the keyboard opens) */
 let lastW=innerWidth;
 addEventListener("resize",()=>{if(innerWidth!==lastW){lastW=innerWidth;if((V.screen==="home"||V.screen==="settings")&&!LP)render();}});
