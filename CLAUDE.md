@@ -217,10 +217,12 @@ Built originally in a claude.ai chat; continue development from here.
     `RELEASE_KEYSTORE_PASSWORD`. Never commit a key (`.gitignore` blocks `*.jks`, `*.keystore`, `*.p12` except the debug key).
   - CI `.github/workflows/build-apk.yml`: job `check` (`npm ci`, Playwright Chromium, `npm run lint`, `npm test`);
     job `build` (`assembleDebug assembleRelease`, debug APK as artifact and force-pushed to the `builds` branch as
-    `Tally-<branch>.apk`, branches only); job `release` on a `v*` tag (needs `check`): tag must equal `v<tallyVersion>`
-    and CHANGELOG must have that section, builds + signs from the secrets, verifies cert/versionName/non-debuggable with
-    apksigner/aapt, publishes a GitHub Release with `Tally-vX.Y.Z.apk` + `.sha256` and the CHANGELOG section as notes.
-  - Releasing: bump `tallyVersion` + CHANGELOG, merge to `main`, push tag `vX.Y.Z`.
+    `Tally-<branch>.apk`, branches only); job `release` on pushes to `main` or a `v*` tag (needs `check`): if
+    `v<tallyVersion>` has no GitHub Release yet (a tag must equal it), CHANGELOG must have that section; builds + signs
+    from the secrets, verifies cert/versionName/non-debuggable with apksigner/aapt, and `gh release create` publishes
+    `Tally-vX.Y.Z.apk` + `.sha256` with the CHANGELOG section as notes, creating the tag at that commit.
+  - Releasing: bump `tallyVersion` + CHANGELOG in a PR and merge it into `main` (this session's git proxy can't push
+    tags, which is why CI creates them).
 - Tests: `tests/` (`npm ci`; `npm test` runs `e2e/NN-*.js` against a throwaway server, `npm test -- 15` for one suite;
   `npm run lint`; `npm run format`). Locally: `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
   Suite 15 guards start-up loading, CSP violations, the bundled font and "no requests outside the app".
