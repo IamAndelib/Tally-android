@@ -135,7 +135,7 @@ function saveOut(name, mime, text) {
    (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
 function goBack() {
   if (CALC) {
-    calcClose(CALC.id, document.querySelector('[data-act="calc-toggle"][data-v="' + CALC.id + '"]'), true);
+    calcClose(CALC.id, calcToggleBtn(CALC.id), true);
     return true;
   }
   if ($("#pop").innerHTML) {

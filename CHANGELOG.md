@@ -5,6 +5,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Calculator: the button next to amount fields is bigger and coloured. While typing, the display scrolls so the caret
+  stays in view, and the caret can be held and dragged. The + − × ÷ keys are larger. A bar above the keys shows the
+  live result, with a keyboard button that applies it and switches to the phone's keyboard.
+
 ## [1.0.0] — 2026-09-24
 
 First public release.

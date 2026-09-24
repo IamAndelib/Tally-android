@@ -505,6 +505,9 @@ document.addEventListener("click", ev => {
     case "calc-pos":
       calcTapCaret(v, el, ev.clientX, ev.clientY);
       break;
+    case "calc-kbd":
+      calcToKeyboard(v);
+      break;
     case "calc-key":
       calcKey(v);
       break;

@@ -22,6 +22,16 @@ function pressStart(x, y, target) {
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
   smSw = target.closest("#sm .smchart") ? { x, y } : null;
+  /* a press on the calculator's caret grabs it (elsewhere on the display, a swipe scrolls and a tap places it) */
+  const mirror = CALC && target.closest(".caretmirror");
+  const caret = mirror && mirror.querySelector(".blink");
+  if (caret) {
+    const r = caret.getBoundingClientRect();
+    if (Math.abs(x - (r.left + r.width / 2)) <= 28) {
+      LP = { kind: "caret", mirror, x, y, moved: false };
+      return;
+    }
+  }
   const rc = PD && PD.tab === "range" && target.closest("#pd .dd");
   if (rc) {
     LP = rc.disabled ? null : { kind: "range", x, y, from: rc.dataset.v, cur: rc.dataset.v, moved: false };
@@ -70,6 +80,13 @@ function pressStart(x, y, target) {
 }
 function pressMove(x, y, ev) {
   if (!LP) return;
+  if (LP.kind === "caret") {
+    if (ev.cancelable) ev.preventDefault();
+    if (!LP.moved && Math.abs(x - LP.x) < 4) return;
+    LP.moved = true;
+    calcDragCaret(LP.mirror, x);
+    return;
+  }
   if (LP.kind === "range") {
     if (ev.cancelable) ev.preventDefault();
     const hit = document.elementFromPoint(x, y),
@@ -128,6 +145,11 @@ function pressEnd(x, y) {
     }
   }
   smSw = null;
+  if (LP && LP.kind === "caret") {
+    if (LP.moved) swallowNextClick();
+    LP = null;
+    return;
+  }
   if (LP && LP.kind === "range") {
     const L = LP;
     LP = null;

@@ -138,7 +138,16 @@ Built originally in a claude.ai chat; continue development from here.
     left-to-right, `×`/`÷` folded into the left operand before summing `+`/`-` terms; `null` on a malformed
     expression or ÷0, which just leaves the field as-is — no crash, no snack), restores `inputmode="decimal"`, hides
     the mirror, and dispatches a real `input` event so previews (transfer, balance fix)
-    stay in sync. `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
+    stay in sync. Round 20: the toggle is a 44px tonal button (`--primary-container`); while open it is hidden
+    (`.amtwrap.calcing`) and the keypad's top bar (`.calcbar`) shows the live result (`#cr-<id>`, only once the
+    expression has an operator) and a keyboard button (`calc-kbd` → `calcToKeyboard()`: `calcClose(...,true)`, then focus
+    the input with the system keyboard). `.caretmirror` scrolls sideways (`overflow-x:auto`, `touch-action:pan-x`,
+    hidden scrollbar, 14px end padding); `calcCaretIntoView()` keeps the caret visible after every sync, so a long
+    expression slides left. A press within 28px of the caret grabs it (`LP.kind==="caret"` in `js/gestures.js` →
+    `calcDragCaret()`, which also scrolls near the edges); elsewhere a swipe scrolls natively and a tap places the caret.
+    `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
+    above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
+    `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
     back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
     received amount/fee (`f-toamt`/`f-fee`, plain `.field` labels, not `.amtwrap`) or asset value (`f-aval`, laid out

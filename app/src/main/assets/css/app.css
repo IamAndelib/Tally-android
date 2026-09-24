@@ -852,10 +852,20 @@ select option {
   margin-bottom: -1px;
 }
 .amtwrap .calcbtn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   flex: none;
-  color: var(--on-surface-variant);
+  border-radius: 14px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+.amtwrap .calcbtn .ic {
+  width: 26px;
+  height: 26px;
+}
+/* while the calculator is open its button moves to the keypad (as the keyboard switch) */
+.amtwrap.calcing .calcbtn {
+  display: none;
 }
 .amtbox {
   position: relative;
@@ -874,12 +884,22 @@ select option {
   letter-spacing: -0.02em;
   color: var(--on-surface);
   white-space: pre;
-  overflow: hidden;
+  /* scrolls sideways once the expression is wider than the field; the caret is kept in view (calcCaretIntoView) */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  padding-right: 14px;
   cursor: text;
+}
+.caretmirror::-webkit-scrollbar {
+  display: none;
 }
 .caretmirror .blink {
   display: inline-block;
-  width: 2px;
+  width: 3px;
+  border-radius: 2px;
   height: 2.6rem;
   margin-left: 2px;
   vertical-align: middle;
@@ -906,7 +926,7 @@ select option {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 14px calc(10px + env(safe-area-inset-bottom, 0px));
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.22);
   animation: up 0.18s cubic-bezier(0.2, 0, 0, 1);
@@ -921,6 +941,39 @@ select option {
 .calc button.op {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1;
+}
+/* keypad top bar: live result, and the switch back to the system keyboard */
+.calcbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 44px;
+  padding-left: 6px;
+}
+.calcres {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+.calc .kbdbtn {
+  width: 52px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+.calc .kbdbtn .ic {
+  width: 26px;
+  height: 26px;
 }
 .calc button.del {
   color: var(--spent);

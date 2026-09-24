@@ -67,7 +67,11 @@ const ok = (c, m) => {
   );
   await page.reload();
 
-  const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
+  // while the calculator is open its own button is hidden; the keypad's keyboard button closes it (applying the result)
+  const act = async (a, v) => {
+    if (a === "calc-toggle" && (await page.isHidden(`[data-act="calc-toggle"][data-v="${v}"]`))) a = "calc-kbd";
+    return page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
+  };
   const sact = (a, v) => page.click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
   const s2act = (a, v) => page.click(`#sheet2 [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
   const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")));
