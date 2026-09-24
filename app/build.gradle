@@ -11,12 +11,12 @@ def releaseKeystore = System.getenv('TALLY_KEYSTORE')
 
 android {
     namespace 'app.tally.expenses'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId 'app.tally.expenses'
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode Integer.parseInt(runNumber ?: '1')
         versionName project.property('tallyVersion')
     }

@@ -219,7 +219,13 @@ Built originally in a claude.ai chat; continue development from here.
     `commit()` also calls `syncReminders()`.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24).
+- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk/targetSdk 35 with
+  `android.suppressUnsupportedCompileSdk=35`, minSdk 24). Android 15 forces edge-to-edge: `MainActivity` wraps the
+  WebView in a `FrameLayout` (`root`) padded by the system-bar/cutout/IME insets (API 30+), and `setBars` also colours
+  `root`, which shows behind the transparent bars.
+- Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
+  User guide `docs/PLAY_STORE.md`; listing kit `docs/play/` (icon-512, feature graphic, 800×1600 screenshots,
+  `listing.md`); `docs/privacy-policy.md` (must be hosted publicly).
   - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.0) is the release `versionName`; debug builds get
     `-dev.<run>`. `versionCode` = `GITHUB_RUN_NUMBER` (per workflow file — keep `build-apk.yml`'s name).
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),

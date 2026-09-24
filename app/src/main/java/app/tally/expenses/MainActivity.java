@@ -11,6 +11,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.widget.FrameLayout;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -33,6 +35,8 @@ public class MainActivity extends Activity {
     private static final int SAVE_FILE = 2;
 
     private WebView web;
+    /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
+    private FrameLayout root;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingSave;
     /** "loan:<id>[:pay]" from a tapped reminder, delivered to the page once it has loaded. */
@@ -42,7 +46,17 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
-        setContentView(web);
+        root = new FrameLayout(this);
+        root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
+        if (Build.VERSION.SDK_INT >= 30) {
+            root.setOnApplyWindowInsetsListener((v, insets) -> {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
+                v.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
+                return WindowInsets.CONSUMED;
+            });
+        }
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -276,6 +290,7 @@ public class MainActivity extends Activity {
                 w.setStatusBarColor(c);
                 w.setNavigationBarColor(c);
                 web.setBackgroundColor(c);
+                root.setBackgroundColor(c); // shows behind the (transparent) system bars on Android 15+
                 View decor = w.getDecorView();
                 int flags = decor.getSystemUiVisibility();
                 int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;

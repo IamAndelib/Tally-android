@@ -5,6 +5,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Targets Android 15 (API 35), as Google Play requires; the app keeps clear of the status bar, navigation bar and
+  keyboard now that Android draws apps edge to edge.
+- Releases also include an Android App Bundle (.aab) for Google Play.
+
 ## [1.1.0] — 2026-09-24
 
 ### Changed
