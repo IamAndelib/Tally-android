@@ -65,6 +65,7 @@ button.pressed:not(:disabled)::before{opacity:.1;transition:none}
 .ic{width:24px;height:24px;fill:currentColor;display:block;flex:none}
 main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .muted{color:var(--on-surface-variant)}
+a{color:var(--primary);text-decoration:none}
 .small{font-size:.85rem}
 .spent{color:var(--spent)}.got{color:var(--got)}.xfer{color:var(--xfer)}
 
@@ -77,7 +78,7 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .plabel .ic{width:20px;height:20px;color:var(--on-surface-variant);flex:none}
 .plabel{min-width:0}.plabel>span{overflow:hidden;text-overflow:ellipsis}
 .month .plabel{font-size:1.05rem;margin:0 auto;padding:0 8px 0 12px}
-.appbar>.icon{width:44px}.pnav .icon{width:40px}.pnav .plabel{font-size:clamp(1.05rem,4.6vw,1.25rem);padding:0 6px 0 10px}.pnav .plabel.long{font-size:clamp(.9rem,4vw,1.15rem);letter-spacing:-.02em}
+.appbar>.icon{width:44px;height:44px}.pnav .icon{width:40px;height:40px}.pnav .plabel{font-size:clamp(1.05rem,4.6vw,1.25rem);padding:0 6px 0 10px}.pnav .plabel.long{font-size:clamp(.9rem,4vw,1.15rem);letter-spacing:-.02em}
 
 /* account balance strip */
 .strip{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:4px 16px 8px;scrollbar-width:none}
@@ -194,7 +195,6 @@ select option{background:var(--surface-high);color:var(--on-surface)}
   border-radius:20px 20px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.22);
   animation:up .18s cubic-bezier(.2,0,0,1)}
 @media (prefers-reduced-motion:reduce){.calc{animation:none}}
-.calc .cap{grid-column:span 4;text-align:center;font-size:.72rem;color:var(--on-surface-variant);margin-bottom:2px}
 .calc button{height:44px;border-radius:12px;background:var(--surface-high);font-weight:600;font-size:1.05rem}
 .calc button.op{background:var(--secondary-container);color:var(--on-secondary-container)}
 .calc button.mut{color:var(--on-surface-variant);font-size:1.2rem}
@@ -211,7 +211,7 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 
 /* lists */
 .list{background:var(--surface-container);border-radius:20px;overflow:hidden}
-.day{display:flex;justify-content:space-between;font-size:.8rem;font-weight:600;color:var(--on-surface-variant);padding:16px 8px 8px}
+.day{display:flex;justify-content:space-between;font-size:.8rem;font-weight:600;color:var(--on-surface-variant);padding:16px 14px 8px}
 .tx{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;text-align:left;border-radius:0}
 .tx+.tx{border-top:1px solid var(--outline-variant)}
 .tx .em{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:1.15rem;flex:none;background:var(--surface-high)}
@@ -622,7 +622,7 @@ function evalAmt(v){
 const CALC_ICON='<svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path fill="currentColor" d="'+(ICONS.calculate?ICONS.calculate[0]:"")+'"/></svg>';
 const calcBtn=id=>'<button type="button" class="icon calcbtn" data-act="calc-toggle" data-v="'+id+'" aria-label="Calculator" aria-expanded="false">'+CALC_ICON+"</button>";
 const CALC_KEYS=["7","8","9","÷","4","5","6","×","1","2","3","−","⌫","0",".","+"];
-const calcPanelHtml=id=>'<div class="calc" id="calc-'+id+'" hidden><div class="cap">Tap the calculator icon again to use the result</div>'+
+const calcPanelHtml=id=>'<div class="calc" id="calc-'+id+'" hidden>'+
   CALC_KEYS.map(k=>'<button type="button" class="'+(/[+\-×÷]/.test(k)?"op":/[0-9.]/.test(k)?"":"mut")+'" data-act="calc-key" data-v="'+esc(k)+'">'+esc(k)+"</button>").join("")+"</div>";
 /* a field's amount box: currency label, the input, the calculator toggle, and its (hidden) panel */
 function amtField(id,cur,val,curId,label){
@@ -1514,11 +1514,16 @@ function settingsView(){
   h+='<div class="sec">Money-in categories</div>'+catGrid("in");
   const hid=S.cats.filter(c=>c.hidden);
   if(hid.length)h+='<p class="hint" style="margin:14px 4px 8px">Removed · tap to bring back</p><div class="chips">'+hid.map(c=>'<button class="chip" data-act="cat-back" data-v="'+esc(c.id)+'">'+emblem(c,"sm")+esc(c.name)+"</button>").join("")+"</div>";
+  const noData=!S.accounts.length&&!S.txns.length&&!S.loans.length&&!S.assets.length;
   h+='<div class="sec">Your data</div><p class="muted small" style="margin:0 4px 12px">Everything stays on this phone. Uninstalling deletes it, so save a backup now and then.</p>'+
     '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>'+
     '<label class="btn tonal" style="position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label><div class="gap"></div>'+
     '<button class="btn tonal" data-act="export">Export entries (CSV)</button><div class="gap"></div>'+
-    '<button class="btn danger" data-act="wipe">Delete all data</button>';
+    '<button class="btn danger" data-act="wipe"'+(noData?" disabled":"")+'>Delete all data</button>';
+  const ver=(window.Android&&Android.getVersion)?(()=>{try{return Android.getVersion();}catch(e){return "";}})():"";
+  h+='<div class="sec">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally'+(ver?" · Version "+esc(ver):"")+
+    '<br>By <a href="https://github.com/IamAndelib">IamAndelib</a>'+
+    '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
   return h;
 }
 

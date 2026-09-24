@@ -224,6 +224,11 @@ public class MainActivity extends Activity {
 
     private class Bridge {
         @JavascriptInterface
+        public String getVersion() {
+            return BuildConfig.VERSION_NAME;
+        }
+
+        @JavascriptInterface
         public void setReminders(String json) {
             ReminderReceiver.save(MainActivity.this, json);
         }

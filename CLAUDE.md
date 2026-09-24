@@ -22,6 +22,9 @@ Built originally in a claude.ai chat; continue development from here.
   - `onShowFileChooser` opens the system file picker (backup restore).
   - JS bridge `window.Android`:
     - `saveFile(name, mime, text)` saves CSV exports / JSON backups via ACTION_CREATE_DOCUMENT; result reported through `window.tallySaved(ok)`.
+    - `getVersion()` returns `BuildConfig.VERSION_NAME` (`buildFeatures.buildConfig true` in `app/build.gradle`, needed for AGP 8+
+      to generate `BuildConfig`), shown in Settings' About footer; called defensively (`window.Android&&Android.getVersion`,
+      wrapped in try/catch) so the browser-preview case and older installed builds degrade to no version line, not "undefined".
     - `getColors()` returns `{dark, a1,a2,a3,n1,n2}`: light/dark mode plus, on Android 12+, the Material You tonal palettes
       (13 hex tones each, tone 100 → 0). `onResume`/`onConfigurationChanged` push the same JSON to `window.tallyTheme(...)`.
     - `setBars(color, dark)` colours the status/navigation bars to match the page surface.
@@ -144,6 +147,11 @@ Built originally in a claude.ai chat; continue development from here.
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
+    "Delete all data" is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
+    accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
+    small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,
+    repo) — any link whose host isn't the app's own asset host already opens in the system browser via
+    `shouldOverrideUrlLoading` (`MainActivity.java`), so these need no `data-act`/bridge wiring of their own.
   - Every add/edit/delete of entries goes through `withUndo(msg, change, fx)` (snapshot of `S.txns` + `S.loans` + `S.accounts`, Undo in the snackbar);
     `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` pops a ring tile, `FX.center` bumps the donut total).
   - Feedback must feel instant and calm (user tested ripples/scales/page animations as laggy): a 10% state layer on press, set by

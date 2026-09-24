@@ -15,6 +15,11 @@ android {
         versionName '1.0.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
     }
 
+    // BuildConfig.VERSION_NAME is read by the JS bridge (Bridge.getVersion()) for Settings' About footer
+    buildFeatures {
+        buildConfig true
+    }
+
     // One committed debug key (not a secret) so every build is signed the same way;
     // otherwise each CI runner signs with a new random key and Android refuses to update.
     signingConfigs {
