@@ -8,16 +8,16 @@
 //   TALLY_URL      page to open (default: http://localhost:8765/index.html)
 //   CHROMIUM_PATH  Chromium binary to use instead of Playwright's own download
 
-const fs = require('fs');
-const path = require('path');
-const { chromium } = require('playwright');
+const fs = require("fs");
+const path = require("path");
+const { chromium } = require("playwright");
 
-const appUrl = process.env.TALLY_URL || 'http://localhost:8765/index.html';
+const appUrl = process.env.TALLY_URL || "http://localhost:8765/index.html";
 const launchOptions = process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {};
 
 /** Screenshots land in tests/e2e/output/<suite>/ (git-ignored). */
 function outDir(name) {
-  const dir = path.join(__dirname, 'output', name);
+  const dir = path.join(__dirname, "output", name);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

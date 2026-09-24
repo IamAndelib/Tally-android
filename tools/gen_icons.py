@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build app/src/main/assets/icons.js: a curated, tagged subset of Google Material Symbols (Rounded, filled).
+"""Build app/src/main/assets/js/icons.js: a curated, tagged subset of Google Material Symbols (Rounded, filled).
 
 Usage: npm pack @material-symbols/svg-400 && tar xzf material-symbols-svg-400-*.tgz
-       python3 tools/gen_icons.py package app/src/main/assets/icons.js
+       python3 tools/gen_icons.py package app/src/main/assets/js/icons.js
 Add a line below (name: search tags) to offer another emblem; the name must exist in the package."""
 import os, re, sys, json
 
