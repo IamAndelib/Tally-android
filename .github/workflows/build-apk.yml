@@ -87,10 +87,11 @@ jobs:
           git commit -q -m "APKs (latest: $SRC_BRANCH @ ${GITHUB_SHA::7})"
           git push -q -f origin HEAD:builds
 
-  # A pushed tag vX.Y.Z publishes a GitHub Release with the APK signed by the private release key.
+  # Publishes a GitHub Release, signed with the private release key, whenever main (or a pushed tag vX.Y.Z) carries a
+  # version that has no release yet. So releasing is: bump tallyVersion + CHANGELOG.md in a PR and merge it.
   release:
     name: Signed release
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
     needs: check
     runs-on: ubuntu-latest
     env:
@@ -98,27 +99,41 @@ jobs:
       RELEASE_CERT_SHA256: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18d2fac88
     steps:
       - uses: actions/checkout@v4
-      - name: Check the tag matches the app version
+      - name: Is there a new version to release?
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -n 's/^tallyVersion=//p' gradle.properties)
-          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
             echo "::error::Tag $GITHUB_REF_NAME doesn't match tallyVersion=$version in gradle.properties"
             exit 1
           fi
+          if gh release view "v$version" > /dev/null 2>&1; then
+            echo "v$version is already released; nothing to do"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $version"; exit 1; }
           echo "VERSION=$version" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@v4
+          echo "TAG=v$version" >> "$GITHUB_ENV"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+      - if: steps.version.outputs.publish == 'true'
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
       - name: Install Android SDK packages
+        if: steps.version.outputs.publish == 'true'
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - if: steps.version.outputs.publish == 'true'
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
       - name: Build the signed release APK
+        if: steps.version.outputs.publish == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           TALLY_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -132,6 +147,7 @@ jobs:
           gradle assembleRelease --no-daemon
           rm -f "$TALLY_KEYSTORE"
       - name: Verify the APK
+        if: steps.version.outputs.publish == 'true'
         run: |
           apk=app/build/outputs/apk/release/app-release.apk
           tools="$ANDROID_HOME/build-tools/34.0.0"
@@ -143,10 +159,11 @@ jobs:
             exit 1
           fi
       - name: Publish the GitHub Release
+        if: steps.version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          out="Tally-$GITHUB_REF_NAME.apk"
+          out="Tally-$TAG.apk"
           cp app/build/outputs/apk/release/app-release.apk "$out"
           sha256sum "$out" > "$out.sha256"
           # the notes are this version's section of CHANGELOG.md, plus how to install and verify
@@ -160,4 +177,5 @@ jobs:
             echo
             echo "Signing certificate SHA-256: \`$fp\`"
           } >> notes.md
-          gh release create "$GITHUB_REF_NAME" "$out" "$out.sha256" --title "Tally $VERSION" --notes-file notes.md --verify-tag
+          # creates the tag at this commit when it doesn't exist yet
+          gh release create "$TAG" "$out" "$out.sha256" --target "$GITHUB_SHA" --title "Tally $VERSION" --notes-file notes.md

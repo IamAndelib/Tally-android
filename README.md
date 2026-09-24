@@ -191,11 +191,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how the pieces fit together and how t
 
 ## Releasing
 
-1. Bump `tallyVersion` in `gradle.properties` and add a section to `CHANGELOG.md`.
-2. Merge to `main`, then tag it: `git tag v1.2.3 && git push origin v1.2.3`.
-3. CI checks the tag matches the version, builds and signs the release (key from the `RELEASE_KEYSTORE_BASE64` and
-   `RELEASE_KEYSTORE_PASSWORD` repository secrets), verifies the signature, and publishes the GitHub Release with the APK
-   and its SHA-256.
+1. In a pull request, bump `tallyVersion` in `gradle.properties` and add its section to `CHANGELOG.md`.
+2. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
+   from the `RELEASE_KEYSTORE_BASE64` and `RELEASE_KEYSTORE_PASSWORD` repository secrets), verifies the signature,
+   and publishes the GitHub Release `vX.Y.Z` — tag, APK, SHA-256 and the changelog section as notes.
+
+Pushing a tag `vX.Y.Z` that matches the version does the same.
 
 ## License
 
