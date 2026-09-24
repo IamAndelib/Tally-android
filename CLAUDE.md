@@ -33,15 +33,35 @@ Built originally in a claude.ai chat; continue development from here.
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
+  - The page installs its hooks last, in `js/main.js`, so the shell can never call into a half-loaded page:
+    `tallyBack`→`goBack()`, `tallyOpen`→`openFromNative()`, `tallyResume`→`onAppResume()`, `tallyTheme`→`onSystemTheme()`,
+    `tallySaved`→`onFileSaved()`. Escape in a desktop browser calls `goBack()` too.
   - Home-screen widget `TallyWidget` (AppWidgetProvider, `res/layout/widget_tally.xml`, `res/xml/tally_widget_info.xml`, 4×1,
     Material You colours via `values-v31` system colours): today's total balance + "Spent today", body opens the app, + opens
     `QuickAddActivity` (small dialog: Spent / Received / Transfer → MainActivity with `open=add:out|add:in|add:tr`).
     The page is the source of truth: `syncWidget()` (from `commit()`, start, resume) sends formatted numbers through
     `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
-- All app logic is one self-contained file: `app/src/main/assets/index.html` (vanilla JS, no framework, no build step).
-  The only other asset is `icons.js` (see Emblems).
+- The app is a web page in `app/src/main/assets` (vanilla JS, no framework, no build step):
+  - `index.html` is only the shell: CSP meta, `css/colors.css` (Material 3 baseline roles), an empty `<style id="dyn">`
+    (wallpaper palette, `js/theme.js`), `css/app.css`, then the scripts in order: `js/icons.js`, `core`, `state`, `theme`,
+    `period`, `layers`, `emblems`, `calculator`, `ring`, `loans`, `sheets`, `summary`, `screens`, `bridge`, `backup`,
+    `gestures`, `events`, `main`. Each file starts with a comment saying what lives in it.
+  - They are **classic scripts sharing one global scope** (top-level `const`/`let`/functions are visible to every file).
+    A function may use anything from any file at call time, but code that runs *while loading* may only use what earlier
+    files defined. All start-up code is in `js/main.js` (last): `loadState()`, theme, native actions, first `render()`,
+    reminders/widget sync, then the window hooks. Each file has `"use strict"`.
+  - Format with Prettier (`.prettierrc.json`: width 120, `arrowParens: avoid`, `trailingComma: es5`); HTML is built by
+    string concatenation (Prettier breaks `${}` in template literals badly, so concatenation stays). `tests/lint.js`
+    lints the scripts concatenated in load order (no-undef, no-unused-vars, no-shadow, no-eval, …); keep it clean.
+  - Content-Security-Policy: `default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self';
+    img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
+    latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
+  - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
   - State `S = {v:6, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
-    in localStorage key `tally:v1`.
+    in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
+    `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
+    text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
+    file (`unreadable`); the app never silently drops saved data. Restoring a backup `migrate()` can't read snacks.
     `migrate()` upgrades any saved state or backup (v1 included) on load/restore without changing balances
     (v4: emblems; built-in categories still on their old default emoji/colour get the new emblem/colour, user choices are kept.
     v6: loans become multi-draw — for each old loan with a `due`, that date moves onto its one existing principal transaction).
@@ -91,10 +111,11 @@ Built originally in a claude.ai chat; continue development from here.
     `clearLoan()`, which always asks how (paid in full into the loan's account today, through the overdraw guard / write off). Archived accounts' sheet has "Show again" (`acc-unarch`).
     History and Settings are two icons in every top bar (`topIcons()`; no ⋮ menu).
   - `balances(before?)` = opening + all entries (optionally only entries dated before a day → "started today with").
+    How one entry moves money lives in one place, `applyEntry(b, t)`, shared with `runBal()`.
     `runBal()` (cached per render, `RBC`) = each account's balance right after each entry, plus loan-payment status; entry
     lists show it under the amount (Bluecoins-style), amounts coloured by money direction (spent red, got green, `--xfer` blue),
     and loan payments carry a "Partly paid" / "Cleared" pill.
-  - Calculator: `amtField(id,cur,val,curId,label)` (quick add, transfer's main amount, loan create/payment, the draw-edit
+  - Calculator (`js/calculator.js`): `amtField(id,cur,val,{curId,label,placeholder})` (quick add, transfer's main amount, loan create/payment, the draw-edit
     sheet, the account "Doesn't match?" fix) renders `.amtbox` (a positioned wrapper around the amount `<input>` plus
     a `.caretmirror` sibling span, `id="cm-<id>"`), a toggle button (`calcBtn`, the bundled `ICONS.calculate` glyph),
     and a hidden 4-column keypad (`calcPanelHtml`: `7 8 9 ÷ / 4 5 6 × / 1 2 3 − / ⌫ 0 . +`; operator keys get `.op`,
@@ -105,7 +126,7 @@ Built originally in a claude.ai chat; continue development from here.
     the system keyboard doesn't fight it for space, and keeps it focused — but a read-only input never shows a native
     caret even when focused, so `.amtbox` gets a `calcing` class that turns the real input's text transparent, and
     `calcMirrorSync()` renders `expr` split at `pos` around a blinking `.blink` span into `.caretmirror` on top, kept
-    in sync on every `calc-key`/`calc-pos` tap). Tapping inside the mirror (`calc-pos`) moves the cursor there:
+    in sync on every `calc-key` (`calcKey()`) / `calc-pos` (`calcTapCaret()`) tap; `calcToggle()` opens/closes). Tapping inside the mirror (`calc-pos`) moves the cursor there:
     `calcPosFromPoint()` resolves the tap via `document.caretRangeFromPoint`, walking `.caretmirror`'s own child text
     nodes to turn the hit DOM position back into an offset in `expr` (`.caretmirror` must stay non-flex — plain block
     text with `line-height` centering, not `display:flex` — flex items broke `caretRangeFromPoint`'s hit-testing for
@@ -117,7 +138,7 @@ Built originally in a claude.ai chat; continue development from here.
     left-to-right, `×`/`÷` folded into the left operand before summing `+`/`-` terms; `null` on a malformed
     expression or ÷0, which just leaves the field as-is — no crash, no snack), restores `inputmode="decimal"`, hides
     the mirror, and dispatches a real `input` event so previews (transfer, balance fix)
-    stay in sync. `window.tallyBack()` checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
+    stay in sync. `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
     back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
     received amount/fee (`f-toamt`/`f-fee`, plain `.field` labels, not `.amtwrap`) or asset value (`f-aval`, laid out
@@ -146,7 +167,7 @@ Built originally in a claude.ai chat; continue development from here.
     `ringHTML(cats, {mode})` draws tiles, donut and leader lines for Home and the Settings preview. Donut slices are ordered
     by their category's position (clockwise); the donut is rotated to the angle where slices sit nearest their categories
     with zero line crossings (crossings are heavily penalised). Lines are computed from the layout (no DOM measuring).
-  - Emblems (Bluecoins-style): `icons.js` = `window.TALLY_ICONS {name: [svgPath, tags]}`, a curated subset (~220) of Google
+  - Emblems (Bluecoins-style): `js/icons.js` = `window.TALLY_ICONS {name: [svgPath, tags]}`, a curated subset (~220) of Google
     Material Symbols Rounded filled (Apache-2.0), generated by `tools/gen_icons.py`. `emblem(o, cls)` draws a filled circle in `o.c`
     with glyph `o.i` (white or near-black, whichever contrasts more) or the emoji `o.e` as fallback. `iconPicker()` (sheet2, search
     matches word starts of name + tags, "Use an emoji instead"), `emblemEditor()` = preview + `PALETTE` swatches in the category /
@@ -182,18 +203,37 @@ Built originally in a claude.ai chat; continue development from here.
     Calendar range: a touch only becomes a drag after 12px, so a jittery tap stays a tap. Don't reuse existing class names
     (`.pop` = dialog layer, `.row`, `.nav .in`) for effects.
     `commit()` also calls `syncReminders()`.
-  - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` with a baseline scheme from the indigo seed
+  - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `gradle assembleDebug` (AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24). Debug builds are signed with the
-  committed `app/debug.keystore` (android/androiddebugkey/android) and `versionCode` = `GITHUB_RUN_NUMBER`, so every CI APK
-  installs as an update over the previous one. Never replace the keystore: installed copies would stop accepting updates. GitHub Actions workflow in `.github/workflows/build-apk.yml` uploads the debug APK as an artifact
-  and also force-pushes it to the `builds` branch as `Tally-<branch>.apk` (one commit, replaced each build).
-- Play Store later: needs a release build signed with a private upload key (kept out of the repo) and Play App Signing.
+- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24).
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.0.0) is the release `versionName`; debug builds get
+    `-dev.<run>`. `versionCode` = `GITHUB_RUN_NUMBER` (per workflow file — keep `build-apk.yml`'s name).
+  - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
+    signed with the committed `app/debug.keystore` (android/androiddebugkey/android) so every CI build updates the last.
+    Never replace the keystore: installed copies would stop accepting updates.
+  - Release builds: `app.tally.expenses`, not minified, signed only when `TALLY_KEYSTORE` / `TALLY_KEYSTORE_PASSWORD`
+    (alias `TALLY_KEY_ALIAS`, default `tally`) are set. The private key (PKCS12, alias `tally`, cert SHA-256
+    `9D:B8:C8:9C:…:8D:2F:AC:88`, in README/SECURITY) is only in the repository secrets `RELEASE_KEYSTORE_BASE64` and
+    `RELEASE_KEYSTORE_PASSWORD`. Never commit a key (`.gitignore` blocks `*.jks`, `*.keystore`, `*.p12` except the debug key).
+  - CI `.github/workflows/build-apk.yml`: job `check` (`npm ci`, Playwright Chromium, `npm run lint`, `npm test`);
+    job `build` (`assembleDebug assembleRelease`, debug APK as artifact and force-pushed to the `builds` branch as
+    `Tally-<branch>.apk`, branches only); job `release` on a `v*` tag (needs `check`): tag must equal `v<tallyVersion>`
+    and CHANGELOG must have that section, builds + signs from the secrets, verifies cert/versionName/non-debuggable with
+    apksigner/aapt, publishes a GitHub Release with `Tally-vX.Y.Z.apk` + `.sha256` and the CHANGELOG section as notes.
+  - Releasing: bump `tallyVersion` + CHANGELOG, merge to `main`, push tag `vX.Y.Z`.
+- Tests: `tests/` (`npm ci`; `npm test` runs `e2e/NN-*.js` against a throwaway server, `npm test -- 15` for one suite;
+  `npm run lint`; `npm run format`). Locally: `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
+  Suite 15 guards start-up loading, CSP violations, the bundled font and "no requests outside the app".
 - The user tests on their phone: after every push, wait for the build, then fetch the APK
-  (`git fetch origin builds && git show origin/builds:Tally-<branch>.apk > file.apk`) and send it to them.
+  (`git fetch origin builds && git show origin/builds:Tally-<branch>.apk > file.apk`) and send it to them. Test builds
+  install as "Tally Dev" next to the release (their data is separate from the release's).
+- Docs: README (features, requirements, install/verify, privacy, build, layout, releasing), CONTRIBUTING (architecture,
+  conventions, design principles), CHANGELOG (Keep a Changelog), SECURITY, THIRD_PARTY_NOTICES + `LICENSES/`,
+  `docs/` (logo.svg from `ic_launcher.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
 
 ## Notes
-- The project has not been test-built yet; first build may need small fixes.
-- No Gradle wrapper jar is committed; Android Studio or `gradle` 8.7 works. Run `gradle wrapper` to add one if needed.
-- UI: Material 3 (adaptive colour on Android 12+), font Onest (falls back to system font offline).
+- License: MIT (© 2026 IamAndelib). Material Symbols are Apache-2.0, Onest is SIL OFL 1.1.
+- UI: Material 3 (adaptive colour on Android 12+), font Onest (bundled; the app makes no network requests).
 - Quick check in a browser: serve `app/src/main/assets/` with `python3 -m http.server` (no Android bridge there: baseline colours, no file saving).
+- The app needs Android System WebView 87+ (CSS `inset`, flex `gap`, `??`).
+- Play Store later: use the release key as the upload key with Play App Signing (or enrol a new upload key).
