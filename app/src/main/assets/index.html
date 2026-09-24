@@ -208,6 +208,40 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .snack span{flex:1}
 .snack button{color:var(--primary-container);font-weight:600;padding:8px 12px;border-radius:20px}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+/* bottom navigation */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface-container);padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav:empty{display:none}
+.nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);height:76px}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;color:var(--on-surface-variant);border-radius:0}
+.nav button::before{display:none}
+.nav .ind{width:60px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .2s}
+.nav button[aria-current="page"]{color:var(--on-surface);font-weight:700}
+.nav button[aria-current="page"] .ind{background:var(--secondary-container);color:var(--on-secondary-container)}
+body.hasnav main{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+/* loans */
+.loanbtns{display:flex;gap:12px;margin-top:18px}
+.loanbtns .btn{flex:1}
+.st{display:inline-block;font-size:.7rem;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--surface-highest);color:var(--on-surface-variant)}
+.st.active{background:var(--secondary-container);color:var(--on-secondary-container)}
+.st.partly{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.st.overdue{background:var(--spent-container);color:var(--on-spent-container)}
+.st.cleared{background:var(--got-container);color:var(--on-got-container)}
+.bar{height:8px;border-radius:4px;background:var(--surface-highest);overflow:hidden;margin:4px 0 4px}
+.bar span{display:block;height:100%;background:var(--primary);border-radius:4px}
+.sumcard{background:var(--primary-container);color:var(--on-primary-container);border-radius:24px;padding:16px 18px;margin-top:4px}
+.sumcard.owe{background:var(--secondary-container);color:var(--on-secondary-container)}
+.sumcard .t{font-size:.85rem;opacity:.85}
+.sumcard .big{font-size:1.7rem;font-weight:700;letter-spacing:-.02em}
+/* settings rows + switch */
+.setrow{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.setrow+.setrow{border-top:1px solid var(--outline-variant)}
+.setrow .mid{flex:1;min-width:0}
+.setrow .s{font-size:.8rem;color:var(--on-surface-variant)}
+.sw{width:52px;height:32px;border-radius:16px;border:2px solid var(--outline);background:var(--surface-highest);flex:none}
+.sw::after{content:"";position:absolute;top:50%;left:6px;width:16px;height:16px;border-radius:50%;background:var(--outline);transform:translateY(-50%);transition:all .15s}
+.sw[aria-checked="true"]{background:var(--primary);border-color:var(--primary)}
+.sw[aria-checked="true"]::after{left:22px;width:24px;height:24px;background:var(--on-primary)}
 .sheet.s2{z-index:12}
 .s2 .p{height:88%}
 .qbar{position:sticky;top:-8px;background:var(--surface-low);padding:4px 0 8px;z-index:2}
@@ -262,6 +296,7 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 </head>
 <body>
 <main id="app"></main>
+<nav class="nav" id="nav"></nav>
 <div id="sheet"></div>
 <div id="sheet2"></div>
 <div id="pop"></div>
@@ -311,6 +346,9 @@ const P={
  delete:"M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
  checkbox:"M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
  selectall:"M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2zM7 17h10V7H7v10zm2-8h6v6H9V9z",
+ home:"M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
+ wallet:"M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z",
+ card:"M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z",
  edit:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
 };
 const ic=n=>'<svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="'+P[n]+'"/></svg>';
@@ -327,7 +365,7 @@ const r2=n=>Math.round(n*100)/100;
 
 /* ---------- state + storage ---------- */
 const LS="tally:v1";
-function blank(){return {v:2,settings:{cur:"CAD",theme:"system"},accounts:[],cats:CATS.map(c=>({...c})),txns:[]};}
+function blank(){return {v:3,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance. */
 function migrate(o){
   const s=blank();
@@ -354,6 +392,9 @@ function migrate(o){
       if(t0.feeId)t.feeId=t0.feeId;
     }else if(t0.type==="adjust"){
       /* signed amount, nothing else */
+    }else if(t0.type==="loan"){
+      if(!t0.loan)return null;
+      t.dir=t0.dir==="in"?"in":"out";t.loan=String(t0.loan);if(t0.principal)t.principal=true;
     }else if(t0.type==="expense"||t0.type==="income"){
       if(t0.cat==="transfer"){
         // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
@@ -369,12 +410,17 @@ function migrate(o){
     }else return null;
     return t;
   }).filter(Boolean);
+  s.loans=(Array.isArray(o.loans)?o.loans:[]).filter(l=>l&&l.id&&(l.kind==="borrow"||l.kind==="lend")&&okAcc.has(l.account)&&isFinite(+l.amount)).map(l=>({
+    id:String(l.id),ts:+l.ts||0,kind:l.kind,person:String(l.person||""),amount:+l.amount,account:l.account,
+    date:/^\d{4}-\d{2}-\d{2}$/.test(l.date)?l.date:today(),due:/^\d{4}-\d{2}-\d{2}$/.test(l.due)?l.due:"",note:String(l.note||""),status:l.status==="writeoff"?"writeoff":"open"}));
+  s.assets=(Array.isArray(o.assets)?o.assets:[]).filter(x=>x&&x.id).map(x=>({id:String(x.id),name:String(x.name||"Asset"),e:x.e||"💎",value:+x.value||0,currency:String(x.currency||s.settings.cur)}));
+  if(!s.settings.remind||typeof s.settings.remind!=="object")s.settings.remind={daily:true,time:"21:00",dues:true};
   return s;
 }
 let S=blank();
 try{const raw=localStorage.getItem(LS);if(raw)S=migrate(JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){snack("Couldn't save on this phone");}}
-function commit(){save();render();}
+function commit(){save();render();syncReminders();}
 
 /* ---------- helpers ---------- */
 const cat=id=>S.cats.find(c=>c.id===id)||S.cats.find(c=>c.id==="other")||CATS[11];
@@ -399,6 +445,7 @@ function balances(before){
     if(t.type==="expense")b[t.account]-=t.amount;
     else if(t.type==="income"||t.type==="adjust")b[t.account]+=t.amount;
     else if(t.type==="transfer"){b[t.account]-=t.amount;if(t.to in b)b[t.to]+=(t.toAmount!=null?t.toAmount:t.amount);}
+    else if(t.type==="loan")b[t.account]+=t.dir==="in"?t.amount:-t.amount;
   });
   for(const k in b)b[k]=r2(b[k]);
   return b;
@@ -422,10 +469,10 @@ function snack(msg,undo){
   $("#snack").innerHTML='<div class="snack" role="status"><span>'+esc(msg)+"</span>"+(undo?'<button data-act="undo">Undo</button>':"")+"</div>";
   clearTimeout(snackT);snackT=setTimeout(()=>{$("#snack").innerHTML="";undoFn=null;},undo?5000:2600);
 }
-/* snapshot entries before a change so Undo can restore them exactly */
+/* snapshot entries and loans before a change so Undo can restore them exactly */
 function withUndo(msg,change){
-  const before=JSON.stringify(S.txns);change();commit();
-  snack(msg,()=>{S.txns=JSON.parse(before);commit();snack("Undone");});
+  const before=JSON.stringify({txns:S.txns,loans:S.loans});change();commit();
+  snack(msg,()=>{const o=JSON.parse(before);S.txns=o.txns;S.loans=o.loans;commit();snack("Undone");});
 }
 
 /* ---------- theme (Material You on Android 12+, baseline scheme elsewhere) ---------- */
@@ -467,7 +514,7 @@ window.tallyTheme=function(p){try{SYS=typeof p==="string"?JSON.parse(p):p;}catch
 {const mq=matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",applyTheme);}
 
 /* ---------- view state ---------- */
-const V={screen:"home",period:"day",anchor:today(),rs:null,re:null,cur:null,hMonth:today().slice(0,7),hAcc:"",showArchived:false,sel:null};
+const V={showCleared:false,screen:"home",period:"day",anchor:today(),rs:null,re:null,cur:null,hMonth:today().slice(0,7),hAcc:"",showArchived:false,sel:null};
 function range(){
   const a=V.anchor;
   if(V.period==="day")return [a,a];
@@ -504,10 +551,16 @@ function periodTxns(){const [s,e]=range();return S.txns.filter(t=>t.date>=s&&t.d
 function render(){
   const app=$("#app");
   if(V.screen!=="history")V.sel=null;
+  if(V.screen==="accounts")V.screen="assets";
   if(V.screen==="history")app.innerHTML=historyView();
-  else if(V.screen==="accounts")app.innerHTML=accountsView();
+  else if(V.screen==="assets")app.innerHTML=assetsView();
+  else if(V.screen==="liabs")app.innerHTML=liabsView();
   else if(V.screen==="settings")app.innerHTML=settingsView();
   else app.innerHTML=homeView();
+  const tabs=["home","assets","liabs"].includes(V.screen)&&activeAccounts().length>0;
+  document.body.classList.toggle("hasnav",tabs);
+  $("#nav").innerHTML=tabs?'<div class="in">'+[["home","Home","home"],["assets","Assets","wallet"],["liabs","Liabilities","card"]].map(([k,l,i])=>
+    '<button data-act="tab" data-v="'+k+'"'+(V.screen===k?' aria-current="page"':"")+'><span class="ind">'+ic(i)+"</span>"+l+"</button>").join("")+"</div>":"";
 }
 function subBar(title){return '<header class="appbar"><button class="icon" data-act="home" aria-label="Back">'+ic("back")+"</button><h1>"+esc(title)+"</h1></header>";}
 /* category icon circle: tinted, but opaque so leader lines pass underneath cleanly */
@@ -541,6 +594,7 @@ function homeView(){
   h+='<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="Add spending">'+ic("remove")+'</button>'+
     '<button class="fab xfer" data-act="tr-new" aria-label="Transfer between accounts">'+ic("swap")+'<span>Transfer</span></button>'+
     '<button class="fab plus" data-act="add-in" aria-label="Add money received">'+ic("add")+"</button></div>";
+  h+='<div class="loanbtns"><button class="btn tonal" data-act="loan-new" data-v="borrow">🤝 Loan</button><button class="btn tonal" data-act="loan-new" data-v="lend">💸 Lend</button></div>';
   return h;
 }
 function checkCard(b,cur){
@@ -553,17 +607,17 @@ function checkCard(b,cur){
     '<button class="btn" data-act="check-ok">'+ic("check")+"All match</button></section>";
 }
 /* ---------- category ring around the donut (shared by Home and the Settings preview) ---------- */
-/* Where n tiles go around the donut: evenly spaced (by arc length) on an oval that hugs the donut.
-   Few categories → a circle of big tiles; more → smaller tiles on a slightly taller oval. Never an empty slot.
+/* Where n tiles go around the donut: evenly spaced on a circle that hugs the donut.
+   More categories → smaller tiles, so the circle stays round and there is never an empty slot.
    Slots come back clockwise, starting just left of 12 o'clock. */
 function ringLayout(n,W){
   const TWO=2*Math.PI,N=720;
   const oval=(a,b)=>{const pts=[],cum=[0];for(let k=0;k<=N;k++){const t=-Math.PI/2+k/N*TWO;pts.push([a*Math.cos(t),b*Math.sin(t)]);
     if(k)cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));}return {pts,cum,P:cum[N]};};
   let u=92,a,b,O;
-  for(;u>=44;u-=1){
+  for(;u>=34;u-=1){
     a=W/2-u/2;let ok=false;
-    for(let k=1;k<=1.3001;k+=.05){b=a*k;O=oval(a,b);if(O.P/n>=u*.96){ok=true;break;}}
+    b=a;O=oval(a,b);ok=O.P/n>=u*.96;
     if(ok)break;
   }
   if(!O)O=oval(a,b);
@@ -646,12 +700,193 @@ function ringHTML(cats,o){
     '<svg class="leaders" width="'+W.toFixed(1)+'" height="'+H.toFixed(1)+'" viewBox="0 0 '+W.toFixed(1)+" "+H.toFixed(1)+'" aria-hidden="true">'+lines+"</svg>"+
     center+pos.map(tile).join("")+"</div>";
 }
+/* ---------- loans (you borrowed) and lendings (you lent) ---------- */
+const loan=id=>S.loans.find(l=>l.id===id);
+/* paid so far, what is left and the status; everything is derived from the loan's entries */
+function loanInfo(l){
+  const pays=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id&&!t.principal);
+  const paid=r2(pays.reduce((s,t)=>s+t.amount,0)),left=r2(Math.max(0,l.amount-paid));
+  const a=acc(l.account),cur=a?a.currency:S.settings.cur;
+  const st=left<=0?"cleared":l.status==="writeoff"?"writeoff":l.due&&l.due<today()?"overdue":paid>0?"partly":"active";
+  return {pays,paid,left,cur,st,open:st!=="cleared"&&st!=="writeoff"};
+}
+function stLabel(l,st){return {active:"Active",partly:"Partly paid",overdue:"Overdue",cleared:"Cleared",writeoff:l.kind==="lend"?"Written off":"Forgiven"}[st];}
+const loanWho=l=>l.person||(l.kind==="lend"?"Someone":"Someone");
+function loanRow(l){
+  const i=loanInfo(l),lend=l.kind==="lend";
+  const sub=i.open?(l.due?(lend?"Payback ":"Return by ")+dayLabel(l.due):"No due date"):(lend?"Lent ":"Borrowed ")+dayLabel(l.date);
+  return '<button class="tx" data-act="loan-open" data-v="'+l.id+'"><span class="em">'+(lend?"💸":"🤝")+'</span><span class="mid"><div class="d">'+esc(loanWho(l))+'</div><div class="s">'+esc(sub)+"</div></span>"+
+    '<span class="a">'+esc(money(i.open?i.left:l.amount,i.cur))+'<small><span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></small></span></button>";
+}
+function loanForm(kind){
+  if(!activeAccounts().length){snack("Add an account first");accForm();return;}
+  const lend=kind==="lend",last=S.settings.lastAcc,def=acc(last)&&!acc(last).archived?last:activeAccounts()[0].id;
+  F={kind:"loanf",lk:kind,account:def};
+  let h='<label class="field" style="margin-top:0"><span>'+(lend?"Lent to":"Borrowed from")+'</span><input id="f-person" placeholder="Name" maxlength="40" autocomplete="off"></label>';
+  h+='<div class="amtwrap"><span class="cur" id="amt-cur">'+esc(acc(def).currency)+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount"></div>';
+  h+='<div class="lbl">'+(lend?"From account":"Into account")+"</div>"+accChips("f-acc",F.account);
+  h+='<div class="row" style="margin-top:4px"><label class="field"><span>Date</span><input id="f-date" type="date" value="'+today()+'" max="'+today()+'"></label>'+
+    '<label class="field"><span>'+(lend?"Payback day":"Return by")+'</span><input id="f-due" type="date" min="'+today()+'"></label></div>';
+  h+='<label class="field"><span>Note</span><input id="f-note" placeholder="Optional" maxlength="80"></label>';
+  h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="loan-save">'+ic("check")+(lend?"Save lending":"Save loan")+"</button>";
+  openSheet(lend?"Lend money":"Borrowed money",h);
+  setTimeout(()=>{const el=$("#f-person");if(el)el.focus();},60);
+}
+function loanOpen(id,focusPay){
+  const l=loan(id);if(!l){snack("That loan was deleted");return;}
+  const i=loanInfo(l),lend=l.kind==="lend",pct=l.amount?Math.min(100,Math.round(i.paid/l.amount*100)):0;
+  F={kind:"loan",id,account:acc(l.account)&&!acc(l.account).archived?l.account:(activeAccounts().find(a=>a.currency===i.cur)||{}).id};
+  let h='<div class="hero"><div class="t">'+(lend?"You lent · ":"You borrowed · ")+esc(dayLabel(l.date))+'</div><div class="v">'+esc(money(i.open?i.left:l.amount,i.cur))+"</div>"+
+    '<div class="t">'+(i.open?"left of "+esc(money(l.amount,i.cur))+" · ":"")+'<span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></div></div>";
+  h+='<div class="bar" aria-label="'+pct+'% paid"><span style="width:'+pct+'%"></span></div>';
+  if(i.open){
+    h+='<div class="card"><h3 id="loan-due">'+esc(l.due?(lend?"Payback day · ":"Return by · ")+dayLabel(l.due):"No due date yet")+'</h3>'+
+      '<div class="chips" style="margin-top:8px"><button class="chip" data-act="loan-ext" data-v="1">+1 day</button><button class="chip" data-act="loan-ext" data-v="7">+1 week</button></div>'+
+      '<input id="f-due2" type="date" value="'+esc(l.due||"")+'" aria-label="Change due date" style="margin-top:10px"></div>';
+    const payAccs=activeAccounts().filter(a=>a.currency===i.cur);
+    h+='<div class="card"><h3>'+(lend?"Got money back?":"Paid some back?")+'</h3><p class="muted small" style="margin:0">Part of it is fine too.</p>'+
+      '<div class="amtwrap"><span class="cur">'+esc(i.cur)+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" value="'+esc(i.left)+'" aria-label="Amount"></div>'+
+      '<div class="lbl">'+(lend?"Into":"From")+"</div>"+accChips("f-acc",F.account,null,payAccs)+
+      '<input id="f-date" type="date" value="'+today()+'" max="'+today()+'" aria-label="Date" style="margin-top:12px">'+
+      '<div class="gap"></div><button class="btn" data-act="loan-pay">'+ic("check")+"Record payment</button></div>";
+  }
+  const hist=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id).sort(byNewest);
+  h+='<div class="sec">History</div><div class="list">'+hist.map(t=>{const a=acc(t.account);
+    return '<div class="tx"><span class="em">'+(t.principal?(lend?"💸":"🤝"):"✓")+'</span><span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+'</div></span>'+
+      '<span class="a">'+esc(money(t.amount,i.cur))+"</span>"+(t.principal?"":'<button class="icon" data-act="loanpay-del" data-v="'+t.id+'" aria-label="Delete this payment">'+ic("close")+"</button>")+"</div>";}).join("")+"</div>";
+  if(l.note)h+='<p class="muted small" style="margin:12px 4px 0">'+esc(l.note)+"</p>";
+  h+='<div class="gap"></div><div class="gap"></div>';
+  if(i.st!=="cleared")h+='<button class="btn tonal" data-act="loan-writeoff">'+(l.status==="writeoff"?"Reopen":lend?"Write off the rest":"Mark as forgiven")+'</button><div class="gap"></div>';
+  h+='<button class="btn danger" data-act="loan-del">Delete '+(lend?"lending":"loan")+"</button>";
+  openSheet(loanWho(l),h);
+  if(focusPay)setTimeout(()=>{const el=$("#f-amt");if(el){el.focus();el.select();}},60);
+}
+function saveLoan(){
+  const v=readVals(),person=$("#f-person").value.trim(),amt=evalAmt(v.amount),due=$("#f-due").value,lend=F.lk==="lend";
+  if(!person){snack(lend?"Who did you lend to?":"Who lent you the money?");return;}
+  if(!(amt>0)){snack("Enter an amount");return;}
+  if(!acc(F.account)){snack("Pick an account");return;}
+  if(!v.date){snack("Pick a date");return;}
+  if(due&&due<v.date){snack("That date is before the loan itself");return;}
+  const l={id:newId(),ts:Date.now(),kind:F.lk,person,amount:amt,account:F.account,date:v.date,due,note:(v.note||"").trim(),status:"open"};
+  S.settings.lastAcc=F.account;closeSheet();
+  withUndo((lend?"Lent ":"Borrowed ")+money(amt,acc(l.account).currency)+(lend?" to ":" from ")+person,()=>{
+    S.loans.push(l);
+    S.txns.push({id:newId(),ts:Date.now(),type:"loan",dir:lend?"out":"in",loan:l.id,principal:true,amount:amt,account:l.account,date:l.date,note:""});
+  });
+  askNotify();
+}
+function payLoan(){
+  const l=loan(F.id);if(!l)return;const i=loanInfo(l),v=readVals(),amt=evalAmt(v.amount),lend=l.kind==="lend";
+  if(!(amt>0)){snack("Enter an amount");return;}
+  if(amt>i.left+.005){snack("That's more than what's left ("+money(i.left,i.cur)+")");return;}
+  if(!acc(F.account)){snack("Pick an account");return;}
+  const id=l.id,account=F.account,date=v.date||today(),done=r2(i.left-amt)<=0;
+  closeSheet();
+  withUndo((lend?"Got back ":"Paid back ")+money(amt,i.cur)+(done?" · all cleared":""),()=>{
+    S.txns.push({id:newId(),ts:Date.now(),type:"loan",dir:lend?"in":"out",loan:id,amount:amt,account,date,note:""});
+  });
+}
+/* the snooze: move the due date on from whichever is later, the old due date or today */
+function extendLoan(l,days){l.due=addDays(l.due&&l.due>today()?l.due:today(),days);}
+
+/* ---------- Assets / Liabilities tabs ---------- */
+function tabBar(title){return '<header class="appbar"><h1>'+esc(title)+'</h1><button class="icon" data-act="menu" aria-label="Menu" aria-haspopup="menu">'+ic("more")+"</button></header>";}
+function perCur(add){const m={};add((c,v)=>{m[c]=r2((m[c]||0)+v);});return m;}
+const curLines=m=>Object.keys(m).length?Object.entries(m).map(([c,v])=>'<div class="big">'+esc(money(v,c))+"</div>").join(""):'<div class="big">'+esc(money(0,S.settings.cur))+"</div>";
+function netWorth(){
+  const b=balances();
+  return perCur(add=>{
+    activeAccounts().forEach(a=>add(a.currency,b[a.id]));
+    S.assets.forEach(x=>add(x.currency,x.value));
+    S.loans.forEach(l=>{const i=loanInfo(l);if(i.open)add(i.cur,l.kind==="lend"?i.left:-i.left);});
+  });
+}
+function accRow(a,b){return '<button class="tx" data-act="acc-open" data-v="'+a.id+'"><span class="em">'+TICON[a.type]+'</span><span class="mid"><div class="d">'+esc(a.name)+'</div><div class="s">'+esc(TYPES[a.type]+" · "+a.currency)+'</div></span><span class="a">'+esc(money(b[a.id],a.currency))+"</span></button>";}
+function assetsView(){
+  const b=balances();let h=tabBar("Assets");
+  h+='<div class="sumcard"><div class="t">Net worth</div>'+curLines(netWorth())+'<div class="t small">What you have and are owed, minus what you owe</div></div>';
+  const accs=activeAccounts().filter(a=>a.type!=="card"),arch=S.accounts.filter(a=>a.archived);
+  h+='<div class="sec">Accounts</div>'+(accs.length?'<div class="list">'+accs.map(a=>accRow(a,b)).join("")+"</div>":'<div class="empty">No accounts yet</div>')+
+    '<button class="btn text" data-act="acc-form" style="margin-top:4px">'+ic("add")+"Add account</button>";
+  if(arch.length){h+='<button class="btn text" data-act="toggle-arch">'+(V.showArchived?"Hide":"Show")+" archived ("+arch.length+")</button>";
+    if(V.showArchived)h+='<div class="list">'+arch.map(a=>accRow(a,b)).join("")+"</div>";}
+  const lends=S.loans.filter(l=>l.kind==="lend"),open=lends.filter(l=>loanInfo(l).open),done=lends.filter(l=>!loanInfo(l).open);
+  h+='<div class="sec">Owed to you</div>'+(open.length?'<div class="list">'+open.map(loanRow).join("")+"</div>":'<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>')+
+    '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">'+ic("add")+"Lend money</button>";
+  if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
+    if(V.showCleared)h+='<div class="list">'+done.map(loanRow).join("")+"</div>";}
+  h+='<div class="sec">Other assets</div>'+(S.assets.length?'<div class="list">'+S.assets.map(x=>'<button class="tx" data-act="asset-edit" data-v="'+x.id+'"><span class="em">'+esc(x.e)+'</span><span class="mid"><div class="d">'+esc(x.name)+'</div></span><span class="a">'+esc(money(x.value,x.currency))+"</span></button>").join("")+"</div>"
+    :'<p class="hint" style="margin:0 4px">Things you own that aren’t accounts, like gold or a laptop.</p>')+
+    '<button class="btn text" data-act="asset-edit" style="margin-top:4px">'+ic("add")+"Add asset</button>";
+  return h;
+}
+function liabsView(){
+  const b=balances();let h=tabBar("Liabilities");
+  const borrows=S.loans.filter(l=>l.kind==="borrow"),open=borrows.filter(l=>loanInfo(l).open),done=borrows.filter(l=>!loanInfo(l).open);
+  const cards=activeAccounts().filter(a=>a.type==="card");
+  const owed=perCur(add=>{open.forEach(l=>{const i=loanInfo(l);add(i.cur,i.left);});cards.forEach(a=>{if(b[a.id]<0)add(a.currency,-b[a.id]);});});
+  h+='<div class="sumcard owe"><div class="t">You owe</div>'+curLines(owed)+"</div>";
+  h+='<div class="sec">Loans</div>'+(open.length?'<div class="list">'+open.map(loanRow).join("")+"</div>":'<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>')+
+    '<button class="btn text" data-act="loan-new" data-v="borrow" style="margin-top:4px">'+ic("add")+"Record a loan</button>";
+  if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
+    if(V.showCleared)h+='<div class="list">'+done.map(loanRow).join("")+"</div>";}
+  if(cards.length)h+='<div class="sec">Credit cards</div><div class="list">'+cards.map(a=>accRow(a,b)).join("")+"</div>";
+  return h;
+}
+function assetForm(id){
+  const x=id?S.assets.find(a=>a.id===id):{name:"",e:"💎",value:"",currency:S.settings.cur};if(!x)return;
+  F={kind:"assetf",id,cur:x.currency};
+  let h='<div class="row"><label class="field" style="flex:0 0 80px;margin-top:0"><span>Icon</span><input id="f-aemo" value="'+esc(x.e)+'" maxlength="8" style="text-align:center;font-size:1.4rem"></label>'+
+    '<label class="field" style="margin-top:0"><span>Name</span><input id="f-aname" value="'+esc(x.name)+'" maxlength="30" placeholder="e.g. Gold ring"></label></div>';
+  h+='<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-assetcur"><span>'+esc(x.currency)+"</span>"+ic("down")+"</button></div>"+
+    '<label class="field"><span>Worth about</span><input id="f-aval" inputmode="decimal" autocomplete="off" value="'+esc(x.value)+'" placeholder="0"></label></div>';
+  h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="asset-save">'+(id?"Save":"Add asset")+"</button>";
+  if(id)h+='<div class="gap"></div><button class="btn danger" data-act="asset-del">Delete</button>';
+  openSheet(id?"Edit asset":"New asset",h);
+}
+
+/* ---------- reminders: the native side shows the notifications ---------- */
+function syncReminders(){
+  if(!(window.Android&&Android.setReminders))return;
+  const r=S.settings.remind||{},tm=/^\d\d:\d\d$/.test(r.time)?r.time:"21:00";
+  const last=S.txns.reduce((m,t)=>{const c=t.ts?iso(new Date(t.ts)):t.date,d=c>t.date?c:t.date;return d>m?d:m;},"");
+  const dues=r.dues===false?[]:S.loans.map(l=>({l,i:loanInfo(l)})).filter(x=>x.i.open&&x.l.due)
+    .map(({l,i})=>({id:l.id,date:l.due,kind:l.kind,who:loanWho(l),amount:money(i.left,i.cur)}));
+  try{Android.setReminders(JSON.stringify({daily:{on:r.daily!==false,h:+tm.slice(0,2),m:+tm.slice(3)},lastEntry:last,dues}));}catch(e){}
+}
+function askNotify(){
+  if(S.settings.notifAsked||!(window.Android&&Android.requestNotifications))return;
+  S.settings.notifAsked=true;save();try{Android.requestNotifications();}catch(e){}
+}
+/* +1 day / +1 week tapped on a notification while the app was closed */
+function applyNativeActions(){
+  if(!(window.Android&&Android.takeActions))return;
+  let list=[];try{list=JSON.parse(Android.takeActions()||"[]");}catch(e){}
+  let changed=false;
+  list.forEach(x=>{const l=x&&loan(x.id);if(x.type==="extend"&&l&&loanInfo(l).open){extendLoan(l,+x.days||1);changed=true;}});
+  if(changed){save();render();}
+}
+window.tallyOpen=function(s){
+  const [k,id,pay]=String(s||"").split(":");
+  if(k!=="loan"||!loan(id))return;
+  applyNativeActions();closePop();closeSheet();loanOpen(id,pay==="pay");
+};
+window.tallyResume=function(){
+  applyNativeActions();
+  if(today()!==lastDay){lastDay=today();V.anchor=today();if(!$("#sheet").innerHTML)render();}
+  syncReminders();
+};
+
 function txLine(t){
   const a=acc(t.account),cur=a?a.currency:S.settings.cur;
   let em,emStyle="",d,s,amt,cls="";
   if(t.type==="transfer"){const to=acc(t.to);em="🔁";d=t.note||"Transfer";s=(a?a.name:"?")+" → "+(to?to.name:"?");
     amt=esc(money(t.amount,cur))+(t.toAmount!=null&&to&&to.currency!==cur?"<small>→ "+esc(money(t.toAmount,to.currency))+"</small>":"");}
   else if(t.type==="adjust"){em="⚖️";d=t.note||"Balance fix";s="Balance fix · "+(a?a.name:"?");amt=esc(signed(t.amount,cur));cls="muted";}
+  else if(t.type==="loan"){const l=loan(t.loan),lend=l&&l.kind==="lend",who=l?loanWho(l):"?";em=lend?"💸":"🤝";
+    d=t.principal?(lend?"Lent to ":"Borrowed from ")+who:(lend?who+" paid back":"Paid back "+who);
+    s=(lend?"Lending":"Loan")+" · "+(a?a.name:"?");amt=esc(signed(t.dir==="in"?t.amount:-t.amount,cur));cls="muted";}
   else{const k=cat(t.cat),out=t.type==="expense";em=k.e;emStyle=' style="background:'+k.c+'1F"';d=t.note||k.name;s=k.name+" · "+(a?a.name:"?");
     amt=(out?"−":"+")+esc(money(t.amount,cur));cls=out?"spent":"got";}
   const selMode=!!V.sel&&V.screen==="history",on=selMode&&V.sel.has(t.id);
@@ -688,20 +923,6 @@ function historyView(){
   if(!list.length)return h+'<div class="empty">Nothing written down this month.</div>';
   return h+dayGroups(list);
 }
-function accountsView(){
-  let h=subBar("Accounts");const b=balances();
-  const row=a=>'<button class="tx" data-act="acc-open" data-v="'+a.id+'"><span class="em">'+TICON[a.type]+'</span><span class="mid"><div class="d">'+esc(a.name)+'</div><div class="s">'+esc(TYPES[a.type]+" · "+a.currency)+'</div></span><span class="a">'+esc(money(b[a.id],a.currency))+"</span></button>";
-  const act=activeAccounts(),arch=S.accounts.filter(a=>a.archived);
-  h+=act.length?'<div class="list">'+act.map(row).join("")+"</div>":'<div class="empty">No accounts yet</div>';
-  const tots=currencies().map(c=>money(r2(act.filter(a=>a.currency===c).reduce((s,a)=>s+b[a.id],0)),c));
-  if(tots.length)h+='<p class="muted small" style="text-align:center">Total '+esc(tots.join(" · "))+"</p>";
-  h+='<div class="gap"></div><button class="btn tonal" data-act="acc-form">'+ic("add")+"Add account</button>";
-  if(arch.length){
-    h+='<div class="gap"></div><button class="btn text" data-act="toggle-arch">'+(V.showArchived?"Hide":"Show")+" archived ("+arch.length+")</button>";
-    if(V.showArchived)h+='<div class="list">'+arch.map(row).join("")+"</div>";
-  }
-  return h;
-}
 function catGrid(kind){
   let h='<div class="cgrid" data-kind="'+kind+'">';
   S.cats.filter(c=>c.kind===kind&&!c.hidden).forEach(c=>{
@@ -713,6 +934,12 @@ function settingsView(){
   let h=subBar("Settings");const th=S.settings.theme||"system";
   h+='<div class="sec">Theme</div><div class="seg">'+[["system","Phone"],["light","Light"],["dark","Dark"]].map(([k,l])=>'<button data-act="theme" data-v="'+k+'" aria-pressed="'+(th===k)+'">'+l+"</button>").join("")+"</div>";
   h+='<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>'+esc(curLabel(S.settings.cur))+"</span>"+ic("down")+"</button>";
+  const r=S.settings.remind||{};
+  h+='<div class="sec">Reminders</div><div class="list">'+
+    '<div class="setrow"><span class="mid"><div>Evening nudge</div><div class="s">If nothing was written that day</div></span><input id="f-rtime" type="time" value="'+esc(r.time||"21:00")+'" aria-label="Nudge time" style="width:auto;min-width:136px;height:44px;padding:0 10px"'+(r.daily===false?" disabled":"")+'>'+
+    '<button class="sw" role="switch" data-act="rem-daily" aria-checked="'+(r.daily!==false)+'" aria-label="Evening nudge"></button></div>'+
+    '<div class="setrow"><span class="mid"><div>Loan & lending due days</div><div class="s">Morning of the day, with +1 day / +1 week</div></span>'+
+    '<button class="sw" role="switch" data-act="rem-dues" aria-checked="'+(r.dues!==false)+'" aria-label="Due day reminders"></button></div></div>';
   h+='<div class="sec">Spending categories</div><p class="hint" style="margin:0 4px 8px">Laid out exactly like your home screen. Tap to edit, hold and drag to move.</p>'+
     ringHTML(outCats(),{mode:"edit"})+'<div class="gap"></div><button class="btn tonal" data-act="cat-new" data-v="out">'+ic("add")+"Add spending category</button>";
   h+='<div class="sec">Money-in categories</div>'+catGrid("in");
@@ -837,6 +1064,7 @@ function txSheet(id,type,catId){
   const t=id?S.txns.find(x=>x.id===id):null;
   if(t&&t.type==="transfer"){trSheet(id);return;}
   if(t&&t.type==="adjust"){adjSheet(id);return;}
+  if(t&&t.type==="loan"){loanOpen(t.loan);return;}
   if(t&&t.feeOf&&S.txns.some(x=>x.id===t.feeOf)){trSheet(t.feeOf);return;}
   type=t?t.type:type;
   const inc=type==="income";
@@ -1008,9 +1236,11 @@ function saveTr(){
     }else{if(oldFee)S.txns=S.txns.filter(x=>x!==oldFee);delete t.feeId;}
   });
 }
-/* delete entries by id, keeping transfers and their fees consistent */
+/* delete entries by id, keeping transfers + fees and loans + their payments consistent */
 function deleteEntries(ids){
   ids=new Set(ids);
+  const gone=new Set(S.txns.filter(t=>ids.has(t.id)&&t.type==="loan"&&t.principal).map(t=>t.loan));
+  if(gone.size){S.txns.forEach(t=>{if(t.type==="loan"&&gone.has(t.loan))ids.add(t.id);});S.loans=S.loans.filter(l=>!gone.has(l.id));}
   S.txns.forEach(t=>{if(ids.has(t.id)&&t.feeId)ids.add(t.feeId);});
   S.txns=S.txns.filter(t=>!ids.has(t.id));
   S.txns.forEach(t=>{if(t.feeId&&ids.has(t.feeId))delete t.feeId;});
@@ -1031,8 +1261,31 @@ document.addEventListener("click",ev=>{
   if(el.closest(".menu"))closePop();
   switch(act){
     case "home":V.screen="home";render();scrollTo(0,0);break;
-    case "go":closeSheet();V.screen=v;render();scrollTo(0,0);break;
-    case "menu":popup([["go","history","History"],["go","accounts","Accounts"],["go","settings","Settings"]],el);break;
+    case "go":closeSheet();V.screen=v==="accounts"?"assets":v;render();scrollTo(0,0);break;
+    case "menu":popup([["go","history","History"],["go","settings","Settings"]],el);break;
+    case "tab":V.screen=v;render();scrollTo(0,0);break;
+    case "toggle-cleared":V.showCleared=!V.showCleared;render();break;
+    case "loan-new":loanForm(v);break;
+    case "loan-save":saveLoan();break;
+    case "loan-open":loanOpen(v);break;
+    case "loan-pay":payLoan();break;
+    case "loan-ext":{const l=loan(F.id);if(!l)return;extendLoan(l,+v);commit();
+      $("#loan-due").textContent=(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due);$("#f-due2").value=l.due;snack("Now due "+dayLabel(l.due));break;}
+    case "loanpay-del":{const id=v;closeSheet();withUndo("Payment deleted",()=>{S.txns=S.txns.filter(x=>x.id!==id);});break;}
+    case "loan-writeoff":{const l=loan(F.id);if(!l)return;const lend=l.kind==="lend",back=l.status==="writeoff";closeSheet();
+      withUndo(back?"Reopened":lend?"Written off":"Marked as forgiven",()=>{const x=loan(l.id);x.status=back?"open":"writeoff";});break;}
+    case "loan-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>{S.loans=S.loans.filter(l=>l.id!==id);S.txns=S.txns.filter(t=>!(t.type==="loan"&&t.loan===id));});break;}
+    case "asset-edit":assetForm(v);break;
+    case "pick-assetcur":curPicker(F.cur,c=>{if(F&&F.kind==="assetf"){F.cur=c;$("#f-cur span").textContent=c;}});break;
+    case "asset-save":{
+      const name=$("#f-aname").value.trim(),raw=$("#f-aval").value.trim(),val=raw?evalAmt(raw):0;
+      if(!name){snack("Give it a name");return;}if(val==null){snack("That value isn't a number");return;}
+      const data={name,e:$("#f-aemo").value.trim()||"💎",value:val,currency:F.cur};
+      if(F.id)Object.assign(S.assets.find(x=>x.id===F.id),data);else S.assets.push(Object.assign({id:newId()},data));
+      closeSheet();commit();break;}
+    case "asset-del":{const id=F.id;closeSheet();S.assets=S.assets.filter(x=>x.id!==id);commit();snack("Asset deleted");break;}
+    case "rem-daily":{const r=S.settings.remind;r.daily=r.daily===false;save();syncReminders();render();if(r.daily)askNotify();break;}
+    case "rem-dues":{const r=S.settings.remind;r.dues=r.dues===false;save();syncReminders();render();if(r.dues)askNotify();break;}
     case "period-open":periodDialog();break;
     case "pd-tab":PD.tab=v;PD.pick=null;pdRender();break;
     case "pd-mon":PD.month=shiftMonth(PD.month,+v);pdRender();break;
@@ -1060,7 +1313,7 @@ document.addEventListener("click",ev=>{
       if(F.type!=="income"){const chip=$("#f-catchip");chip.innerHTML=catChipInner(cat(v));chip.hidden=false;chip.setAttribute("aria-expanded","false");
         $("#f-catgrid").hidden=true;$("#f-catlbl").hidden=true;focusAmt();}
       break;}
-    case "f-acc":F.account=v;setPressed("f-acc",v);$("#amt-cur").textContent=acc(v).currency;break;
+    case "f-acc":{F.account=v;setPressed("f-acc",v);const c=$("#amt-cur");if(c)c.textContent=acc(v).currency;break;}
     case "tx-save":saveTx();break;
     case "tx-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>deleteEntries([id]));break;}
     case "tr-new":trSheet();break;
@@ -1130,13 +1383,14 @@ document.addEventListener("click",ev=>{
       closeSheet();commit();snack(c.name+" removed");break;}
     case "export":{
       const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+      const kind=t=>t.type==="loan"?(loan(t.loan)&&loan(t.loan).kind==="lend"?"lend":"loan")+"-"+t.dir:t.type;
       const lines=[["date","type","amount","currency","account","to_account","to_amount","category","note"].join(",")];
       [...S.txns].sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||0)-(b.ts||0)).forEach(t=>{const a=acc(t.account),to=acc(t.to);
-        lines.push([t.date,t.type,t.amount,a?a.currency:"",q(a?a.name:""),q(to?to.name:""),t.type==="transfer"?(t.toAmount!=null?t.toAmount:t.amount):"",q(t.type==="expense"||t.type==="income"?cat(t.cat).name:""),q(t.note)].join(","));});
+        lines.push([t.date,kind(t),t.amount,a?a.currency:"",q(a?a.name:""),q(to?to.name:""),t.type==="transfer"?(t.toAmount!=null?t.toAmount:t.amount):"",q(t.type==="expense"||t.type==="income"?cat(t.cat).name:""),q(t.note)].join(","));});
       saveOut("tally-entries-"+today()+".csv","text/csv",lines.join("\n"));break;}
     case "backup":saveOut("tally-backup-"+today()+".json","application/json",JSON.stringify(S));break;
     case "wipe":if(confirm("Delete every account and entry? This can't be undone.")){
-      const keep={cur:S.settings.cur,theme:S.settings.theme};S=blank();Object.assign(S.settings,keep);commit();snack("All data deleted");}break;
+      const keep={cur:S.settings.cur,theme:S.settings.theme,remind:S.settings.remind,notifAsked:S.settings.notifAsked};S=blank();Object.assign(S.settings,keep);commit();snack("All data deleted");}break;
   }
 });
 document.addEventListener("input",ev=>{
@@ -1148,6 +1402,8 @@ document.addEventListener("input",ev=>{
 });
 document.addEventListener("change",ev=>{
   const el=ev.target;
+  if(el.id==="f-due2"&&F&&F.kind==="loan"){const l=loan(F.id);if(l&&el.value){l.due=el.value;commit();$("#loan-due").textContent=(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due);}return;}
+  if(el.id==="f-rtime"){if(/^\d\d:\d\d$/.test(el.value)){S.settings.remind.time=el.value;save();syncReminders();}return;}
   if(el.id==="restore-file"){const f=el.files[0];el.value="";if(!f)return;f.text().then(t=>{let o;try{o=JSON.parse(t);}catch(e){snack("That isn't a Tally backup file");return;}
     if(!o||!Array.isArray(o.accounts)||!Array.isArray(o.txns)){snack("That isn't a Tally backup file");return;}
     if(!confirm("Replace everything on this phone with this backup ("+o.accounts.length+" accounts, "+o.txns.length+" entries)?"))return;
@@ -1157,7 +1413,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){if(!window.tallyBack())return;}
   else if(e.key==="Enter"&&e.target.id==="cur-q"){const b=$('#curlist [data-act="cur-pick"]');if(b){e.preventDefault();b.click();}}
   else if(e.key==="Enter"&&F&&e.target.tagName==="INPUT"){
-    const map={tx:"tx-save",tr:"tr-save",acc:"fix-save",accf:"acc-save",catf:"cat-save"};
+    const map={tx:"tx-save",tr:"tr-save",acc:"fix-save",accf:"acc-save",catf:"cat-save",loanf:"loan-save",loan:"loan-pay",assetf:"asset-save"};
     const b=map[F.kind]&&document.querySelector('[data-act="'+map[F.kind]+'"]');if(b){e.preventDefault();b.click();}
   }
 });
@@ -1260,7 +1516,8 @@ window.tallySaved=function(ok){snack(ok?"Saved":"Not saved");};
 let lastDay=today();
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&today()!==lastDay){lastDay=today();V.anchor=today();if(!$("#sheet").innerHTML)render();}});
 
-readSys();applyTheme();render();
+readSys();applyTheme();applyNativeActions();render();syncReminders();
+if(activeAccounts().length)askNotify();
 })();
 </script>
 </body>
