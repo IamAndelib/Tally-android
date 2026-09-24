@@ -19,10 +19,12 @@ and the committed `app/debug.keystore` is a public test key by design.
 ## Option A — IzzyOnDroid (quick, a day or two)
 A popular extra repository that F-Droid users can add. It uses the **signed APKs from your GitHub releases**, so its
 copy keeps your signature and can update the GitHub-installed app.
-1. Create a free account on <https://gitlab.com>.
-2. Open an issue at <https://gitlab.com/IzzyOnDroid/repo/-/issues> titled "Inclusion request: Tally", with the link
-   to this repository and a line saying the APK is attached to each GitHub release (`Tally-vX.Y.Z.apk`) and metadata
-   is in `fastlane/`.
+IzzyOnDroid moved from GitLab to **Codeberg** (the old GitLab project is archived and read-only).
+1. Create a free account on <https://codeberg.org>.
+2. Read their [App Inclusion Policy](https://izzyondroid.org/docs/general/AppInclusionPolicy/), then open a new issue
+   in their repodata tracker, <https://codeberg.org/IzzyOnDroid/repodata/issues>, titled "Inclusion request: Tally",
+   using the template if one is offered. Include the link to this repository, the licence (MIT), and a line saying the
+   signed APK is attached to each GitHub release (`Tally-vX.Y.Z.apk`) and the store metadata is in `fastlane/`.
 3. Answer any questions. Once added, every new GitHub release shows up there automatically.
 
 ## Option B — the main F-Droid repository (a few weeks)
