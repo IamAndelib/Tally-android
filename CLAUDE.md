@@ -6,7 +6,7 @@ Built originally in a claude.ai chat; continue development from here.
 ## Goals
 - Work like a pocket notebook: each morning the balances of every money source sit at the top of the page, spending is
   written down through the day by category and source, and the balances roll over live to the next day.
-- Home screen = one tap per expense: a ring of 12 spending categories around a donut of the current day's spending
+- Home screen = one tap per expense: all spending categories (up to 24) laid out around a donut of the current day's spending
   (Monefy-style interaction, but Tally's own Material 3 look). Tap a category → amount → Save.
 - Multiple accounts (bank, mobile wallet e.g. bKash, cash, credit card, savings), each with its own currency (CAD, BDT, ...).
 - Reliable transfers ("Transfer") between own accounts: never count as spending; cross-currency moves require the received amount;
@@ -28,21 +28,26 @@ Built originally in a claude.ai chat; continue development from here.
   - State `S = {v:2, settings:{cur, theme, lastAcc, lastAccIn, lastCheck}, accounts, cats, txns}` in localStorage key `tally:v1`.
     `migrate()` upgrades any saved state or backup (v1 included) on load/restore without changing balances.
   - Account: `{id, name, type, currency, opening, archived}`. Accounts with entries are archived, never deleted (deleting would change other accounts' balances through transfers).
-  - Category: `{id, name, e, c, kind:'out'|'in', hidden?}`. The first 12 visible `out` categories form the home ring.
+  - Category: `{id, name, e, c, kind:'out'|'in', hidden?}`. All visible `out` categories (max 24) form the home ring, in reading order.
   - Transaction: `{id, ts, date:'YYYY-MM-DD', type, amount, account, note, ...}` where type is
     - `expense` / `income` (+ `cat`; a transfer fee also has `feeOf`),
     - `transfer` (+ `to`, `toAmount` when currencies differ, `feeId` of the linked fee expense),
     - `adjust` — balance fix; signed `amount`; changes the balance but never counts as spent/received.
   - `balances(before?)` = opening + all entries (optionally only entries dated before a day → "started today with").
-  - Home: period (day/week/month, default Today; ‹ › and swipe on the ring; tapping the label opens the Day | Week | Month
-    picker dialog: calendar / week rows / month grid), account balance strip, once-a-day morning check card (`settings.lastCheck`),
-    donut + category ring with leader lines (`drawLeaders()`, from each slice to its category tile), balance bar (opens the
+  - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
+    Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
+    account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring, balance bar (opens the
     period's entries), − / Transfer / + buttons. New entries default to the day being viewed.
+  - Ring: `ringLayout(n, W)` puts n tiles on a top row, bottom row and two side columns with no empty slot (tiles shrink
+    as n grows); `ringHTML(cats, {mode})` draws tiles, donut and leader lines for Home and the Settings preview.
+    Donut slices are ordered by their category's position (clockwise) and the donut is rotated so each slice faces its
+    category; leader lines are computed from the layout (no DOM measuring), so they don't cross.
   - Sheets are built once and then patched in place (`setPressed`, `trSync`), never re-rendered while open.
     `#sheet2` is a second layer for pickers opened from a sheet (currency picker: search, in use / popular / all ISO currencies).
   - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent.
-  - Settings: category grids per kind; tap to edit (emoji, colour), hold-and-drag to reorder (touch + mouse, `pressStart/Move/End`);
-    the first 12 spending categories are the home ring. Built-in or used categories are hidden, not deleted.
+  - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emoji, colour),
+    hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
+    Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
   - Every add/edit/delete of entries goes through `withUndo()` (snapshot of `S.txns`, Undo in the snackbar).
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
