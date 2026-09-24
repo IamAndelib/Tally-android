@@ -94,7 +94,7 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .ring.edit{margin:0 -4px;background:var(--surface-container);border-radius:20px}
 .leaders{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:visible}
 .cat{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:16px;min-width:0}
-.cat .ci{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:1.45rem;border:2px solid}
+.cat .ci{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:1.45rem}
 .cat .cn{font-size:.72rem;color:var(--on-surface-variant);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cat .cp{font-size:.72rem;font-weight:700;min-height:1em}
 .dwrap{position:absolute;z-index:1;display:block;padding:0;border-radius:50%}
@@ -155,7 +155,7 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .catgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 .catgrid .cat[aria-pressed="true"] .ci{box-shadow:0 0 0 3px var(--surface-low),0 0 0 5px var(--primary)}
 .catchip{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 14px 0 6px;border-radius:24px;background:var(--surface-high);font-weight:600}
-.catchip .ci{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:1.1rem;border:2px solid}
+.catchip .ci{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:1.1rem}
 .catchip .ic{width:18px;height:18px;color:var(--on-surface-variant);transition:transform .15s}
 .catchip[aria-expanded="true"] .ic{transform:rotate(180deg)}
 
@@ -208,6 +208,25 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .snack span{flex:1}
 .snack button{color:var(--primary-container);font-weight:600;padding:8px 12px;border-radius:20px}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+/* emblems */
+.emb{display:inline-grid;place-items:center;border-radius:50%;flex:none;width:40px;height:40px;overflow:hidden}
+.emb svg{width:58%;height:58%;display:block}
+.emb .emo{line-height:1}
+.emb.sm{width:22px;height:22px;font-size:.7rem;vertical-align:middle;margin-right:6px}
+.acc .n .emb.sm{width:20px;height:20px}
+.btn .emb.sm{margin-right:0}
+.cprevbtn{border-radius:50%}
+.icgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;justify-items:center;padding:4px 0}
+.icbtn{width:56px;height:56px;border-radius:50%;display:grid;place-items:center}
+.icbtn .emb{width:48px;height:48px}
+.icbtn[aria-pressed="true"]{box-shadow:0 0 0 3px var(--surface-low),0 0 0 5px var(--primary)}
+.dots .dot{width:34px;height:34px}
+/* date picker header, time grid */
+.dp-h{padding:4px 8px 8px;border-bottom:1px solid var(--outline-variant);margin-bottom:4px}
+.dp-h .t{font-size:.8rem;color:var(--on-surface-variant)}
+.dp-h .big{font-size:1.6rem;font-weight:600}
+.tgrid{grid-template-columns:repeat(4,1fr)}
+.tgrid button{height:44px;font-size:.85rem}
 /* bottom navigation */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface-container);padding-bottom:env(safe-area-inset-bottom,0px)}
 .nav:empty{display:none}
@@ -254,7 +273,7 @@ body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 .tile.placeholder{opacity:.25}
 .ghost{position:fixed;z-index:30;pointer-events:none;transition:none;transform:scale(1.1);background:var(--surface-high);border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.25);margin:0}
 .tile-add .ci{border:2px dashed var(--outline);color:var(--on-surface-variant)}
-.cprev{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;font-size:2rem;border:2px solid;margin:0 auto 4px}
+.cprev{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:2rem;margin:0 auto 4px}
 .emo-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
 .emo-grid button{height:40px;border-radius:10px;font-size:1.3rem}
 .emo-grid button[aria-pressed="true"]{background:var(--secondary-container)}
@@ -301,30 +320,33 @@ body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 <div id="sheet2"></div>
 <div id="pop"></div>
 <div id="snack"></div>
+<script src="icons.js"></script>
 <script>
 (function(){
 "use strict";
 /* ---------- constants ---------- */
 const CATS=[
- {id:"groceries",name:"Groceries",e:"🛒",c:"#2E9E6B",kind:"out"},
- {id:"food",name:"Eating out",e:"🍔",c:"#E08A2E",kind:"out"},
- {id:"transport",name:"Transport",e:"🚌",c:"#3A7BD5",kind:"out"},
- {id:"housing",name:"Rent",e:"🏠",c:"#8E5BD0",kind:"out"},
- {id:"bills",name:"Bills",e:"📱",c:"#D04E7C",kind:"out"},
- {id:"shopping",name:"Shopping",e:"🛍️",c:"#C9A227",kind:"out"},
- {id:"education",name:"Study",e:"📚",c:"#2BA3A3",kind:"out"},
- {id:"health",name:"Health",e:"💊",c:"#D65A45",kind:"out"},
- {id:"fun",name:"Fun",e:"🎬",c:"#6E7BE0",kind:"out"},
- {id:"family",name:"Family",e:"🎁",c:"#B8577E",kind:"out"},
- {id:"fees",name:"Fees",e:"🏦",c:"#7A8190",kind:"out"},
- {id:"other",name:"Other",e:"🧾",c:"#9AA3B2",kind:"out"},
- {id:"income",name:"Income",e:"💰",c:"#1D8A62",kind:"in"},
- {id:"gift",name:"Gift",e:"🎁",c:"#B8577E",kind:"in"},
- {id:"otherin",name:"Other",e:"➕",c:"#5E8A7A",kind:"in"}
+ {id:"groceries",name:"Groceries",e:"🛒",c:"#15a06f",i:"shopping_cart",kind:"out"},
+ {id:"food",name:"Eating out",e:"🍔",c:"#c98500",i:"restaurant",kind:"out"},
+ {id:"transport",name:"Transport",e:"🚌",c:"#0a91b8",i:"directions_bus",kind:"out"},
+ {id:"housing",name:"Rent",e:"🏠",c:"#7c9a0d",i:"home",kind:"out"},
+ {id:"bills",name:"Bills",e:"📱",c:"#a646c9",i:"receipt_long",kind:"out"},
+ {id:"shopping",name:"Shopping",e:"🛍️",c:"#e0578c",i:"shopping_bag",kind:"out"},
+ {id:"education",name:"Study",e:"📚",c:"#4b5fd6",i:"school",kind:"out"},
+ {id:"health",name:"Health",e:"💊",c:"#e0504f",i:"medication",kind:"out"},
+ {id:"fun",name:"Fun",e:"🎬",c:"#2a78d6",i:"movie",kind:"out"},
+ {id:"family",name:"Family",e:"🎁",c:"#df5f2b",i:"family_restroom",kind:"out"},
+ {id:"fees",name:"Fees",e:"🏦",c:"#00897b",i:"account_balance",kind:"out"},
+ {id:"other",name:"Other",e:"🧾",c:"#b0671f",i:"category",kind:"out"},
+ {id:"income",name:"Income",e:"💰",c:"#15a06f",i:"payments",kind:"in"},
+ {id:"gift",name:"Gift",e:"🎁",c:"#e0578c",i:"redeem",kind:"in"},
+ {id:"otherin",name:"Other",e:"➕",c:"#5f7389",i:"add_circle",kind:"in"}
 ];
+/* colours the built-in categories had before emblems (v<4), to upgrade only untouched ones */
+const OLD_CAT_COLS={"groceries":"#2E9E6B","food":"#E08A2E","transport":"#3A7BD5","housing":"#8E5BD0","bills":"#D04E7C","shopping":"#C9A227","education":"#2BA3A3","health":"#D65A45","fun":"#6E7BE0","family":"#B8577E","fees":"#7A8190","other":"#9AA3B2","income":"#1D8A62","gift":"#B8577E","otherin":"#5E8A7A"};
 const OLD_DEFAULT_IDS=["groceries","food","transport","housing","bills","shopping","education","health","fun","fees","family","other","income","transfer"];
+const ICONS=window.TALLY_ICONS||{};
 const TYPES={bank:"Bank",wallet:"Mobile wallet",cash:"Cash",card:"Credit card",savings:"Savings"};
-const TICON={bank:"🏦",wallet:"📲",cash:"💵",card:"💳",savings:"🐖"};
 const CURS=["CAD","USD","BDT","INR","EUR","GBP"];
 const CUSTOM_COLS=["#4C9F8A","#C0703A","#7657B5","#B0465F","#4A86B8","#8A8F2E"];
 const P={
@@ -349,6 +371,8 @@ const P={
  home:"M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
  wallet:"M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z",
  card:"M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z",
+ event:"M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z",
+ schedule:"M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
  edit:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
 };
 const ic=n=>'<svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="'+P[n]+'"/></svg>';
@@ -365,7 +389,7 @@ const r2=n=>Math.round(n*100)/100;
 
 /* ---------- state + storage ---------- */
 const LS="tally:v1";
-function blank(){return {v:3,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
+function blank(){return {v:4,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance. */
 function migrate(o){
   const s=blank();
@@ -373,11 +397,14 @@ function migrate(o){
   Object.assign(s.settings,o.settings||{});
   s.accounts=(Array.isArray(o.accounts)?o.accounts:[]).filter(a=>a&&a.id).map(a=>({
     id:String(a.id),name:String(a.name||"Account"),type:TYPES[a.type]?a.type:"bank",
-    currency:String(a.currency||s.settings.cur),opening:+a.opening||0,archived:!!a.archived}));
+    currency:String(a.currency||s.settings.cur),opening:+a.opening||0,archived:!!a.archived,i:a.i&&ICONS[a.i]?a.i:"",e:a.i?"":String(a.e||""),c:/^#[0-9a-f]{6}$/i.test(a.c)?a.c:""}));
   if(Array.isArray(o.cats)){
     const valid=o.cats.filter(c=>c&&c.id&&c.name&&c.id!=="transfer");
     if(o.v>=2){
-      s.cats=valid.map(c=>({id:String(c.id),name:String(c.name),e:c.e||"🏷️",c:c.c||"#9AA3B2",kind:c.kind==="in"?"in":"out",hidden:!!c.hidden}));
+      s.cats=valid.map(c=>({id:String(c.id),name:String(c.name),e:c.e||"🏷️",c:c.c||"#9AA3B2",i:c.i&&ICONS[c.i]?c.i:"",kind:c.kind==="in"?"in":"out",hidden:!!c.hidden}));
+      if(!(o.v>=4))s.cats.forEach(c=>{const d=CATS.find(x=>x.id===c.id);if(!d)return;
+        if(!c.i&&c.e===d.e)c.i=d.i;
+        if(String(c.c).toLowerCase()===String(OLD_CAT_COLS[c.id]||"").toLowerCase())c.c=d.c;});
       CATS.forEach(d=>{if(!s.cats.some(c=>c.id===d.id))s.cats.push({...d});});
     }else{
       valid.filter(c=>!OLD_DEFAULT_IDS.includes(c.id)&&!CATS.some(d=>d.id===c.id))
@@ -413,7 +440,7 @@ function migrate(o){
   s.loans=(Array.isArray(o.loans)?o.loans:[]).filter(l=>l&&l.id&&(l.kind==="borrow"||l.kind==="lend")&&okAcc.has(l.account)&&isFinite(+l.amount)).map(l=>({
     id:String(l.id),ts:+l.ts||0,kind:l.kind,person:String(l.person||""),amount:+l.amount,account:l.account,
     date:/^\d{4}-\d{2}-\d{2}$/.test(l.date)?l.date:today(),due:/^\d{4}-\d{2}-\d{2}$/.test(l.due)?l.due:"",note:String(l.note||""),status:l.status==="writeoff"?"writeoff":"open"}));
-  s.assets=(Array.isArray(o.assets)?o.assets:[]).filter(x=>x&&x.id).map(x=>({id:String(x.id),name:String(x.name||"Asset"),e:x.e||"💎",value:+x.value||0,currency:String(x.currency||s.settings.cur)}));
+  s.assets=(Array.isArray(o.assets)?o.assets:[]).filter(x=>x&&x.id).map(x=>({id:String(x.id),name:String(x.name||"Asset"),e:x.e&&x.e!=="💎"?x.e:"",i:x.i&&ICONS[x.i]?x.i:(!x.e||x.e==="💎"?"diamond":""),c:/^#[0-9a-f]{6}$/i.test(x.c)?x.c:"#a646c9",value:+x.value||0,currency:String(x.currency||s.settings.cur)}));
   if(!s.settings.remind||typeof s.settings.remind!=="object")s.settings.remind={daily:true,time:"21:00",dues:true};
   return s;
 }
@@ -564,7 +591,117 @@ function render(){
 }
 function subBar(title){return '<header class="appbar"><button class="icon" data-act="home" aria-label="Back">'+ic("back")+"</button><h1>"+esc(title)+"</h1></header>";}
 /* category icon circle: tinted, but opaque so leader lines pass underneath cleanly */
-const ciStyle=c=>"border-color:"+c+";background:linear-gradient("+c+"1F,"+c+"1F),var(--surface)";
+/* ---------- emblems: a Material Symbols glyph on a filled colour circle (icons.js), emoji as a fallback ---------- */
+/* default colours: validated with a colour-blind-safe check (OKLab ΔE) in ring order on the light and dark surfaces;
+   the last six are extra choices for the user */
+const PALETTE=["#15a06f","#c98500","#0a91b8","#7c9a0d","#a646c9","#e0578c","#4b5fd6","#e0504f","#2a78d6","#df5f2b","#00897b","#b0671f",
+  "#5f7389","#c2185b","#689f38","#6a3fb5","#0288d1","#a1887f"];
+const TYPE_ICON={bank:"account_balance",wallet:"mobile",cash:"payments",card:"credit_card",savings:"savings"};
+const TYPE_COL={bank:"#2a78d6",wallet:"#e0578c",cash:"#15a06f",card:"#4b5fd6",savings:"#c98500"};
+const lum=h=>{const c=hexRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});return .2126*c[0]+.7152*c[1]+.0722*c[2];};
+/* white or near-black glyph, whichever reads better on the circle */
+const glyphOn=bg=>{const L=lum(bg);return (1.05)/(L+.05)>=(L+.05)/(lum("#1b1b1f")+.05)?"#ffffff":"#1b1b1f";};
+function emblem(o,cls,title){
+  const c=o&&o.c||"#7a8190",fg=glyphOn(c),p=o&&o.i&&ICONS[o.i];
+  return '<span class="'+(cls||"emb")+' emb" style="background:'+c+";color:"+fg+'"'+(title?' title="'+esc(title)+'"':"")+">"+
+    (p?'<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="'+p[0]+'"/></svg>':'<span class="emo">'+esc(o&&o.e||"•")+"</span>")+"</span>";
+}
+const accEmb=a=>({i:a.i||(a.e?"":TYPE_ICON[a.type]),e:a.e,c:a.c||TYPE_COL[a.type]});
+const LOAN_EMB={borrow:{i:"handshake",c:"#5f7389"},lend:{i:"volunteer_activism",c:"#0288d1"}};
+/* search: every word must match the start of a word in the name or tags; whole-word matches rank first */
+function iconSearch(q){
+  const words=q.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),names=Object.keys(ICONS);
+  if(!words.length)return names;
+  const scored=[];
+  names.forEach((n,idx)=>{const toks=(n.replace(/_/g," ")+" "+ICONS[n][1]).toLowerCase().split(/\s+/);let s=0;
+    for(const w of words){let best=0;for(const t of toks){if(t===w){best=3;break;}if(t.startsWith(w))best=Math.max(best,1);}if(!best)return;s+=best;}
+    scored.push([s,idx,n]);});
+  return scored.sort((a,b)=>b[0]-a[0]||a[1]-b[1]).map(x=>x[2]);
+}
+let ICPICK=null;
+function iconPicker(cur,color,onPick){
+  openSheet2("Choose an emblem",'<div class="qbar"><input id="ic-q" type="search" placeholder="Search: coffee, car, gift…" autocomplete="off" aria-label="Search emblems"></div>'+
+    '<div id="iclist" class="icgrid"></div><div id="ic-emo-box" hidden><label class="field"><span>Type an emoji</span><input id="ic-emo" maxlength="8" style="width:110px;text-align:center;font-size:1.5rem"></label><div class="gap"></div><button class="btn" data-act="ic-emo-ok">Use this emoji</button></div>'+
+    '<button class="btn text" data-act="ic-emoji" style="margin-top:8px">Use an emoji instead</button>');
+  ICPICK={cur,color,onPick};icList("");
+}
+function icList(q){
+  const box=$("#iclist");if(!box||!ICPICK)return;const res=iconSearch(q);
+  box.innerHTML=res.length?res.map(n=>'<button class="icbtn" data-act="ic-pick" data-v="'+n+'" aria-pressed="'+(n===ICPICK.cur)+'" aria-label="'+esc(n.replace(/_/g," "))+'">'+emblem({i:n,c:ICPICK.color})+"</button>").join("")
+    :'<div class="empty" style="grid-column:1/-1">Nothing called “'+esc(q)+'” yet. Pick a close one, or use an emoji.</div>';
+}
+/* form part shared by category / account / asset editors: big preview (tap to change) + colour swatches */
+function emblemEditor(o){
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 4px"><button class="cprevbtn" data-act="f-icon" aria-label="Change emblem"><span id="f-cprev">'+emblem(o,"cprev")+
+    '</span></button><button class="btn text" data-act="f-icon" style="width:auto;height:36px">'+ic("edit")+"Change emblem</button></div>"+
+    '<div class="lbl">Colour</div><div class="dots">'+PALETTE.map(x=>'<button class="dot" data-act="f-col" data-v="'+x+'" style="background:'+x+'" aria-pressed="'+(x.toLowerCase()===String(o.c).toLowerCase())+'" aria-label="Colour '+x+'"></button>').join("")+"</div>";
+}
+const prevUpd=()=>{const el=$("#f-cprev");if(el&&F)el.innerHTML=emblem({i:F.i,e:F.e,c:F.col},"cprev");};
+
+/* month grid shared by the period dialog and the date picker */
+function calGrid(m,o){
+  const t=today(),[y,mo]=m.split("-").map(Number),first=m+"-01";
+  const off=(parseISO(first).getDay()+6)%7,rows=Math.ceil((off+new Date(y,mo,0).getDate())/7);
+  const has=new Set(S.txns.map(x=>x.date)),minM=o.min?o.min.slice(0,7):"",maxM=o.max?o.max.slice(0,7):"";
+  let h='<div class="cal-h"><button class="icon" data-act="'+o.monAct+'" data-v="-1" aria-label="Previous month"'+(minM&&m<=minM?" disabled":"")+">"+ic("left")+"</button><b>"+esc(monthLabel(m,true))+
+    '</b><button class="icon" data-act="'+o.monAct+'" data-v="1" aria-label="Next month"'+(maxM&&m>=maxM?" disabled":"")+">"+ic("right")+"</button></div>";
+  h+='<div class="cal"><div class="cal-wd">'+Array.from({length:7},(_,i)=>"<span>"+esc(parseISO(addDays("2024-01-01",i)).toLocaleDateString(undefined,{weekday:"narrow"}))+"</span>").join("")+"</div>";
+  let d=addDays(first,-off);
+  for(let r=0;r<rows;r++){
+    h+='<div class="wk">';
+    for(let i=0;i<7;i++){
+      const cls=["dd"];if(d.slice(0,7)!==m)cls.push("other");if(d===t)cls.push("now");if(o.sel&&d===o.sel)cls.push("sel");
+      if(o.hs&&d>=o.hs&&d<=o.he){if(d===o.hs)cls.push("rs");if(d===o.he)cls.push("re");if(d>o.hs&&d<o.he)cls.push("in");}
+      const off2=(o.max&&d>o.max)||(o.min&&d<o.min);
+      h+='<button class="'+cls.join(" ")+'" data-act="'+o.act+'" data-v="'+d+'"'+(off2?" disabled":"")+">"+parseISO(d).getDate()+(has.has(d)?'<i class="dt"></i>':"")+"</button>";
+      d=addDays(d,1);
+    }
+    h+="</div>";
+  }
+  return h+"</div>";
+}
+
+/* ---------- date + time fields: Material dialogs instead of the system pickers ---------- */
+/* short label for date fields: Today / Yesterday / 22 Sep (year only if not this year) */
+function shortDay(d){const t=today();if(d===t)return "Today";if(d===addDays(t,-1))return "Yesterday";if(d===addDays(t,1))return "Tomorrow";
+  const x=parseISO(d),o={day:"numeric",month:"short"};if(x.getFullYear()!==new Date().getFullYear())o.year="numeric";return x.toLocaleDateString(undefined,o);}
+function dateField(id,val,o){
+  o=o||{};
+  return '<button class="fieldbtn datefld" id="'+id+'" data-act="pick-date" data-v="'+esc(val||"")+'"'+(o.min?' data-min="'+o.min+'"':"")+(o.max?' data-max="'+o.max+'"':"")+
+    (o.opt?' data-opt="1"':"")+' data-none="'+esc(o.none||"No date")+'" aria-label="'+esc(o.label||"Date")+'"'+(o.style?' style="'+o.style+'"':"")+"><span>"+
+    esc(val?shortDay(val):(o.none||"No date"))+"</span>"+ic("event")+"</button>";
+}
+function setDateField(el,v){el.dataset.v=v||"";el.firstChild.textContent=v?shortDay(v):el.dataset.none;}
+let DP=null;
+function datePicker(el){
+  const v=el.dataset.v,mx=el.dataset.max||"",mn=el.dataset.min||"";
+  let ref=v||today();if(mx&&ref>mx)ref=mx;if(mn&&ref<mn)ref=mn;
+  DP={id:el.id,month:ref.slice(0,7),sel:v,min:mn,max:mx,opt:!!el.dataset.opt};
+  $("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="dp" role="dialog" aria-modal="true" aria-label="Pick a date"></div></div>';
+  dpRender();
+}
+function dpRender(){
+  const el=$("#dp");if(!el||!DP)return;const t=today(),tOk=!((DP.max&&t>DP.max)||(DP.min&&t<DP.min));
+  el.innerHTML='<div class="dp-h"><div class="t">Pick a date</div><div class="big">'+esc(DP.sel?dayLabel(DP.sel):"No date")+"</div></div>"+
+    calGrid(DP.month,{act:"dp-day",monAct:"dp-mon",sel:DP.sel,min:DP.min,max:DP.max})+
+    '<div class="dlg-act">'+(DP.opt&&DP.sel?'<button class="btn text" data-act="dp-set" data-v="">Clear</button>':'<button class="btn text" data-act="dp-set" data-v="'+t+'"'+(tOk?"":" disabled")+">Today</button>")+
+    '<button class="btn text" data-act="pd-close">Cancel</button></div>';
+}
+function dpSet(v){
+  const id=DP.id,el=$("#"+id);closePop();if(!el)return;
+  setDateField(el,v);
+  if(id==="f-due2"&&F&&F.kind==="loan"){const l=loan(F.id);if(!l)return;l.due=v;commit();
+    $("#loan-due").textContent=l.due?(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due):"No due date yet";}
+}
+const timeLabel=hm=>{const [h,m]=hm.split(":").map(Number);return new Date(2024,0,1,h,m).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});};
+function timePicker(){
+  const cur=(S.settings.remind||{}).time||"21:00",times=[];
+  for(let h=16;h<24;h++)for(const m of ["00","30"])times.push(pad(h)+":"+m);
+  $("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Nudge time"><div class="dp-h"><div class="t">Evening nudge at</div><div class="big">'+esc(timeLabel(cur))+
+    '</div></div><div class="mgrid tgrid">'+times.map(x=>'<button class="'+(x===cur?"sel":"")+'" data-act="tm-pick" data-v="'+x+'">'+esc(timeLabel(x))+"</button>").join("")+
+    '</div><div class="dlg-act"><span></span><button class="btn text" data-act="pd-close">Cancel</button></div></div></div>';
+}
+
 function homeView(){
   const act=activeAccounts();
   if(!act.length){
@@ -578,7 +715,7 @@ function homeView(){
     '<button class="icon" data-act="menu" aria-label="Menu" aria-haspopup="menu">'+ic("more")+"</button></header>";
 
   if(S.settings.lastCheck!==today())h+=checkCard(b,cur);
-  else h+='<div class="strip">'+act.map(a=>'<button class="acc" data-act="acc-open" data-v="'+a.id+'"><span class="n">'+TICON[a.type]+" "+esc(a.name)+'</span><span class="b">'+esc(money(b[a.id],a.currency))+"</span></button>").join("")+
+  else h+='<div class="strip">'+act.map(a=>'<button class="acc" data-act="acc-open" data-v="'+a.id+'"><span class="n">'+emblem(accEmb(a),"sm")+esc(a.name)+'</span><span class="b">'+esc(money(b[a.id],a.currency))+"</span></button>").join("")+
     '<button class="acc add" data-act="acc-form" aria-label="Add account">'+ic("add")+"</button></div>";
 
   const inCur=t=>{const a=acc(t.account);return a&&a.currency===cur;};
@@ -594,7 +731,7 @@ function homeView(){
   h+='<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="Add spending">'+ic("remove")+'</button>'+
     '<button class="fab xfer" data-act="tr-new" aria-label="Transfer between accounts">'+ic("swap")+'<span>Transfer</span></button>'+
     '<button class="fab plus" data-act="add-in" aria-label="Add money received">'+ic("add")+"</button></div>";
-  h+='<div class="loanbtns"><button class="btn tonal" data-act="loan-new" data-v="borrow">🤝 Loan</button><button class="btn tonal" data-act="loan-new" data-v="lend">💸 Lend</button></div>';
+  h+='<div class="loanbtns"><button class="btn tonal" data-act="loan-new" data-v="borrow">'+emblem(LOAN_EMB.borrow,"sm")+'Loan</button><button class="btn tonal" data-act="loan-new" data-v="lend">'+emblem(LOAN_EMB.lend,"sm")+'Lend</button></div>';
   return h;
 }
 function checkCard(b,cur){
@@ -603,7 +740,7 @@ function checkCard(b,cur){
   const y=addDays(today(),-1);
   const ySpent=r2(S.txns.filter(t=>t.date===y&&t.type==="expense"&&acc(t.account)&&acc(t.account).currency===cur).reduce((s,t)=>s+t.amount,0));
   return '<section class="check"><h2>'+hello+'</h2><p>Do these still match what you have?'+(ySpent?" Yesterday you spent "+esc(money(ySpent,cur))+".":"")+"</p>"+
-    activeAccounts().map(a=>'<button class="ckrow" data-act="acc-open" data-v="'+a.id+'"><span>'+TICON[a.type]+'</span><span class="nm">'+esc(a.name)+"</span><b>"+esc(money(b[a.id],a.currency))+'</b><span class="fx">Fix</span></button>').join("")+
+    activeAccounts().map(a=>'<button class="ckrow" data-act="acc-open" data-v="'+a.id+'">'+emblem(accEmb(a),"sm")+'<span class="nm">'+esc(a.name)+"</span><b>"+esc(money(b[a.id],a.currency))+'</b><span class="fx">Fix</span></button>').join("")+
     '<button class="btn" data-act="check-ok">'+ic("check")+"All match</button></section>";
 }
 /* ---------- category ring around the donut (shared by Home and the Settings preview) ---------- */
@@ -647,7 +784,7 @@ function ringHTML(cats,o){
     ang:((Math.atan2(s.y-cy,s.x-cx)/TAU+.25)%1+1)%1};});
   const tile=p=>{const v=home?(o.by[p.c.id]||0):0;
     return '<button class="cat rt'+(home?"":" tile")+'" style="left:'+(p.x-u/2).toFixed(1)+"px;top:"+p.top.toFixed(1)+"px;width:"+u.toFixed(1)+"px;height:"+u.toFixed(1)+"px;--d:"+d+"px;--f:"+f.toFixed(1)+'px" data-act="'+(home?"add-cat":"cat-edit")+'" data-v="'+esc(p.c.id)+'"'+(home?' aria-label="Add '+esc(p.c.name)+'"':"")+">"+
-      '<span class="ci" style="'+ciStyle(p.c.c)+'">'+esc(p.c.e)+'</span><span class="cn">'+esc(p.c.name)+"</span>"+
+      emblem(p.c,"ci")+'<span class="cn">'+esc(p.c.name)+"</span>"+
       (home?'<span class="cp" style="color:'+p.c.c+'">'+(v?Math.max(1,Math.round(v/o.spent*100))+"%":"")+"</span>":"")+"</button>";};
   const R=40,C=2*Math.PI*R,Rout=D/2*.92; /* stroke outer edge: (40+6)/50 of the radius */
   let segs="",lines="",rot=-90;
@@ -714,8 +851,9 @@ function stLabel(l,st){return {active:"Active",partly:"Partly paid",overdue:"Ove
 const loanWho=l=>l.person||(l.kind==="lend"?"Someone":"Someone");
 function loanRow(l){
   const i=loanInfo(l),lend=l.kind==="lend";
-  const sub=i.open?(l.due?(lend?"Payback ":"Return by ")+dayLabel(l.due):"No due date"):(lend?"Lent ":"Borrowed ")+dayLabel(l.date);
-  return '<button class="tx" data-act="loan-open" data-v="'+l.id+'"><span class="em">'+(lend?"💸":"🤝")+'</span><span class="mid"><div class="d">'+esc(loanWho(l))+'</div><div class="s">'+esc(sub)+"</div></span>"+
+  const a=acc(l.account),src=(lend?"From ":"Into ")+(a?a.name:"?")+" · ";
+  const sub=src+(i.open?(l.due?(lend?"Payback ":"Return by ")+dayLabel(l.due):"No due date"):(lend?"Lent ":"Borrowed ")+dayLabel(l.date));
+  return '<button class="tx" data-act="loan-open" data-v="'+l.id+'">'+emblem(LOAN_EMB[l.kind],"em")+'<span class="mid"><div class="d">'+esc(loanWho(l))+'</div><div class="s">'+esc(sub)+"</div></span>"+
     '<span class="a">'+esc(money(i.open?i.left:l.amount,i.cur))+'<small><span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></small></span></button>";
 }
 function loanForm(kind){
@@ -725,8 +863,8 @@ function loanForm(kind){
   let h='<label class="field" style="margin-top:0"><span>'+(lend?"Lent to":"Borrowed from")+'</span><input id="f-person" placeholder="Name" maxlength="40" autocomplete="off"></label>';
   h+='<div class="amtwrap"><span class="cur" id="amt-cur">'+esc(acc(def).currency)+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount"></div>';
   h+='<div class="lbl">'+(lend?"From account":"Into account")+"</div>"+accChips("f-acc",F.account);
-  h+='<div class="row" style="margin-top:4px"><label class="field"><span>Date</span><input id="f-date" type="date" value="'+today()+'" max="'+today()+'"></label>'+
-    '<label class="field"><span>'+(lend?"Payback day":"Return by")+'</span><input id="f-due" type="date" min="'+today()+'"></label></div>';
+  h+='<div class="row" style="margin-top:4px"><div class="field"><span>Date</span>'+dateField("f-date",today(),{max:today()})+"</div>"+
+    '<div class="field"><span>'+(lend?"Payback day":"Return by")+"</span>"+dateField("f-due","",{min:today(),opt:true,none:"Pick a day",label:lend?"Payback day":"Return by"})+"</div></div>";
   h+='<label class="field"><span>Note</span><input id="f-note" placeholder="Optional" maxlength="80"></label>';
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="loan-save">'+ic("check")+(lend?"Save lending":"Save loan")+"</button>";
   openSheet(lend?"Lend money":"Borrowed money",h);
@@ -736,23 +874,24 @@ function loanOpen(id,focusPay){
   const l=loan(id);if(!l){snack("That loan was deleted");return;}
   const i=loanInfo(l),lend=l.kind==="lend",pct=l.amount?Math.min(100,Math.round(i.paid/l.amount*100)):0;
   F={kind:"loan",id,account:acc(l.account)&&!acc(l.account).archived?l.account:(activeAccounts().find(a=>a.currency===i.cur)||{}).id};
-  let h='<div class="hero"><div class="t">'+(lend?"You lent · ":"You borrowed · ")+esc(dayLabel(l.date))+'</div><div class="v">'+esc(money(i.open?i.left:l.amount,i.cur))+"</div>"+
+  const la=acc(l.account);
+  let h='<div class="hero"><div class="t">'+(lend?"You lent from ":"You borrowed into ")+esc((la?la.name:"?")+" · "+dayLabel(l.date))+'</div><div class="v">'+esc(money(i.open?i.left:l.amount,i.cur))+"</div>"+
     '<div class="t">'+(i.open?"left of "+esc(money(l.amount,i.cur))+" · ":"")+'<span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></div></div>";
   h+='<div class="bar" aria-label="'+pct+'% paid"><span style="width:'+pct+'%"></span></div>';
   if(i.open){
     h+='<div class="card"><h3 id="loan-due">'+esc(l.due?(lend?"Payback day · ":"Return by · ")+dayLabel(l.due):"No due date yet")+'</h3>'+
       '<div class="chips" style="margin-top:8px"><button class="chip" data-act="loan-ext" data-v="1">+1 day</button><button class="chip" data-act="loan-ext" data-v="7">+1 week</button></div>'+
-      '<input id="f-due2" type="date" value="'+esc(l.due||"")+'" aria-label="Change due date" style="margin-top:10px"></div>';
+      '<div style="margin-top:10px">'+dateField("f-due2",l.due||"",{min:today(),opt:true,none:"Pick a day",label:"Change due date"})+"</div></div>";
     const payAccs=activeAccounts().filter(a=>a.currency===i.cur);
     h+='<div class="card"><h3>'+(lend?"Got money back?":"Paid some back?")+'</h3><p class="muted small" style="margin:0">Part of it is fine too.</p>'+
       '<div class="amtwrap"><span class="cur">'+esc(i.cur)+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" value="'+esc(i.left)+'" aria-label="Amount"></div>'+
       '<div class="lbl">'+(lend?"Into":"From")+"</div>"+accChips("f-acc",F.account,null,payAccs)+
-      '<input id="f-date" type="date" value="'+today()+'" max="'+today()+'" aria-label="Date" style="margin-top:12px">'+
+      '<div style="margin-top:12px">'+dateField("f-date",today(),{max:today()})+"</div>"+
       '<div class="gap"></div><button class="btn" data-act="loan-pay">'+ic("check")+"Record payment</button></div>";
   }
   const hist=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id).sort(byNewest);
   h+='<div class="sec">History</div><div class="list">'+hist.map(t=>{const a=acc(t.account);
-    return '<div class="tx"><span class="em">'+(t.principal?(lend?"💸":"🤝"):"✓")+'</span><span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+'</div></span>'+
+    return '<div class="tx">'+emblem(t.principal?LOAN_EMB[l.kind]:{i:"paid",c:"#15a06f"},"em")+'<span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+'</div></span>'+
       '<span class="a">'+esc(money(t.amount,i.cur))+"</span>"+(t.principal?"":'<button class="icon" data-act="loanpay-del" data-v="'+t.id+'" aria-label="Delete this payment">'+ic("close")+"</button>")+"</div>";}).join("")+"</div>";
   if(l.note)h+='<p class="muted small" style="margin:12px 4px 0">'+esc(l.note)+"</p>";
   h+='<div class="gap"></div><div class="gap"></div>';
@@ -762,7 +901,7 @@ function loanOpen(id,focusPay){
   if(focusPay)setTimeout(()=>{const el=$("#f-amt");if(el){el.focus();el.select();}},60);
 }
 function saveLoan(){
-  const v=readVals(),person=$("#f-person").value.trim(),amt=evalAmt(v.amount),due=$("#f-due").value,lend=F.lk==="lend";
+  const v=readVals(),person=$("#f-person").value.trim(),amt=evalAmt(v.amount),due=$("#f-due").dataset.v,lend=F.lk==="lend";
   if(!person){snack(lend?"Who did you lend to?":"Who lent you the money?");return;}
   if(!(amt>0)){snack("Enter an amount");return;}
   if(!acc(F.account)){snack("Pick an account");return;}
@@ -802,7 +941,7 @@ function netWorth(){
     S.loans.forEach(l=>{const i=loanInfo(l);if(i.open)add(i.cur,l.kind==="lend"?i.left:-i.left);});
   });
 }
-function accRow(a,b){return '<button class="tx" data-act="acc-open" data-v="'+a.id+'"><span class="em">'+TICON[a.type]+'</span><span class="mid"><div class="d">'+esc(a.name)+'</div><div class="s">'+esc(TYPES[a.type]+" · "+a.currency)+'</div></span><span class="a">'+esc(money(b[a.id],a.currency))+"</span></button>";}
+function accRow(a,b){return '<button class="tx" data-act="acc-open" data-v="'+a.id+'">'+emblem(accEmb(a),"em")+'<span class="mid"><div class="d">'+esc(a.name)+'</div><div class="s">'+esc(TYPES[a.type]+" · "+a.currency)+'</div></span><span class="a">'+esc(money(b[a.id],a.currency))+"</span></button>";}
 function assetsView(){
   const b=balances();let h=tabBar("Assets");
   h+='<div class="sumcard"><div class="t">Net worth</div>'+curLines(netWorth())+'<div class="t small">What you have and are owed, minus what you owe</div></div>';
@@ -816,7 +955,7 @@ function assetsView(){
     '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">'+ic("add")+"Lend money</button>";
   if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
     if(V.showCleared)h+='<div class="list">'+done.map(loanRow).join("")+"</div>";}
-  h+='<div class="sec">Other assets</div>'+(S.assets.length?'<div class="list">'+S.assets.map(x=>'<button class="tx" data-act="asset-edit" data-v="'+x.id+'"><span class="em">'+esc(x.e)+'</span><span class="mid"><div class="d">'+esc(x.name)+'</div></span><span class="a">'+esc(money(x.value,x.currency))+"</span></button>").join("")+"</div>"
+  h+='<div class="sec">Other assets</div>'+(S.assets.length?'<div class="list">'+S.assets.map(x=>'<button class="tx" data-act="asset-edit" data-v="'+x.id+'">'+emblem(x,"em")+'<span class="mid"><div class="d">'+esc(x.name)+'</div></span><span class="a">'+esc(money(x.value,x.currency))+"</span></button>").join("")+"</div>"
     :'<p class="hint" style="margin:0 4px">Things you own that aren’t accounts, like gold or a laptop.</p>')+
     '<button class="btn text" data-act="asset-edit" style="margin-top:4px">'+ic("add")+"Add asset</button>";
   return h;
@@ -835,10 +974,9 @@ function liabsView(){
   return h;
 }
 function assetForm(id){
-  const x=id?S.assets.find(a=>a.id===id):{name:"",e:"💎",value:"",currency:S.settings.cur};if(!x)return;
-  F={kind:"assetf",id,cur:x.currency};
-  let h='<div class="row"><label class="field" style="flex:0 0 80px;margin-top:0"><span>Icon</span><input id="f-aemo" value="'+esc(x.e)+'" maxlength="8" style="text-align:center;font-size:1.4rem"></label>'+
-    '<label class="field" style="margin-top:0"><span>Name</span><input id="f-aname" value="'+esc(x.name)+'" maxlength="30" placeholder="e.g. Gold ring"></label></div>';
+  const x=id?S.assets.find(a=>a.id===id):{name:"",e:"",i:"diamond",c:"#a646c9",value:"",currency:S.settings.cur};if(!x)return;
+  F={kind:"assetf",id,cur:x.currency,i:x.i||"",e:x.e||"",col:x.c||"#a646c9"};
+  let h=emblemEditor({i:F.i,e:F.e,c:F.col})+'<label class="field"><span>Name</span><input id="f-aname" value="'+esc(x.name)+'" maxlength="30" placeholder="e.g. Gold ring"></label>';
   h+='<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-assetcur"><span>'+esc(x.currency)+"</span>"+ic("down")+"</button></div>"+
     '<label class="field"><span>Worth about</span><input id="f-aval" inputmode="decimal" autocomplete="off" value="'+esc(x.value)+'" placeholder="0"></label></div>';
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="asset-save">'+(id?"Save":"Add asset")+"</button>";
@@ -880,18 +1018,18 @@ window.tallyResume=function(){
 
 function txLine(t){
   const a=acc(t.account),cur=a?a.currency:S.settings.cur;
-  let em,emStyle="",d,s,amt,cls="";
-  if(t.type==="transfer"){const to=acc(t.to);em="🔁";d=t.note||"Transfer";s=(a?a.name:"?")+" → "+(to?to.name:"?");
+  let em,d,s,amt,cls="";
+  if(t.type==="transfer"){const to=acc(t.to);em={i:"swap_horiz",c:"#5f7389"};d=t.note||"Transfer";s=(a?a.name:"?")+" → "+(to?to.name:"?");
     amt=esc(money(t.amount,cur))+(t.toAmount!=null&&to&&to.currency!==cur?"<small>→ "+esc(money(t.toAmount,to.currency))+"</small>":"");}
-  else if(t.type==="adjust"){em="⚖️";d=t.note||"Balance fix";s="Balance fix · "+(a?a.name:"?");amt=esc(signed(t.amount,cur));cls="muted";}
-  else if(t.type==="loan"){const l=loan(t.loan),lend=l&&l.kind==="lend",who=l?loanWho(l):"?";em=lend?"💸":"🤝";
+  else if(t.type==="adjust"){em={i:"balance",c:"#7a8190"};d=t.note||"Balance fix";s="Balance fix · "+(a?a.name:"?");amt=esc(signed(t.amount,cur));cls="muted";}
+  else if(t.type==="loan"){const l=loan(t.loan),lend=l&&l.kind==="lend",who=l?loanWho(l):"?";em=LOAN_EMB[lend?"lend":"borrow"];
     d=t.principal?(lend?"Lent to ":"Borrowed from ")+who:(lend?who+" paid back":"Paid back "+who);
     s=(lend?"Lending":"Loan")+" · "+(a?a.name:"?");amt=esc(signed(t.dir==="in"?t.amount:-t.amount,cur));cls="muted";}
-  else{const k=cat(t.cat),out=t.type==="expense";em=k.e;emStyle=' style="background:'+k.c+'1F"';d=t.note||k.name;s=k.name+" · "+(a?a.name:"?");
+  else{const k=cat(t.cat),out=t.type==="expense";em=k;d=t.note||k.name;s=k.name+" · "+(a?a.name:"?");
     amt=(out?"−":"+")+esc(money(t.amount,cur));cls=out?"spent":"got";}
   const selMode=!!V.sel&&V.screen==="history",on=selMode&&V.sel.has(t.id);
   return '<button class="tx'+(on?" on":"")+'" data-act="'+(selMode?"sel-toggle":"tx-open")+'" data-v="'+t.id+'"'+(selMode?' aria-pressed="'+on+'"':"")+">"+
-    '<span class="em'+(selMode?" pick":"")+'"'+(selMode?"":emStyle)+">"+(selMode?ic(on?"checked":"unchecked"):esc(em))+'</span><span class="mid"><div class="d">'+esc(d)+'</div><div class="s">'+esc(s)+'</div></span><span class="a '+cls+'">'+amt+"</span></button>";
+    (selMode?'<span class="em pick">'+ic(on?"checked":"unchecked")+"</span>":emblem(em,"em"))+'<span class="mid"><div class="d">'+esc(d)+'</div><div class="s">'+esc(s)+'</div></span><span class="a '+cls+'">'+amt+"</span></button>";
 }
 const byNewest=(a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0);
 function dayGroups(list){
@@ -926,7 +1064,7 @@ function historyView(){
 function catGrid(kind){
   let h='<div class="cgrid" data-kind="'+kind+'">';
   S.cats.filter(c=>c.kind===kind&&!c.hidden).forEach(c=>{
-    h+='<button class="cat tile" data-act="cat-edit" data-v="'+esc(c.id)+'"><span class="ci" style="'+ciStyle(c.c)+'">'+esc(c.e)+'</span><span class="cn">'+esc(c.name)+"</span></button>";
+    h+='<button class="cat tile" data-act="cat-edit" data-v="'+esc(c.id)+'">'+emblem(c,"ci")+'<span class="cn">'+esc(c.name)+"</span></button>";
   });
   return h+'<button class="cat tile-add" data-act="cat-new" data-v="'+kind+'" aria-label="Add category"><span class="ci">'+ic("add")+'</span><span class="cn">Add</span></button></div>';
 }
@@ -936,7 +1074,7 @@ function settingsView(){
   h+='<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>'+esc(curLabel(S.settings.cur))+"</span>"+ic("down")+"</button>";
   const r=S.settings.remind||{};
   h+='<div class="sec">Reminders</div><div class="list">'+
-    '<div class="setrow"><span class="mid"><div>Evening nudge</div><div class="s">If nothing was written that day</div></span><input id="f-rtime" type="time" value="'+esc(r.time||"21:00")+'" aria-label="Nudge time" style="width:auto;min-width:136px;height:44px;padding:0 10px"'+(r.daily===false?" disabled":"")+'>'+
+    '<div class="setrow"><span class="mid"><div>Evening nudge</div><div class="s">If nothing was written that day</div></span><button class="fieldbtn" id="f-rtime" data-act="pick-time" style="width:auto;height:44px;gap:6px"'+(r.daily===false?" disabled":"")+'><span>'+esc(timeLabel(r.time||"21:00"))+"</span>"+ic("schedule")+'</button>'+
     '<button class="sw" role="switch" data-act="rem-daily" aria-checked="'+(r.daily!==false)+'" aria-label="Evening nudge"></button></div>'+
     '<div class="setrow"><span class="mid"><div>Loan & lending due days</div><div class="s">Morning of the day, with +1 day / +1 week</div></span>'+
     '<button class="sw" role="switch" data-act="rem-dues" aria-checked="'+(r.dues!==false)+'" aria-label="Due day reminders"></button></div></div>';
@@ -944,7 +1082,7 @@ function settingsView(){
     ringHTML(outCats(),{mode:"edit"})+'<div class="gap"></div><button class="btn tonal" data-act="cat-new" data-v="out">'+ic("add")+"Add spending category</button>";
   h+='<div class="sec">Money-in categories</div>'+catGrid("in");
   const hid=S.cats.filter(c=>c.hidden);
-  if(hid.length)h+='<p class="hint" style="margin:14px 4px 8px">Removed · tap to bring back</p><div class="chips">'+hid.map(c=>'<button class="chip" data-act="cat-back" data-v="'+esc(c.id)+'">'+esc(c.e)+" "+esc(c.name)+"</button>").join("")+"</div>";
+  if(hid.length)h+='<p class="hint" style="margin:14px 4px 8px">Removed · tap to bring back</p><div class="chips">'+hid.map(c=>'<button class="chip" data-act="cat-back" data-v="'+esc(c.id)+'">'+emblem(c,"sm")+esc(c.name)+"</button>").join("")+"</div>";
   h+='<div class="sec">Your data</div><p class="muted small" style="margin:0 4px 12px">Everything stays on this phone. Uninstalling deletes it, so save a backup now and then.</p>'+
     '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>'+
     '<label class="btn tonal" style="position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label><div class="gap"></div>'+
@@ -960,7 +1098,7 @@ function popup(items,anchor){
   const pos="top:"+(r.bottom+4)+"px;"+(right?"right:"+Math.max(8,innerWidth-r.right)+"px":"left:"+Math.max(8,r.left)+"px");
   $("#pop").innerHTML='<div class="pop" data-act="pop-bg"><div class="menu" role="menu" style="'+pos+'">'+items.map(([act,v,label])=>'<button role="menuitem" data-act="'+act+'" data-v="'+esc(v)+'">'+esc(label)+"</button>").join("")+"</div></div>";
 }
-const closePop=()=>{$("#pop").innerHTML="";PD=null;};
+const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;};
 function openSheet(title,body){
   $("#sheet").innerHTML='<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
 }
@@ -969,12 +1107,12 @@ function closeSheet(){closeSheet2();$("#sheet").innerHTML="";F=null;}
 function openSheet2(title,body){
   $("#sheet2").innerHTML='<div class="sheet s2" data-act="sheet2-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close2" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
 }
-function closeSheet2(){$("#sheet2").innerHTML="";CURPICK=null;}
+function closeSheet2(){$("#sheet2").innerHTML="";CURPICK=null;ICPICK=null;}
 const focusAmt=()=>setTimeout(()=>{const el=$("#f-amt");if(el)el.focus();},60);
 /* update toggle buttons inside the open sheet without rebuilding it */
 function setPressed(act,v){$("#sheet").querySelectorAll('[data-act="'+act+'"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));}
 let F=null;
-const accChips=(act,sel,disabled,list)=>'<div class="chips">'+(list||activeAccounts()).map(a=>'<button class="chip" data-act="'+act+'" data-v="'+a.id+'" aria-pressed="'+(a.id===sel)+'"'+(a.id===disabled?" disabled":"")+">"+TICON[a.type]+" "+esc(a.name)+"</button>").join("")+"</div>";
+const accChips=(act,sel,disabled,list)=>'<div class="chips">'+(list||activeAccounts()).map(a=>'<button class="chip" data-act="'+act+'" data-v="'+a.id+'" aria-pressed="'+(a.id===sel)+'"'+(a.id===disabled?" disabled":"")+">"+emblem(accEmb(a),"sm")+esc(a.name)+"</button>").join("")+"</div>";
 function accChoices(...keep){const l=activeAccounts();keep.forEach(id=>{const k=acc(id);if(k&&k.archived&&!l.includes(k))l.push(k);});return l;}
 
 /* period picker: Day / Range / Month */
@@ -998,25 +1136,9 @@ function pdRender(){
   el.innerHTML=h;
 }
 function calendar(){
-  const t=today(),m=PD.month,[y,mo]=m.split("-").map(Number),first=m+"-01";
-  const off=(parseISO(first).getDay()+6)%7,rows=Math.ceil((off+new Date(y,mo,0).getDate())/7);
-  const has=new Set(S.txns.map(x=>x.date)),rg=PD.tab==="range";
-  const hs=rg?(PD.pick||(V.period==="range"?V.rs:null)):null,he=rg?(PD.pick||(V.period==="range"?V.re:null)):null;
-  let h='<div class="cal-h"><button class="icon" data-act="pd-mon" data-v="-1" aria-label="Previous month">'+ic("left")+"</button><b>"+esc(monthLabel(m,true))+'</b><button class="icon" data-act="pd-mon" data-v="1" aria-label="Next month"'+(m>=t.slice(0,7)?" disabled":"")+">"+ic("right")+"</button></div>";
-  h+='<div class="cal"><div class="cal-wd">'+Array.from({length:7},(_,i)=>"<span>"+esc(parseISO(addDays("2024-01-01",i)).toLocaleDateString(undefined,{weekday:"narrow"}))+"</span>").join("")+"</div>";
-  let d=addDays(first,-off);
-  for(let r=0;r<rows;r++){
-    h+='<div class="wk">';
-    for(let i=0;i<7;i++){
-      const cls=["dd"];if(d.slice(0,7)!==m)cls.push("other");if(d===t)cls.push("now");
-      if(!rg&&V.period==="day"&&d===V.anchor)cls.push("sel");
-      if(hs&&d>=hs&&d<=he){if(d===hs)cls.push("rs");if(d===he)cls.push("re");if(d>hs&&d<he)cls.push("in");}
-      h+='<button class="'+cls.join(" ")+'" data-act="'+(rg?"pd-rday":"pd-day")+'" data-v="'+d+'"'+(d>t?" disabled":"")+">"+parseISO(d).getDate()+(has.has(d)?'<i class="dt"></i>':"")+"</button>";
-      d=addDays(d,1);
-    }
-    h+="</div>";
-  }
-  return h+"</div>";
+  const rg=PD.tab==="range";
+  return calGrid(PD.month,{act:rg?"pd-rday":"pd-day",monAct:"pd-mon",max:today(),sel:!rg&&V.period==="day"?V.anchor:null,
+    hs:rg?(PD.pick||(V.period==="range"?V.rs:null)):null,he:rg?(PD.pick||(V.period==="range"?V.re:null)):null});
 }
 /* live range highlight while dragging, without rebuilding the dialog */
 function pdPaint(s,e){$("#pd").querySelectorAll(".dd").forEach(b=>{const d=b.dataset.v;b.classList.toggle("rs",d===s);b.classList.toggle("re",d===e);b.classList.toggle("in",d>s&&d<e);});}
@@ -1057,8 +1179,8 @@ function curList(q){
 }
 
 /* quick add / edit for spending and money in */
-const catBtns=(list,sel)=>list.map(c=>'<button class="cat" data-act="f-cat" data-v="'+esc(c.id)+'" aria-pressed="'+(c.id===sel)+'"><span class="ci" style="'+ciStyle(c.c)+'">'+esc(c.e)+'</span><span class="cn">'+esc(c.name)+"</span></button>").join("");
-const catChipInner=k=>'<span class="ci" style="'+ciStyle(k.c)+'">'+esc(k.e)+"</span>"+esc(k.name)+ic("down");
+const catBtns=(list,sel)=>list.map(c=>'<button class="cat" data-act="f-cat" data-v="'+esc(c.id)+'" aria-pressed="'+(c.id===sel)+'">'+emblem(c,"ci")+'<span class="cn">'+esc(c.name)+"</span></button>").join("");
+const catChipInner=k=>emblem(k,"ci")+esc(k.name)+ic("down");
 function txSheet(id,type,catId){
   if(!id&&!activeAccounts().length){snack("Add an account first");accForm();return;}
   const t=id?S.txns.find(x=>x.id===id):null;
@@ -1080,13 +1202,13 @@ function txSheet(id,type,catId){
     '<div class="catgrid" id="f-catgrid" style="margin-top:8px"'+(k?" hidden":"")+">"+catBtns(list,F.cat)+"</div>";
   h+='<div class="amtwrap"><span class="cur" id="amt-cur">'+esc(a?a.currency:"")+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(t?String(t.amount):"")+'" aria-label="Amount"></div>';
   h+='<div class="lbl">'+(inc?"Into":"Paid from")+"</div>"+accChips("f-acc",F.account,null,accChoices(F.account));
-  h+='<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="'+esc(t?t.note:"")+'" aria-label="Note"><input id="f-date" type="date" value="'+esc(t?t.date:entryDate())+'" max="'+today()+'" aria-label="Date" style="flex:0 0 150px"></div>';
+  h+='<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="'+esc(t?t.note:"")+'" aria-label="Note"><div style="flex:0 0 150px">'+dateField("f-date",t?t.date:entryDate(),{max:today()})+"</div></div>";
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">'+ic("check")+(id?"Save changes":"Save")+"</button>";
   if(id)h+='<div class="gap"></div><button class="btn danger" data-act="tx-del">Delete</button>';
   openSheet(id?(inc?"Edit money in":"Edit spending"):(inc?"Money in":"Spent"),h);
   if(!id&&F.cat)focusAmt();
 }
-function readVals(){const g=id=>{const el=$("#"+id);return el?el.value:undefined;};return {amount:g("f-amt"),note:g("f-note"),date:g("f-date"),toAmount:g("f-toamt"),fee:g("f-fee")};}
+function readVals(){const g=id=>{const el=$("#"+id);return el?(el.tagName==="INPUT"?el.value:el.dataset.v):undefined;};return {amount:g("f-amt"),note:g("f-note"),date:g("f-date"),toAmount:g("f-toamt"),fee:g("f-fee")};}
 /* transfer between own accounts, with optional fee */
 function trSheet(id,from){
   const act=activeAccounts();
@@ -1105,7 +1227,7 @@ function trSheet(id,from){
   h+='<label class="field" id="fee-wrap"'+(F.showFee?"":" hidden")+'><span id="fee-lbl"></span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(fee?String(fee.amount):"")+'"></label>';
   h+='<button class="btn text" id="fee-btn" data-act="tr-fee" style="width:auto;margin-top:6px;padding:0 12px"'+(F.showFee?" hidden":"")+">"+ic("add")+"Add a fee (ATM, cash-out)</button>";
   h+='<div class="preview" id="tr-prev"></div>';
-  h+='<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="'+esc(t?t.note:"")+'" aria-label="Note"><input id="f-date" type="date" value="'+esc(t?t.date:entryDate())+'" max="'+today()+'" aria-label="Date" style="flex:0 0 150px"></div>';
+  h+='<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="'+esc(t?t.note:"")+'" aria-label="Note"><div style="flex:0 0 150px">'+dateField("f-date",t?t.date:entryDate(),{max:today()})+"</div></div>";
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tr-save">'+ic("check")+(id?"Save changes":"Transfer")+"</button>";
   if(id)h+='<div class="gap"></div><button class="btn danger" data-act="tr-del">Delete</button>';
   openSheet(id?"Edit transfer":"Transfer",h);
@@ -1146,7 +1268,7 @@ function accOpen(id){
   const a=acc(id);if(!a)return;
   const bal=balances()[id],start=balances(today())[id];
   F={kind:"acc",id};
-  let h='<div class="hero"><div class="t">'+TICON[a.type]+" "+esc(TYPES[a.type])+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
+  let h='<div class="hero">'+emblem(accEmb(a),"cprev")+'<div class="t">'+esc(TYPES[a.type])+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
     (start!==bal?'<div class="t">Started today with '+esc(money(start,a.currency))+"</div>":"")+"</div>";
   h+='<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>'+
     '<div class="amtwrap"><span class="cur">'+esc(a.currency)+'</span><input id="f-actual" inputmode="decimal" autocomplete="off" placeholder="'+esc(r2(bal))+'" aria-label="Actual balance"></div>'+
@@ -1166,9 +1288,10 @@ function fixPreview(){
 function accForm(id){
   const a=id?acc(id):{name:"",type:"bank",currency:S.settings.cur,opening:""};
   const used=id&&S.txns.some(t=>t.account===id||t.to===id);
-  F={kind:"accf",id,type:a.type,cur:a.currency};
-  let h='<label class="field"><span>Name</span><input id="f-name" value="'+esc(a.name)+'" placeholder="e.g. RBC Chequing, bKash, Wallet" maxlength="30"></label>';
-  h+='<div class="lbl">Type</div><div class="chips">'+Object.entries(TYPES).map(([k,v])=>'<button class="chip" data-act="f-type" data-v="'+k+'" aria-pressed="'+(a.type===k)+'">'+TICON[k]+" "+v+"</button>").join("")+"</div>";
+  F={kind:"accf",id,type:a.type,cur:a.currency,i:a.i||"",e:a.e||"",col:a.c||TYPE_COL[a.type],iSet:!!(a.i||a.e),cSet:!!a.c};
+  if(!F.i&&!F.e)F.i=TYPE_ICON[a.type];
+  let h=emblemEditor({i:F.i,e:F.e,c:F.col})+'<label class="field"><span>Name</span><input id="f-name" value="'+esc(a.name)+'" placeholder="e.g. RBC Chequing, bKash, Wallet" maxlength="30"></label>';
+  h+='<div class="lbl">Type</div><div class="chips">'+Object.entries(TYPES).map(([k,v])=>'<button class="chip" data-act="f-type" data-v="'+k+'" aria-pressed="'+(a.type===k)+'">'+emblem({i:TYPE_ICON[k],c:TYPE_COL[k]},"sm")+v+"</button>").join("")+"</div>";
   h+='<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"'+(used?" disabled":"")+"><span>"+esc(a.currency)+"</span>"+ic("down")+"</button></div>"+
     '<label class="field"><span>'+(id?"Starting balance":"Balance right now")+'</span><input id="f-open" inputmode="decimal" autocomplete="off" value="'+esc(a.opening===""?"":a.opening)+'" placeholder="0.00"></label></div>';
   h+='<p class="hint">'+(id?"What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead.":"Credit card? Enter what you owe as a negative number.")+(used?" Currency is locked because this account has entries.":"")+"</p>";
@@ -1179,17 +1302,13 @@ function accForm(id){
   }
   openSheet(id?"Edit account":"New account",h);
 }
-const EMOJIS=["🛒","🍔","☕","🍕","🍜","🧋","🍺","🚌","🚗","⛽","🚕","✈️","🏠","💡","📱","🌐","🛍️","👕","👟","💄","📚","🎓","💊","🏥","🏋️","🎬","🎮","🎵","🎁","👪","🐶","👶","💇","🧾","🏦","💳","💰","💵","📈","🔧","🧹","❤️","🕌","📦"];
-const CAT_COLS=["#2E9E6B","#E08A2E","#3A7BD5","#8E5BD0","#D04E7C","#C9A227","#2BA3A3","#D65A45","#6E7BE0","#7A8190"];
 function catForm(id,kind){
-  const c=id?S.cats.find(x=>x.id===id):{name:"",e:"🏷️",c:CAT_COLS[S.cats.length%CAT_COLS.length],kind:kind==="in"?"in":"out"};
+  const used=new Set(S.cats.map(x=>String(x.c).toLowerCase())),free=PALETTE.find(x=>!used.has(x))||PALETTE[S.cats.length%PALETTE.length];
+  const c=id?S.cats.find(x=>x.id===id):{name:"",e:"🏷️",i:"label",c:free,kind:kind==="in"?"in":"out"};
   if(!c)return;
-  F={kind:"catf",id,ck:c.kind,col:c.c};
-  let h='<div class="cprev" id="f-cprev" style="'+ciStyle(c.c)+'">'+esc(c.e)+"</div>";
+  F={kind:"catf",id,ck:c.kind,col:c.c,i:c.i||"",e:c.e};
+  let h=emblemEditor(c);
   h+='<label class="field"><span>Name</span><input id="f-cname" value="'+esc(c.name)+'" maxlength="16" placeholder="e.g. Coffee"></label>';
-  h+='<div class="lbl">Icon</div><div class="emo-grid">'+EMOJIS.map(e=>'<button data-act="f-emo" data-v="'+e+'" aria-pressed="'+(e===c.e)+'">'+e+"</button>").join("")+"</div>";
-  h+='<label class="field"><span>Or type any emoji</span><input id="f-emo" value="'+esc(c.e)+'" maxlength="8" style="width:96px;text-align:center;font-size:1.3rem"></label>';
-  h+='<div class="lbl">Colour</div><div class="dots">'+CAT_COLS.map(x=>'<button class="dot" data-act="f-col" data-v="'+x+'" style="background:'+x+'" aria-pressed="'+(x===c.c)+'" aria-label="Colour '+x+'"></button>').join("")+"</div>";
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="cat-save">'+(id?"Save":"Add category")+"</button>";
   if(id)h+='<div class="gap"></div><button class="btn danger" data-act="cat-del">'+(c.hidden?"Bring back":"Remove")+"</button>";
   openSheet(id?"Edit category":(c.kind==="in"?"New money-in category":"New spending category"),h);
@@ -1270,7 +1389,7 @@ document.addEventListener("click",ev=>{
     case "loan-open":loanOpen(v);break;
     case "loan-pay":payLoan();break;
     case "loan-ext":{const l=loan(F.id);if(!l)return;extendLoan(l,+v);commit();
-      $("#loan-due").textContent=(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due);$("#f-due2").value=l.due;snack("Now due "+dayLabel(l.due));break;}
+      $("#loan-due").textContent=(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due);setDateField($("#f-due2"),l.due);snack("Now due "+dayLabel(l.due));break;}
     case "loanpay-del":{const id=v;closeSheet();withUndo("Payment deleted",()=>{S.txns=S.txns.filter(x=>x.id!==id);});break;}
     case "loan-writeoff":{const l=loan(F.id);if(!l)return;const lend=l.kind==="lend",back=l.status==="writeoff";closeSheet();
       withUndo(back?"Reopened":lend?"Written off":"Marked as forgiven",()=>{const x=loan(l.id);x.status=back?"open":"writeoff";});break;}
@@ -1280,7 +1399,7 @@ document.addEventListener("click",ev=>{
     case "asset-save":{
       const name=$("#f-aname").value.trim(),raw=$("#f-aval").value.trim(),val=raw?evalAmt(raw):0;
       if(!name){snack("Give it a name");return;}if(val==null){snack("That value isn't a number");return;}
-      const data={name,e:$("#f-aemo").value.trim()||"💎",value:val,currency:F.cur};
+      const data={name,i:F.i,e:F.e,c:F.col,value:val,currency:F.cur};
       if(F.id)Object.assign(S.assets.find(x=>x.id===F.id),data);else S.assets.push(Object.assign({id:newId()},data));
       closeSheet();commit();break;}
     case "asset-del":{const id=F.id;closeSheet();S.assets=S.assets.filter(x=>x.id!==id);commit();snack("Asset deleted");break;}
@@ -1336,7 +1455,16 @@ document.addEventListener("click",ev=>{
       break;}
     case "hist-acc":closeSheet();V.hAcc=v;V.hMonth=today().slice(0,7);V.screen="history";render();scrollTo(0,0);break;
     case "acc-form":accForm(v);break;
-    case "f-type":F.type=v;setPressed("f-type",v);break;
+    case "f-type":F.type=v;setPressed("f-type",v);if(!F.iSet){F.i=TYPE_ICON[v];F.e="";}if(!F.cSet){F.col=TYPE_COL[v];setPressed("f-col",F.col);}prevUpd();break;
+    case "f-icon":iconPicker(F.i,F.col,r=>{if(r.i){F.i=r.i;F.e="";}else{F.i="";F.e=r.e;}F.iSet=true;prevUpd();});break;
+    case "ic-pick":{const f=ICPICK&&ICPICK.onPick;closeSheet2();if(f)f({i:v});break;}
+    case "ic-emoji":$("#ic-emo-box").hidden=false;el.hidden=true;$("#ic-emo").focus();break;
+    case "ic-emo-ok":{const e=$("#ic-emo").value.trim();if(!e){snack("Type an emoji");return;}const f=ICPICK&&ICPICK.onPick;closeSheet2();if(f)f({e});break;}
+    case "pick-date":datePicker(el);break;
+    case "dp-mon":DP.month=shiftMonth(DP.month,+v);dpRender();break;
+    case "dp-day":case "dp-set":dpSet(v);break;
+    case "pick-time":timePicker();break;
+    case "tm-pick":closePop();S.settings.remind.time=v;save();syncReminders();render();break;
     case "pick-acccur":curPicker(F.cur,c=>{if(F&&F.kind==="accf"){F.cur=c;$("#f-cur span").textContent=c;}});break;
     case "pick-maincur":curPicker(S.settings.cur,c=>{S.settings.cur=c;V.cur=null;commit();});break;
     case "cur-pick":{const f=CURPICK;closeSheet2();if(f)f(v);break;}
@@ -1344,7 +1472,7 @@ document.addEventListener("click",ev=>{
       const name=$("#f-name").value.trim();if(!name){snack("Give the account a name");return;}
       const raw=$("#f-open").value.trim(),o=raw?evalAmt(raw):0;
       if(o==null){snack("That balance isn't a number");return;}
-      const data={name,type:F.type,currency:F.cur,opening:o};
+      const data={name,type:F.type,currency:F.cur,opening:o,i:F.iSet?F.i:"",e:F.iSet?F.e:"",c:F.cSet?F.col:""};
       if(F.id)Object.assign(acc(F.id),data);else S.accounts.push(Object.assign({id:newId(),archived:false},data));
       const was=F.id;closeSheet();commit();snack(was?"Account saved":name+" added");break;}
     case "acc-arch":{const a=acc(F.id);a.archived=!a.archived;closeSheet();commit();snack(a.archived?a.name+" archived":a.name+" is back");break;}
@@ -1365,12 +1493,11 @@ document.addEventListener("click",ev=>{
     case "cat-edit":catForm(v);break;
     case "cat-new":if(v==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}catForm(null,v);break;
     case "cat-back":{const c=S.cats.find(x=>x.id===v);if(c&&c.kind==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}if(c){c.hidden=false;commit();snack(c.name+" is back");}break;}
-    case "f-emo":$("#f-emo").value=v;$("#f-cprev").textContent=v;setPressed("f-emo",v);break;
-    case "f-col":F.col=v;$("#f-cprev").setAttribute("style",ciStyle(v));setPressed("f-col",v);break;
+    case "f-col":F.col=v;F.cSet=true;setPressed("f-col",v);prevUpd();break;
     case "cat-save":{
-      const name=$("#f-cname").value.trim(),e=$("#f-emo").value.trim()||"🏷️";if(!name){snack("Give it a name");return;}
-      if(F.id)Object.assign(S.cats.find(c=>c.id===F.id),{name,e,c:F.col});
-      else{const c={id:"c"+newId(),name,e,c:F.col,kind:F.ck};
+      const name=$("#f-cname").value.trim(),e=F.e||"🏷️",i=F.i;if(!name){snack("Give it a name");return;}
+      if(F.id)Object.assign(S.cats.find(c=>c.id===F.id),{name,e,i,c:F.col});
+      else{const c={id:"c"+newId(),name,e,i,c:F.col,kind:F.ck};
         const lastVis=S.cats.map(x=>x.kind===F.ck&&!x.hidden).lastIndexOf(true);S.cats.splice(lastVis+1,0,c);}
       closeSheet();commit();break;}
     case "cat-del":{
@@ -1398,12 +1525,10 @@ document.addEventListener("input",ev=>{
   if(F&&F.kind==="tr"&&["f-amt","f-toamt","f-fee"].includes(id))trPreview();
   else if(id==="f-actual")fixPreview();
   else if(id==="cur-q")curList(ev.target.value);
-  else if(id==="f-emo"){$("#f-cprev").textContent=ev.target.value.trim()||"🏷️";setPressed("f-emo",ev.target.value.trim());}
+  else if(id==="ic-q")icList(ev.target.value);
 });
 document.addEventListener("change",ev=>{
   const el=ev.target;
-  if(el.id==="f-due2"&&F&&F.kind==="loan"){const l=loan(F.id);if(l&&el.value){l.due=el.value;commit();$("#loan-due").textContent=(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due);}return;}
-  if(el.id==="f-rtime"){if(/^\d\d:\d\d$/.test(el.value)){S.settings.remind.time=el.value;save();syncReminders();}return;}
   if(el.id==="restore-file"){const f=el.files[0];el.value="";if(!f)return;f.text().then(t=>{let o;try{o=JSON.parse(t);}catch(e){snack("That isn't a Tally backup file");return;}
     if(!o||!Array.isArray(o.accounts)||!Array.isArray(o.txns)){snack("That isn't a Tally backup file");return;}
     if(!confirm("Replace everything on this phone with this backup ("+o.accounts.length+" accounts, "+o.txns.length+" entries)?"))return;
