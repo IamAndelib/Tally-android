@@ -111,11 +111,11 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .rt{position:absolute;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;padding:4px 0 0;border-radius:16px;transition:left .2s,top .2s}
 .rt .ci{width:var(--d);height:var(--d);font-size:calc(var(--d)*.5)}
 .rt .cn,.rt .cp{font-size:var(--f);line-height:1.25}
-.dcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.dcenter{position:absolute;inset:0;padding:0 18%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
 .dcenter .g{font-size:.9rem;font-weight:600;color:var(--got)}
 .dcenter .s{font-size:1.2rem;font-weight:700;color:var(--spent);letter-spacing:-.01em;white-space:nowrap}
 .dcenter .s.zero{color:var(--on-surface-variant);font-weight:600}
-.dcenter .hint{font-size:.72rem;color:var(--on-surface-variant);max-width:100px;margin-top:2px}
+.dcenter .hint{font-size:clamp(.66rem,calc(var(--D,160px)*.07),.8rem);color:var(--on-surface-variant);margin-top:2px;line-height:1.25}
 .curbtn{pointer-events:auto;margin-top:4px;font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--surface-high);color:var(--on-surface-variant)}
 
 /* balance bar + fabs */
@@ -156,6 +156,7 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .dlg-t{font-size:1.2rem;font-weight:600;margin:6px 4px 8px}
 .dlg-x{margin:0 4px 8px;color:var(--on-surface-variant);line-height:1.45}
 .btn.text.dng{color:var(--spent)}
+.dlg-act.stack{flex-direction:column;align-items:flex-end;gap:0}.dlg-act.stack .btn{width:auto}
 .chip.addnew{border-style:dashed;border-color:var(--outline);color:var(--on-surface-variant);opacity:.8}
 .chip.addnew .ic{width:18px;height:18px}
 .dot.addnew{display:grid;place-items:center;border:2px dashed var(--outline);color:var(--on-surface-variant);background:transparent}
@@ -201,6 +202,12 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .tx .a small{display:block;font-weight:400;font-size:.75rem;color:var(--on-surface-variant)}
 .tx .a .rb{display:block;font-weight:500;font-size:.72rem;color:var(--on-surface-variant);max-width:170px;overflow:hidden;text-overflow:ellipsis;margin-left:auto}
 .tx .s .st{margin-right:2px;vertical-align:1px}
+.tx.exp{flex-wrap:wrap;row-gap:0}
+.tx .more{display:none;flex-basis:100%;font-size:.85rem;color:var(--on-surface-variant);padding:6px 0 2px 52px;line-height:1.4}
+.tx.open .more{display:block}
+.tx .more .mdel{width:auto;height:36px;padding:0 8px;margin:4px 0 0 -8px;font-size:.85rem}.tx .more .mdel .ic{width:18px;height:18px}
+.tx .chev{display:grid;place-items:center;color:var(--on-surface-variant);margin-left:-4px}.tx .chev .ic{width:20px;height:20px;transition:transform .15s}.tx.open .chev .ic{transform:rotate(180deg)}
+.tx.exp{cursor:pointer}
 .empty{text-align:center;padding:28px 12px;color:var(--on-surface-variant)}
 .sec{font-size:.85rem;font-weight:600;color:var(--primary);margin:24px 4px 8px}
 .welcome{text-align:center;padding:48px 16px}
@@ -313,6 +320,9 @@ body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 .dropbox.dropover{border-style:solid;border-color:var(--primary);background:var(--primary-container);color:var(--on-primary-container);opacity:1}
 /* motion: kept deliberately small and cheap: state layer on press, a soft flash on the row that changed, snackbar in */
 .flash{animation:flash .7s ease-out}
+/* the one deliberate flourish: a tapped tab's icon flips once like a coin */
+.nav .ic.flip{animation:tabflip .42s cubic-bezier(.2,0,0,1)}
+@keyframes tabflip{from{transform:perspective(160px) rotateY(0)}to{transform:perspective(160px) rotateY(360deg)}}
 @keyframes flash{from{background:var(--secondary-container)}to{background:transparent}}
 .snack{animation:snackin .2s cubic-bezier(.2,0,0,1)}
 @keyframes snackin{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%)}}
@@ -355,7 +365,7 @@ body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 .mgrid button{height:48px;border-radius:24px;font-weight:500}
 .mgrid button.now{box-shadow:inset 0 0 0 1px var(--primary);color:var(--primary)}
 .mgrid button.sel{background:var(--primary);color:var(--on-primary)}
-.dlg-act{display:flex;justify-content:space-between;margin-top:12px}
+.dlg-act{display:flex;justify-content:space-between;flex-wrap:wrap;gap:0 4px;margin-top:12px}
 .dlg-act .btn{width:auto}
 </style>
 </head>
@@ -502,7 +512,19 @@ function migrate(o){
 let S=blank();
 try{const raw=localStorage.getItem(LS);if(raw)S=migrate(JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){snack("Couldn't save on this phone");}}
-function commit(){save();render();syncReminders();}
+function commit(){save();render();syncReminders();syncWidget();}
+/* home-screen widget: today's total balance (same number as the Home banner, main currency) and today's spending */
+let lastWidget="";
+function syncWidget(){
+  if(!(window.Android&&Android.setWidget))return;
+  const act=activeAccounts(),cs=currencies(),t=today();let o={date:t};
+  if(act.length){const cur=cs.includes(S.settings.cur)?S.settings.cur:cs[0],b=balances();
+    const total=r2(act.filter(a=>a.currency===cur).reduce((q,a)=>q+b[a.id],0));
+    const spent=r2(S.txns.filter(x=>x.type==="expense"&&x.date===t&&(acc(x.account)||{}).currency===cur).reduce((q,x)=>q+x.amount,0));
+    o={date:t,balance:money(total,cur),spent:money(spent,cur),zero:money(0,cur)};}
+  const j=JSON.stringify(o);if(j===lastWidget)return;lastWidget=j;
+  try{Android.setWidget(j);}catch(e){}
+}
 
 /* ---------- helpers ---------- */
 const cat=id=>S.cats.find(c=>c.id===id)||S.cats.find(c=>c.id==="other")||CATS[11];
@@ -531,7 +553,7 @@ function runBal(){
     else if(t.type==="transfer"){b[t.account]-=t.amount;if(t.to in b)b[t.to]+=(t.toAmount!=null?t.toAmount:t.amount);}
     else if(t.type==="loan")b[t.account]+=t.dir==="in"?t.amount:-t.amount;
     const r={a:r2(b[t.account]),t:t.type==="transfer"&&t.to in b?r2(b[t.to]):null};
-    if(t.type==="loan"&&!t.principal&&t.loan in paid){paid[t.loan]+=t.amount;r.ls=r2(amt[t.loan]-paid[t.loan])<=0?"cleared":"partly";}
+    if(t.type==="loan"&&!t.principal&&t.loan in paid){paid[t.loan]+=t.amount;r.left=Math.max(0,r2(amt[t.loan]-paid[t.loan]));r.ls=r.left<=0?"cleared":"partly";}
     m[t.id]=r;
   });
   return RBC=m;
@@ -655,6 +677,7 @@ function entryDate(){const t=today(),[s,e]=range();if(t>=s&&t<=e)return V.period
 function periodTxns(){const [s,e]=range();return S.txns.filter(t=>t.date>=s&&t.date<=e);}
 
 /* ---------- render ---------- */
+let FLIP=null;
 function render(){
   const app=$("#app");RBC=null;
   if(V.screen!=="history")V.sel=null;
@@ -667,7 +690,8 @@ function render(){
   const tabs=["home","assets","liabs"].includes(V.screen)&&activeAccounts().length>0;
   document.body.classList.toggle("hasnav",tabs);
   $("#nav").innerHTML=tabs?'<div class="in">'+[["home","Home","home"],["assets","Assets","wallet"],["liabs","Liabilities","card"]].map(([k,l,i])=>
-    '<button data-act="tab" data-v="'+k+'"'+(V.screen===k?' aria-current="page"':"")+'><span class="ind">'+ic(i)+"</span>"+l+"</button>").join("")+"</div>":"";
+    '<button data-act="tab" data-v="'+k+'"'+(V.screen===k?' aria-current="page"':"")+'><span class="ind">'+(FLIP===k?ic(i).replace('class="ic"','class="ic flip"'):ic(i))+"</span>"+l+"</button>").join("")+"</div>":"";
+  FLIP=null;
 }
 function subBar(title){return '<header class="appbar"><button class="icon" data-act="home" aria-label="Back">'+ic("back")+"</button><h1>"+esc(title)+"</h1></header>";}
 /* category icon circle: tinted, but opaque so leader lines pass underneath cleanly */
@@ -753,12 +777,15 @@ function calGrid(m,o){
 }
 
 /* ---------- Material confirm (never the browser's confirm(): it shows the page address and looks foreign) ---------- */
-let ASK=null;
+let ASK=null,ASK_ALT=null;
 function askDialog(title,text,okText,onOk,o){
-  o=o||{};ASK=onOk;
+  o=o||{};ASK=onOk;ASK_ALT=o.alt?o.alt[1]:null;
   $("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-label="'+esc(title)+'"><h3 class="dlg-t">'+esc(title)+"</h3>"+
-    (text?'<p class="dlg-x">'+esc(text)+"</p>":"")+'<div class="dlg-act"><button class="btn text" data-act="pd-close">'+esc(o.cancel||"Cancel")+"</button>"+
-    '<button class="btn text'+(o.danger?" dng":"")+'" data-act="ask-ok">'+esc(okText)+"</button></div></div></div>";
+    (text?'<p class="dlg-x">'+esc(text)+"</p>":"")+
+    (o.alt?'<div class="dlg-act stack"><button class="btn text" data-act="ask-ok">'+esc(okText)+'</button><button class="btn text" data-act="ask-alt">'+esc(o.alt[0])+
+      '</button><button class="btn text" data-act="pd-close">'+esc(o.cancel||"Cancel")+"</button></div></div></div>"
+    :'<div class="dlg-act"><button class="btn text" data-act="pd-close">'+esc(o.cancel||"Cancel")+"</button>"+
+    '<button class="btn text'+(o.danger?" dng":"")+'" data-act="ask-ok">'+esc(okText)+"</button></div></div></div>");
 }
 /* ---------- small dialogs: new account type, custom colour ---------- */
 const miniDialog=(label,body,okAct,okText)=>{$("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="'+esc(label)+'"><div class="dp-h"><div class="t">'+esc(label)+"</div></div>"+body+
@@ -914,6 +941,8 @@ function checkCard(b,cur){
 /* Where n tiles go around the donut: evenly spaced on a circle that hugs the donut.
    More categories → smaller tiles, so the circle stays round and there is never an empty slot.
    Slots come back clockwise, starting just left of 12 o'clock. */
+/* distance from a tile centre to the donut edge, in tile sizes (smaller = bigger donut); checked against every n and width */
+const DONUT_GAP=.64;
 function ringLayout(n,W){
   const TWO=2*Math.PI,N=720;
   const oval=(a,b)=>{const pts=[],cum=[0];for(let k=0;k<=N;k++){const t=-Math.PI/2+k/N*TWO;pts.push([a*Math.cos(t),b*Math.sin(t)]);
@@ -932,7 +961,7 @@ function ringLayout(n,W){
     const f=(target-O.cum[k])/((O.cum[k+1]-O.cum[k])||1),x=O.pts[k][0]+(O.pts[k+1][0]-O.pts[k][0])*f,y=O.pts[k][1]+(O.pts[k+1][1]-O.pts[k][1])*f;
     slots.push({x:W/2+x,y:b+u/2+y});
   }
-  const H=2*b+u,D=2*(Math.min(a,b)-.72*u);
+  const H=2*b+u,D=2*(Math.min(a,b)-DONUT_GAP*u);
   return {W,H,u,slots,cx:W/2,cy:H/2,D:Math.max(D,90)};
 }
 const TAU=2*Math.PI;
@@ -990,13 +1019,15 @@ function ringHTML(cats,o){
     });
   }
   const donut='<svg viewBox="0 0 100 100" class="donut" aria-hidden="true"><circle r="34" cx="50" cy="50" style="fill:var(--surface)"/><g transform="rotate('+rot.toFixed(2)+' 50 50)"><circle r="'+R+'" cx="50" cy="50" fill="none" style="stroke:var(--surface-highest)" stroke-width="12"/>'+segs+"</g></svg>";
-  const box='left:'+(cx-D/2).toFixed(1)+"px;top:"+(cy-D/2).toFixed(1)+"px;width:"+D.toFixed(1)+"px;height:"+D.toFixed(1)+"px";
+  const box='left:'+(cx-D/2).toFixed(1)+"px;top:"+(cy-D/2).toFixed(1)+"px;width:"+D.toFixed(1)+"px;height:"+D.toFixed(1)+"px;--D:"+D.toFixed(1)+"px";
+  /* amount font: as large as fits inside the hole (about 62% of the donut) */
+  const fit=txt=>Math.max(11,Math.min(22,D*.11,.62*D/(Math.max(3,String(txt).length)*.6))).toFixed(1)+"px";
   let center;
   if(home){const cs=currencies();
     center='<button class="dwrap" data-act="summary" aria-label="Spending summary" style="'+box+'">'+donut+'<div class="dcenter">'+
       (o.got?'<div class="g">+'+esc(money(o.got,o.cur,true))+"</div>":"")+
-      '<div class="s'+(o.spent?"":" zero")+'">'+esc(money(o.spent,o.cur,true))+"</div>"+
-      (!o.spent&&!o.got?'<div class="hint">Tap a category to add</div>':"")+
+      '<div class="s'+(o.spent?"":" zero")+'" style="font-size:'+fit(money(o.spent,o.cur,true))+'">'+esc(money(o.spent,o.cur,true))+"</div>"+
+      (!o.spent&&!o.got?'<div class="hint">Tap a category</div>':"")+
       (cs.length>1?'<span class="curbtn" data-act="cur-next" role="button">'+esc(o.cur)+" ⇄</span>":"")+"</div></button>";}
   else{RE={L,order:cats.map(c=>c.id)};
     center='<div class="dwrap" style="'+box+'">'+donut+'<div class="dcenter"><div class="hint">Spending</div></div></div>';}
@@ -1058,8 +1089,10 @@ function loanOpen(id,focusPay){
   }
   const hist=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id).sort(byNewest);
   h+='<div class="sec">History</div><div class="list">'+hist.map(t=>{const a=acc(t.account);
-    return '<div class="tx">'+emblem(t.principal?LOAN_EMB[l.kind]:{i:"paid",c:"#15a06f"},"em")+'<span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+loanPill(t)+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+'</div></span>'+
-      '<span class="a '+(t.dir==="in"?"got":"spent")+'">'+esc(money(t.amount,i.cur))+"</span>"+(t.principal?"":'<button class="icon" data-act="loanpay-del" data-v="'+t.id+'" aria-label="Delete this payment">'+ic("close")+"</button>")+"</div>";}).join("")+"</div>";
+    const r=runBal()[t.id]||{},more=t.principal?(lend?"Lent from ":"Borrowed into ")+(a?a.name:"?")+" on "+dayLabel(t.date)
+      :dayLabel(t.date)+" · "+(lend?"into ":"from ")+(a?a.name:"?")+" · "+(r.ls==="cleared"?(lend?"this cleared the lending":"this cleared the loan"):money(r.left||0,i.cur)+" left after this");
+    return '<div class="tx exp" data-act="row-exp">'+emblem(t.principal?LOAN_EMB[l.kind]:{i:"paid",c:"#15a06f"},"em")+'<span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div><div class="s">'+loanPill(t)+esc(dayLabel(t.date)+" · "+(a?a.name:"?"))+"</div></span>"+
+      '<span class="a '+(t.dir==="in"?"got":"spent")+'">'+esc(money(t.amount,i.cur))+"</span>"+'<span class="chev">'+ic("down")+"</span>"+'<div class="more">'+esc(more)+(t.principal?"":'<button class="btn text dng mdel" data-act="loanpay-del" data-v="'+t.id+'">'+ic("delete")+"Delete this payment</button>")+"</div></div>";}).join("")+"</div>";
   if(l.note)h+='<p class="muted small" style="margin:12px 4px 0">'+esc(l.note)+"</p>";
   h+='<div class="gap"></div><div class="gap"></div>';
   if(i.st==="cleared"&&i.pays.length)h+='<button class="btn tonal" data-act="loan-reopen">'+ic("reset")+"Reopen · undo last payment</button><div class=\"gap\"></div>";
@@ -1090,11 +1123,37 @@ function saveLoan(){
 function payLoan(){
   const l=loan(F.id);if(!l)return;const i=loanInfo(l),v=readVals(),amt=evalAmt(v.amount),lend=l.kind==="lend";
   if(!(amt>0)){snack("Enter an amount");return;}
-  if(amt>i.left+.005){snack("That's more than what's left ("+money(i.left,i.cur)+")");return;}
   if(!acc(F.account)){snack("Pick an account");return;}
+  if(amt>i.left+.005){overpay(l,i,amt,F.account,v.date||today());return;}
   const id=l.id,account=F.account,date=v.date||today(),done=r2(i.left-amt)<=0,pid=newId(),ts=Date.now();
   const mutate=()=>{S.txns.push({id:pid,ts,type:"loan",dir:lend?"in":"out",loan:id,amount:amt,account,date,note:""});};
   guardOverdraw(mutate,date,()=>{closeSheet();withUndo((lend?"Got back ":"Paid back ")+money(amt,i.cur)+(done?" · all cleared":""),mutate,{row:id});});
+}
+/* someone paid back more than they owed (or you did): clear this one and track the extra as a loan the other way */
+function overpay(l,i,amt,account,date){
+  const lend=l.kind==="lend",who=loanWho(l),extra=r2(amt-i.left),cur=i.cur,pid=newId(),nid=newId(),qid=newId(),ts=Date.now();
+  askDialog(lend?who+" paid "+money(extra,cur)+" more":"You paid "+money(extra,cur)+" more",
+    lend?"Track the extra "+money(extra,cur)+" as a loan from "+who+" (you now owe it)?":"Track the extra "+money(extra,cur)+" as a lending to "+who+" (they owe you)?",
+    lend?"Track as loan":"Track as lending",()=>{
+      const mutate=()=>{
+        if(i.left>0)S.txns.push({id:pid,ts,type:"loan",dir:lend?"in":"out",loan:l.id,amount:i.left,account,date,note:""});
+        S.loans.push({id:nid,ts,kind:lend?"borrow":"lend",person:l.person,amount:extra,account,date,due:"",note:"",status:"open"});
+        S.txns.push({id:qid,ts:ts+1,type:"loan",dir:lend?"in":"out",loan:nid,principal:true,amount:extra,account,date,note:""});
+      };
+      guardOverdraw(mutate,date,()=>{closeSheet();
+        withUndo(lend?who+"’s lending cleared · you owe "+who+" "+money(extra,cur):"Loan cleared · "+who+" owes you "+money(extra,cur),mutate,{row:nid});});
+    },{cancel:"Go back"});
+}
+/* dropped on Cleared: ask how it was cleared, because one way moves money */
+function clearLoan(id){
+  const l=loan(id);if(!l)return;const i=loanInfo(l),lend=l.kind==="lend",who=loanWho(l);if(!i.open)return;
+  const la=acc(l.account),account=la&&!la.archived?l.account:(activeAccounts().find(a=>a.currency===i.cur)||{}).id,pid=newId(),ts=Date.now();
+  const paid=()=>{if(!account){snack("No account in "+i.cur+" to record it");return;}
+    const mutate=()=>{S.txns.push({id:pid,ts,type:"loan",dir:lend?"in":"out",loan:id,amount:i.left,account,date:today(),note:""});};
+    guardOverdraw(mutate,today(),()=>{V.showCleared=true;withUndo((lend?"Got back ":"Paid back ")+money(i.left,i.cur)+" · all cleared",mutate,{row:id});});};
+  const off=()=>{V.showCleared=true;withUndo(lend?"Written off":"Marked as forgiven",()=>{loan(id).status="writeoff";},{row:id});};
+  askDialog(lend?"Clear "+who+"’s lending?":"Clear the loan from "+who+"?",(lend?who+" still owes ":"You still owe "+who+" ")+money(i.left,i.cur)+".",
+    lend?"Got it all back":"Paid it all back",paid,{alt:[lend?"Write it off":"Mark as forgiven",off]});
 }
 /* back to open: a written-off one just reopens; a fully paid one drops its latest payment (the user's choice) */
 function reopenLoan(id){
@@ -1141,8 +1200,9 @@ function assetsView(){
   if(arch.length)h+='<button class="btn text" data-act="toggle-arch">'+(V.showArchived?"Hide":"Show")+" archived ("+arch.length+")</button>";
   h+=dropBox("arch","Drop here to archive")+(arch.length&&V.showArchived?zoneList("arch",arch.map(a=>accRow(a,b,true)).join(""))+dragTip():"");
   const lends=S.loans.filter(l=>l.kind==="lend"),open=lends.filter(l=>loanInfo(l).open),done=lends.filter(l=>!loanInfo(l).open);
-  h+='<div class="sec">Owed to you</div>'+(open.length?'<div class="list">'+open.map(l=>loanRow(l)).join("")+"</div>":'<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>')+dropBox("lend-open","Drop here to make it active again","reset")+
+  h+='<div class="sec">Owed to you</div>'+(open.length?zoneList("lend-open",open.map(l=>loanRow(l,true)).join("")):'<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>')+dropBox("lend-open","Drop here to make it active again","reset")+
     '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">'+ic("add")+"Lend money</button>";
+  h+=dropBox("lend-done","Drop here to mark it cleared","check");
   if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
     if(V.showCleared)h+=zoneList("lend-done",done.map(l=>loanRow(l,true)).join(""))+dragTip();}
   h+='<div class="sec">Other assets</div>'+(S.assets.length?'<div class="list">'+S.assets.map(x=>'<button class="tx" data-act="asset-edit" data-v="'+x.id+'">'+emblem(x,"em")+'<span class="mid"><div class="d">'+esc(x.name)+'</div></span><span class="a">'+esc(money(x.value,x.currency))+"</span></button>").join("")+"</div>"
@@ -1156,8 +1216,9 @@ function liabsView(){
   const cards=activeAccounts().filter(a=>a.type==="card");
   const owed=perCur(add=>{open.forEach(l=>{const i=loanInfo(l);add(i.cur,i.left);});cards.forEach(a=>{if(b[a.id]<0)add(a.currency,-b[a.id]);});});
   h+='<div class="sumcard owe"><div class="t">You owe</div>'+curLines(owed)+"</div>";
-  h+='<div class="sec">Loans</div>'+(open.length?'<div class="list">'+open.map(l=>loanRow(l)).join("")+"</div>":'<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>')+dropBox("borrow-open","Drop here to make it active again","reset")+
+  h+='<div class="sec">Loans</div>'+(open.length?zoneList("borrow-open",open.map(l=>loanRow(l,true)).join("")):'<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>')+dropBox("borrow-open","Drop here to make it active again","reset")+
     '<button class="btn text" data-act="loan-new" data-v="borrow" style="margin-top:4px">'+ic("add")+"Record a loan</button>";
+  h+=dropBox("borrow-done","Drop here to mark it cleared","check");
   if(done.length){h+='<button class="btn text" data-act="toggle-cleared">'+(V.showCleared?"Hide":"Show")+" cleared ("+done.length+")</button>";
     if(V.showCleared)h+=zoneList("borrow-done",done.map(l=>loanRow(l,true)).join(""))+dragTip();}
   if(cards.length)h+='<div class="sec">Credit cards</div><div class="list">'+cards.map(a=>accRow(a,b)).join("")+"</div>";
@@ -1197,11 +1258,17 @@ function applyNativeActions(){
 }
 window.tallyOpen=function(s){
   const [k,id,pay]=String(s||"").split(":");
+  if(k==="add"){ /* from the widget's quick add: today, on Home */
+    applyNativeActions();closePop();BACKTO=null;closeSheet();V.screen="home";V.period="day";V.anchor=today();render();
+    if(!activeAccounts().length)return;
+    if(id==="out")txSheet(null,"expense");else if(id==="in")txSheet(null,"income");else if(id==="tr")trSheet();
+    return;
+  }
   if(k!=="loan"||!loan(id))return;
   applyNativeActions();closePop();closeSheet();loanOpen(id,pay==="pay");
 };
 window.tallyResume=function(){
-  applyNativeActions();
+  applyNativeActions();syncWidget();
   if(today()!==lastDay){lastDay=today();V.anchor=today();if(!$("#sheet").innerHTML)render();}
   syncReminders();
 };
@@ -1293,11 +1360,15 @@ function settingsView(){
 }
 
 /* ---------- menus, dialogs + sheets ---------- */
-const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;ASK=null;};
+const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;ASK=null;ASK_ALT=null;};
 function openSheet(title,body){
   $("#sheet").innerHTML='<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
 }
-function closeSheet(){closeSheet2();$("#sheet").innerHTML="";F=null;}
+function closeSheet(){
+  closeSheet2();$("#sheet").innerHTML="";F=null;
+  /* came from the entries list: go back to it (after a save/delete has been applied), not to Home */
+  if(BACKTO){const b=BACKTO;BACKTO=null;setTimeout(()=>{if($("#sheet").innerHTML||V.screen!==b.screen)return;entriesSheet();const p=$("#sheet .p");if(p)p.scrollTop=b.scroll;},0);}
+}
 /* second layer, for pickers opened from inside a sheet */
 function openSheet2(title,body){
   $("#sheet2").innerHTML='<div class="sheet s2" data-act="sheet2-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close2" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
@@ -1510,9 +1581,10 @@ function catForm(id,kind){
   if(id)h+='<div class="gap"></div><button class="btn danger" data-act="cat-del">'+(c.hidden?"Bring back":"Remove")+"</button>";
   openSheet(id?"Edit category":(c.kind==="in"?"New money-in category":"New spending category"),h);
 }
+let BACKTO=null;
 function entriesSheet(){
   RBC=null;  const list=periodTxns().sort(byNewest);
-  openSheet(periodLabel(),(list.length?dayGroups(list):'<div class="empty">Nothing written down yet.</div>')+'<div class="gap"></div><button class="btn text" data-act="go" data-v="history">Open full history</button>');
+  openSheet(periodLabel(),'<div id="ent-list"></div>'+(list.length?dayGroups(list):'<div class="empty">Nothing written down yet.</div>')+'<div class="gap"></div><button class="btn text" data-act="go" data-v="history">Open full history</button>');
 }
 
 /* ---------- spending summary (tap the donut): days / weeks / months as bars ---------- */
@@ -1668,7 +1740,7 @@ document.addEventListener("click",ev=>{
   switch(act){
     case "home":V.screen="home";render();scrollTo(0,0);break;
     case "go":closeSheet();V.screen=v==="accounts"?"assets":v;render();scrollTo(0,0);break;
-    case "tab":V.screen=v;render();scrollTo(0,0);break;
+    case "tab":V.screen=v;FLIP=v;render();scrollTo(0,0);break;
     case "toggle-cleared":V.showCleared=!V.showCleared;render();break;
     case "loan-new":loanForm(v);break;
     case "loan-save":saveLoan();break;
@@ -1701,6 +1773,7 @@ document.addEventListener("click",ev=>{
     case "pd-today":setPeriod({period:PD.tab==="month"?"month":"day",anchor:today()});break;
     case "pd-close":closePop();break;
     case "ask-ok":{const f=ASK;closePop();if(f)f();break;}
+    case "ask-alt":{const f=ASK_ALT;closePop();if(f)f();break;}
     case "go-today":V.period="day";V.anchor=today();render();break;
     case "prev":shiftPeriod(-1);render();break;
     case "next":if(canNext()){shiftPeriod(1);render();}break;
@@ -1718,7 +1791,7 @@ document.addEventListener("click",ev=>{
     case "add-out":txSheet(null,"expense");break;
     case "add-in":txSheet(null,"income");break;
     case "add-cat":txSheet(null,"expense",v);break;
-    case "tx-open":txSheet(v);break;
+    case "tx-open":{const lst=$("#sheet #ent-list");BACKTO=lst?{screen:V.screen,scroll:($("#sheet .p")||{}).scrollTop||0}:null;txSheet(v);break;}
     case "f-showcats":{const g=$("#f-catgrid");g.hidden=!g.hidden;el.setAttribute("aria-expanded",String(!g.hidden));break;}
     case "f-cat":{
       F.cat=v;setPressed("f-cat",v);
@@ -1727,6 +1800,7 @@ document.addEventListener("click",ev=>{
       break;}
     case "f-acc":{F.account=v;setPressed("f-acc",v);const c=$("#amt-cur");if(c)c.textContent=acc(v).currency;break;}
     case "tx-save":saveTx();break;
+    case "row-exp":el.classList.toggle("open");break;
     case "tx-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>deleteEntries([id]));break;}
     case "tr-new":trSheet();break;
     case "tr-from-acc":trSheet(null,v);break;
@@ -1899,7 +1973,7 @@ function dragBegin(){
     document.querySelectorAll('.dropbox[data-zone="'+LP.to+'"]').forEach(z=>z.classList.add("dropok"));}
 }
 /* where a row may be dropped (source list data-src -> slot data-zone): archived <-> accounts, cleared -> open (clearing stays explicit) */
-const ZONE_TO={acc:"arch",arch:"acc","lend-done":"lend-open","borrow-done":"borrow-open"};
+const ZONE_TO={acc:"arch",arch:"acc","lend-done":"lend-open","borrow-done":"borrow-open","lend-open":"lend-done","borrow-open":"borrow-done"};
 function rowDrop(){
   const L=LP,ok=!!L.over;
   document.querySelectorAll(".dropok,.dropover").forEach(z=>z.classList.remove("dropok","dropover"));
@@ -1909,6 +1983,7 @@ function rowDrop(){
   const [type,id]=L.el.dataset.drag.split(":");
   S.settings.dragTip=true;buzz(12);
   if(type==="acc")setArchived(id,L.to==="arch");
+  else if(/-done$/.test(L.to))clearLoan(id);
   else reopenLoan(id);
 }
 function dragMove(x,y){
@@ -1973,7 +2048,7 @@ window.tallySaved=function(ok){snack(ok?"Saved":"Not saved");};
 let lastDay=today();
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&today()!==lastDay){lastDay=today();V.anchor=today();if(!$("#sheet").innerHTML)render();}});
 
-readSys();applyTheme();applyNativeActions();render();syncReminders();
+readSys();applyTheme();applyNativeActions();render();syncReminders();syncWidget();
 if(activeAccounts().length)askNotify();
 })();
 </script>

@@ -228,6 +228,12 @@ public class MainActivity extends Activity {
             ReminderReceiver.save(MainActivity.this, json);
         }
 
+        /** Today's balance + spending for the home-screen widget, formatted by the page. */
+        @JavascriptInterface
+        public void setWidget(String json) {
+            TallyWidget.save(MainActivity.this, json);
+        }
+
         @JavascriptInterface
         public String takeActions() {
             return ReminderReceiver.takeActions(MainActivity.this);

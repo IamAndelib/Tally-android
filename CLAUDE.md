@@ -30,6 +30,11 @@ Built originally in a claude.ai chat; continue development from here.
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
+  - Home-screen widget `TallyWidget` (AppWidgetProvider, `res/layout/widget_tally.xml`, `res/xml/tally_widget_info.xml`, 4×1,
+    Material You colours via `values-v31` system colours): today's total balance + "Spent today", body opens the app, + opens
+    `QuickAddActivity` (small dialog: Spent / Received / Transfer → MainActivity with `open=add:out|add:in|add:tr`).
+    The page is the source of truth: `syncWidget()` (from `commit()`, start, resume) sends formatted numbers through
+    `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
 - All app logic is one self-contained file: `app/src/main/assets/index.html` (vanilla JS, no framework, no build step).
   The only other asset is `icons.js` (see Emblems).
   - State `S = {v:5, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
@@ -52,13 +57,16 @@ Built originally in a claude.ai chat; continue development from here.
     date from the later of the old due date and today (the notification's +1 day uses the same rule).
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow).
     `reopenLoan()`: a written-off one just reopens; a fully paid one drops its latest payment (user's choice), with Undo.
+    Paying back more than is left → `overpay()` offers to clear it and track the extra as a new loan the other way.
+    The loan sheet's history rows expand on tap (`row-exp`): full date/account, what was left after that payment, Delete.
   - Other assets: `S.assets = [{id, name, i, e, c, value, currency}]` (value only, no entries).
   - Account sheet (`accOpen`): balance, "Doesn't match?" fix, then [Archive | History] or, when archived, [Show again | History];
     Edit account below (the edit form has Delete only for accounts without entries; no archive there).
   - Tabs (bottom nav): Home, Assets (net worth, accounts, owed to you, other assets), Liabilities (loans, credit cards).
     Hold a row and drag it between sections: source lists carry `data-src`, rows `data-drag="acc:id|loan:id"`, `ZONE_TO` maps the
     source to a target slot `.dropbox[data-zone]` (an empty dashed slot, shown only while dragging; never outline existing lists or
-    rows, that reads as "merge"). Archived ↔ accounts via `setArchived()`, cleared → open via `reopenLoan()`; clearing is never a drop. Archived accounts' sheet has "Show again" (`acc-unarch`).
+    rows, that reads as "merge"). Archived ↔ accounts via `setArchived()`, cleared → open via `reopenLoan()`, open → cleared via
+    `clearLoan()`, which always asks how (paid in full into the loan's account today, through the overdraw guard / write off). Archived accounts' sheet has "Show again" (`acc-unarch`).
     History and Settings are two icons in every top bar (`topIcons()`; no ⋮ menu).
   - `balances(before?)` = opening + all entries (optionally only entries dated before a day → "started today with").
     `runBal()` (cached per render, `RBC`) = each account's balance right after each entry, plus loan-payment status; entry
@@ -67,7 +75,10 @@ Built originally in a claude.ai chat; continue development from here.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
-  - Confirmations use `askDialog(title, text, okText, onOk, {danger, cancel})` in `#pop`; never the browser's `confirm()`.
+  - Confirmations use `askDialog(title, text, okText, onOk, {danger, cancel, alt:[label, fn]})` in `#pop` (with `alt` the three
+    actions stack); never the browser's `confirm()`.
+  - Sheet back link: an entry opened from the entries list (`#ent-list`) sets `BACKTO`; `closeSheet()` then reopens the list
+    (after any save/delete, same scroll) instead of dropping to Home.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
     Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
     account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()`: Days | Weeks | Months bars of spending in the donut's currency,
@@ -75,7 +86,9 @@ Built originally in a claude.ai chat; continue development from here.
     "Open … on Home"; state `SM`, patched by `smRender()`), balance bar (opens the
     period's entries; a "↺ Today" chip above it whenever Home isn't on today), − / Transfer / + buttons, then Loan / Lend
     function buttons (own pastel tokens `--loan-*` / `--lend-*`, like `--minus-*` / `--plus-*`). New entries default to the day being viewed.
-  - Ring: `ringLayout(n, W)` spaces n tiles evenly on a circle around the donut, clockwise from just left of 12 o'clock;
+  - Ring: donut size `D = 2*(r - DONUT_GAP*u)` (0.64, checked for n = 1…24 at 360/393/430px: no tile or label overlap); the centre
+    text is padded into the hole and the amount's font is fitted to its length, the hint is just "Tap a category".
+    `ringLayout(n, W)` spaces n tiles evenly on a circle around the donut, clockwise from just left of 12 o'clock;
     tiles shrink as n grows, so it stays round and there is never a gap.
     `ringHTML(cats, {mode})` draws tiles, donut and leader lines for Home and the Settings preview. Donut slices are ordered
     by their category's position (clockwise); the donut is rotated to the angle where slices sit nearest their categories
@@ -103,6 +116,7 @@ Built originally in a claude.ai chat; continue development from here.
   - Feedback must feel instant and calm (user tested ripples/scales/page animations as laggy): a 10% state layer on press, set by
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
     row (`FX.row`), snackbar and sheet slide in, dialog fade, haptic `buzz()` (VIBRATE). No ripple, no scale, no page animation.
+    The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
     Calendar range: a touch only becomes a drag after 12px, so a jittery tap stays a tap. Don't reuse existing class names
     (`.pop` = dialog layer, `.row`, `.nav .in`) for effects.
     `commit()` also calls `syncReminders()`.

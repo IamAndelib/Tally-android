@@ -4,4 +4,8 @@
         <item name="android:navigationBarColor">#FBF8FF</item>
         <item name="android:windowBackground">@color/surface</item>
     </style>
+    <!-- the widget's quick-add dialog; DeviceDefault = Material You look on Android 12+ -->
+    <style name="QuickAdd" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
+        <item name="android:windowCloseOnTouchOutside">true</item>
+    </style>
 </resources>
