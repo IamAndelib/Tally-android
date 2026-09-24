@@ -143,6 +143,7 @@ a{color:var(--primary);text-decoration:none}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 #f-person-sug{margin-top:8px}
 .chip{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--outline-variant);display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:500;color:var(--on-surface-variant);white-space:nowrap}
+.strip .chip{flex-shrink:0}
 .chip[aria-pressed="true"]{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
 .chip[aria-pressed="true"]::after{content:"✓";font-size:.8rem}
 .smc{display:flex;align-items:stretch;height:170px;border-bottom:1px solid var(--outline-variant);margin:4px 0 0}
@@ -184,7 +185,7 @@ input:focus-visible,select:focus-visible{outline:0}
 select option{background:var(--surface-high);color:var(--on-surface)}
 .amtwrap{display:flex;align-items:center;gap:10px;border-bottom:2px solid var(--primary);padding:4px 2px;margin-top:8px}
 .amtwrap .cur{font-weight:600;color:var(--on-surface-variant);font-size:1.1rem}
-.amtwrap input{border:0;height:64px;padding:0;font-size:2.4rem;font-weight:700;letter-spacing:-.02em}
+.amtwrap input{border:0;height:64px;padding:0;font-size:2.4rem;font-weight:700;letter-spacing:-.02em;caret-color:var(--primary)}
 .amtwrap input:focus{border:0;padding:0}
 .amtwrap input:focus-visible{outline:0}
 .amtwrap:focus-within{border-bottom-width:3px;margin-bottom:-1px}
@@ -195,7 +196,7 @@ select option{background:var(--surface-high);color:var(--on-surface)}
   border-radius:20px 20px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.22);
   animation:up .18s cubic-bezier(.2,0,0,1)}
 @media (prefers-reduced-motion:reduce){.calc{animation:none}}
-.calc button{height:44px;border-radius:12px;background:var(--surface-high);font-weight:600;font-size:1.05rem}
+.calc button{height:56px;border-radius:12px;background:var(--surface-high);font-weight:600;font-size:1.15rem}
 .calc button.op{background:var(--secondary-container);color:var(--on-secondary-container)}
 .calc button.mut{color:var(--on-surface-variant);font-size:1.2rem}
 .preview{font-size:.85rem;color:var(--on-surface-variant);background:var(--surface-high);border-radius:12px;padding:10px 12px;margin-top:12px}
@@ -658,7 +659,7 @@ function calcOpen(id,btn){
   document.querySelectorAll('[data-act="calc-toggle"][aria-expanded="true"]').forEach(b=>b.setAttribute("aria-expanded","false"));
   const inp=$("#"+id),start=inp?inp.value.replace(/[^0-9.+\-×÷−]/g,""):"";
   CALC={id,expr:start};
-  if(inp){inp.readOnly=true;inp.blur();}
+  if(inp){inp.readOnly=true;inp.setAttribute("inputmode","none");inp.focus({preventScroll:true});}
   const panel=$("#calc-"+id);if(panel)panel.hidden=false;
   if(btn)btn.setAttribute("aria-expanded","true");
   if(inp)setTimeout(()=>inp.scrollIntoView({block:"center",behavior:"auto"}),0);
@@ -666,7 +667,7 @@ function calcOpen(id,btn){
 function calcClose(id,btn,use){
   const inp=$("#"+id);
   if(use&&CALC&&CALC.id===id&&CALC.expr){const val=calcEval(CALC.expr);if(val!=null&&inp)inp.value=String(val);}
-  if(inp){inp.readOnly=false;inp.dispatchEvent(new Event("input",{bubbles:true}));}
+  if(inp){inp.readOnly=false;inp.setAttribute("inputmode","decimal");inp.dispatchEvent(new Event("input",{bubbles:true}));}
   const panel=$("#calc-"+id);if(panel)panel.hidden=true;
   if(btn)btn.setAttribute("aria-expanded","false");
   if(CALC&&CALC.id===id)CALC=null;
@@ -2246,6 +2247,7 @@ addEventListener("resize",()=>{if(innerWidth!==lastW){lastW=innerWidth;if((V.scr
 
 function saveOut(name,mime,text){if(window.Android&&Android.saveFile)Android.saveFile(name,mime,text);else snack("Saving isn't available here");}
 window.tallyBack=function(){
+  if(CALC){calcClose(CALC.id,document.querySelector('[data-act="calc-toggle"][data-v="'+CALC.id+'"]'),true);return true;}
   if($("#pop").innerHTML){closePop();return true;}
   if($("#sheet2").innerHTML){closeSheet2();return true;}
   if($("#sheet").innerHTML){closeSheet();return true;}

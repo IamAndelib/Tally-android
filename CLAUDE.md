@@ -98,11 +98,15 @@ Built originally in a claude.ai chat; continue development from here.
     sheet, the account "Doesn't match?" fix) renders the amount input plus a toggle button (`calcBtn`, the bundled
     `ICONS.calculate` glyph) and a hidden 4-column keypad (`calcPanelHtml`: `7 8 9 ÷ / 4 5 6 × / 1 2 3 − / ⌫ 0 . +`).
     Tapping the toggle opens it (`calcOpen`: seeds `CALC={id,expr}` from the field's current value, makes the input
-    read-only so the system keyboard doesn't fight it for space); each key (`calc-key`) appends to `CALC.expr` and
-    live-writes it into the input, so the field doubles as the display. Tapping the same toggle again (`calcClose`)
-    evaluates the buffer (`calcEval`: left-to-right, `×`/`÷` folded into the left operand before summing `+`/`-` terms;
-    `null` on a malformed expression or ÷0, which just leaves the field as-is — no crash, no snack) and dispatches a
-    real `input` event so previews (transfer, balance fix) stay in sync. Deliberately **not** applied to transfer's
+    read-only and sets `inputmode="none"` so the system keyboard doesn't fight it for space — the field stays
+    *focused* rather than blurred, so its native caret still blinks there); each key (`calc-key`) appends to
+    `CALC.expr` and live-writes it into the input, so the field doubles as the display. Tapping the same toggle again
+    (`calcClose`) evaluates the buffer (`calcEval`: left-to-right, `×`/`÷` folded into the left operand before
+    summing `+`/`-` terms; `null` on a malformed expression or ÷0, which just leaves the field as-is — no crash, no
+    snack), restores `inputmode="decimal"`, and dispatches a real `input` event so previews (transfer, balance fix)
+    stay in sync. `window.tallyBack()` checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
+    back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
+    result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
     received amount/fee (`f-toamt`/`f-fee`, plain `.field` labels, not `.amtwrap`) or asset value (`f-aval`, laid out
     beside a currency picker) — scope-trimmed to avoid layout rework.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
@@ -142,7 +146,11 @@ Built originally in a claude.ai chat; continue development from here.
     `#sheet2` is a second layer for pickers opened from a sheet (currency picker: search, in use / popular / all ISO currencies).
   - History has its own period `HP` (default this month) with the same ‹ label ▾ › bar and Day | Range | Month dialog as Home:
     `range/periodLabel/shiftPeriod/canNext(p)` and `periodDialog(p)` take the period object (`V` for Home, `HP` for History).
-    Long labels shrink/truncate so the top-bar icons always fit at 360px.
+    Long labels shrink/truncate so the top-bar icons always fit at 360px. Its per-account filter row (`.strip` of
+    `.chip`s, `data-act="hacc"`) sets `.strip .chip{flex-shrink:0}` — a bare flex child would otherwise shrink below
+    its own text width and get clipped, because `button{overflow:hidden}` (kept globally so the press-state layer
+    stays inside each button's rounded corners) disables a flex item's usual "don't shrink past your content" floor;
+    the Home account-balance strip's own buttons (`.acc`) already carried the equivalent `flex:none` for this reason.
   - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent.
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
