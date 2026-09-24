@@ -5,8 +5,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-24
+
 ### Changed
 
+- Amounts get thousands commas as you type them (123986 reads 123,986), in every amount field. The keypad's "," key
+  types the decimal point.
 - Calculator: the button next to amount fields is bigger and coloured. While typing, the display scrolls so the caret
   stays in view, and the caret can be held and dragged. The + − × ÷ keys are larger. A bar above the keys shows the
   live result, with a keyboard button that applies it and switches to the phone's keyboard.
@@ -50,4 +54,5 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.1.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.0
 [1.0.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.0.0

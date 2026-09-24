@@ -152,6 +152,11 @@ Built originally in a claude.ai chat; continue development from here.
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
     received amount/fee (`f-toamt`/`f-fee`, plain `.field` labels, not `.amtwrap`) or asset value (`f-aval`, laid out
     beside a currency picker) — scope-trimmed to avoid layout rework.
+  - Amount inputs are exactly the `input[inputmode="decimal"]` ones (amtField fields, `f-open`, `f-toamt`, `f-fee`, `f-aval`):
+    they show thousands commas while typing (`formatAmountInput()` from the `input` listener, skipped while read-only in
+    calculator mode; caret kept beside the same digit; the keypad's "," becomes the decimal point or is dropped), and
+    `openSheet`/`openSheet2` group pre-filled values (`groupAmountInputs`, `groupDigits` in `js/core.js`, groups of three
+    for every currency). Readers always parse through `evalAmt()`, which strips the commas; never `parseFloat` a field.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
@@ -215,7 +220,7 @@ Built originally in a claude.ai chat; continue development from here.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
 - Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.0.0) is the release `versionName`; debug builds get
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.0) is the release `versionName`; debug builds get
     `-dev.<run>`. `versionCode` = `GITHUB_RUN_NUMBER` (per workflow file — keep `build-apk.yml`'s name).
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
     signed with the committed `app/debug.keystore` (android/androiddebugkey/android) so every CI build updates the last.

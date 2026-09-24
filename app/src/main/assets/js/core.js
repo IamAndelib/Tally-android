@@ -161,7 +161,36 @@ function dayLabel(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(undefined, o);
 }
-/* amount field: accepts "12.50", "12,50", and quick sums like "12+3.5" */
+/* "1234567.891" → "1,234,567.891": thousands commas in every number of the text (never after a decimal point) */
+function groupDigits(s) {
+  return String(s ?? "")
+    .replace(/,/g, "")
+    .replace(/(^|[^\d.])(\d+)/g, (m, pre, n) => pre + n.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
+}
+/* Amount inputs (every input[inputmode=decimal]) regroup their digits as you type, keeping the caret beside the same
+   digit. The keypad's "," key is not a separator here: it becomes the decimal point, or is ignored if there is one. */
+function formatAmountInput(inp, ev) {
+  let v = inp.value,
+    caret = inp.selectionStart ?? v.length;
+  if (ev && ev.inputType === "insertText" && ev.data === "," && caret > 0 && v[caret - 1] === ",") {
+    const before = v.slice(0, caret - 1),
+      after = v.slice(caret),
+      num = before.match(/[\d,.]*$/)[0] + after.match(/^[\d,.]*/)[0],
+      dot = num.includes(".") ? "" : ".";
+    v = before + dot + after;
+    caret = before.length + dot.length;
+  }
+  const keep = v.slice(0, caret).replace(/,/g, "").length,
+    out = groupDigits(v);
+  if (out === inp.value) return;
+  inp.value = out;
+  let i = 0;
+  for (let n = 0; i < out.length && n < keep; i++) if (out[i] !== ",") n++;
+  try {
+    inp.setSelectionRange(i, i);
+  } catch (e) {}
+}
+/* amount field: accepts "12.50", "1,250.50", "12,50", and quick sums like "12+3.5" (readers never see the grouping) */
 function evalAmt(v) {
   let s = String(v ?? "").replace(/\s+/g, "");
   if (!s) return null;

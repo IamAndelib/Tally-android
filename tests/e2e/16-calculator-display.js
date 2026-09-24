@@ -187,7 +187,7 @@ const ok = (c, m) => {
         btn: getComputedStyle(document.querySelector('[data-act="calc-toggle"][data-v="f-amt"]')).display,
       };
     });
-    ok(after.value === String(650 + 5893 + 653 * 123456 + 98765), "the result is applied: " + after.value + tag);
+    ok(after.value === "80,722,076", "the result is applied: " + after.value + tag);
     ok(
       after.panel && after.focused && !after.readOnly && after.mode === "decimal",
       "keyboard mode: " + JSON.stringify(after) + tag
