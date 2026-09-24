@@ -100,15 +100,23 @@ Built originally in a claude.ai chat; continue development from here.
     and a hidden 4-column keypad (`calcPanelHtml`: `7 8 9 ÷ / 4 5 6 × / 1 2 3 − / ⌫ 0 . +`; operator keys get `.op`,
     backspace gets its own `.del` in `--spent` red — matched against the actual glyphs in `CALC_KEYS`, notably the
     Unicode minus `−` U+2212, not an ASCII hyphen, which every regex touching keys/expressions has to test for too).
-    Tapping the toggle opens it (`calcOpen`: seeds `CALC={id,expr}` from the field's current value, makes the input
-    read-only and sets `inputmode="none"` so the system keyboard doesn't fight it for space, and keeps it focused —
-    but a read-only input never shows a native caret even when focused, so `.amtbox` gets a `calcing` class that
-    turns the real input's text transparent, and `calcMirrorSync()` mirrors `CALC.expr` plus a blinking `.blink` span
-    into `.caretmirror` on top, kept in sync on every `calc-key` tap); each key appends to `CALC.expr` and live-writes
-    it into the input, so the field's value doubles as the display underneath the visible mirror. Tapping the same
-    toggle again (`calcClose`) evaluates the buffer (`calcEval`: left-to-right, `×`/`÷` folded into the left operand
-    before summing `+`/`-` terms; `null` on a malformed expression or ÷0, which just leaves the field as-is — no
-    crash, no snack), restores `inputmode="decimal"`, hides the mirror, and dispatches a real `input` event so previews (transfer, balance fix)
+    Tapping the toggle opens it (`calcOpen`: seeds `CALC={id,expr,pos}` — `pos` is the cursor offset into `expr`,
+    starting at the end — from the field's current value, makes the input read-only and sets `inputmode="none"` so
+    the system keyboard doesn't fight it for space, and keeps it focused — but a read-only input never shows a native
+    caret even when focused, so `.amtbox` gets a `calcing` class that turns the real input's text transparent, and
+    `calcMirrorSync()` renders `expr` split at `pos` around a blinking `.blink` span into `.caretmirror` on top, kept
+    in sync on every `calc-key`/`calc-pos` tap). Tapping inside the mirror (`calc-pos`) moves the cursor there:
+    `calcPosFromPoint()` resolves the tap via `document.caretRangeFromPoint`, walking `.caretmirror`'s own child text
+    nodes to turn the hit DOM position back into an offset in `expr` (`.caretmirror` must stay non-flex — plain block
+    text with `line-height` centering, not `display:flex` — flex items broke `caretRangeFromPoint`'s hit-testing for
+    taps past the last character, snapping them to the *other* text node instead of the end). Every key then reads
+    `expr`/`pos` as `before`/`after` and inserts, deletes, or (for an operator right after another) replaces at that
+    split point, not just at the end, so a mid-expression tap actually lets you edit there, same as a real keyboard;
+    each key appends to `CALC.expr` and live-writes it into the input, so the field's value doubles as the display
+    underneath the visible mirror. Tapping the same toggle again (`calcClose`) evaluates the buffer (`calcEval`:
+    left-to-right, `×`/`÷` folded into the left operand before summing `+`/`-` terms; `null` on a malformed
+    expression or ÷0, which just leaves the field as-is — no crash, no snack), restores `inputmode="decimal"`, hides
+    the mirror, and dispatches a real `input` event so previews (transfer, balance fix)
     stay in sync. `window.tallyBack()` checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
     back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
