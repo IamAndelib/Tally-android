@@ -58,7 +58,8 @@ Built originally in a claude.ai chat; continue development from here.
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow).
     `reopenLoan()`: a written-off one just reopens; a fully paid one drops its latest payment (user's choice), with Undo.
     Paying back more than is left → `overpay()` offers to clear it and track the extra as a new loan the other way.
-    The loan sheet's history rows expand on tap (`row-exp`): full date/account, what was left after that payment, Delete.
+    The loan sheet's history rows are compact (title + status pill only) and expand on tap (`row-exp`): date, account, what was
+    left after that payment, Delete.
   - Other assets: `S.assets = [{id, name, i, e, c, value, currency}]` (value only, no entries).
   - Account sheet (`accOpen`): balance, "Doesn't match?" fix, then [Archive | History] or, when archived, [Show again | History];
     Edit account below (the edit form has Delete only for accounts without entries; no archive there).
@@ -75,15 +76,18 @@ Built originally in a claude.ai chat; continue development from here.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
+  - While a sheet or dialog is open the page is locked (`html.lock`, `overscroll-behavior:contain`), the Home ring swipe is off, and
+    `#ring` / `.smchart` have `touch-action:pan-y` so horizontal swipes belong to the app.
   - Confirmations use `askDialog(title, text, okText, onOk, {danger, cancel, alt:[label, fn]})` in `#pop` (with `alt` the three
     actions stack); never the browser's `confirm()`.
   - Sheet back link: an entry opened from the entries list (`#ent-list`) sets `BACKTO`; `closeSheet()` then reopens the list
     (after any save/delete, same scroll) instead of dropping to Home.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
     Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
-    account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()`: Days | Weeks | Months bars of spending in the donut's currency,
-    tap a bar for its total, comparison with the one before (daily average for an unfinished week/month), top 3 categories and
-    "Open … on Home"; state `SM`, patched by `smRender()`), balance bar (opens the
+    account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()` in the donut's currency: Days = 7 vertical bars, Weeks = 8 horizontal
+    bar rows ("3–9 Aug"; no cramped x-axis), Months = a category donut of one month (‹ › one month) with a legend list of every
+    category and %; tap a bar/row for its total, comparison with the one before (daily average for an unfinished week/month),
+    top categories and "Open … on Home"; swipe the chart to move the window; state `SM`, patched by `smRender()`), balance bar (opens the
     period's entries; a "↺ Today" chip above it whenever Home isn't on today), − / Transfer / + buttons, then Loan / Lend
     function buttons (own pastel tokens `--loan-*` / `--lend-*`, like `--minus-*` / `--plus-*`). New entries default to the day being viewed.
   - Ring: donut size `D = 2*(r - DONUT_GAP*u)` (0.64, checked for n = 1…24 at 360/393/430px: no tile or label overlap); the centre
