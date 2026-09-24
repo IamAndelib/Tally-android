@@ -2,7 +2,17 @@ name: Build APK
 
 on:
   push:
+    branches-ignore:
+      - builds
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One build at a time, so publishing to the builds branch never races.
+concurrency:
+  group: build-apk
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -26,3 +36,24 @@ jobs:
         with:
           name: Tally-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+      # Keeps the latest APK of every branch on the `builds` branch (a single commit, replaced each time),
+      # so it can be downloaded without unzipping an artifact: builds/Tally-<branch>.apk
+      - name: Publish APK to the builds branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SRC_BRANCH: ${{ github.ref_name }}
+        run: |
+          name="Tally-$(printf '%s' "$SRC_BRANCH" | tr -c 'A-Za-z0-9._-' '-').apk"
+          apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          dir="$RUNNER_TEMP/builds"
+          rm -rf "$dir" && mkdir "$dir" && cd "$dir"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin builds; then git checkout -q FETCH_HEAD -- . ; fi
+          cp "$apk" "$name"
+          printf '%s  %s  %s\n' "$name" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%MZ)" > "$name.txt"
+          git add -A
+          git commit -q -m "APKs (latest: $SRC_BRANCH @ ${GITHUB_SHA::7})"
+          git push -q -f origin HEAD:builds

@@ -46,7 +46,10 @@ Built originally in a claude.ai chat; continue development from here.
   - Every add/edit/delete of entries goes through `withUndo()` (snapshot of `S.txns`, Undo in the snackbar).
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `gradle assembleDebug` (AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24). GitHub Actions workflow in `.github/workflows/build-apk.yml` uploads the debug APK as an artifact.
+- Build: `gradle assembleDebug` (AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24). GitHub Actions workflow in `.github/workflows/build-apk.yml` uploads the debug APK as an artifact
+  and also force-pushes it to the `builds` branch as `Tally-<branch>.apk` (one commit, replaced each build).
+- The user tests on their phone: after every push, wait for the build, then fetch the APK
+  (`git fetch origin builds && git show origin/builds:Tally-<branch>.apk > file.apk`) and send it to them.
 
 ## Notes
 - The project has not been test-built yet; first build may need small fixes.
