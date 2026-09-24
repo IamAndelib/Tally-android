@@ -47,8 +47,12 @@ Built originally in a claude.ai chat; continue development from here.
     are derived in `loanInfo()` (Active, Partly paid, Overdue, Cleared, Written off/Forgiven). `extendLoan()` moves the due
     date from the later of the old due date and today (the notification's +1 day uses the same rule).
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow).
+    `reopenLoan()`: a written-off one just reopens; a fully paid one drops its latest payment (user's choice), with Undo.
   - Other assets: `S.assets = [{id, name, i, e, c, value, currency}]` (value only, no entries).
   - Tabs (bottom nav): Home, Assets (net worth, accounts, owed to you, other assets), Liabilities (loans, credit cards).
+    Hold a row and drag it between sections: lists carry `data-zone`, rows `data-drag="acc:id|loan:id"`, `ZONE_TO` says what may go
+    where (archived ↔ accounts via `setArchived()`, cleared → open via `reopenLoan()`; clearing is never a drop). Empty or collapsed
+    targets render a `.dropbox` that only shows while dragging. Archived accounts' sheet has "Show again" (`acc-unarch`).
     History and Settings are two icons in every top bar (`topIcons()`; no ⋮ menu).
   - `balances(before?)` = opening + all entries (optionally only entries dated before a day → "started today with").
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
@@ -78,7 +82,12 @@ Built originally in a claude.ai chat; continue development from here.
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-  - Every add/edit/delete of entries goes through `withUndo()` (snapshot of `S.txns` + `S.loans`, Undo in the snackbar).
+  - Every add/edit/delete of entries goes through `withUndo(msg, change, fx)` (snapshot of `S.txns` + `S.loans` + `S.accounts`, Undo in the snackbar);
+    `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` pops a ring tile, `FX.center` bumps the donut total).
+  - Motion: press scale + a ripple from the touch point on every button, `#app.enter` only when the screen changes, `.reveal` on
+    expanding lists, snackbar and sheet slide in/out (closing sheet is an inert copy), haptic `buzz()` (VIBRATE permission).
+    All animation is transform/opacity and is switched off under prefers-reduced-motion. Don't reuse existing class names
+    (`.pop` = dialog layer, `.row`, `.nav .in`) for effects.
     `commit()` also calls `syncReminders()`.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
