@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Tally</string>
+    <string name="w_name">Tally today</string>
+    <string name="w_desc">Today\'s balance and spending, with a quick +</string>
+    <string name="w_label">Tally · Today</string>
+    <string name="w_spent">Spent today</string>
+    <string name="w_open">Open Tally</string>
+    <string name="w_add">Quick add</string>
+    <string name="qa_title">Quick add</string>
+    <string name="qa_out">Spent</string>
+    <string name="qa_in">Received</string>
+    <string name="qa_tr">Transfer</string>
 </resources>

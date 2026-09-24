@@ -3,6 +3,7 @@ package app.tally.expenses;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
@@ -21,6 +22,8 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONObject;
+
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -32,6 +35,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingSave;
+    /** "loan:<id>[:pay]" from a tapped reminder, delivered to the page once it has loaded. */
+    private String pendingOpen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +58,11 @@ public class MainActivity extends Activity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return loader.shouldInterceptRequest(request.getUrl());
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                deliverOpen();
             }
 
             @Override
@@ -84,6 +94,7 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "Android");
 
+        pendingOpen = getIntent().getStringExtra("open");
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl("https://" + HOST + "/assets/index.html");
     }
@@ -98,6 +109,22 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         pushTheme();
+        web.evaluateJavascript("window.tallyResume&&window.tallyResume()", null);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        pendingOpen = intent.getStringExtra("open");
+        deliverOpen();
+    }
+
+    private void deliverOpen() {
+        if (pendingOpen == null || web == null) return;
+        String open = JSONObject.quote(pendingOpen);
+        pendingOpen = null;
+        web.evaluateJavascript("window.tallyOpen&&window.tallyOpen(" + open + ")", null);
     }
 
     /** Re-sends the phone's light/dark mode and wallpaper palette to the page. */
@@ -159,6 +186,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        if (web != null) web.destroy();
+        super.onDestroy();
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         web.saveState(out);
@@ -197,6 +230,38 @@ public class MainActivity extends Activity {
 
     private class Bridge {
         @JavascriptInterface
+        public String getVersion() {
+            return BuildConfig.VERSION_NAME;
+        }
+
+        @JavascriptInterface
+        public void setReminders(String json) {
+            ReminderReceiver.save(MainActivity.this, json);
+        }
+
+        /** Today's balance + spending for the home-screen widget, formatted by the page. */
+        @JavascriptInterface
+        public void setWidget(String json) {
+            TallyWidget.save(MainActivity.this, json);
+        }
+
+        @JavascriptInterface
+        public String takeActions() {
+            return ReminderReceiver.takeActions(MainActivity.this);
+        }
+
+        /** Android 13+ asks the user before an app may post notifications. */
+        @JavascriptInterface
+        public void requestNotifications() {
+            if (Build.VERSION.SDK_INT < 33) return;
+            runOnUiThread(() -> {
+                if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 3);
+                }
+            });
+        }
+
+        @JavascriptInterface
         public String getColors() {
             return colorsJson();
         }
@@ -231,6 +296,7 @@ public class MainActivity extends Activity {
                     startActivityForResult(i, SAVE_FILE);
                 } catch (ActivityNotFoundException e) {
                     pendingSave = null;
+                    web.evaluateJavascript("window.tallySaved&&window.tallySaved(false)", null);
                 }
             });
         }

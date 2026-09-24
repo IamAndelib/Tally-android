@@ -1,3 +1,11 @@
 <resources>
     <color name="surface">#131318</color>
+    <color name="w_bg">#1F1F25</color>
+    <color name="w_on">#E4E1E9</color>
+    <color name="w_muted">#C6C5D0</color>
+    <color name="w_btn_bg">#293CA0</color>
+    <color name="w_btn_fg">#DEE0FF</color>
+    <color name="w_spent">#FFB4AB</color>
+    <color name="w_got">#88D990</color>
+    <color name="w_xfer">#9ECAFF</color>
 </resources>

@@ -1,0 +1,5 @@
+<resources>
+    <style name="QuickAdd" parent="@android:style/Theme.DeviceDefault.Dialog.NoActionBar">
+        <item name="android:windowCloseOnTouchOutside">true</item>
+    </style>
+</resources>

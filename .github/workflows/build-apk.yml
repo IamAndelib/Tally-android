@@ -1,28 +1,163 @@
+# Keep this file's name: the run number (GITHUB_RUN_NUMBER) is counted per workflow file and is the APK's versionCode.
 name: Build APK
 
 on:
   push:
+    branches-ignore:
+      - builds
+    tags:
+      - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  check:
+    name: Lint and end-to-end tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lint
+      - run: npm test
+      - name: Keep the screenshots of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: tests/e2e/output
+
+  build:
+    name: Debug APK
+    runs-on: ubuntu-latest
+    # one publish at a time, so pushing to the builds branch never races
+    concurrency:
+      group: build-apk-${{ github.ref_type }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
       - name: Install Android SDK packages
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
-      - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+          gradle-version: "8.7"
+      # the release variant is built too (unsigned here), so a problem with it shows up before a version is tagged
+      - name: Build
+        run: gradle assembleDebug assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: Tally-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+      # Keeps the latest debug APK of every branch on the `builds` branch (a single commit, replaced each time),
+      # so it can be downloaded without unzipping an artifact: builds/Tally-<branch>.apk
+      - name: Publish APK to the builds branch
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SRC_BRANCH: ${{ github.ref_name }}
+        run: |
+          name="Tally-$(printf '%s' "$SRC_BRANCH" | tr -c 'A-Za-z0-9._-' '-').apk"
+          apk="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          dir="$RUNNER_TEMP/builds"
+          rm -rf "$dir" && mkdir "$dir" && cd "$dir"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin builds; then git checkout -q FETCH_HEAD -- . ; fi
+          cp "$apk" "$name"
+          printf '%s  %s  %s\n' "$name" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%MZ)" > "$name.txt"
+          git add -A
+          git commit -q -m "APKs (latest: $SRC_BRANCH @ ${GITHUB_SHA::7})"
+          git push -q -f origin HEAD:builds
+
+  # A pushed tag vX.Y.Z publishes a GitHub Release with the APK signed by the private release key.
+  release:
+    name: Signed release
+    if: github.ref_type == 'tag'
+    needs: check
+    runs-on: ubuntu-latest
+    env:
+      # SHA-256 of the release signing certificate (public; also in README.md so people can verify their download)
+      RELEASE_CERT_SHA256: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18d2fac88
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the app version
+        run: |
+          version=$(sed -n 's/^tallyVersion=//p' gradle.properties)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match tallyVersion=$version in gradle.properties"
+            exit 1
+          fi
+          grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $version"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android SDK packages
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Build the signed release APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          TALLY_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$TALLY_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Add the RELEASE_KEYSTORE_BASE64 and RELEASE_KEYSTORE_PASSWORD repository secrets"
+            exit 1
+          fi
+          export TALLY_KEYSTORE="$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$TALLY_KEYSTORE"
+          gradle assembleRelease --no-daemon
+          rm -f "$TALLY_KEYSTORE"
+      - name: Verify the APK
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          tools="$ANDROID_HOME/build-tools/34.0.0"
+          "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
+          grep -q "SHA-256 digest: $RELEASE_CERT_SHA256" certs.txt || { echo "::error::Not signed with the Tally release key"; exit 1; }
+          "$tools/aapt" dump badging "$apk" | grep -q "versionName='$VERSION'" || { echo "::error::versionName isn't $VERSION"; exit 1; }
+          if "$tools/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -q debuggable; then
+            echo "::error::The release APK is debuggable"
+            exit 1
+          fi
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out="Tally-$GITHUB_REF_NAME.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$out"
+          sha256sum "$out" > "$out.sha256"
+          # the notes are this version's section of CHANGELOG.md, plus how to install and verify
+          awk -v v="[$VERSION]" '/^## /{p = index($0, v) > 0; next} p' CHANGELOG.md > notes.md
+          fp=$(printf '%s' "$RELEASE_CERT_SHA256" | tr a-f A-F | sed 's/../&:/g; s/:$//')
+          {
+            echo
+            echo "### Install"
+            echo "Download \`$out\` below on an Android 7.0+ phone and open it (allow installing from your browser or files app)."
+            echo "Coming from a test build? Back up first (Settings → Backup), uninstall it, install this, then restore."
+            echo
+            echo "Signing certificate SHA-256: \`$fp\`"
+          } >> notes.md
+          gh release create "$GITHUB_REF_NAME" "$out" "$out.sha256" --title "Tally $VERSION" --notes-file notes.md --verify-tag

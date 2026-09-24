@@ -3,3 +3,10 @@ build/
 local.properties
 .idea/
 *.iml
+out/
+
+# signing keys never belong in the repository (the committed debug key is the one exception)
+*.jks
+*.keystore
+*.p12
+!app/debug.keystore

@@ -1,3 +1,12 @@
 <resources>
     <color name="surface">#FBF8FF</color>
+    <!-- home-screen widget (Android 12+ uses the phone's Material You colours, see values-v31) -->
+    <color name="w_bg">#EFEDF4</color>
+    <color name="w_on">#1B1B21</color>
+    <color name="w_muted">#45464F</color>
+    <color name="w_btn_bg">#DEE0FF</color>
+    <color name="w_btn_fg">#00105C</color>
+    <color name="w_spent">#BA1A1A</color>
+    <color name="w_got">#146C2E</color>
+    <color name="w_xfer">#1565C0</color>
 </resources>

@@ -1,0 +1,16 @@
+{
+  "name": "tally-e2e",
+  "private": true,
+  "description": "Checks for the Tally web app: end-to-end tests in headless Chromium, lint and formatting",
+  "scripts": {
+    "test": "node e2e/run.js",
+    "lint": "node lint.js && prettier --check --ignore-path ../.prettierignore ../app/src/main/assets .",
+    "format": "prettier --write --ignore-path ../.prettierignore ../app/src/main/assets ."
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "globals": "17.12.0",
+    "playwright": "1.56.1",
+    "prettier": "3.9.9"
+  }
+}
