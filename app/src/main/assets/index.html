@@ -628,9 +628,10 @@ const calcBtn=id=>'<button type="button" class="icon calcbtn" data-act="calc-tog
 const CALC_KEYS=["7","8","9","÷","4","5","6","×","1","2","3","−","⌫","0",".","+"];
 const calcPanelHtml=id=>'<div class="calc" id="calc-'+id+'" hidden>'+
   CALC_KEYS.map(k=>'<button type="button" class="'+(k==="⌫"?"del":/[+−×÷]/.test(k)?"op":"")+'" data-act="calc-key" data-v="'+esc(k)+'">'+esc(k)+"</button>").join("")+"</div>";
-/* a field's amount box: currency label, the input, the calculator toggle, and its (hidden) panel */
-function amtField(id,cur,val,curId,label){
-  return '<div class="amtwrap"><span class="cur"'+(curId?' id="'+curId+'"':"")+'>'+esc(cur)+'</span><span class="amtbox"><input id="'+id+'" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(val||"")+'" aria-label="'+esc(label||"Amount")+'"><span class="caretmirror" id="cm-'+id+'" data-act="calc-pos" data-v="'+id+'" hidden aria-hidden="true"></span></span>'+calcBtn(id)+"</div>"+calcPanelHtml(id);
+/* a field's amount box: currency label, the input, the calculator toggle, and its (hidden) panel.
+   o: {curId} id for the currency label (so it can follow the chosen account), {label} for screen readers, {placeholder} */
+function amtField(id,cur,val,o={}){
+  return '<div class="amtwrap"><span class="cur"'+(o.curId?' id="'+o.curId+'"':"")+'>'+esc(cur)+'</span><span class="amtbox"><input id="'+id+'" inputmode="decimal" autocomplete="off" placeholder="'+esc(o.placeholder??"0")+'" value="'+esc(val||"")+'" aria-label="'+esc(o.label||"Amount")+'"><span class="caretmirror" id="cm-'+id+'" data-act="calc-pos" data-v="'+id+'" hidden aria-hidden="true"></span></span>'+calcBtn(id)+"</div>"+calcPanelHtml(id);
 }
 /* left-to-right with standard × ÷ before + − precedence (no parentheses — this is a phone calculator, not a parser) */
 function calcEval(expr){
@@ -700,16 +701,49 @@ function calcClose(id,btn,use){
   if(btn)btn.setAttribute("aria-expanded","false");
   if(CALC&&CALC.id===id)CALC=null;
 }
+/* the field's calculator icon: opens the calculator, or evaluates, uses the result and closes it */
+function calcToggle(id,btn){
+  const panel=$("#calc-"+id);if(!panel)return;
+  if(panel.hidden)calcOpen(id,btn);else calcClose(id,btn,true);
+}
+/* a tap on the field while the calculator is open moves the caret there */
+function calcTapCaret(id,mirror,x,y){
+  if(!CALC||CALC.id!==id)return;
+  const pos=calcPosFromPoint(mirror,x,y);
+  if(pos!=null){CALC.pos=pos;calcMirrorSync(id);}
+}
+/* one calculator key, applied at the caret: ⌫ deletes before it, an operator right after another replaces it,
+   a number gets at most one ".", a leading operator can only be − */
+function calcKey(k){
+  if(!CALC)return;
+  const before=CALC.expr.slice(0,CALC.pos),after=CALC.expr.slice(CALC.pos),OP=/[+−×÷]/;
+  if(k==="⌫"){
+    if(!before)return;
+    CALC.expr=before.slice(0,-1)+after;CALC.pos--;
+  }else if(OP.test(k)){
+    if(!before&&k!=="−")return;
+    if(before&&OP.test(before.slice(-1)))CALC.expr=before.slice(0,-1)+k+after;
+    else{CALC.expr=before+k+after;CALC.pos++;}
+  }else if(k==="."){
+    const num=(before.match(/[0-9.]*$/)||[""])[0]+(after.match(/^[0-9.]*/)||[""])[0];
+    if(num.includes("."))return;
+    CALC.expr=before+"."+after;CALC.pos++;
+  }else{CALC.expr=before+k+after;CALC.pos++;}
+  const inp=$("#"+CALC.id);if(inp){inp.value=CALC.expr;inp.dispatchEvent(new Event("input",{bubbles:true}));}
+  calcMirrorSync(CALC.id);
+}
 let snackT=null,undoFn=null;
 function snack(msg,undo){
   undoFn=undo||null;
   $("#snack").innerHTML='<div class="snack" role="status"><span>'+esc(msg)+"</span>"+(undo?'<button data-act="undo">Undo</button>':"")+"</div>";
   clearTimeout(snackT);snackT=setTimeout(()=>{$("#snack").innerHTML="";undoFn=null;},undo?5000:2600);
 }
-/* snapshot entries and loans before a change so Undo can restore them exactly */
-/* FX: one-shot feedback for the next render (FX.row = id of the row to flash softly) */
+/* FX: one-shot feedback for the next render (FX.row flashes a row, FX.cat pops a ring tile, FX.center bumps the donut total) */
 let FX={};
+/* short haptic tick (VIBRATE) */
 const buzz=ms=>{try{if(navigator.vibrate)navigator.vibrate(ms);}catch(e){}};
+/* Every add/edit/delete of entries goes through here: snapshot entries, loans and accounts, apply the change,
+   save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. */
 function withUndo(msg,change,fx){
   const before=JSON.stringify({txns:S.txns,loans:S.loans,accounts:S.accounts});change();FX=fx||{};commit();FX={};
   snack(msg,()=>{const o=JSON.parse(before);S.txns=o.txns;S.loans=o.loans;S.accounts=o.accounts;commit();snack("Undone");});
@@ -750,8 +784,8 @@ function applyTheme(){
   const bg=getComputedStyle(root).getPropertyValue("--surface").trim();
   try{if(window.Android&&Android.setBars)Android.setBars(bg,dark);}catch(e){}
 }
-window.tallyTheme=function(p){try{SYS=typeof p==="string"?JSON.parse(p):p;}catch(e){SYS=null;}applyTheme();};
-{const mq=matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",applyTheme);}
+/* the phone's light/dark mode or wallpaper palette changed (window.tallyTheme, from MainActivity) */
+function onSystemTheme(p){try{SYS=typeof p==="string"?JSON.parse(p):p;}catch(e){SYS=null;}applyTheme();}
 
 /* ---------- view state ---------- */
 const V={showCleared:false,screen:"home",period:"day",anchor:today(),rs:null,re:null,cur:null,hAcc:"",showArchived:false,sel:null};
@@ -789,6 +823,13 @@ function shiftPeriod(n,p=V){
 const canNext=(p=V)=>range(p)[1]<today();
 /* the date a new entry gets: the day being looked at (today when it is in view) */
 function entryDate(){const t=today(),[s,e]=range();if(t>=s&&t<=e)return V.period==="day"?V.anchor:t;return V.period==="day"?V.anchor:e;}
+/* coming back to the app on a new day: Home jumps to today (unless a sheet is open) */
+let lastDay=today();
+function catchUpToday(){
+  if(today()===lastDay)return;
+  lastDay=today();V.anchor=today();
+  if(!$("#sheet").innerHTML)render();
+}
 function periodTxns(){const [s,e]=range();return S.txns.filter(t=>t.date>=s&&t.date<=e);}
 
 /* ---------- render ---------- */
@@ -1295,6 +1336,15 @@ function saveLoan(){
     askNotify();
   });
 }
+function writeOffLoan(){
+  const l=loan(F.id);if(!l)return;
+  const lend=l.kind==="lend",back=l.status==="writeoff";closeSheet();
+  withUndo(back?"Reopened":lend?"Written off":"Marked as forgiven",()=>{const x=loan(l.id);x.status=back?"open":"writeoff";});
+}
+function deleteLoan(){
+  const id=F.id;closeSheet();
+  withUndo("Deleted",()=>{S.loans=S.loans.filter(l=>l.id!==id);S.txns=S.txns.filter(t=>!(t.type==="loan"&&t.loan===id));});
+}
 function payLoan(){
   const l=loan(F.id);if(!l)return;const i=loanInfo(l),v=readVals(),amt=evalAmt(v.amount),lend=l.kind==="lend";
   if(!(amt>0)){snack("Enter an amount");return;}
@@ -1415,6 +1465,15 @@ function assetForm(id){
   openSheet(id?"Edit asset":"New asset",h);
 }
 
+function saveAsset(){
+  const name=$("#f-aname").value.trim(),raw=$("#f-aval").value.trim(),val=raw?evalAmt(raw):0;
+  if(!name){snack("Give it a name");return;}
+  if(val==null){snack("That value isn't a number");return;}
+  const data={name,i:F.i,e:F.e,c:F.col,value:val,currency:F.cur};
+  if(F.id)Object.assign(S.assets.find(x=>x.id===F.id),data);else S.assets.push(Object.assign({id:newId()},data));
+  closeSheet();commit();
+}
+function deleteAsset(){const id=F.id;closeSheet();S.assets=S.assets.filter(x=>x.id!==id);commit();snack("Asset deleted");}
 /* ---------- reminders: the native side shows the notifications ---------- */
 function syncReminders(){
   if(!(window.Android&&Android.setReminders))return;
@@ -1423,6 +1482,11 @@ function syncReminders(){
   const dues=r.dues===false?[]:S.loans.map(l=>({l,i:loanInfo(l)})).filter(x=>x.i.open&&x.i.nextDue)
     .map(({l,i})=>({id:l.id,date:i.nextDue,kind:l.kind,who:loanWho(l),amount:money(i.left,i.cur)}));
   try{Android.setReminders(JSON.stringify({daily:{on:r.daily!==false,h:+tm.slice(0,2),m:+tm.slice(3)},lastEntry:last,dues}));}catch(e){}
+}
+/* Settings switch for the evening nudge ("daily") or due-day reminders ("dues") */
+function toggleReminder(k){
+  const r=S.settings.remind;r[k]=r[k]===false;save();syncReminders();render();
+  if(r[k])askNotify();
 }
 function askNotify(){
   if(S.settings.notifAsked||!(window.Android&&Android.requestNotifications))return;
@@ -1436,7 +1500,8 @@ function applyNativeActions(){
   list.forEach(x=>{const l=x&&loan(x.id);if(x.type==="extend"&&l&&loanInfo(l).open){extendLoan(l,+x.days||1);changed=true;}});
   if(changed){save();render();}
 }
-window.tallyOpen=function(s){
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder (window.tallyOpen) */
+function openFromNative(s){
   const [k,id,pay]=String(s||"").split(":");
   if(k==="add"){ /* from the widget's quick add: today, on Home */
     applyNativeActions();closePop();BACKTO=null;closeSheet();V.screen="home";V.period="day";V.anchor=today();render();
@@ -1446,12 +1511,11 @@ window.tallyOpen=function(s){
   }
   if(k!=="loan"||!loan(id))return;
   applyNativeActions();closePop();closeSheet();loanOpen(id,pay==="pay");
-};
-window.tallyResume=function(){
-  applyNativeActions();syncWidget();
-  if(today()!==lastDay){lastDay=today();V.anchor=today();if(!$("#sheet").innerHTML)render();}
-  syncReminders();
-};
+}
+/* the app came back to the foreground (window.tallyResume) */
+function onAppResume(){
+  applyNativeActions();syncWidget();catchUpToday();syncReminders();
+}
 
 function txLine(t){
   const a=acc(t.account),cur=a?a.currency:S.settings.cur;
@@ -1653,13 +1717,32 @@ function txSheet(id,type,catId){
   else h+='<button class="catchip" id="f-catchip" data-act="f-showcats" aria-expanded="false"'+(k?"":" hidden")+">"+(k?catChipInner(k):"")+"</button>"+
     '<div class="lbl" id="f-catlbl" style="margin-top:0"'+(k?" hidden":"")+'>What was it for?</div>'+
     '<div class="catgrid" id="f-catgrid" style="margin-top:8px"'+(k?" hidden":"")+">"+catBtns(list,F.cat)+"</div>";
-  h+=amtField("f-amt",a?a.currency:"",t?String(t.amount):"","amt-cur");
+  h+=amtField("f-amt",a?a.currency:"",t?String(t.amount):"",{curId:"amt-cur"});
   h+='<div class="lbl">'+(inc?"Into":"Paid from")+"</div>"+accChips("f-acc",F.account,null,accChoices(F.account));
   h+='<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="'+esc(t?t.note:"")+'" aria-label="Note"><div style="flex:0 0 150px">'+dateField("f-date",t?t.date:entryDate(),{max:today()})+"</div></div>";
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">'+ic("check")+(id?"Save changes":"Save")+"</button>";
   if(id)h+='<div class="gap"></div><button class="btn danger" data-act="tx-del">Delete</button>';
   openSheet(id?(inc?"Edit money in":"Edit spending"):(inc?"Money in":"Spent"),h);
   if(!id&&F.cat)focusAmt();
+}
+/* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
+function openEntry(id){
+  BACKTO=$("#sheet #ent-list")?{screen:V.screen,scroll:($("#sheet .p")||{}).scrollTop||0}:null;
+  txSheet(id);
+}
+function pickCat(id){
+  F.cat=id;setPressed("f-cat",id);
+  if(F.type==="income")return;
+  const chip=$("#f-catchip");chip.innerHTML=catChipInner(cat(id));chip.hidden=false;chip.setAttribute("aria-expanded","false");
+  $("#f-catgrid").hidden=true;$("#f-catlbl").hidden=true;focusAmt();
+}
+/* account chips in the entry and loan forms; the amount's currency label follows the account */
+function pickAccount(id){
+  F.account=id;setPressed("f-acc",id);
+  const c=$("#amt-cur");if(c)c.textContent=acc(id).currency;
+  if(F.kind!=="loanf")return;
+  if(F.merge){const ml=loan(F.merge);if(!ml||loanInfo(ml).cur!==acc(id).currency)F.merge=null;}
+  personSuggest(($("#f-person")||{}).value||"");mergeHint();
 }
 function readVals(){const g=id=>{const el=$("#"+id);return el?(el.tagName==="INPUT"?el.value:el.dataset.v):undefined;};return {amount:g("f-amt"),note:g("f-note"),date:g("f-date"),toAmount:g("f-toamt"),fee:g("f-fee")};}
 /* transfer between own accounts, with optional fee */
@@ -1675,7 +1758,7 @@ function trSheet(id,from){
   let h='<div class="lbl" style="margin-top:4px">From</div>'+accChips("tr-from",F.from,null,list);
   h+='<div style="display:flex;justify-content:center;margin:4px 0 -8px"><button class="icon" data-act="tr-swap" aria-label="Swap from and to">'+ic("swapv")+"</button></div>";
   h+='<div class="lbl">To</div>'+accChips("tr-to",F.to,F.from,list);
-  h+=amtField("f-amt","",t?String(t.amount):"","tr-cur","Amount sent");
+  h+=amtField("f-amt","",t?String(t.amount):"",{curId:"tr-cur",label:"Amount sent"});
   h+='<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(t&&t.toAmount!=null?String(t.toAmount):"")+'"></label>';
   h+='<label class="field" id="fee-wrap"'+(F.showFee?"":" hidden")+'><span id="fee-lbl"></span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(fee?String(fee.amount):"")+'"></label>';
   h+='<button class="btn text" id="fee-btn" data-act="tr-fee" style="width:auto;margin-top:6px;padding:0 12px"'+(F.showFee?" hidden":"")+">"+ic("add")+"Add a fee (ATM, cash-out)</button>";
@@ -1688,6 +1771,11 @@ function trSheet(id,from){
   if(!id)focusAmt();
 }
 /* reflect From/To in the open transfer sheet: chips, currencies, received-amount field, preview */
+function trPickFrom(id){
+  F.from=id;
+  if(F.to===id)F.to=[...$("#sheet").querySelectorAll('[data-act="tr-to"]')].map(b=>b.dataset.v).find(x=>x!==id);
+  trSync();
+}
 function trSync(){
   const fa=acc(F.from),ta=acc(F.to),diff=!!(fa&&ta&&fa.currency!==ta.currency);
   setPressed("tr-from",F.from);
@@ -1724,12 +1812,21 @@ function accOpen(id){
   let h='<div class="hero">'+emblem(accEmb(a),"cprev")+'<div class="t">'+esc(typeName(a.type))+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
     (start!==bal?'<div class="t">Started today with '+esc(money(start,a.currency))+"</div>":"")+"</div>";
   h+='<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>'+
-    '<div class="amtwrap"><span class="cur">'+esc(a.currency)+'</span><span class="amtbox"><input id="f-actual" inputmode="decimal" autocomplete="off" placeholder="'+esc(r2(bal))+'" aria-label="Actual balance"><span class="caretmirror" id="cm-f-actual" data-act="calc-pos" data-v="f-actual" hidden aria-hidden="true"></span></span>'+calcBtn("f-actual")+"</div>"+calcPanelHtml("f-actual")+
+    amtField("f-actual",a.currency,"",{label:"Actual balance",placeholder:r2(bal)})+
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
   h+='<div class="gap"></div><div class="row">'+(a.archived?'<button class="btn tonal" data-act="acc-unarch">'+ic("reset")+"Show again</button>":'<button class="btn tonal" data-act="acc-arch">'+ic("archive")+"Archive</button>")+
     '<button class="btn tonal" data-act="hist-acc" data-v="'+a.id+'">'+ic("list")+"History</button></div>";
   h+='<div class="gap"></div><button class="btn text" data-act="acc-form" data-v="'+a.id+'">'+ic("edit")+"Edit account</button>";
   openSheet(a.name,h);
+}
+/* "Set actual balance": records the difference as a balance fix dated today */
+function saveFix(){
+  const a=acc(F.id),val=evalAmt($("#f-actual").value);
+  if(val==null){snack("Type what you have now");return;}
+  const d=r2(val-balances()[F.id]);
+  if(d===0){snack("Already matches");return;}
+  const id=F.id,xid=newId(),ts=Date.now(),mutate=()=>{S.txns.push({id:xid,ts,type:"adjust",amount:d,account:id,date:today(),note:"Balance fix"});};
+  guardOverdraw(mutate,today(),()=>{closeSheet();withUndo(a.name+" set to "+money(val,a.currency),mutate,{row:id});});
 }
 function fixPreview(){
   const el=$("#fix-prev");if(!el||!F||F.kind!=="acc")return;
@@ -1755,6 +1852,20 @@ function accForm(id){
   }
   openSheet(id?"Edit account":"New account",h);
 }
+function saveAccount(){
+  const name=$("#f-name").value.trim();if(!name){snack("Give the account a name");return;}
+  const raw=$("#f-open").value.trim(),o=raw?evalAmt(raw):0;
+  if(o==null){snack("That balance isn't a number");return;}
+  const data={name,type:F.type,currency:F.cur,opening:o,i:F.iSet?F.i:"",e:F.iSet?F.e:"",c:F.cSet?F.col:""},was=F.id;
+  const go=()=>{if(was)Object.assign(acc(was),data);else S.accounts.push(Object.assign({id:newId(),archived:false},data));closeSheet();commit();snack(was?"Account saved":name+" added");};
+  if(o<0&&data.type!=="card"&&!(was&&acc(was).opening===o))askDialog("Start below zero?","Only credit cards usually go below zero. Save "+name+" at "+signed(o,data.currency)+"?","Save anyway",go,{cancel:"Go back"});
+  else go();
+}
+/* only accounts without entries can be deleted (deleting would change other balances through transfers); the rest are archived */
+function deleteAccount(){
+  const id=F.id;if(S.txns.some(t=>t.account===id||t.to===id))return;
+  askDialog("Delete this account?","It has no entries, so nothing else changes.","Delete",()=>{S.accounts=S.accounts.filter(a=>a.id!==id);closeSheet();commit();snack("Account deleted");},{danger:true});
+}
 function catForm(id,kind){
   const used=new Set(S.cats.map(x=>String(x.c).toLowerCase())),free=PALETTE.find(x=>!used.has(x))||PALETTE[S.cats.length%PALETTE.length];
   const c=id?S.cats.find(x=>x.id===id):{name:"",e:"🏷️",i:"label",c:free,kind:kind==="in"?"in":"out"};
@@ -1767,6 +1878,28 @@ function catForm(id,kind){
   openSheet(id?"Edit category":(c.kind==="in"?"New money-in category":"New spending category"),h);
 }
 let BACKTO=null;
+function saveCat(){
+  const name=$("#f-cname").value.trim(),e=F.e||"🏷️",i=F.i;if(!name){snack("Give it a name");return;}
+  if(F.id)Object.assign(S.cats.find(c=>c.id===F.id),{name,e,i,c:F.col});
+  else{const c={id:"c"+newId(),name,e,i,c:F.col,kind:F.ck};
+    const lastVis=S.cats.map(x=>x.kind===F.ck&&!x.hidden).lastIndexOf(true);S.cats.splice(lastVis+1,0,c);}
+  closeSheet();commit();
+}
+/* built-in categories and ones with entries are hidden (old entries keep their emblem); unused custom ones are deleted */
+function removeCat(){
+  const c=S.cats.find(x=>x.id===F.id);if(!c)return;
+  if(c.hidden){c.hidden=false;closeSheet();commit();snack(c.name+" is back");return;}
+  if(S.cats.filter(x=>x.kind===c.kind&&!x.hidden).length<=1){snack("Keep at least one category");return;}
+  if(CATS.some(d=>d.id===c.id)||S.txns.some(t=>t.cat===c.id))c.hidden=true;
+  else S.cats=S.cats.filter(x=>x!==c);
+  closeSheet();commit();snack(c.name+" removed");
+}
+/* a hidden category's "bring back" chip in Settings */
+function restoreCat(id){
+  const c=S.cats.find(x=>x.id===id);if(!c)return;
+  if(c.kind==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}
+  c.hidden=false;commit();snack(c.name+" is back");
+}
 function entriesSheet(){
   RBC=null;  const list=periodTxns().sort(byNewest);
   openSheet(periodLabel(),'<div id="ent-list"></div>'+(list.length?dayGroups(list):'<div class="empty">Nothing written down yet.</div>')+'<div class="gap"></div><button class="btn text" data-act="go" data-v="history">Open full history</button>');
@@ -1941,7 +2074,7 @@ document.addEventListener("click",ev=>{
   if(el.tagName==="SELECT"||el.tagName==="INPUT")return;
   switch(act){
     case "home":V.screen="home";render();scrollTo(0,0);break;
-    case "go":closeSheet();V.screen=v==="accounts"?"assets":v;render();scrollTo(0,0);break;
+    case "go":closeSheet();V.screen=v;render();scrollTo(0,0);break;
     case "tab":V.screen=v;FLIP=v;render();scrollTo(0,0);break;
     case "toggle-cleared":V.showCleared=!V.showCleared;render();break;
     case "loan-new":loanForm(v);break;
@@ -1952,20 +2085,14 @@ document.addEventListener("click",ev=>{
     case "loandraw-save":saveLoanDraw();break;
     case "ed-acc":F.editAcc=v;setPressed("ed-acc",v);break;
     case "loanpay-del":{const id=v;closeSheet();withUndo("Payment deleted",()=>{S.txns=S.txns.filter(x=>x.id!==id);});break;}
-    case "loan-writeoff":{const l=loan(F.id);if(!l)return;const lend=l.kind==="lend",back=l.status==="writeoff";closeSheet();
-      withUndo(back?"Reopened":lend?"Written off":"Marked as forgiven",()=>{const x=loan(l.id);x.status=back?"open":"writeoff";});break;}
-    case "loan-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>{S.loans=S.loans.filter(l=>l.id!==id);S.txns=S.txns.filter(t=>!(t.type==="loan"&&t.loan===id));});break;}
+    case "loan-writeoff":writeOffLoan();break;
+    case "loan-del":deleteLoan();break;
     case "asset-edit":assetForm(v);break;
     case "pick-assetcur":curPicker(F.cur,c=>{if(F&&F.kind==="assetf"){F.cur=c;$("#f-cur span").textContent=c;}});break;
-    case "asset-save":{
-      const name=$("#f-aname").value.trim(),raw=$("#f-aval").value.trim(),val=raw?evalAmt(raw):0;
-      if(!name){snack("Give it a name");return;}if(val==null){snack("That value isn't a number");return;}
-      const data={name,i:F.i,e:F.e,c:F.col,value:val,currency:F.cur};
-      if(F.id)Object.assign(S.assets.find(x=>x.id===F.id),data);else S.assets.push(Object.assign({id:newId()},data));
-      closeSheet();commit();break;}
-    case "asset-del":{const id=F.id;closeSheet();S.assets=S.assets.filter(x=>x.id!==id);commit();snack("Asset deleted");break;}
-    case "rem-daily":{const r=S.settings.remind;r.daily=r.daily===false;save();syncReminders();render();if(r.daily)askNotify();break;}
-    case "rem-dues":{const r=S.settings.remind;r.dues=r.dues===false;save();syncReminders();render();if(r.dues)askNotify();break;}
+    case "asset-save":saveAsset();break;
+    case "asset-del":deleteAsset();break;
+    case "rem-daily":toggleReminder("daily");break;
+    case "rem-dues":toggleReminder("dues");break;
     case "period-open":periodDialog(v==="hist"?HP:V);break;
     case "pd-tab":PD.tab=v;PD.pick=null;pdRender();break;
     case "pd-mon":PD.month=shiftMonth(PD.month,+v);pdRender();break;
@@ -1994,22 +2121,16 @@ document.addEventListener("click",ev=>{
     case "add-out":txSheet(null,"expense");break;
     case "add-in":txSheet(null,"income");break;
     case "add-cat":txSheet(null,"expense",v);break;
-    case "tx-open":{const lst=$("#sheet #ent-list");BACKTO=lst?{screen:V.screen,scroll:($("#sheet .p")||{}).scrollTop||0}:null;txSheet(v);break;}
+    case "tx-open":openEntry(v);break;
     case "f-showcats":{const g=$("#f-catgrid");g.hidden=!g.hidden;el.setAttribute("aria-expanded",String(!g.hidden));break;}
-    case "f-cat":{
-      F.cat=v;setPressed("f-cat",v);
-      if(F.type!=="income"){const chip=$("#f-catchip");chip.innerHTML=catChipInner(cat(v));chip.hidden=false;chip.setAttribute("aria-expanded","false");
-        $("#f-catgrid").hidden=true;$("#f-catlbl").hidden=true;focusAmt();}
-      break;}
-    case "f-acc":{F.account=v;setPressed("f-acc",v);const c=$("#amt-cur");if(c)c.textContent=acc(v).currency;
-      if(F.kind==="loanf"){if(F.merge){const ml=loan(F.merge);if(!ml||loanInfo(ml).cur!==acc(v).currency)F.merge=null;}personSuggest(($("#f-person")||{}).value||"");mergeHint();}
-      break;}
+    case "f-cat":pickCat(v);break;
+    case "f-acc":pickAccount(v);break;
     case "tx-save":saveTx();break;
     case "row-exp":el.classList.toggle("open");break;
     case "tx-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>deleteEntries([id]));break;}
     case "tr-new":trSheet();break;
     case "tr-from-acc":trSheet(null,v);break;
-    case "tr-from":{F.from=v;if(F.to===v)F.to=[...$("#sheet").querySelectorAll('[data-act="tr-to"]')].map(b=>b.dataset.v).find(x=>x!==v);trSync();break;}
+    case "tr-from":trPickFrom(v);break;
     case "tr-to":F.to=v;trSync();break;
     case "tr-swap":{const x=F.from;F.from=F.to;F.to=x;$("#f-toamt").value="";trSync();break;}
     case "tr-fee":F.showFee=true;$("#fee-wrap").hidden=false;el.hidden=true;$("#f-fee").focus();trPreview();break;
@@ -2017,14 +2138,7 @@ document.addEventListener("click",ev=>{
     case "tr-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>deleteEntries([id]));break;}
     case "adj-del":{const id=F.id;closeSheet();withUndo("Fix deleted",()=>deleteEntries([id]));break;}
     case "acc-open":accOpen(v);break;
-    case "fix-save":{
-      const a=acc(F.id),val=evalAmt($("#f-actual").value);
-      if(val==null){snack("Type what you have now");return;}
-      const d=r2(val-balances()[F.id]);
-      if(d===0){snack("Already matches");return;}
-      const id=F.id,xid=newId(),ts=Date.now(),mutate=()=>{S.txns.push({id:xid,ts,type:"adjust",amount:d,account:id,date:today(),note:"Balance fix"});};
-      guardOverdraw(mutate,today(),()=>{closeSheet();withUndo(a.name+" set to "+money(val,a.currency),mutate,{row:id});});
-      break;}
+    case "fix-save":saveFix();break;
     case "hist-acc":closeSheet();V.hAcc=v;Object.assign(HP,{period:"month",anchor:today()});V.screen="history";render();scrollTo(0,0);break;
     case "acc-form":accForm(v);break;
     case "f-type":pickType(v);break;
@@ -2044,84 +2158,34 @@ document.addEventListener("click",ev=>{
     case "pick-acccur":curPicker(F.cur,c=>{if(F&&F.kind==="accf"){F.cur=c;$("#f-cur span").textContent=c;}});break;
     case "pick-maincur":curPicker(S.settings.cur,c=>{S.settings.cur=c;V.cur=null;commit();});break;
     case "cur-pick":{const f=CURPICK;closeSheet2();if(f)f(v);break;}
-    case "acc-save":{
-      const name=$("#f-name").value.trim();if(!name){snack("Give the account a name");return;}
-      const raw=$("#f-open").value.trim(),o=raw?evalAmt(raw):0;
-      if(o==null){snack("That balance isn't a number");return;}
-      const data={name,type:F.type,currency:F.cur,opening:o,i:F.iSet?F.i:"",e:F.iSet?F.e:"",c:F.cSet?F.col:""},was=F.id;
-      const go=()=>{if(was)Object.assign(acc(was),data);else S.accounts.push(Object.assign({id:newId(),archived:false},data));closeSheet();commit();snack(was?"Account saved":name+" added");};
-      if(o<0&&data.type!=="card"&&!(was&&acc(was).opening===o))askDialog("Start below zero?","Only credit cards usually go below zero. Save "+name+" at "+signed(o,data.currency)+"?","Save anyway",go,{cancel:"Go back"});
-      else go();
-      break;}
+    case "acc-save":saveAccount();break;
     case "acc-arch":{const a=acc(F.id);closeSheet();if(a)setArchived(a.id,!a.archived);break;}
     case "acc-unarch":{const id=F.id;closeSheet();setArchived(id,false);break;}
     case "loan-reopen":{const id=F.id;closeSheet();reopenLoan(id);break;}
-    case "acc-del":{
-      const id=F.id;if(S.txns.some(t=>t.account===id||t.to===id))return;
-      askDialog("Delete this account?","It has no entries, so nothing else changes.","Delete",()=>{S.accounts=S.accounts.filter(a=>a.id!==id);closeSheet();commit();snack("Account deleted");},{danger:true});break;}
+    case "acc-del":deleteAccount();break;
     case "toggle-arch":V.showArchived=!V.showArchived;render();break;
     case "hmon":if(+v<0||canNext(HP)){shiftPeriod(+v,HP);if(V.sel)V.sel=new Set();render();}break;
     case "hacc":V.hAcc=v;if(V.sel)V.sel=new Set();render();break;
     case "sel-start":V.sel=new Set();render();break;
     case "sel-cancel":V.sel=null;render();break;
     case "sel-toggle":if(V.sel.has(v))V.sel.delete(v);else V.sel.add(v);if(!V.sel.size)V.sel=null;render();break;
-    case "sel-all":{const ids=historyList().map(t=>t.id),all=ids.every(id=>V.sel.has(id));V.sel=all?new Set():new Set(ids);render();break;}
+    case "sel-all":{const ids=historyList().map(t=>t.id);V.sel=ids.every(id=>V.sel.has(id))?new Set():new Set(ids);render();break;}
     case "sel-del":{if(!V.sel||!V.sel.size)return;const ids=[...V.sel],n=ids.length;
       withUndo("Deleted "+n+" "+(n===1?"entry":"entries"),()=>{deleteEntries(ids);V.sel=null;});break;}
     case "theme":S.settings.theme=v;save();applyTheme();render();break;
     case "cat-edit":catForm(v);break;
     case "cat-new":if(v==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}catForm(null,v);break;
-    case "cat-back":{const c=S.cats.find(x=>x.id===v);if(c&&c.kind==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}if(c){c.hidden=false;commit();snack(c.name+" is back");}break;}
+    case "cat-back":restoreCat(v);break;
     case "f-col":F.col=v;F.cSet=true;setPressed("f-col",v);prevUpd();break;
-    case "calc-toggle":{const panel=$("#calc-"+v);if(!panel)break;if(panel.hidden)calcOpen(v,el);else calcClose(v,el,true);break;}
-    case "calc-pos":{
-      if(!CALC||CALC.id!==v)break;
-      const pos=calcPosFromPoint(el,ev.clientX,ev.clientY);
-      if(pos!=null){CALC.pos=pos;calcMirrorSync(CALC.id);}
-      break;}
-    case "calc-key":{
-      if(!CALC)break;
-      const before=CALC.expr.slice(0,CALC.pos),after=CALC.expr.slice(CALC.pos),OP=/[+−×÷]/;
-      if(v==="⌫"){
-        if(!before)break;
-        CALC.expr=before.slice(0,-1)+after;CALC.pos--;
-      }else if(v==="+"||v==="−"||v==="×"||v==="÷"){
-        if(!before&&v!=="−")break;
-        if(before&&OP.test(before.slice(-1)))CALC.expr=before.slice(0,-1)+v+after;
-        else{CALC.expr=before+v+after;CALC.pos++;}
-      }else if(v==="."){
-        const seg=(before.match(/[0-9.]*$/)||[""])[0]+(after.match(/^[0-9.]*/)||[""])[0];
-        if(seg.includes("."))break;
-        CALC.expr=before+"."+after;CALC.pos++;
-      }else{CALC.expr=before+v+after;CALC.pos++;}
-      const inp=$("#"+CALC.id);if(inp){inp.value=CALC.expr;inp.dispatchEvent(new Event("input",{bubbles:true}));}
-      calcMirrorSync(CALC.id);
-      break;}
+    case "calc-toggle":calcToggle(v,el);break;
+    case "calc-pos":calcTapCaret(v,el,ev.clientX,ev.clientY);break;
+    case "calc-key":calcKey(v);break;
     case "f-person-pick":{const el2=$("#f-person");if(el2)el2.value=(loan(v)||{}).person||"";F.merge=v;$("#f-person-sug").hidden=true;mergeHint();break;}
-    case "cat-save":{
-      const name=$("#f-cname").value.trim(),e=F.e||"🏷️",i=F.i;if(!name){snack("Give it a name");return;}
-      if(F.id)Object.assign(S.cats.find(c=>c.id===F.id),{name,e,i,c:F.col});
-      else{const c={id:"c"+newId(),name,e,i,c:F.col,kind:F.ck};
-        const lastVis=S.cats.map(x=>x.kind===F.ck&&!x.hidden).lastIndexOf(true);S.cats.splice(lastVis+1,0,c);}
-      closeSheet();commit();break;}
-    case "cat-del":{
-      const c=S.cats.find(x=>x.id===F.id);if(!c)return;
-      if(c.hidden){c.hidden=false;closeSheet();commit();snack(c.name+" is back");break;}
-      if(S.cats.filter(x=>x.kind===c.kind&&!x.hidden).length<=1){snack("Keep at least one category");return;}
-      // built-in categories and ones with entries are hidden (old entries keep their icon); unused custom ones are deleted
-      if(CATS.some(d=>d.id===c.id)||S.txns.some(t=>t.cat===c.id))c.hidden=true;
-      else S.cats=S.cats.filter(x=>x!==c);
-      closeSheet();commit();snack(c.name+" removed");break;}
-    case "export":{
-      const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
-      const kind=t=>t.type==="loan"?(loan(t.loan)&&loan(t.loan).kind==="lend"?"lend":"loan")+"-"+t.dir:t.type;
-      const lines=[["date","type","amount","currency","account","to_account","to_amount","category","note"].join(",")];
-      [...S.txns].sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||0)-(b.ts||0)).forEach(t=>{const a=acc(t.account),to=acc(t.to);
-        lines.push([t.date,kind(t),t.amount,a?a.currency:"",q(a?a.name:""),q(to?to.name:""),t.type==="transfer"?(t.toAmount!=null?t.toAmount:t.amount):"",q(t.type==="expense"||t.type==="income"?cat(t.cat).name:""),q(t.note)].join(","));});
-      saveOut("tally-entries-"+today()+".csv","text/csv",lines.join("\n"));break;}
+    case "cat-save":saveCat();break;
+    case "cat-del":removeCat();break;
+    case "export":exportCsv();break;
     case "backup":saveOut("tally-backup-"+today()+".json","application/json",JSON.stringify(S));break;
-    case "wipe":askDialog("Delete all data?","Every account and entry on this phone. This can't be undone.","Delete all",()=>{
-      const keep={cur:S.settings.cur,theme:S.settings.theme,remind:S.settings.remind,notifAsked:S.settings.notifAsked};S=blank();Object.assign(S.settings,keep);commit();snack("All data deleted");},{danger:true});break;
+    case "wipe":wipeAll();break;
   }
 });
 document.addEventListener("input",ev=>{
@@ -2135,13 +2199,10 @@ document.addEventListener("input",ev=>{
   else if(id==="f-amt"&&F&&F.kind==="loanf")mergeHint();
 });
 document.addEventListener("change",ev=>{
-  const el=ev.target;
-  if(el.id==="restore-file"){const f=el.files[0];el.value="";if(!f)return;f.text().then(t=>{let o;try{o=JSON.parse(t);}catch(e){snack("That isn't a Tally backup file");return;}
-    if(!o||!Array.isArray(o.accounts)||!Array.isArray(o.txns)){snack("That isn't a Tally backup file");return;}
-    askDialog("Restore this backup?","Replaces everything on this phone with "+o.accounts.length+" accounts and "+o.txns.length+" entries.","Restore",()=>{let n;try{n=migrate(o);}catch(e){snack("That backup couldn't be read");return;}S=n;commit();applyTheme();snack("Backup restored");});});}
+  if(ev.target.id==="restore-file")restoreFile(ev.target);
 });
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape")window.tallyBack();
+  if(e.key==="Escape")goBack();
   else if(e.key==="Enter"&&(e.target.id==="nt-name"||e.target.id==="hx-in")){e.preventDefault();(e.target.id==="nt-name"?addType:useHex)();}
   else if(e.key==="Enter"&&e.target.id==="cur-q"){const b=$('#curlist [data-act="cur-pick"]');if(b){e.preventDefault();b.click();}}
   else if(e.key==="Enter"&&F&&e.target.tagName==="INPUT"){
@@ -2275,8 +2336,36 @@ document.addEventListener("contextmenu",e=>{if(e.target.closest(".tile,.tx,.dd,.
 let lastW=innerWidth;
 addEventListener("resize",()=>{if(innerWidth!==lastW){lastW=innerWidth;if((V.screen==="home"||V.screen==="settings")&&!LP)render();}});
 
+/* ---------- export, backup, restore, delete all ---------- */
+function exportCsv(){
+  const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+  const kind=t=>t.type==="loan"?(loan(t.loan)&&loan(t.loan).kind==="lend"?"lend":"loan")+"-"+t.dir:t.type;
+  const lines=[["date","type","amount","currency","account","to_account","to_amount","category","note"].join(",")];
+  [...S.txns].sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||0)-(b.ts||0)).forEach(t=>{const a=acc(t.account),to=acc(t.to);
+    lines.push([t.date,kind(t),t.amount,a?a.currency:"",q(a?a.name:""),q(to?to.name:""),t.type==="transfer"?(t.toAmount!=null?t.toAmount:t.amount):"",q(t.type==="expense"||t.type==="income"?cat(t.cat).name:""),q(t.note)].join(","));});
+  saveOut("tally-entries-"+today()+".csv","text/csv",lines.join("\n"));
+}
+/* the chosen backup file (Settings → Restore) replaces everything after a confirmation */
+function restoreFile(input){
+  const f=input.files[0];input.value="";if(!f)return;
+  f.text().then(t=>{
+    let o;try{o=JSON.parse(t);}catch(e){snack("That isn't a Tally backup file");return;}
+    if(!o||!Array.isArray(o.accounts)||!Array.isArray(o.txns)){snack("That isn't a Tally backup file");return;}
+    askDialog("Restore this backup?","Replaces everything on this phone with "+o.accounts.length+" accounts and "+o.txns.length+" entries.","Restore",()=>{
+      let n;try{n=migrate(o);}catch(e){snack("That backup couldn't be read");return;}
+      S=n;commit();applyTheme();snack("Backup restored");});
+  });
+}
+/* keeps the main currency, theme and reminder settings */
+function wipeAll(){
+  askDialog("Delete all data?","Every account and entry on this phone. This can't be undone.","Delete all",()=>{
+    const keep={cur:S.settings.cur,theme:S.settings.theme,remind:S.settings.remind,notifAsked:S.settings.notifAsked};
+    S=blank();Object.assign(S.settings,keep);commit();snack("All data deleted");},{danger:true});
+}
 function saveOut(name,mime,text){if(window.Android&&Android.saveFile)Android.saveFile(name,mime,text);else snack("Saving isn't available here");}
-window.tallyBack=function(){
+/* Android back / Escape: closes the top-most layer, else returns Home. False when there is nothing left to close
+   (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
+function goBack(){
   if(CALC){calcClose(CALC.id,document.querySelector('[data-act="calc-toggle"][data-v="'+CALC.id+'"]'),true);return true;}
   if($("#pop").innerHTML){closePop();return true;}
   if($("#sheet2").innerHTML){closeSheet2();return true;}
@@ -2284,16 +2373,19 @@ window.tallyBack=function(){
   if(V.sel){V.sel=null;render();return true;}
   if(V.screen!=="home"){V.screen="home";render();return true;}
   return false;
-};
-window.tallySaved=function(ok){snack(ok?"Saved":"Not saved");};
-/* coming back to the app on a new day: jump to today */
-let lastDay=today();
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&today()!==lastDay){lastDay=today();V.anchor=today();if(!$("#sheet").innerHTML)render();}});
+}
+/* result of Android.saveFile (window.tallySaved) */
+function onFileSaved(ok){snack(ok?"Saved":"Not saved");}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")catchUpToday();});
 
 loadState();readSys();applyTheme();applyNativeActions();render();syncReminders();syncWidget();
 if(unreadable)askDialog("Couldn't open your saved data","A copy is kept on this phone. Save it as a file so it's safe?","Save file",
   ()=>saveOut("tally-unreadable-"+today()+".json","application/json",unreadable),{cancel:"Not now"});
 else if(activeAccounts().length)askNotify();
+/* follow the phone's light/dark switch */
+{const mq=matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",applyTheme);}
+/* hooks the Android shell (MainActivity.java) calls, installed last so they never run before the app is ready */
+Object.assign(window,{tallyBack:goBack,tallyOpen:openFromNative,tallyResume:onAppResume,tallyTheme:onSystemTheme,tallySaved:onFileSaved});
 })();
 </script>
 </body>

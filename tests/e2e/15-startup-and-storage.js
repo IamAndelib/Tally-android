@@ -79,6 +79,39 @@ const daysFromNow = n => { const d = new Date(); d.setDate(d.getDate() + n); ret
   await page.keyboard.press('Escape'); await settle();
   ok(!(await page.innerHTML('#sheet')), 'Escape closed it');
 
+  // ---- 5. balance fix, CSV export, asset delete, a file that isn't a backup
+  await seed({ ...base, assets: [{ id: 'g', name: 'Gold', i: 'diamond', c: '#a646c9', value: 900, currency: 'BDT' }],
+    txns: [{ id: 't1', ts: 1, type: 'expense', amount: 250, account: 'w', cat: 'food', date: daysFromNow(-1), note: 'Tea, "strong"' }] });
+  await act('acc-open', 'w'); await settle();
+  ok((await page.getAttribute('#f-actual', 'placeholder')) === '4750', 'balance fix field suggests the current balance');
+  ok(!!(await page.$('#sheet [data-act="calc-toggle"][data-v="f-actual"]')), 'balance fix field has the calculator toggle');
+  await page.fill('#f-actual', '4700');
+  await page.click('#sheet [data-act="fix-save"]'); await settle();
+  S = await state();
+  const fix = S.txns.find(t => t.type === 'adjust');
+  ok(fix && fix.amount === -50 && fix.date === daysFromNow(0), 'Update balance records a −50 fix dated today');
+
+  await page.evaluate(() => { window.__saved = []; });
+  await act('go', 'settings'); await settle();
+  await act('export'); await settle();
+  const csv = await page.evaluate(() => window.__saved[0]);
+  const lines = csv ? csv.text.split('\n') : [];
+  ok(csv && csv.mime === 'text/csv' && lines[0] === 'date,type,amount,currency,account,to_account,to_amount,category,note', 'export writes a CSV with the header row');
+  ok(lines.some(l => l.includes('expense,250,BDT,"Wallet"') && l.endsWith('"Tea, ""strong"""')), 'quotes inside notes are escaped: ' + lines[1]);
+
+  await act('home'); await settle();
+  await act('tab', 'assets'); await settle();
+  await act('asset-edit', 'g'); await settle();
+  await page.click('#sheet [data-act="asset-del"]'); await settle();
+  S = await state();
+  ok(S.assets.length === 0, 'asset deleted');
+
+  await act('go', 'settings'); await settle();
+  await page.setInputFiles('#restore-file', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') }); await settle();
+  ok((await page.textContent('#snack')).includes("isn't a Tally backup"), 'a JSON file that is not a backup is refused');
+  S = await state();
+  ok(S.accounts.length === 1 && S.txns.length === 2, 'nothing changed');
+
   ok(errors.length === 0, 'no page errors: ' + JSON.stringify(errors));
   await browser.close();
   process.exitCode = fails ? 1 : 0;
