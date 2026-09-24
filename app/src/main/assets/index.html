@@ -140,6 +140,7 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
 .gap{height:8px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
+#f-person-sug{margin-top:8px}
 .chip{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--outline-variant);display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:500;color:var(--on-surface-variant);white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
 .chip[aria-pressed="true"]::after{content:"✓";font-size:.8rem}
@@ -187,7 +188,12 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .amtwrap input:focus-visible{outline:0}
 .amtwrap:focus-within{border-bottom-width:3px;margin-bottom:-1px}
 .amtwrap .calcbtn{width:36px;height:36px;flex:none;color:var(--on-surface-variant)}
-.calc{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 10px}
+.calc{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface-low);
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));
+  border-radius:20px 20px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.22);
+  animation:up .18s cubic-bezier(.2,0,0,1)}
+@media (prefers-reduced-motion:reduce){.calc{animation:none}}
 .calc .cap{grid-column:span 4;text-align:center;font-size:.72rem;color:var(--on-surface-variant);margin-bottom:2px}
 .calc button{height:44px;border-radius:12px;background:var(--surface-high);font-weight:600;font-size:1.05rem}
 .calc button.op{background:var(--secondary-container);color:var(--on-secondary-container)}
@@ -655,6 +661,7 @@ function calcOpen(id,btn){
   if(inp){inp.readOnly=true;inp.blur();}
   const panel=$("#calc-"+id);if(panel)panel.hidden=false;
   if(btn)btn.setAttribute("aria-expanded","true");
+  if(inp)setTimeout(()=>inp.scrollIntoView({block:"center",behavior:"auto"}),0);
 }
 function calcClose(id,btn,use){
   const inp=$("#"+id);
