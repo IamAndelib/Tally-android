@@ -12,9 +12,12 @@
 ## Or with Android Studio
 Open this folder in Android Studio, wait for it to sync, then Build > Build APK(s).
 
-## Reading PDF statements
-PDF statements are read entirely on your phone — no internet connection or API key needed.
-CSV import still works best when your bank offers it, since it's the most reliable format.
+## How it works
+- Add your money sources once (bank, bKash, cash wallet...) with what each holds right now.
+- Each morning Tally asks if the balances still match. Tap "All match", or "Fix" one.
+- Spent something? Tap its category on the home screen, type the amount, Save.
+- Moved money (ATM, bank → bKash)? Tap "Move". Add the fee if there was one.
+- A balance looks wrong? Tap the account and type what you really have. Tally records a balance fix.
 
 ## Your data
-Stored only on the phone. Use Settings > Save backup regularly; uninstalling deletes the data.
+Stored only on the phone. Use ⋮ > Settings > Save backup regularly; uninstalling deletes the data.
