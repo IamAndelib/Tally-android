@@ -69,7 +69,10 @@ main{max-width:520px;margin:0 auto;padding:0 16px 24px}
 .icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:var(--on-surface-variant);flex:none}
 .pnav{display:flex;align-items:center;flex:1;min-width:0}
 .plabel{height:40px;padding:0 12px 0 16px;border-radius:20px;font-size:1.25rem;font-weight:600;display:flex;align-items:center;gap:2px;letter-spacing:-.01em;white-space:nowrap}
-.plabel .ic{width:20px;height:20px;color:var(--on-surface-variant)}
+.plabel .ic{width:20px;height:20px;color:var(--on-surface-variant);flex:none}
+.plabel{min-width:0}.plabel>span{overflow:hidden;text-overflow:ellipsis}
+.month .plabel{font-size:1.05rem;margin:0 auto;padding:0 8px 0 12px}
+.appbar>.icon{width:44px}.pnav .icon{width:40px}.pnav .plabel{font-size:clamp(1.05rem,4.6vw,1.25rem);padding:0 6px 0 10px}.pnav .plabel.long{font-size:clamp(.9rem,4vw,1.15rem);letter-spacing:-.02em}
 
 /* account balance strip */
 .strip{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:4px 16px 8px;scrollbar-width:none}
@@ -373,6 +376,8 @@ const P={
  card:"M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z",
  event:"M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z",
  schedule:"M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
+ history:"M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z",
+ settings:"M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z",
  edit:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
 };
 const ic=n=>'<svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="'+P[n]+'"/></svg>';
@@ -541,35 +546,39 @@ window.tallyTheme=function(p){try{SYS=typeof p==="string"?JSON.parse(p):p;}catch
 {const mq=matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",applyTheme);}
 
 /* ---------- view state ---------- */
-const V={showCleared:false,screen:"home",period:"day",anchor:today(),rs:null,re:null,cur:null,hMonth:today().slice(0,7),hAcc:"",showArchived:false,sel:null};
-function range(){
-  const a=V.anchor;
-  if(V.period==="day")return [a,a];
-  if(V.period==="range")return [V.rs,V.re];
+const V={showCleared:false,screen:"home",period:"day",anchor:today(),rs:null,re:null,cur:null,hAcc:"",showArchived:false,sel:null};
+/* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month", anchor, rs, re} */
+const HP={period:"month",anchor:today(),rs:null,re:null};
+function range(p=V){
+  const a=p.anchor;
+  if(p.period==="day")return [a,a];
+  if(p.period==="range")return [p.rs,p.re];
   const m=a.slice(0,7),[y,mo]=m.split("-").map(Number);return [m+"-01",m+"-"+pad(new Date(y,mo,0).getDate())];
 }
-function periodLabel(){
-  const t=today(),[s,e]=range();
-  if(V.period==="day")return V.anchor===t?"Today":V.anchor===addDays(t,-1)?"Yesterday":dayLabel(V.anchor);
-  if(V.period==="range"){
+function periodLabel(p=V){
+  const t=today(),[s,e]=range(p);
+  if(p.period==="day")return p.anchor===t?"Today":p.anchor===addDays(t,-1)?"Yesterday":dayLabel(p.anchor);
+  if(p.period==="range"){
     if(s===e)return s===t?"Today":dayLabel(s);
     const a=parseISO(s),b=parseISO(e),mo=x=>x.toLocaleDateString(undefined,{month:"short"});
-    return a.getDate()+(a.getMonth()!==b.getMonth()||a.getFullYear()!==b.getFullYear()?" "+mo(a):"")+" – "+b.getDate()+" "+mo(b);
+    return a.getDate()+(a.getMonth()!==b.getMonth()||a.getFullYear()!==b.getFullYear()?" "+mo(a):"")+"\u2009–\u2009"+b.getDate()+" "+mo(b);
   }
-  return monthLabel(V.anchor.slice(0,7));
+  const m=p.anchor.slice(0,7);
+  if(p===HP||m.slice(0,4)===t.slice(0,4))return monthLabel(m,p===HP);
+  return parseISO(m+"-01").toLocaleDateString(undefined,{month:"short",year:"numeric"});
 }
-function shiftPeriod(n){
-  if(V.period==="day")V.anchor=addDays(V.anchor,n);
-  else if(V.period==="range"){
-    const len=Math.round((parseISO(V.re)-parseISO(V.rs))/864e5)+1;
-    V.rs=addDays(V.rs,n*len);V.re=addDays(V.re,n*len);
-    if(V.re>today()){V.re=today();V.rs=addDays(V.re,1-len);}
+function shiftPeriod(n,p=V){
+  if(p.period==="day")p.anchor=addDays(p.anchor,n);
+  else if(p.period==="range"){
+    const len=Math.round((parseISO(p.re)-parseISO(p.rs))/864e5)+1;
+    p.rs=addDays(p.rs,n*len);p.re=addDays(p.re,n*len);
+    if(p.re>today()){p.re=today();p.rs=addDays(p.re,1-len);}
     return;
   }
-  else V.anchor=shiftMonth(V.anchor.slice(0,7),n)+"-01";
-  if(V.anchor>today())V.anchor=today();
+  else p.anchor=shiftMonth(p.anchor.slice(0,7),n)+"-01";
+  if(p.anchor>today())p.anchor=today();
 }
-const canNext=()=>range()[1]<today();
+const canNext=(p=V)=>range(p)[1]<today();
 /* the date a new entry gets: the day being looked at (today when it is in view) */
 function entryDate(){const t=today(),[s,e]=range();if(t>=s&&t<=e)return V.period==="day"?V.anchor:t;return V.period==="day"?V.anchor:e;}
 function periodTxns(){const [s,e]=range();return S.txns.filter(t=>t.date>=s&&t.date<=e);}
@@ -705,14 +714,14 @@ function timePicker(){
 function homeView(){
   const act=activeAccounts();
   if(!act.length){
-    return '<header class="appbar"><h1>Tally</h1><button class="icon" data-act="menu" aria-label="Menu">'+ic("more")+'</button></header>'+
+    return '<header class="appbar"><h1>Tally</h1>'+topIcons()+'</header>'+
       '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="btn" data-act="acc-form">'+ic("add")+"Add first account</button></div>";
   }
   const b=balances(),cur=viewCur();
   let h='<header class="appbar"><div class="pnav"><button class="icon" data-act="prev" aria-label="Previous">'+ic("left")+'</button>'+
-    '<button class="plabel" data-act="period-open" aria-haspopup="dialog">'+esc(periodLabel())+ic("down")+'</button>'+
+    '<button class="plabel'+(periodLabel().length>11?" long":"")+'" data-act="period-open" aria-haspopup="dialog"><span>'+esc(periodLabel())+"</span>"+ic("down")+'</button>'+
     '<button class="icon" data-act="next" aria-label="Next"'+(canNext()?"":" disabled")+">"+ic("right")+'</button></div>'+
-    '<button class="icon" data-act="menu" aria-label="Menu" aria-haspopup="menu">'+ic("more")+"</button></header>";
+    topIcons()+"</header>";
 
   if(S.settings.lastCheck!==today())h+=checkCard(b,cur);
   else h+='<div class="strip">'+act.map(a=>'<button class="acc" data-act="acc-open" data-v="'+a.id+'"><span class="n">'+emblem(accEmb(a),"sm")+esc(a.name)+'</span><span class="b">'+esc(money(b[a.id],a.currency))+"</span></button>").join("")+
@@ -930,7 +939,9 @@ function payLoan(){
 function extendLoan(l,days){l.due=addDays(l.due&&l.due>today()?l.due:today(),days);}
 
 /* ---------- Assets / Liabilities tabs ---------- */
-function tabBar(title){return '<header class="appbar"><h1>'+esc(title)+'</h1><button class="icon" data-act="menu" aria-label="Menu" aria-haspopup="menu">'+ic("more")+"</button></header>";}
+/* History + Settings, always one tap away in the top bar */
+const topIcons=()=>'<button class="icon" data-act="go" data-v="history" aria-label="History">'+ic("history")+'</button><button class="icon" data-act="go" data-v="settings" aria-label="Settings">'+ic("settings")+"</button>";
+function tabBar(title){return '<header class="appbar"><h1>'+esc(title)+"</h1>"+topIcons()+"</header>";}
 function perCur(add){const m={};add((c,v)=>{m[c]=r2((m[c]||0)+v);});return m;}
 const curLines=m=>Object.keys(m).length?Object.entries(m).map(([c,v])=>'<div class="big">'+esc(money(v,c))+"</div>").join(""):'<div class="big">'+esc(money(0,S.settings.cur))+"</div>";
 function netWorth(){
@@ -1043,7 +1054,7 @@ function dayGroups(list){
   return cur?h+"</div>":h;
 }
 function historyList(){
-  let list=S.txns.filter(t=>t.date.slice(0,7)===V.hMonth);
+  const [s,e]=range(HP);let list=S.txns.filter(t=>t.date>=s&&t.date<=e);
   if(V.hAcc)list=list.filter(t=>t.account===V.hAcc||t.to===V.hAcc);
   return list.sort(byNewest);
 }
@@ -1055,10 +1066,11 @@ function historyView(){
       '<button class="icon" data-act="sel-del" aria-label="Delete selected"'+(n?"":" disabled")+">"+ic("delete")+"</button></header>";
   }else h='<header class="appbar"><button class="icon" data-act="home" aria-label="Back">'+ic("back")+"</button><h1>History</h1>"+
     (list.length?'<button class="icon" data-act="sel-start" aria-label="Select entries">'+ic("checkbox")+"</button>":"")+"</header>";
-  h+='<div class="month"><button class="icon" data-act="hmon" data-v="-1" aria-label="Previous month">'+ic("left")+"</button><b>"+esc(monthLabel(V.hMonth,true))+'</b><button class="icon" data-act="hmon" data-v="1" aria-label="Next month"'+(V.hMonth>=today().slice(0,7)?" disabled":"")+">"+ic("right")+"</button></div>";
+  h+='<div class="month"><button class="icon" data-act="hmon" data-v="-1" aria-label="Previous">'+ic("left")+'</button><button class="plabel" data-act="period-open" data-v="hist" aria-haspopup="dialog"><span>'+esc(periodLabel(HP))+"</span>"+ic("down")+
+    '</button><button class="icon" data-act="hmon" data-v="1" aria-label="Next"'+(canNext(HP)?"":" disabled")+">"+ic("right")+"</button></div>";
   const accs=S.accounts.filter(a=>!a.archived||a.id===V.hAcc);
   if(accs.length>1)h+='<div class="strip" style="margin-top:8px"><button class="chip" data-act="hacc" data-v="" aria-pressed="'+(!V.hAcc)+'">All</button>'+accs.map(a=>'<button class="chip" data-act="hacc" data-v="'+a.id+'" aria-pressed="'+(V.hAcc===a.id)+'">'+esc(a.name)+"</button>").join("")+"</div>";
-  if(!list.length)return h+'<div class="empty">Nothing written down this month.</div>';
+  if(!list.length)return h+'<div class="empty">Nothing written down '+(HP.period==="day"?"that day":HP.period==="month"?"that month":"in those days")+".</div>";
   return h+dayGroups(list);
 }
 function catGrid(kind){
@@ -1092,12 +1104,6 @@ function settingsView(){
 }
 
 /* ---------- menus, dialogs + sheets ---------- */
-function popup(items,anchor){
-  const r=anchor.getBoundingClientRect();
-  const right=r.left>innerWidth/2;
-  const pos="top:"+(r.bottom+4)+"px;"+(right?"right:"+Math.max(8,innerWidth-r.right)+"px":"left:"+Math.max(8,r.left)+"px");
-  $("#pop").innerHTML='<div class="pop" data-act="pop-bg"><div class="menu" role="menu" style="'+pos+'">'+items.map(([act,v,label])=>'<button role="menuitem" data-act="'+act+'" data-v="'+esc(v)+'">'+esc(label)+"</button>").join("")+"</div></div>";
-}
 const closePop=()=>{$("#pop").innerHTML="";PD=null;DP=null;};
 function openSheet(title,body){
   $("#sheet").innerHTML='<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
@@ -1117,9 +1123,9 @@ function accChoices(...keep){const l=activeAccounts();keep.forEach(id=>{const k=
 
 /* period picker: Day / Range / Month */
 let PD=null;
-function periodDialog(){
-  const ref=V.period==="range"?V.re:V.anchor;
-  PD={tab:V.period,month:ref.slice(0,7),year:+ref.slice(0,4),pick:null};
+function periodDialog(p){
+  const ref=p.period==="range"?p.re:p.anchor;
+  PD={p,tab:p.period,month:ref.slice(0,7),year:+ref.slice(0,4),pick:null};
   $("#pop").innerHTML='<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="pd" role="dialog" aria-modal="true" aria-label="Choose what to show"></div></div>';
   pdRender();
 }
@@ -1129,22 +1135,24 @@ function pdRender(){
   if(PD.tab==="month"){
     h+='<div class="cal-h"><button class="icon" data-act="pd-year" data-v="-1" aria-label="Previous year">'+ic("left")+"</button><b>"+PD.year+'</b><button class="icon" data-act="pd-year" data-v="1" aria-label="Next year"'+(PD.year>=+t.slice(0,4)?" disabled":"")+">"+ic("right")+"</button></div>";
     h+='<div class="mgrid">'+Array.from({length:12},(_,i)=>{const m=PD.year+"-"+pad(i+1);
-      const cls=[V.period==="month"&&V.anchor.slice(0,7)===m?"sel":"",m===tm?"now":""].join(" ").trim();
+      const cls=[PD.p.period==="month"&&PD.p.anchor.slice(0,7)===m?"sel":"",m===tm?"now":""].join(" ").trim();
       return '<button class="'+cls+'" data-act="pd-month" data-v="'+m+'"'+(m>tm?" disabled":"")+">"+esc(new Date(PD.year,i,1).toLocaleDateString(undefined,{month:"short"}))+"</button>";}).join("")+"</div>";
   }else h+=calendar()+(PD.tab==="range"?'<p class="hint" id="pd-hint" style="text-align:center">'+(PD.pick?"Now tap the end day":"Drag across days, or tap start then end")+"</p>":"");
   h+='<div class="dlg-act"><button class="btn text" data-act="pd-today">Today</button><button class="btn text" data-act="pd-close">Cancel</button></div>';
   el.innerHTML=h;
 }
 function calendar(){
-  const rg=PD.tab==="range";
-  return calGrid(PD.month,{act:rg?"pd-rday":"pd-day",monAct:"pd-mon",max:today(),sel:!rg&&V.period==="day"?V.anchor:null,
-    hs:rg?(PD.pick||(V.period==="range"?V.rs:null)):null,he:rg?(PD.pick||(V.period==="range"?V.re:null)):null});
+  const rg=PD.tab==="range",p=PD.p;
+  return calGrid(PD.month,{act:rg?"pd-rday":"pd-day",monAct:"pd-mon",max:today(),sel:!rg&&p.period==="day"?p.anchor:null,
+    hs:rg?(PD.pick||(p.period==="range"?p.rs:null)):null,he:rg?(PD.pick||(p.period==="range"?p.re:null)):null});
 }
 /* live range highlight while dragging, without rebuilding the dialog */
 function pdPaint(s,e){$("#pd").querySelectorAll(".dd").forEach(b=>{const d=b.dataset.v;b.classList.toggle("rs",d===s);b.classList.toggle("re",d===e);b.classList.toggle("in",d>s&&d<e);});}
+/* apply a choice from the dialog to the period it was opened for */
+function setPeriod(o){const p=PD.p;Object.assign(p,o);closePop();if(V.sel)V.sel=new Set();render();}
 function applyRange(a,b){
   let s=a<b?a:b,e=a<b?b:a;const t=today();if(e>t)e=t;if(s>e)s=e;
-  V.period="range";V.rs=s;V.re=e;closePop();render();
+  setPeriod({period:"range",rs:s,re:e});
 }
 
 /* currency picker */
@@ -1381,7 +1389,6 @@ document.addEventListener("click",ev=>{
   switch(act){
     case "home":V.screen="home";render();scrollTo(0,0);break;
     case "go":closeSheet();V.screen=v==="accounts"?"assets":v;render();scrollTo(0,0);break;
-    case "menu":popup([["go","history","History"],["go","settings","Settings"]],el);break;
     case "tab":V.screen=v;render();scrollTo(0,0);break;
     case "toggle-cleared":V.showCleared=!V.showCleared;render();break;
     case "loan-new":loanForm(v);break;
@@ -1405,14 +1412,14 @@ document.addEventListener("click",ev=>{
     case "asset-del":{const id=F.id;closeSheet();S.assets=S.assets.filter(x=>x.id!==id);commit();snack("Asset deleted");break;}
     case "rem-daily":{const r=S.settings.remind;r.daily=r.daily===false;save();syncReminders();render();if(r.daily)askNotify();break;}
     case "rem-dues":{const r=S.settings.remind;r.dues=r.dues===false;save();syncReminders();render();if(r.dues)askNotify();break;}
-    case "period-open":periodDialog();break;
+    case "period-open":periodDialog(v==="hist"?HP:V);break;
     case "pd-tab":PD.tab=v;PD.pick=null;pdRender();break;
     case "pd-mon":PD.month=shiftMonth(PD.month,+v);pdRender();break;
     case "pd-year":PD.year+=+v;pdRender();break;
-    case "pd-day":V.period="day";V.anchor=v;closePop();render();break;
+    case "pd-day":setPeriod({period:"day",anchor:v});break;
     case "pd-rday":if(!PD.pick){PD.pick=v;pdRender();}else applyRange(PD.pick,v);break;
-    case "pd-month":V.period="month";V.anchor=v+"-01";closePop();render();break;
-    case "pd-today":V.period=PD.tab==="month"?"month":"day";V.anchor=today();closePop();render();break;
+    case "pd-month":setPeriod({period:"month",anchor:v+"-01"});break;
+    case "pd-today":setPeriod({period:PD.tab==="month"?"month":"day",anchor:today()});break;
     case "pd-close":closePop();break;
     case "prev":shiftPeriod(-1);render();break;
     case "next":if(canNext()){shiftPeriod(1);render();}break;
@@ -1453,7 +1460,7 @@ document.addEventListener("click",ev=>{
       const id=F.id;closeSheet();
       withUndo(a.name+" set to "+money(val,a.currency),()=>{S.txns.push({id:newId(),ts:Date.now(),type:"adjust",amount:d,account:id,date:today(),note:"Balance fix"});});
       break;}
-    case "hist-acc":closeSheet();V.hAcc=v;V.hMonth=today().slice(0,7);V.screen="history";render();scrollTo(0,0);break;
+    case "hist-acc":closeSheet();V.hAcc=v;Object.assign(HP,{period:"month",anchor:today()});V.screen="history";render();scrollTo(0,0);break;
     case "acc-form":accForm(v);break;
     case "f-type":F.type=v;setPressed("f-type",v);if(!F.iSet){F.i=TYPE_ICON[v];F.e="";}if(!F.cSet){F.col=TYPE_COL[v];setPressed("f-col",F.col);}prevUpd();break;
     case "f-icon":iconPicker(F.i,F.col,r=>{if(r.i){F.i=r.i;F.e="";}else{F.i="";F.e=r.e;}F.iSet=true;prevUpd();});break;
@@ -1481,7 +1488,7 @@ document.addEventListener("click",ev=>{
       if(!confirm("Delete this account?"))return;
       S.accounts=S.accounts.filter(a=>a.id!==F.id);closeSheet();commit();break;}
     case "toggle-arch":V.showArchived=!V.showArchived;render();break;
-    case "hmon":{const m=shiftMonth(V.hMonth,+v);if(m<=today().slice(0,7)){V.hMonth=m;if(V.sel)V.sel=new Set();render();}break;}
+    case "hmon":if(+v<0||canNext(HP)){shiftPeriod(+v,HP);if(V.sel)V.sel=new Set();render();}break;
     case "hacc":V.hAcc=v;if(V.sel)V.sel=new Set();render();break;
     case "sel-start":V.sel=new Set();render();break;
     case "sel-cancel":V.sel=null;render();break;

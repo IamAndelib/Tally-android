@@ -29,7 +29,7 @@ Built originally in a claude.ai chat; continue development from here.
       `setAndAllowWhileIdle`, channel "Reminders"; `BootReceiver` re-arms after reboot/update). Notification buttons
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
-  - Back button calls `window.tallyBack()` (closes menu / sheet / returns to Home) before exiting.
+  - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
 - All app logic is one self-contained file: `app/src/main/assets/index.html` (vanilla JS, no framework, no build step).
   The only other asset is `icons.js` (see Emblems).
   - State `S = {v:4, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked}, accounts, cats, txns, loans, assets}`
@@ -49,7 +49,7 @@ Built originally in a claude.ai chat; continue development from here.
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow).
   - Other assets: `S.assets = [{id, name, i, e, c, value, currency}]` (value only, no entries).
   - Tabs (bottom nav): Home, Assets (net worth, accounts, owed to you, other assets), Liabilities (loans, credit cards).
-    History and Settings are in the ⋮ menu.
+    History and Settings are two icons in every top bar (`topIcons()`; no ⋮ menu).
   - `balances(before?)` = opening + all entries (optionally only entries dated before a day → "started today with").
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
     Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
@@ -70,6 +70,9 @@ Built originally in a claude.ai chat; continue development from here.
     `datePicker()` opens a Material dialog in `#pop` built on `calGrid()` (shared with the period dialog); `timePicker()` for the nudge time.
   - Sheets are built once and then patched in place (`setPressed`, `trSync`), never re-rendered while open.
     `#sheet2` is a second layer for pickers opened from a sheet (currency picker: search, in use / popular / all ISO currencies).
+  - History has its own period `HP` (default this month) with the same ‹ label ▾ › bar and Day | Range | Month dialog as Home:
+    `range/periodLabel/shiftPeriod/canNext(p)` and `periodDialog(p)` take the period object (`V` for Home, `HP` for History).
+    Long labels shrink/truncate so the top-bar icons always fit at 360px.
   - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent.
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
