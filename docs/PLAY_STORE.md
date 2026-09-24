@@ -1,7 +1,7 @@
 # Publishing Tally on Google Play — step by step
 
 Everything the app needs is ready in this repository: a signed **.aab** (Android App Bundle, the file format Play
-takes) attached to every GitHub Release from 1.1.1 on, the store texts and graphics in [`docs/play/`](play/), and a
+takes) attached to every GitHub Release from 1.1.1 on, the store texts in [`docs/play/listing.md`](play/listing.md) and graphics in [`fastlane/metadata/android/en-US/images/`](../fastlane/metadata/android/en-US/images/), and a
 privacy policy in [`privacy-policy.md`](privacy-policy.md). What's left happens in your Google account.
 
 Plan on **3–4 weeks** in total, mostly waiting: account verification (a few days), a required 14-day closed test, then
@@ -49,9 +49,9 @@ Answer each task; Tally's answers:
 ## 6. Store listing
 **Grow → Store presence → Main store listing**: paste the texts from [`docs/play/listing.md`](play/listing.md) and
 upload:
-- App icon: `docs/play/icon-512.png`
-- Feature graphic: `docs/play/feature-graphic-1024x500.png`
-- Phone screenshots: 4–8 from `docs/play/screenshots/`
+- App icon: `fastlane/metadata/android/en-US/images/icon.png`
+- Feature graphic: `fastlane/metadata/android/en-US/images/featureGraphic.png`
+- Phone screenshots: 4–8 from `fastlane/metadata/android/en-US/images/phoneScreenshots/`
 Set **App category → Finance** and your **contact email** under Store settings.
 
 ## 7. Signing

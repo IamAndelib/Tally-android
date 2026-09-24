@@ -1,4 +1,4 @@
-# Keep this file's name: the run number (GITHUB_RUN_NUMBER) is counted per workflow file and is the APK's versionCode.
+# Keep this file's name: the run number (GITHUB_RUN_NUMBER) is counted per workflow file and is test builds' versionCode.
 name: Build APK
 
 on:
@@ -115,6 +115,9 @@ jobs:
             exit 0
           fi
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $version"; exit 1; }
+          code=$(sed -n 's/^tallyVersionCode=//p' gradle.properties)
+          [ -s "fastlane/metadata/android/en-US/changelogs/$code.txt" ] || { echo "::error::Add fastlane/metadata/android/en-US/changelogs/$code.txt (F-Droid's release notes)"; exit 1; }
+          echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "TAG=v$version" >> "$GITHUB_ENV"
           echo "publish=true" >> "$GITHUB_OUTPUT"
@@ -153,7 +156,7 @@ jobs:
           tools="$ANDROID_HOME/build-tools/35.0.0"
           "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
           grep -q "SHA-256 digest: $RELEASE_CERT_SHA256" certs.txt || { echo "::error::Not signed with the Tally release key"; exit 1; }
-          "$tools/aapt" dump badging "$apk" | grep -q "versionName='$VERSION'" || { echo "::error::versionName isn't $VERSION"; exit 1; }
+          "$tools/aapt" dump badging "$apk" | grep -q "versionCode='$VERSION_CODE' versionName='$VERSION'" || { echo "::error::version isn't $VERSION ($VERSION_CODE)"; exit 1; }
           if "$tools/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -q debuggable; then
             echo "::error::The release APK is debuggable"
             exit 1

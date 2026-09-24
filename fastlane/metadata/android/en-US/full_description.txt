@@ -1,12 +1,3 @@
-# Google Play store listing (copy and paste into Play Console → Grow → Store presence → Main store listing)
-
-**App name** (max 30): Tally: Pocket Money Notebook
-
-**Short description** (max 80):
-One tap per expense. Every account, every currency. Private, offline, no ads.
-
-**Full description** (max 4000):
-
 Tally works like a pocket notebook for your money. Each morning your balances sit at the top of the page, you write
 down spending through the day with one tap, and everything rolls over to tomorrow.
 
@@ -43,11 +34,3 @@ you like, restore it on a new phone, or export all entries as CSV.
 Follows your phone's Material You colours, in light and dark.
 
 Open source (MIT): https://github.com/IamAndelib/Tally-android
-
-**Category:** Finance  **Tags:** Budget / expense tracking, personal finance
-**Contact email:** (your email — required, shown publicly)
-**Privacy policy URL:** (the public link to docs/privacy-policy.md — see PLAY_STORE.md step 3)
-
-**Graphics** are shared with F-Droid in `fastlane/metadata/android/en-US/images/`: `icon.png` (512×512),
-`featureGraphic.png` (1024×500) and `phoneScreenshots/` (800×1600; upload 4–8). The full description above is kept in
-`fastlane/metadata/android/en-US/full_description.txt` too — change both together.

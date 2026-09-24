@@ -1,0 +1,4 @@
+- Amounts get thousands commas as you type (123,986).
+- Bigger calculator button and operator keys; the calculator display scrolls with the caret, which you can drag;
+  a live result and a keyboard switch above the keys.
+- Targets Android 15; stays clear of the system bars and keyboard.
