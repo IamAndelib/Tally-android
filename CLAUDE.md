@@ -219,9 +219,20 @@ Built originally in a claude.ai chat; continue development from here.
     `commit()` also calls `syncReminders()`.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.0) is the release `versionName`; debug builds get
-    `-dev.<run>`. `versionCode` = `GITHUB_RUN_NUMBER` (per workflow file — keep `build-apk.yml`'s name).
+- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk/targetSdk 35 with
+  `android.suppressUnsupportedCompileSdk=35`, minSdk 24). Android 15 forces edge-to-edge: `MainActivity` wraps the
+  WebView in a `FrameLayout` (`root`) padded by the system-bar/cutout/IME insets (API 30+), and `setBars` also colours
+  `root`, which shows behind the transparent bars.
+- Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
+  User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
+  `docs/privacy-policy.md` (must be hosted publicly).
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.1) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10101) so F-Droid's
+    rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
+    `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
+  - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the
+    release job refuses to publish without it) is shared by F-Droid, IzzyOnDroid and the Play kit (`docs/play/listing.md`).
+    Guides: `docs/PLAY_STORE.md`, `docs/FDROID.md`; F-Droid recipe draft `docs/fdroid/app.tally.expenses.yml`.
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
     signed with the committed `app/debug.keystore` (android/androiddebugkey/android) so every CI build updates the last.
     Never replace the keystore: installed copies would stop accepting updates.
@@ -235,7 +246,7 @@ Built originally in a claude.ai chat; continue development from here.
     `v<tallyVersion>` has no GitHub Release yet (a tag must equal it), CHANGELOG must have that section; builds + signs
     from the secrets, verifies cert/versionName/non-debuggable with apksigner/aapt, and `gh release create` publishes
     `Tally-vX.Y.Z.apk` + `.sha256` with the CHANGELOG section as notes, creating the tag at that commit.
-  - Releasing: bump `tallyVersion` + CHANGELOG in a PR and merge it into `main` (this session's git proxy can't push
+  - Releasing: bump `tallyVersion` + `tallyVersionCode` + CHANGELOG + fastlane changelog in a PR and merge it into `main` (this session's git proxy can't push
     tags, which is why CI creates them).
 - Tests: `tests/` (`npm ci`; `npm test` runs `e2e/NN-*.js` against a throwaway server, `npm test -- 15` for one suite;
   `npm run lint`; `npm run format`). Locally: `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.

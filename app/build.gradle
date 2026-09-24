@@ -2,7 +2,8 @@ plugins {
     id 'com.android.application'
 }
 
-// CI numbers every build (GITHUB_RUN_NUMBER), so each APK installs as an update over the one before.
+// CI numbers every build (GITHUB_RUN_NUMBER): test builds use it as their versionCode, so each one installs as an
+// update over the one before. Release builds use the fixed tallyVersionCode from gradle.properties.
 def runNumber = System.getenv('GITHUB_RUN_NUMBER')
 
 // Release signing key: never in the repository. CI decodes it from the RELEASE_KEYSTORE_BASE64 secret and
@@ -11,13 +12,13 @@ def releaseKeystore = System.getenv('TALLY_KEYSTORE')
 
 android {
     namespace 'app.tally.expenses'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId 'app.tally.expenses'
         minSdk 24
-        targetSdk 34
-        versionCode Integer.parseInt(runNumber ?: '1')
+        targetSdk 35
+        versionCode Integer.parseInt(project.property('tallyVersionCode'))
         versionName project.property('tallyVersion')
     }
 
@@ -65,6 +66,15 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+// test builds ("Tally Dev") count up with every CI build instead
+androidComponents {
+    onVariants(selector().withBuildType('debug')) { variant ->
+        if (runNumber) {
+            variant.outputs.each { output -> output.versionCode.set(Integer.parseInt(runNumber)) }
+        }
     }
 }
 

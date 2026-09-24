@@ -1,4 +1,4 @@
-# Keep this file's name: the run number (GITHUB_RUN_NUMBER) is counted per workflow file and is the APK's versionCode.
+# Keep this file's name: the run number (GITHUB_RUN_NUMBER) is counted per workflow file and is test builds' versionCode.
 name: Build APK
 
 on:
@@ -53,7 +53,7 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
@@ -115,6 +115,9 @@ jobs:
             exit 0
           fi
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $version"; exit 1; }
+          code=$(sed -n 's/^tallyVersionCode=//p' gradle.properties)
+          [ -s "fastlane/metadata/android/en-US/changelogs/$code.txt" ] || { echo "::error::Add fastlane/metadata/android/en-US/changelogs/$code.txt (F-Droid's release notes)"; exit 1; }
+          echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "TAG=v$version" >> "$GITHUB_ENV"
           echo "publish=true" >> "$GITHUB_OUTPUT"
@@ -127,7 +130,7 @@ jobs:
         if: steps.version.outputs.publish == 'true'
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - if: steps.version.outputs.publish == 'true'
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -144,16 +147,16 @@ jobs:
           fi
           export TALLY_KEYSTORE="$RUNNER_TEMP/release.jks"
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$TALLY_KEYSTORE"
-          gradle assembleRelease --no-daemon
+          gradle assembleRelease bundleRelease --no-daemon
           rm -f "$TALLY_KEYSTORE"
       - name: Verify the APK
         if: steps.version.outputs.publish == 'true'
         run: |
           apk=app/build/outputs/apk/release/app-release.apk
-          tools="$ANDROID_HOME/build-tools/34.0.0"
+          tools="$ANDROID_HOME/build-tools/35.0.0"
           "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
           grep -q "SHA-256 digest: $RELEASE_CERT_SHA256" certs.txt || { echo "::error::Not signed with the Tally release key"; exit 1; }
-          "$tools/aapt" dump badging "$apk" | grep -q "versionName='$VERSION'" || { echo "::error::versionName isn't $VERSION"; exit 1; }
+          "$tools/aapt" dump badging "$apk" | grep -q "versionCode='$VERSION_CODE' versionName='$VERSION'" || { echo "::error::version isn't $VERSION ($VERSION_CODE)"; exit 1; }
           if "$tools/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -q debuggable; then
             echo "::error::The release APK is debuggable"
             exit 1
@@ -166,6 +169,10 @@ jobs:
           out="Tally-$TAG.apk"
           cp app/build/outputs/apk/release/app-release.apk "$out"
           sha256sum "$out" > "$out.sha256"
+          # the bundle is what Google Play takes; same release (upload) key
+          aab="Tally-$TAG.aab"
+          cp app/build/outputs/bundle/release/app-release.aab "$aab"
+          keytool -printcert -jarfile "$aab" | grep -qi "$(printf '%s' "$RELEASE_CERT_SHA256" | sed 's/../&:/g; s/:$//')" || { echo "::error::AAB not signed with the release key"; exit 1; }
           # the notes are this version's section of CHANGELOG.md, plus how to install and verify
           awk -v v="[$VERSION]" '/^## /{p = index($0, v) > 0; next} p' CHANGELOG.md > notes.md
           fp=$(printf '%s' "$RELEASE_CERT_SHA256" | tr a-f A-F | sed 's/../&:/g; s/:$//')
@@ -178,4 +185,4 @@ jobs:
             echo "Signing certificate SHA-256: \`$fp\`"
           } >> notes.md
           # creates the tag at this commit when it doesn't exist yet
-          gh release create "$TAG" "$out" "$out.sha256" --target "$GITHUB_SHA" --title "Tally $VERSION" --notes-file notes.md
+          gh release create "$TAG" "$out" "$out.sha256" "$aab" --target "$GITHUB_SHA" --title "Tally $VERSION" --notes-file notes.md

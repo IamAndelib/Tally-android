@@ -5,6 +5,16 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-09-24
+
+### Changed
+
+- Targets Android 15 (API 35), as Google Play requires; the app keeps clear of the status bar, navigation bar and
+  keyboard now that Android draws apps edge to edge.
+- Releases also include an Android App Bundle (.aab) for Google Play.
+- Ready for F-Droid and IzzyOnDroid: store texts and screenshots in `fastlane/`, and release version codes fixed in
+  `gradle.properties` (1.1.1 = 10101) so anyone rebuilding from source gets the same app.
+
 ## [1.1.0] — 2026-09-24
 
 ### Changed
@@ -54,5 +64,6 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1
 [1.1.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.0
 [1.0.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.0.0
