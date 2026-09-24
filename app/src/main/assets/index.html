@@ -186,6 +186,12 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .amtwrap input:focus{border:0;padding:0}
 .amtwrap input:focus-visible{outline:0}
 .amtwrap:focus-within{border-bottom-width:3px;margin-bottom:-1px}
+.amtwrap .calcbtn{width:36px;height:36px;flex:none;color:var(--on-surface-variant)}
+.calc{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 10px}
+.calc .cap{grid-column:span 4;text-align:center;font-size:.72rem;color:var(--on-surface-variant);margin-bottom:2px}
+.calc button{height:44px;border-radius:12px;background:var(--surface-high);font-weight:600;font-size:1.05rem}
+.calc button.op{background:var(--secondary-container);color:var(--on-secondary-container)}
+.calc button.mut{color:var(--on-surface-variant);font-size:1.2rem}
 .preview{font-size:.85rem;color:var(--on-surface-variant);background:var(--surface-high);border-radius:12px;padding:10px 12px;margin-top:12px}
 .preview:empty{display:none}
 .hint{font-size:.8rem;color:var(--on-surface-variant);margin:6px 2px 0}
@@ -217,7 +223,8 @@ select option{background:var(--surface-high);color:var(--on-surface)}
 .tx.exp{flex-wrap:wrap;row-gap:0}
 .tx .more{display:none;flex-basis:100%;font-size:.85rem;color:var(--on-surface-variant);padding:6px 0 2px 52px;line-height:1.4}
 .tx.open .more{display:block}
-.tx .more .mdel{width:auto;height:36px;padding:0 8px;margin:4px 0 0 -8px;font-size:.85rem}.tx .more .mdel .ic{width:18px;height:18px}
+.tx .more .medit{display:flex;flex-wrap:wrap;gap:0 4px;margin:4px 0 0 -8px}
+.tx .more .medit .btn{width:auto;height:36px;padding:0 8px;font-size:.85rem}.tx .more .medit .btn .ic{width:18px;height:18px}
 .tx .chev{display:grid;place-items:center;color:var(--on-surface-variant);margin-left:-4px}.tx .chev .ic{width:20px;height:20px;transition:transform .15s}.tx.open .chev .ic{transform:rotate(180deg)}
 .tx.exp{cursor:pointer}
 .empty{text-align:center;padding:28px 12px;color:var(--on-surface-variant)}
@@ -462,7 +469,7 @@ const r2=n=>Math.round(n*100)/100;
 
 /* ---------- state + storage ---------- */
 const LS="tally:v1";
-function blank(){return {v:5,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],types:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
+function blank(){return {v:6,settings:{cur:"CAD",theme:"system",remind:{daily:true,time:"21:00",dues:true}},accounts:[],types:[],cats:CATS.map(c=>({...c})),txns:[],loans:[],assets:[]};}
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance. */
 function migrate(o){
   const s=blank();
@@ -500,6 +507,7 @@ function migrate(o){
     }else if(t0.type==="loan"){
       if(!t0.loan)return null;
       t.dir=t0.dir==="in"?"in":"out";t.loan=String(t0.loan);if(t0.principal)t.principal=true;
+      if(t0.principal&&/^\d{4}-\d{2}-\d{2}$/.test(t0.due||""))t.due=t0.due;
     }else if(t0.type==="expense"||t0.type==="income"){
       if(t0.cat==="transfer"){
         // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
@@ -515,9 +523,15 @@ function migrate(o){
     }else return null;
     return t;
   }).filter(Boolean);
-  s.loans=(Array.isArray(o.loans)?o.loans:[]).filter(l=>l&&l.id&&(l.kind==="borrow"||l.kind==="lend")&&okAcc.has(l.account)&&isFinite(+l.amount)).map(l=>({
-    id:String(l.id),ts:+l.ts||0,kind:l.kind,person:String(l.person||""),amount:+l.amount,account:l.account,
-    date:/^\d{4}-\d{2}-\d{2}$/.test(l.date)?l.date:today(),due:/^\d{4}-\d{2}-\d{2}$/.test(l.due)?l.due:"",note:String(l.note||""),status:l.status==="writeoff"?"writeoff":"open"}));
+  s.loans=(Array.isArray(o.loans)?o.loans:[]).filter(l=>l&&l.id&&(l.kind==="borrow"||l.kind==="lend")&&okAcc.has(l.account)&&(o.v>=6||isFinite(+l.amount))).map(l=>({
+    id:String(l.id),ts:+l.ts||0,kind:l.kind,person:String(l.person||""),account:l.account,
+    date:/^\d{4}-\d{2}-\d{2}$/.test(l.date)?l.date:today(),note:String(l.note||""),status:l.status==="writeoff"?"writeoff":"open"}));
+  /* v6: a loan's due date used to live on the loan itself; move it onto its (first/only) principal draw */
+  if(!(o.v>=6)&&Array.isArray(o.loans))o.loans.forEach(ol=>{
+    if(!ol||!/^\d{4}-\d{2}-\d{2}$/.test(ol.due||""))return;
+    const draw=s.txns.find(t=>t.type==="loan"&&t.principal&&t.loan===String(ol.id));
+    if(draw&&!draw.due)draw.due=ol.due;
+  });
   s.assets=(Array.isArray(o.assets)?o.assets:[]).filter(x=>x&&x.id).map(x=>({id:String(x.id),name:String(x.name||"Asset"),e:x.e&&x.e!=="💎"?x.e:"",i:x.i&&ICONS[x.i]?x.i:(!x.e||x.e==="💎"?"diamond":""),c:/^#[0-9a-f]{6}$/i.test(x.c)?x.c:"#a646c9",value:+x.value||0,currency:String(x.currency||s.settings.cur)}));
   if(!s.settings.remind||typeof s.settings.remind!=="object")s.settings.remind={daily:true,time:"21:00",dues:true};
   return s;
@@ -558,7 +572,7 @@ const signed=(n,cur)=>(n>0?"+":n<0?"−":"")+money(Math.abs(n),cur);
 let RBC=null;
 function runBal(){
   if(RBC)return RBC;
-  const b={},m={},paid={},amt={};S.accounts.forEach(a=>b[a.id]=+a.opening||0);S.loans.forEach(l=>{amt[l.id]=l.amount;paid[l.id]=0;});
+  const b={},m={},paid={},amt={};S.accounts.forEach(a=>b[a.id]=+a.opening||0);S.loans.forEach(l=>{amt[l.id]=0;paid[l.id]=0;});
   S.txns.slice().sort((x,y)=>x.date.localeCompare(y.date)||(x.ts||0)-(y.ts||0)).forEach(t=>{
     if(!(t.account in b))return;
     if(t.type==="expense")b[t.account]-=t.amount;
@@ -566,7 +580,7 @@ function runBal(){
     else if(t.type==="transfer"){b[t.account]-=t.amount;if(t.to in b)b[t.to]+=(t.toAmount!=null?t.toAmount:t.amount);}
     else if(t.type==="loan")b[t.account]+=t.dir==="in"?t.amount:-t.amount;
     const r={a:r2(b[t.account]),t:t.type==="transfer"&&t.to in b?r2(b[t.to]):null};
-    if(t.type==="loan"&&!t.principal&&t.loan in paid){paid[t.loan]+=t.amount;r.left=Math.max(0,r2(amt[t.loan]-paid[t.loan]));r.ls=r.left<=0?"cleared":"partly";}
+    if(t.type==="loan"&&t.loan in amt){if(t.principal)amt[t.loan]+=t.amount;else{paid[t.loan]+=t.amount;r.left=Math.max(0,r2(amt[t.loan]-paid[t.loan]));r.ls=r.left<=0?"cleared":"partly";}}
     m[t.id]=r;
   });
   return RBC=m;
@@ -597,6 +611,58 @@ function evalAmt(v){
   if(!/^[-+]?(\d+\.?\d*|\.\d+)([-+](\d+\.?\d*|\.\d+))*$/.test(s))return null;
   let tot=0;s.replace(/([-+]?)(\d+\.?\d*|\.\d+)/g,(m,sg,n)=>{tot+=(sg==="-"?-1:1)*parseFloat(n);return m;});
   return r2(tot);
+}
+/* ---------- calculator: toggled open from any amount field, tapping the same icon again evaluates + uses it ---------- */
+const CALC_ICON='<svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path fill="currentColor" d="'+(ICONS.calculate?ICONS.calculate[0]:"")+'"/></svg>';
+const calcBtn=id=>'<button type="button" class="icon calcbtn" data-act="calc-toggle" data-v="'+id+'" aria-label="Calculator" aria-expanded="false">'+CALC_ICON+"</button>";
+const CALC_KEYS=["7","8","9","÷","4","5","6","×","1","2","3","−","⌫","0",".","+"];
+const calcPanelHtml=id=>'<div class="calc" id="calc-'+id+'" hidden><div class="cap">Tap the calculator icon again to use the result</div>'+
+  CALC_KEYS.map(k=>'<button type="button" class="'+(/[+\-×÷]/.test(k)?"op":/[0-9.]/.test(k)?"":"mut")+'" data-act="calc-key" data-v="'+esc(k)+'">'+esc(k)+"</button>").join("")+"</div>";
+/* a field's amount box: currency label, the input, the calculator toggle, and its (hidden) panel */
+function amtField(id,cur,val,curId,label){
+  return '<div class="amtwrap"><span class="cur"'+(curId?' id="'+curId+'"':"")+'>'+esc(cur)+'</span><input id="'+id+'" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(val||"")+'" aria-label="'+esc(label||"Amount")+'">'+calcBtn(id)+"</div>"+calcPanelHtml(id);
+}
+/* left-to-right with standard × ÷ before + − precedence (no parentheses — this is a phone calculator, not a parser) */
+function calcEval(expr){
+  const m=String(expr||"").replace(/−/g,"-").match(/\d+\.?\d*|\.\d+|[+\-×÷]/g);
+  if(!m||!m.length)return null;
+  let i=0,sign=1;
+  if(m[i]==="-"){sign=-1;i++;}else if(m[i]==="+"){i++;}
+  if(i>=m.length||!/^[\d.]/.test(m[i]))return null;
+  let val=parseFloat(m[i]);if(isNaN(val))return null;i++;
+  const terms=[];
+  while(i<m.length){
+    const op=m[i];
+    if(op==="×"||op==="÷"){
+      const n=parseFloat(m[i+1]);if(isNaN(n))return null;
+      if(op==="÷"){if(!n)return null;val/=n;}else val*=n;
+      i+=2;
+    }else if(op==="+"||op==="-"){
+      terms.push(sign*val);sign=op==="-"?-1:1;
+      val=parseFloat(m[i+1]);if(isNaN(val))return null;i+=2;
+    }else return null;
+  }
+  terms.push(sign*val);
+  const tot=terms.reduce((a,b)=>a+b,0);
+  return isFinite(tot)?r2(tot):null;
+}
+let CALC=null;
+function calcOpen(id,btn){
+  document.querySelectorAll(".calc:not([hidden])").forEach(p=>p.hidden=true);
+  document.querySelectorAll('[data-act="calc-toggle"][aria-expanded="true"]').forEach(b=>b.setAttribute("aria-expanded","false"));
+  const inp=$("#"+id),start=inp?inp.value.replace(/[^0-9.+\-×÷−]/g,""):"";
+  CALC={id,expr:start};
+  if(inp){inp.readOnly=true;inp.blur();}
+  const panel=$("#calc-"+id);if(panel)panel.hidden=false;
+  if(btn)btn.setAttribute("aria-expanded","true");
+}
+function calcClose(id,btn,use){
+  const inp=$("#"+id);
+  if(use&&CALC&&CALC.id===id&&CALC.expr){const val=calcEval(CALC.expr);if(val!=null&&inp)inp.value=String(val);}
+  if(inp){inp.readOnly=false;inp.dispatchEvent(new Event("input",{bubbles:true}));}
+  const panel=$("#calc-"+id);if(panel)panel.hidden=true;
+  if(btn)btn.setAttribute("aria-expanded","false");
+  if(CALC&&CALC.id===id)CALC=null;
 }
 let snackT=null,undoFn=null;
 function snack(msg,undo){
@@ -896,8 +962,8 @@ function dpRender(){
 function dpSet(v){
   const id=DP.id,el=$("#"+id);closePop();if(!el)return;
   setDateField(el,v);
-  if(id==="f-due2"&&F&&F.kind==="loan"){const l=loan(F.id);if(!l)return;l.due=v;commit();
-    $("#loan-due").textContent=l.due?(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due):"No due date yet";}
+  if(id==="f-due2"&&F&&F.kind==="loan"){const l=loan(F.id);if(!l)return;const t=S.txns.find(x=>x.id===F.dueDraw);if(!t)return;t.due=v;commit();
+    const i=loanInfo(l);$("#loan-due").textContent=i.nextDue?(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(i.nextDue):"No due date yet";}
 }
 const timeLabel=hm=>{const [h,m]=hm.split(":").map(Number);return new Date(2024,0,1,h,m).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});};
 function timePicker(){
@@ -1051,61 +1117,101 @@ function ringHTML(cats,o){
 /* ---------- loans (you borrowed) and lendings (you lent) ---------- */
 const loan=id=>S.loans.find(l=>l.id===id);
 /* paid so far, what is left and the status; everything is derived from the loan's entries */
+/* a loan/lending is one or more "draws" (principal entries), each with its own amount, date and optional due date;
+   payments reduce the shared pool (not attributed to a specific draw — see CLAUDE.md) */
 function loanInfo(l){
+  const draws=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id&&t.principal).sort((x,y)=>x.date.localeCompare(y.date)||(x.ts||0)-(y.ts||0));
   const pays=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id&&!t.principal);
-  const paid=r2(pays.reduce((s,t)=>s+t.amount,0)),left=r2(Math.max(0,l.amount-paid));
-  const a=acc(l.account),cur=a?a.currency:S.settings.cur;
-  const st=left<=0?"cleared":l.status==="writeoff"?"writeoff":l.due&&l.due<today()?"overdue":paid>0?"partly":"active";
-  return {pays,paid,left,cur,st,open:st!=="cleared"&&st!=="writeoff"};
+  const total=r2(draws.reduce((s,t)=>s+t.amount,0)),paid=r2(pays.reduce((s,t)=>s+t.amount,0)),left=r2(Math.max(0,total-paid));
+  const newest=draws[draws.length-1],a=acc(newest?newest.account:l.account),cur=a?a.currency:S.settings.cur;
+  const nextDue=draws.map(t=>t.due).filter(Boolean).sort()[0]||"";
+  const st=left<=0?"cleared":l.status==="writeoff"?"writeoff":nextDue&&nextDue<today()?"overdue":paid>0?"partly":"active";
+  return {draws,pays,total,paid,left,cur,nextDue,st,open:st!=="cleared"&&st!=="writeoff"};
 }
 function stLabel(l,st){return {active:"Active",partly:"Partly paid",overdue:"Overdue",cleared:"Cleared",writeoff:l.kind==="lend"?"Written off":"Forgiven"}[st];}
 const loanWho=l=>l.person||(l.kind==="lend"?"Someone":"Someone");
 function loanRow(l,drag){
   const i=loanInfo(l),lend=l.kind==="lend";
   const a=acc(l.account),src=(lend?"From ":"Into ")+(a?a.name:"?")+" · ";
-  const sub=src+(i.open?(l.due?(lend?"Payback ":"Return by ")+dayLabel(l.due):"No due date"):(lend?"Lent ":"Borrowed ")+dayLabel(l.date));
+  const sub=src+(i.open?(i.nextDue?(lend?"Payback ":"Return by ")+dayLabel(i.nextDue):"No due date"):(lend?"Lent ":"Borrowed ")+dayLabel(l.date));
   return '<button class="tx'+(FX.row===l.id?" flash":"")+'" data-act="loan-open" data-v="'+l.id+'"'+(drag?' data-drag="loan:'+l.id+'"':"")+">"+emblem(LOAN_EMB[l.kind],"em")+'<span class="mid"><div class="d">'+esc(loanWho(l))+'</div><div class="s">'+esc(sub)+"</div></span>"+
-    '<span class="a">'+esc(money(i.open?i.left:l.amount,i.cur))+'<small><span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></small></span></button>";
+    '<span class="a">'+esc(money(i.open?i.left:i.total,i.cur))+'<small><span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></small></span></button>";
+}
+/* people you already have an open loan/lending of the same kind + currency with (most recently drawn on first) */
+function personCandidates(kind,cur,q){
+  const qq=q.trim().toLowerCase(),seen=new Set(),out=[];
+  S.loans.forEach(l=>{
+    if(l.kind!==kind||!l.person)return;
+    const i=loanInfo(l);if(!i.open||i.cur!==cur)return;
+    if(qq&&!l.person.toLowerCase().startsWith(qq))return;
+    const key=l.person.toLowerCase();if(seen.has(key))return;seen.add(key);
+    out.push({l,ts:i.draws.length?i.draws[i.draws.length-1].ts||0:0});
+  });
+  return out.sort((a,b)=>b.ts-a.ts).slice(0,6).map(x=>x.l);
+}
+function personSuggest(q){
+  if(!F||F.kind!=="loanf")return;const el=$("#f-person-sug");if(!el)return;
+  const cur=(acc(F.account)||{}).currency,list=cur?personCandidates(F.lk,cur,q||""):[];
+  el.hidden=!list.length;
+  el.innerHTML=list.map(l=>'<button class="chip" data-act="f-person-pick" data-v="'+esc(l.id)+'">'+esc(l.person)+"</button>").join("");
+}
+/* one-line feedback once a suggestion is picked: what the tab will total once this amount is added */
+function mergeHint(){
+  const el=$("#f-mergehint");if(!el||!F)return;
+  const l=F.merge&&loan(F.merge);
+  if(!l){el.hidden=true;return;}
+  const i=loanInfo(l),lend=l.kind==="lend",add=evalAmt(($("#f-amt")||{}).value||"")||0,tot=r2(i.total+(add>0?add:0));
+  el.hidden=false;
+  el.textContent="Adds to what you "+(lend?"lent ":"borrowed from ")+l.person+" — now "+money(tot,i.cur)+(lend?" owed":" you owe")+".";
 }
 function loanForm(kind){
   if(!activeAccounts().length){snack("Add an account first");accForm();return;}
   const lend=kind==="lend",last=S.settings.lastAcc,def=acc(last)&&!acc(last).archived?last:activeAccounts()[0].id;
-  F={kind:"loanf",lk:kind,account:def};
+  F={kind:"loanf",lk:kind,account:def,merge:null};
   let h='<label class="field" style="margin-top:0"><span>'+(lend?"Lent to":"Borrowed from")+'</span><input id="f-person" placeholder="Name" maxlength="40" autocomplete="off"></label>';
-  h+='<div class="amtwrap"><span class="cur" id="amt-cur">'+esc(acc(def).currency)+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount"></div>';
+  h+='<div class="chips" id="f-person-sug" hidden></div>';
+  h+=amtField("f-amt",acc(def).currency,"");
+  h+='<p class="hint" id="f-mergehint" hidden></p>';
   h+='<div class="lbl">'+(lend?"From account":"Into account")+"</div>"+accChips("f-acc",F.account);
-  h+='<div class="row" style="margin-top:4px"><div class="field"><span>Date</span>'+dateField("f-date",today(),{max:today()})+"</div>"+
+  h+='<div class="row" style="margin-top:4px"><div class="field"><span>Date</span>'+dateField("f-date",entryDate(),{max:today()})+"</div>"+
     '<div class="field"><span>'+(lend?"Payback day":"Return by")+"</span>"+dateField("f-due","",{min:today(),opt:true,none:"Pick a day",label:lend?"Payback day":"Return by"})+"</div></div>";
   h+='<label class="field"><span>Note</span><input id="f-note" placeholder="Optional" maxlength="80"></label>';
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="loan-save">'+ic("check")+(lend?"Save lending":"Save loan")+"</button>";
   openSheet(lend?"Lend money":"Borrowed money",h);
+  personSuggest("");
   setTimeout(()=>{const el=$("#f-person");if(el)el.focus();},60);
 }
 function loanOpen(id,focusPay){
   RBC=null;  const l=loan(id);if(!l){snack("That loan was deleted");return;}
-  const i=loanInfo(l),lend=l.kind==="lend",pct=l.amount?Math.min(100,Math.round(i.paid/l.amount*100)):0;
+  const i=loanInfo(l),lend=l.kind==="lend",pct=i.total?Math.min(100,Math.round(i.paid/i.total*100)):0;
   F={kind:"loan",id,account:acc(l.account)&&!acc(l.account).archived?l.account:(activeAccounts().find(a=>a.currency===i.cur)||{}).id};
-  const la=acc(l.account);
-  let h='<div class="hero"><div class="t">'+(lend?"You lent from ":"You borrowed into ")+esc((la?la.name:"?")+" · "+dayLabel(l.date))+'</div><div class="v">'+esc(money(i.open?i.left:l.amount,i.cur))+"</div>"+
-    '<div class="t">'+(i.open?"left of "+esc(money(l.amount,i.cur))+" · ":"")+'<span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></div></div>";
+  const heroLine=i.draws.length<=1?((lend?"You lent from ":"You borrowed into ")+esc((acc(l.account)||{}).name||"?")+" · "+dayLabel(l.date))
+    :esc(i.draws.length+(lend?" lendings since ":" loans since ")+dayLabel(l.date));
+  let h='<div class="hero"><div class="t">'+heroLine+'</div><div class="v">'+esc(money(i.open?i.left:i.total,i.cur))+"</div>"+
+    '<div class="t">'+(i.open?"left of "+esc(money(i.total,i.cur))+" · ":"")+'<span class="st '+i.st+'">'+esc(stLabel(l,i.st))+"</span></div></div>";
   h+='<div class="bar" aria-label="'+pct+'% paid"><span style="width:'+pct+'%"></span></div>';
+  let dueDraw=null;
   if(i.open){
-    h+='<div class="card"><h3 id="loan-due">'+esc(l.due?(lend?"Payback day · ":"Return by · ")+dayLabel(l.due):"No due date yet")+'</h3>'+
-      '<div class="chips" style="margin-top:8px"><button class="chip" data-act="loan-ext" data-v="1">+1 day</button><button class="chip" data-act="loan-ext" data-v="7">+1 week</button></div>'+
-      '<div style="margin-top:10px">'+dateField("f-due2",l.due||"",{min:today(),opt:true,none:"Pick a day",label:"Change due date"})+"</div></div>";
+    dueDraw=i.draws.find(t=>t.due===i.nextDue)||i.draws[i.draws.length-1]||null;
+    F.dueDraw=dueDraw?dueDraw.id:null;
+    h+='<div class="card"><h3 id="loan-due">'+esc(i.nextDue?(lend?"Payback day · ":"Return by · ")+dayLabel(i.nextDue):"No due date yet")+'</h3>'+
+      (dueDraw?'<div style="margin-top:10px">'+dateField("f-due2",i.nextDue||"",{min:today(),opt:true,none:"Pick a day",label:"Change due date"})+"</div>":"")+"</div>";
     const payAccs=activeAccounts().filter(a=>a.currency===i.cur);
     h+='<div class="card"><h3>'+(lend?"Got money back?":"Paid some back?")+'</h3><p class="muted small" style="margin:0">Part of it is fine too.</p>'+
-      '<div class="amtwrap"><span class="cur">'+esc(i.cur)+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" value="'+esc(i.left)+'" aria-label="Amount"></div>'+
+      amtField("f-amt",i.cur,String(i.left))+
       '<div class="lbl">'+(lend?"Into":"From")+"</div>"+accChips("f-acc",F.account,null,payAccs)+
       '<div style="margin-top:12px">'+dateField("f-date",today(),{max:today()})+"</div>"+
       '<div class="gap"></div><button class="btn" data-act="loan-pay">'+ic("check")+"Record payment</button></div>";
   }
   const hist=S.txns.filter(t=>t.type==="loan"&&t.loan===l.id).sort(byNewest);
   h+='<div class="sec">History</div><div class="list">'+hist.map(t=>{const a=acc(t.account);
-    const r=runBal()[t.id]||{},more=t.principal?(lend?"Lent from ":"Borrowed into ")+(a?a.name:"?")+" on "+dayLabel(t.date)
+    const r=runBal()[t.id]||{},canDel=!t.principal||i.draws.length>1,
+      more=t.principal?(lend?"Lent from ":"Borrowed into ")+(a?a.name:"?")+" on "+dayLabel(t.date)+(t.due?" · due "+dayLabel(t.due):"")
       :dayLabel(t.date)+" · "+(lend?"into ":"from ")+(a?a.name:"?")+" · "+(r.ls==="cleared"?(lend?"this cleared the lending":"this cleared the loan"):money(r.left||0,i.cur)+" left after this");
     return '<div class="tx exp" data-act="row-exp">'+emblem(t.principal?LOAN_EMB[l.kind]:{i:"paid",c:"#15a06f"},"em")+'<span class="mid"><div class="d">'+esc(t.principal?(lend?"Lent":"Borrowed"):(lend?"Got back":"Paid back"))+'</div>'+(t.principal?"":'<div class="s">'+loanPill(t)+"</div>")+"</span>"+
-      '<span class="a '+(t.dir==="in"?"got":"spent")+'">'+esc(money(t.amount,i.cur))+"</span>"+'<span class="chev">'+ic("down")+"</span>"+'<div class="more">'+esc(more)+(t.principal?"":'<button class="btn text dng mdel" data-act="loanpay-del" data-v="'+t.id+'">'+ic("delete")+"Delete this payment</button>")+"</div></div>";}).join("")+"</div>";
+      '<span class="a '+(t.dir==="in"?"got":"spent")+'">'+esc(money(t.amount,i.cur))+"</span>"+'<span class="chev">'+ic("down")+"</span>"+
+      '<div class="more">'+esc(more)+'<div class="medit"><button class="btn text" data-act="loandraw-edit" data-v="'+t.id+'">'+ic("edit")+"Edit</button>"+
+      (canDel?'<button class="btn text dng" data-act="loanpay-del" data-v="'+t.id+'">'+ic("delete")+(t.principal?"Delete this entry":"Delete this payment")+"</button>":"")+"</div></div></div>";}).join("")+"</div>";
   if(l.note)h+='<p class="muted small" style="margin:12px 4px 0">'+esc(l.note)+"</p>";
   h+='<div class="gap"></div><div class="gap"></div>';
   if(i.st==="cleared"&&i.pays.length)h+='<button class="btn tonal" data-act="loan-reopen">'+ic("reset")+"Reopen · undo last payment</button><div class=\"gap\"></div>";
@@ -1114,6 +1220,35 @@ function loanOpen(id,focusPay){
   openSheet(loanWho(l),h);
   if(focusPay)setTimeout(()=>{const el=$("#f-amt");if(el){el.focus();el.select();}},60);
 }
+function loanDrawEdit(txnId){
+  if(!F||F.kind!=="loan")return;
+  const l=loan(F.id);if(!l)return;
+  const t=S.txns.find(x=>x.id===txnId);if(!t)return;
+  const i=loanInfo(l),lend=l.kind==="lend";
+  F.editTxn=txnId;F.editAcc=t.account;
+  const accs=activeAccounts().filter(a=>a.currency===i.cur);
+  let h=amtField("ed-amt",i.cur,String(t.amount));
+  h+='<div class="lbl">Account</div>'+accChips("ed-acc",t.account,null,accs);
+  h+='<div class="field"><span>Date</span>'+dateField("ed-date",t.date,{max:today()})+"</div>";
+  if(t.principal)h+='<div class="field"><span>Due (optional)</span>'+dateField("ed-due",t.due||"",{min:t.date,opt:true,none:"No due date"})+"</div>";
+  h+='<div class="gap"></div><button class="btn" data-act="loandraw-save">'+ic("check")+"Save</button>";
+  openSheet2(t.principal?(lend?"Edit lending":"Edit loan"):"Edit payment",h);
+}
+function saveLoanDraw(){
+  if(!F||!F.editTxn)return;
+  const l=loan(F.id);if(!l)return;
+  const amt=evalAmt(($("#ed-amt")||{}).value);
+  if(!(amt>0)){snack("Enter an amount");return;}
+  const acc2=F.editAcc;if(!acc(acc2)){snack("Pick an account");return;}
+  const dateEl=$("#ed-date"),date2=dateEl?dateEl.dataset.v:"";
+  if(!date2){snack("Pick a date");return;}
+  const dueEl=$("#ed-due"),setDue=!!dueEl,due2=dueEl?dueEl.dataset.v||"":"";
+  const txnId=F.editTxn;
+  const mutate=()=>{const t=S.txns.find(x=>x.id===txnId);if(!t)return;
+    t.amount=amt;t.account=acc2;t.date=date2;
+    if(setDue)t.due=due2;};
+  guardOverdraw(mutate,date2,()=>{closeSheet2();closeSheet();withUndo("Saved",mutate,{row:l.id});});
+}
 function saveLoan(){
   const v=readVals(),person=$("#f-person").value.trim(),amt=evalAmt(v.amount),due=$("#f-due").dataset.v,lend=F.lk==="lend";
   if(!person){snack(lend?"Who did you lend to?":"Who lent you the money?");return;}
@@ -1121,15 +1256,18 @@ function saveLoan(){
   if(!acc(F.account)){snack("Pick an account");return;}
   if(!v.date){snack("Pick a date");return;}
   if(due&&due<v.date){snack("That date is before the loan itself");return;}
-  const l={id:newId(),ts:Date.now(),kind:F.lk,person,amount:amt,account:F.account,date:v.date,due,note:(v.note||"").trim(),status:"open"};
-  const pid=newId();
+  const account=F.account,acct=acc(account),date=v.date,note=(v.note||"").trim();
+  let merge=null;
+  if(F.merge){const ml=loan(F.merge);if(ml&&ml.kind===F.lk&&loanInfo(ml).open&&loanInfo(ml).cur===acct.currency)merge=ml;}
+  const pid=newId(),ts=Date.now(),l=merge||{id:newId(),kind:F.lk,person,account,date,note,status:"open"};
   const mutate=()=>{
-    S.loans.push(Object.assign({},l));
-    S.txns.push({id:pid,ts:l.ts,type:"loan",dir:lend?"out":"in",loan:l.id,principal:true,amount:amt,account:l.account,date:l.date,note:""});
+    if(!merge)S.loans.push(Object.assign({},l));
+    else{const l2=loan(l.id);if(l2)l2.account=account;}
+    S.txns.push({id:pid,ts,type:"loan",dir:lend?"out":"in",loan:l.id,principal:true,amount:amt,account,date,due,note});
   };
-  guardOverdraw(mutate,l.date,()=>{
-    S.settings.lastAcc=l.account;closeSheet();
-    withUndo((lend?"Lent ":"Borrowed ")+money(amt,acc(l.account).currency)+(lend?" to ":" from ")+person,mutate,{row:l.id});
+  guardOverdraw(mutate,date,()=>{
+    S.settings.lastAcc=account;closeSheet();
+    withUndo((lend?"Lent ":"Borrowed ")+money(amt,acct.currency)+(lend?" to ":" from ")+person,mutate,{row:l.id});
     askNotify();
   });
 }
@@ -1150,7 +1288,7 @@ function overpay(l,i,amt,account,date){
     lend?"Track as loan":"Track as lending",()=>{
       const mutate=()=>{
         if(i.left>0)S.txns.push({id:pid,ts,type:"loan",dir:lend?"in":"out",loan:l.id,amount:i.left,account,date,note:""});
-        S.loans.push({id:nid,ts,kind:lend?"borrow":"lend",person:l.person,amount:extra,account,date,due:"",note:"",status:"open"});
+        S.loans.push({id:nid,ts,kind:lend?"borrow":"lend",person:l.person,account,date,note:"",status:"open"});
         S.txns.push({id:qid,ts:ts+1,type:"loan",dir:lend?"in":"out",loan:nid,principal:true,amount:extra,account,date,note:""});
       };
       guardOverdraw(mutate,date,()=>{closeSheet();
@@ -1182,7 +1320,12 @@ function setArchived(id,on){
   withUndo(on?a.name+" archived":a.name+" is back",()=>{acc(id).archived=on;},{row:id});
 }
 /* the snooze: move the due date on from whichever is later, the old due date or today */
-function extendLoan(l,days){l.due=addDays(l.due&&l.due>today()?l.due:today(),days);}
+function extendLoan(l,days){
+  const i=loanInfo(l);
+  const t=i.draws.find(d=>d.due===i.nextDue)||i.draws[i.draws.length-1];
+  if(!t)return;
+  t.due=addDays(t.due&&t.due>today()?t.due:today(),days);
+}
 
 /* ---------- Assets / Liabilities tabs ---------- */
 /* History + Settings, always one tap away in the top bar */
@@ -1253,8 +1396,8 @@ function syncReminders(){
   if(!(window.Android&&Android.setReminders))return;
   const r=S.settings.remind||{},tm=/^\d\d:\d\d$/.test(r.time)?r.time:"21:00";
   const last=S.txns.reduce((m,t)=>{const c=t.ts?iso(new Date(t.ts)):t.date,d=c>t.date?c:t.date;return d>m?d:m;},"");
-  const dues=r.dues===false?[]:S.loans.map(l=>({l,i:loanInfo(l)})).filter(x=>x.i.open&&x.l.due)
-    .map(({l,i})=>({id:l.id,date:l.due,kind:l.kind,who:loanWho(l),amount:money(i.left,i.cur)}));
+  const dues=r.dues===false?[]:S.loans.map(l=>({l,i:loanInfo(l)})).filter(x=>x.i.open&&x.i.nextDue)
+    .map(({l,i})=>({id:l.id,date:i.nextDue,kind:l.kind,who:loanWho(l),amount:money(i.left,i.cur)}));
   try{Android.setReminders(JSON.stringify({daily:{on:r.daily!==false,h:+tm.slice(0,2),m:+tm.slice(3)},lastEntry:last,dues}));}catch(e){}
 }
 function askNotify(){
@@ -1386,7 +1529,7 @@ function closeSheet(){
 function openSheet2(title,body){
   $("#sheet2").innerHTML='<div class="sheet s2" data-act="sheet2-bg"><div class="p" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="handle"></div><div class="h"><h2>'+esc(title)+'</h2><button class="icon" data-act="close2" aria-label="Close">'+ic("close")+"</button></div>"+body+"</div></div>";
 }
-function closeSheet2(){$("#sheet2").innerHTML="";CURPICK=null;ICPICK=null;}
+function closeSheet2(){$("#sheet2").innerHTML="";CURPICK=null;ICPICK=null;if(F){F.editTxn=null;F.editAcc=null;}}
 const focusAmt=()=>setTimeout(()=>{const el=$("#f-amt");if(el)el.focus();},60);
 /* update toggle buttons inside the open sheet without rebuilding it */
 function setPressed(act,v){$("#sheet").querySelectorAll('[data-act="'+act+'"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));}
@@ -1481,7 +1624,7 @@ function txSheet(id,type,catId){
   else h+='<button class="catchip" id="f-catchip" data-act="f-showcats" aria-expanded="false"'+(k?"":" hidden")+">"+(k?catChipInner(k):"")+"</button>"+
     '<div class="lbl" id="f-catlbl" style="margin-top:0"'+(k?" hidden":"")+'>What was it for?</div>'+
     '<div class="catgrid" id="f-catgrid" style="margin-top:8px"'+(k?" hidden":"")+">"+catBtns(list,F.cat)+"</div>";
-  h+='<div class="amtwrap"><span class="cur" id="amt-cur">'+esc(a?a.currency:"")+'</span><input id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(t?String(t.amount):"")+'" aria-label="Amount"></div>';
+  h+=amtField("f-amt",a?a.currency:"",t?String(t.amount):"","amt-cur");
   h+='<div class="lbl">'+(inc?"Into":"Paid from")+"</div>"+accChips("f-acc",F.account,null,accChoices(F.account));
   h+='<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="'+esc(t?t.note:"")+'" aria-label="Note"><div style="flex:0 0 150px">'+dateField("f-date",t?t.date:entryDate(),{max:today()})+"</div></div>";
   h+='<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">'+ic("check")+(id?"Save changes":"Save")+"</button>";
@@ -1503,7 +1646,7 @@ function trSheet(id,from){
   let h='<div class="lbl" style="margin-top:4px">From</div>'+accChips("tr-from",F.from,null,list);
   h+='<div style="display:flex;justify-content:center;margin:4px 0 -8px"><button class="icon" data-act="tr-swap" aria-label="Swap from and to">'+ic("swapv")+"</button></div>";
   h+='<div class="lbl">To</div>'+accChips("tr-to",F.to,F.from,list);
-  h+='<div class="amtwrap"><span class="cur" id="tr-cur"></span><input id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(t?String(t.amount):"")+'" aria-label="Amount sent"></div>';
+  h+=amtField("f-amt","",t?String(t.amount):"","tr-cur","Amount sent");
   h+='<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(t&&t.toAmount!=null?String(t.toAmount):"")+'"></label>';
   h+='<label class="field" id="fee-wrap"'+(F.showFee?"":" hidden")+'><span id="fee-lbl"></span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="'+esc(fee?String(fee.amount):"")+'"></label>';
   h+='<button class="btn text" id="fee-btn" data-act="tr-fee" style="width:auto;margin-top:6px;padding:0 12px"'+(F.showFee?" hidden":"")+">"+ic("add")+"Add a fee (ATM, cash-out)</button>";
@@ -1552,7 +1695,7 @@ function accOpen(id){
   let h='<div class="hero">'+emblem(accEmb(a),"cprev")+'<div class="t">'+esc(typeName(a.type))+" · "+esc(a.currency)+(a.archived?" · archived":"")+'</div><div class="v">'+esc(money(bal,a.currency))+"</div>"+
     (start!==bal?'<div class="t">Started today with '+esc(money(start,a.currency))+"</div>":"")+"</div>";
   h+='<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>'+
-    '<div class="amtwrap"><span class="cur">'+esc(a.currency)+'</span><input id="f-actual" inputmode="decimal" autocomplete="off" placeholder="'+esc(r2(bal))+'" aria-label="Actual balance"></div>'+
+    '<div class="amtwrap"><span class="cur">'+esc(a.currency)+'</span><input id="f-actual" inputmode="decimal" autocomplete="off" placeholder="'+esc(r2(bal))+'" aria-label="Actual balance">'+calcBtn("f-actual")+"</div>"+calcPanelHtml("f-actual")+
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
   h+='<div class="gap"></div><div class="row">'+(a.archived?'<button class="btn tonal" data-act="acc-unarch">'+ic("reset")+"Show again</button>":'<button class="btn tonal" data-act="acc-arch">'+ic("archive")+"Archive</button>")+
     '<button class="btn tonal" data-act="hist-acc" data-v="'+a.id+'">'+ic("list")+"History</button></div>";
@@ -1777,8 +1920,9 @@ document.addEventListener("click",ev=>{
     case "loan-save":saveLoan();break;
     case "loan-open":loanOpen(v);break;
     case "loan-pay":payLoan();break;
-    case "loan-ext":{const l=loan(F.id);if(!l)return;extendLoan(l,+v);commit();
-      $("#loan-due").textContent=(l.kind==="lend"?"Payback day · ":"Return by · ")+dayLabel(l.due);setDateField($("#f-due2"),l.due);snack("Now due "+dayLabel(l.due));break;}
+    case "loandraw-edit":loanDrawEdit(v);break;
+    case "loandraw-save":saveLoanDraw();break;
+    case "ed-acc":F.editAcc=v;setPressed("ed-acc",v);break;
     case "loanpay-del":{const id=v;closeSheet();withUndo("Payment deleted",()=>{S.txns=S.txns.filter(x=>x.id!==id);});break;}
     case "loan-writeoff":{const l=loan(F.id);if(!l)return;const lend=l.kind==="lend",back=l.status==="writeoff";closeSheet();
       withUndo(back?"Reopened":lend?"Written off":"Marked as forgiven",()=>{const x=loan(l.id);x.status=back?"open":"writeoff";});break;}
@@ -1829,7 +1973,9 @@ document.addEventListener("click",ev=>{
       if(F.type!=="income"){const chip=$("#f-catchip");chip.innerHTML=catChipInner(cat(v));chip.hidden=false;chip.setAttribute("aria-expanded","false");
         $("#f-catgrid").hidden=true;$("#f-catlbl").hidden=true;focusAmt();}
       break;}
-    case "f-acc":{F.account=v;setPressed("f-acc",v);const c=$("#amt-cur");if(c)c.textContent=acc(v).currency;break;}
+    case "f-acc":{F.account=v;setPressed("f-acc",v);const c=$("#amt-cur");if(c)c.textContent=acc(v).currency;
+      if(F.kind==="loanf"){if(F.merge){const ml=loan(F.merge);if(!ml||loanInfo(ml).cur!==acc(v).currency)F.merge=null;}personSuggest(($("#f-person")||{}).value||"");mergeHint();}
+      break;}
     case "tx-save":saveTx();break;
     case "row-exp":el.classList.toggle("open");break;
     case "tx-del":{const id=F.id;closeSheet();withUndo("Deleted",()=>deleteEntries([id]));break;}
@@ -1899,6 +2045,16 @@ document.addEventListener("click",ev=>{
     case "cat-new":if(v==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}catForm(null,v);break;
     case "cat-back":{const c=S.cats.find(x=>x.id===v);if(c&&c.kind==="out"&&outCats().length>=24){snack("Up to 24 spending categories");return;}if(c){c.hidden=false;commit();snack(c.name+" is back");}break;}
     case "f-col":F.col=v;F.cSet=true;setPressed("f-col",v);prevUpd();break;
+    case "calc-toggle":{const panel=$("#calc-"+v);if(!panel)break;if(panel.hidden)calcOpen(v,el);else calcClose(v,el,true);break;}
+    case "calc-key":{
+      if(!CALC)break;const cur=CALC.expr,OP=/[+\-×÷]$/;
+      if(v==="⌫")CALC.expr=cur.slice(0,-1);
+      else if(v==="+"||v==="−"||v==="×"||v==="÷"){if(!cur&&v!=="−")break;CALC.expr=OP.test(cur)?cur.slice(0,-1)+v:cur+v;}
+      else if(v==="."){const m=cur.match(/(\d*\.?\d*)$/);if(m&&m[0].includes("."))break;CALC.expr=cur+".";}
+      else CALC.expr=cur+v;
+      const inp=$("#"+CALC.id);if(inp){inp.value=CALC.expr;inp.dispatchEvent(new Event("input",{bubbles:true}));}
+      break;}
+    case "f-person-pick":{const el2=$("#f-person");if(el2)el2.value=(loan(v)||{}).person||"";F.merge=v;$("#f-person-sug").hidden=true;mergeHint();break;}
     case "cat-save":{
       const name=$("#f-cname").value.trim(),e=F.e||"🏷️",i=F.i;if(!name){snack("Give it a name");return;}
       if(F.id)Object.assign(S.cats.find(c=>c.id===F.id),{name,e,i,c:F.col});
@@ -1932,6 +2088,8 @@ document.addEventListener("input",ev=>{
   else if(id==="cur-q")curList(ev.target.value);
   else if(id==="ic-q")icList(ev.target.value);
   else if(id==="hx-in")hexPreview();
+  else if(id==="f-person"&&F&&F.kind==="loanf"){F.merge=null;mergeHint();personSuggest(ev.target.value);}
+  else if(id==="f-amt"&&F&&F.kind==="loanf")mergeHint();
 });
 document.addEventListener("change",ev=>{
   const el=ev.target;

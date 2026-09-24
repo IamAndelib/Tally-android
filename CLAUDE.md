@@ -37,10 +37,11 @@ Built originally in a claude.ai chat; continue development from here.
     `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
 - All app logic is one self-contained file: `app/src/main/assets/index.html` (vanilla JS, no framework, no build step).
   The only other asset is `icons.js` (see Emblems).
-  - State `S = {v:5, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`.
     `migrate()` upgrades any saved state or backup (v1 included) on load/restore without changing balances
-    (v4: emblems; built-in categories still on their old default emoji/colour get the new emblem/colour, user choices are kept).
+    (v4: emblems; built-in categories still on their old default emoji/colour get the new emblem/colour, user choices are kept.
+    v6: loans become multi-draw — for each old loan with a `due`, that date moves onto its one existing principal transaction).
   - Account: `{id, name, type, currency, opening, archived, i?, e?, c?}` (emblem only stored when customised; else type default).
     `type` is a built-in key (`TYPES`: bank, wallet, cash, card, savings) or the id of a user type in `S.types = [{id, name, i, c}]`
     ("+ Add new" chip in the account form). Hold any type chip to remove it when no account uses it: built-ins are only
@@ -51,15 +52,32 @@ Built originally in a claude.ai chat; continue development from here.
     - `expense` / `income` (+ `cat`; a transfer fee also has `feeOf`),
     - `transfer` (+ `to`, `toAmount` when currencies differ, `feeId` of the linked fee expense),
     - `adjust` — balance fix; signed `amount`; changes the balance but never counts as spent/received.
-    - `loan` — `{dir:'in'|'out', loan:id, principal?}`: money moving for a loan/lending; changes the balance, never spent/received.
-  - Loan: `{id, kind:'borrow'|'lend', person, amount, account, date, due, note, status:'open'|'writeoff'}`. Paid/left/status
-    are derived in `loanInfo()` (Active, Partly paid, Overdue, Cleared, Written off/Forgiven). `extendLoan()` moves the due
-    date from the later of the old due date and today (the notification's +1 day uses the same rule).
-    Loan rows and the loan detail show the account the money came from (lend) or went into (borrow).
+    - `loan` — `{dir:'in'|'out', loan:id, principal?, due?}`: money moving for a loan/lending; changes the balance, never
+      spent/received. A `principal:true` entry is a draw (money lent/borrowed) and may carry its own optional `due`
+      (`YYYY-MM-DD`); a non-principal entry is a payment against the shared pool.
+  - Loan: `{id, kind:'borrow'|'lend', person, account, date, note, status:'open'|'writeoff'}` — a **person tab**, not a
+    single amount. `amount`/`due` are never stored on the Loan itself, only derived; `account` is the most recently
+    drawn-on account (updated whenever a new draw merges in) and `date` is the first draw's date (kept fixed).
+    `loanInfo(l)` derives everything: `draws` (principal txns, oldest→newest), `pays` (payment txns), `total`/`paid`/`left`,
+    `cur` (currency of the newest draw's account), `nextDue` (earliest non-empty due among draws), `st`/`open`
+    (Active, Partly paid, Overdue, Cleared, Written off/Forgiven). **Trade-off:** payments reduce the shared pool, not a
+    specific draw — which draw is due when is tracked, but which draw has been paid off is not. `extendLoan(l,days)`
+    (only reachable via the closed-app notification's +1 day/+1 week, native side unchanged) now bumps the due date of
+    the draw nearest its due (or the newest draw), from the later of that draw's due and today.
+    Loan rows and the loan detail show the account the money came from (lend) or went into (borrow); the hero line reads
+    "You lent from X · date" for a single draw, or "N lendings/loans since date" once merged.
+    **Suggested people + merging:** typing a name in the Loan/Lend form suggests (as chips, `personCandidates()`) people
+    with an already-open loan of the same kind and currency as the picked account, most recently drawn on first; picking
+    one sets `F.merge` and shows a running-total hint (`mergeHint()`) — saving then adds a new principal draw onto that
+    existing loan instead of starting a new one. Changing the name clears the merge target; switching the account
+    re-validates it against the new currency.
     `reopenLoan()`: a written-off one just reopens; a fully paid one drops its latest payment (user's choice), with Undo.
     Paying back more than is left → `overpay()` offers to clear it and track the extra as a new loan the other way.
-    The loan sheet's history rows are compact (title + status pill only) and expand on tap (`row-exp`): date, account, what was
-    left after that payment, Delete.
+    The loan sheet's history rows are compact (title + status pill only) and expand on tap (`row-exp`): date, account, due
+    (principal rows), what was left after that payment; each row has **Edit** (`loandraw-edit`, opens `#sheet2` with
+    amount/account/date and, for a principal, an optional due — saved via `loandraw-save`, closing the whole sheet like a
+    payment save) and **Delete**, hidden on a principal row when it is the loan's only remaining draw. There are no
+    +1 day/+1 week chips in the sheet any more — that action is reserved for the closed-app notification.
   - Other assets: `S.assets = [{id, name, i, e, c, value, currency}]` (value only, no entries).
   - Account sheet (`accOpen`): balance, "Doesn't match?" fix, then [Archive | History] or, when archived, [Show again | History];
     Edit account below (the edit form has Delete only for accounts without entries; no archive there).
@@ -73,6 +91,17 @@ Built originally in a claude.ai chat; continue development from here.
     `runBal()` (cached per render, `RBC`) = each account's balance right after each entry, plus loan-payment status; entry
     lists show it under the amount (Bluecoins-style), amounts coloured by money direction (spent red, got green, `--xfer` blue),
     and loan payments carry a "Partly paid" / "Cleared" pill.
+  - Calculator: `amtField(id,cur,val,curId,label)` (quick add, transfer's main amount, loan create/payment, the draw-edit
+    sheet, the account "Doesn't match?" fix) renders the amount input plus a toggle button (`calcBtn`, the bundled
+    `ICONS.calculate` glyph) and a hidden 4-column keypad (`calcPanelHtml`: `7 8 9 ÷ / 4 5 6 × / 1 2 3 − / ⌫ 0 . +`).
+    Tapping the toggle opens it (`calcOpen`: seeds `CALC={id,expr}` from the field's current value, makes the input
+    read-only so the system keyboard doesn't fight it for space); each key (`calc-key`) appends to `CALC.expr` and
+    live-writes it into the input, so the field doubles as the display. Tapping the same toggle again (`calcClose`)
+    evaluates the buffer (`calcEval`: left-to-right, `×`/`÷` folded into the left operand before summing `+`/`-` terms;
+    `null` on a malformed expression or ÷0, which just leaves the field as-is — no crash, no snack) and dispatches a
+    real `input` event so previews (transfer, balance fix) stay in sync. Deliberately **not** applied to transfer's
+    received amount/fee (`f-toamt`/`f-fee`, plain `.field` labels, not `.amtwrap`) or asset value (`f-aval`, laid out
+    beside a currency picker) — scope-trimmed to avoid layout rework.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
