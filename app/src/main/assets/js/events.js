@@ -505,6 +505,9 @@ document.addEventListener("click", ev => {
     case "calc-pos":
       calcTapCaret(v, el, ev.clientX, ev.clientY);
       break;
+    case "calc-kbd":
+      calcToKeyboard(v);
+      break;
     case "calc-key":
       calcKey(v);
       break;
@@ -535,6 +538,7 @@ document.addEventListener("click", ev => {
 });
 document.addEventListener("input", ev => {
   const id = ev.target.id;
+  if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
   if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-fee"].includes(id)) trPreview();
   else if (id === "f-actual") fixPreview();
   else if (id === "cur-q") curList(ev.target.value);

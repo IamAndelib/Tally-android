@@ -29,7 +29,11 @@ const ok = (c, m) => {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
-  const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
+  // while the calculator is open its own button is hidden; the keypad's keyboard button closes it (applying the result)
+  const act = async (a, v) => {
+    if (a === "calc-toggle" && (await page.isHidden(`[data-act="calc-toggle"][data-v="${v}"]`))) a = "calc-kbd";
+    return page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
+  };
   const settle = () => page.waitForTimeout(120);
   const type = async keys => {
     for (const k of keys) await page.click(`.calc [data-act="calc-key"][data-v="${k}"]`);

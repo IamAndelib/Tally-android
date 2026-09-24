@@ -242,6 +242,11 @@ function openSheet(title, body) {
     "</button></div>" +
     body +
     "</div></div>";
+  groupAmountInputs($("#sheet"));
+}
+/* amounts already in a new sheet (editing an entry, a loan's balance) show grouped like typed ones */
+function groupAmountInputs(root) {
+  root.querySelectorAll('input[inputmode="decimal"]').forEach(i => (i.value = groupDigits(i.value)));
 }
 function closeSheet() {
   closeSheet2();
@@ -271,6 +276,7 @@ function openSheet2(title, body) {
     "</button></div>" +
     body +
     "</div></div>";
+  groupAmountInputs($("#sheet2"));
 }
 function closeSheet2() {
   $("#sheet2").innerHTML = "";

@@ -15,10 +15,17 @@ const calcBtn = id =>
   CALC_ICON +
   "</button>";
 const CALC_KEYS = ["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "⌫", "0", ".", "+"];
+/* the keypad; its top bar shows the live result and the button back to the system keyboard */
 const calcPanelHtml = id =>
   '<div class="calc" id="calc-' +
   id +
-  '" hidden>' +
+  '" hidden><div class="calcbar"><span class="calcres" id="cr-' +
+  id +
+  '"></span><button type="button" class="icon kbdbtn" data-act="calc-kbd" data-v="' +
+  id +
+  '" aria-label="Use keyboard">' +
+  ic("keyboard") +
+  "</button></div>" +
   CALC_KEYS.map(
     k =>
       '<button type="button" class="' +
@@ -105,10 +112,41 @@ function calcMirrorSync(id) {
   if (!mirror) return;
   if (!CALC) {
     mirror.innerHTML = "";
+    const res = $("#cr-" + id);
+    if (res) res.textContent = "";
     return;
   }
   const p = Math.max(0, Math.min(CALC.expr.length, CALC.pos));
   mirror.innerHTML = esc(CALC.expr.slice(0, p)) + '<span class="blink"></span>' + esc(CALC.expr.slice(p));
+  calcCaretIntoView(mirror);
+  const res = $("#cr-" + id);
+  if (res) {
+    const v = /[+−×÷]/.test(CALC.expr.slice(1)) ? calcEval(CALC.expr) : null;
+    res.textContent = v == null ? "" : "= " + v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+}
+/* keeps the caret in view: as the expression grows the display slides left, like a calculator's */
+function calcCaretIntoView(mirror) {
+  const caret = mirror.querySelector(".blink");
+  if (!caret) return;
+  const x = caret.offsetLeft,
+    w = mirror.clientWidth,
+    room = 12;
+  if (x + room > mirror.scrollLeft + w) mirror.scrollLeft = x + room - w;
+  else if (x - room < mirror.scrollLeft) mirror.scrollLeft = Math.max(0, x - room);
+}
+/* holding the caret and dragging it (see gestures.js); near either edge the display scrolls along */
+function calcDragCaret(mirror, x) {
+  if (!CALC) return;
+  const r = mirror.getBoundingClientRect(),
+    edge = 24;
+  if (x < r.left + edge) mirror.scrollLeft -= 8;
+  else if (x > r.right - edge) mirror.scrollLeft += 8;
+  const pos = calcPosFromPoint(mirror, Math.max(r.left + 1, Math.min(r.right - 1, x)), r.top + r.height / 2);
+  if (pos != null && pos !== CALC.pos) {
+    CALC.pos = pos;
+    calcMirrorSync(CALC.id);
+  }
 }
 /* maps a tap's screen point to a character offset in CALC.expr, via the mirror's own text nodes */
 function calcPosFromPoint(mirror, x, y) {
@@ -134,8 +172,10 @@ function calcOpen(id, btn) {
     inp.readOnly = true;
     inp.setAttribute("inputmode", "none");
     inp.focus({ preventScroll: true });
-    const box = inp.closest(".amtbox");
+    const box = inp.closest(".amtbox"),
+      wrap = inp.closest(".amtwrap");
     if (box) box.classList.add("calcing");
+    if (wrap) wrap.classList.add("calcing");
   }
   const mirror = $("#cm-" + id);
   if (mirror) mirror.hidden = false;
@@ -143,7 +183,19 @@ function calcOpen(id, btn) {
   const panel = $("#calc-" + id);
   if (panel) panel.hidden = false;
   if (btn) btn.setAttribute("aria-expanded", "true");
-  if (inp) setTimeout(() => inp.scrollIntoView({ block: "center", behavior: "auto" }), 0);
+  if (inp) setTimeout(() => calcKeepFieldVisible(inp, panel), 0);
+}
+/* the keypad docks over the bottom of the screen: give the sheet room below its content and scroll the amount
+   line up so it sits just above the keypad */
+function calcKeepFieldVisible(inp, panel) {
+  const sheet = inp.closest(".p"),
+    line = inp.closest(".amtwrap") || inp;
+  if (sheet && panel) sheet.style.paddingBottom = panel.offsetHeight + 16 + "px";
+  const r = line.getBoundingClientRect(),
+    limit = (panel ? panel.getBoundingClientRect().top : innerHeight) - 12,
+    scroller = sheet || document.scrollingElement;
+  if (r.bottom > limit) scroller.scrollTop += r.bottom - limit;
+  else if (r.top < 8) scroller.scrollTop -= 8 - r.top;
 }
 function calcClose(id, btn, use) {
   const inp = $("#" + id);
@@ -155,8 +207,10 @@ function calcClose(id, btn, use) {
     inp.readOnly = false;
     inp.setAttribute("inputmode", "decimal");
     inp.dispatchEvent(new Event("input", { bubbles: true }));
-    const box = inp.closest(".amtbox");
+    const box = inp.closest(".amtbox"),
+      wrap = inp.closest(".amtwrap");
     if (box) box.classList.remove("calcing");
+    if (wrap) wrap.classList.remove("calcing");
   }
   const mirror = $("#cm-" + id);
   if (mirror) {
@@ -165,6 +219,8 @@ function calcClose(id, btn, use) {
   }
   const panel = $("#calc-" + id);
   if (panel) panel.hidden = true;
+  const sheet = inp && inp.closest(".p");
+  if (sheet) sheet.style.paddingBottom = "";
   if (btn) btn.setAttribute("aria-expanded", "false");
   if (CALC && CALC.id === id) CALC = null;
 }
@@ -174,6 +230,18 @@ function calcToggle(id, btn) {
   if (!panel) return;
   if (panel.hidden) calcOpen(id, btn);
   else calcClose(id, btn, true);
+}
+const calcToggleBtn = id => document.querySelector('[data-act="calc-toggle"][data-v="' + id + '"]');
+/* the keypad's keyboard button: applies the result, closes the calculator and opens the system keyboard */
+function calcToKeyboard(id) {
+  calcClose(id, calcToggleBtn(id), true);
+  const inp = $("#" + id);
+  if (!inp) return;
+  inp.focus();
+  const n = inp.value.length;
+  try {
+    inp.setSelectionRange(n, n);
+  } catch (e) {}
 }
 /* a tap on the field while the calculator is open moves the caret there */
 function calcTapCaret(id, mirror, x, y) {

@@ -138,11 +138,25 @@ Built originally in a claude.ai chat; continue development from here.
     left-to-right, `×`/`÷` folded into the left operand before summing `+`/`-` terms; `null` on a malformed
     expression or ÷0, which just leaves the field as-is — no crash, no snack), restores `inputmode="decimal"`, hides
     the mirror, and dispatches a real `input` event so previews (transfer, balance fix)
-    stay in sync. `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
+    stay in sync. Round 20: the toggle is a 44px tonal button (`--primary-container`); while open it is hidden
+    (`.amtwrap.calcing`) and the keypad's top bar (`.calcbar`) shows the live result (`#cr-<id>`, only once the
+    expression has an operator) and a keyboard button (`calc-kbd` → `calcToKeyboard()`: `calcClose(...,true)`, then focus
+    the input with the system keyboard). `.caretmirror` scrolls sideways (`overflow-x:auto`, `touch-action:pan-x`,
+    hidden scrollbar, 14px end padding); `calcCaretIntoView()` keeps the caret visible after every sync, so a long
+    expression slides left. A press within 28px of the caret grabs it (`LP.kind==="caret"` in `js/gestures.js` →
+    `calcDragCaret()`, which also scrolls near the edges); elsewhere a swipe scrolls natively and a tap places the caret.
+    `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
+    above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
+    `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
     back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
     received amount/fee (`f-toamt`/`f-fee`, plain `.field` labels, not `.amtwrap`) or asset value (`f-aval`, laid out
     beside a currency picker) — scope-trimmed to avoid layout rework.
+  - Amount inputs are exactly the `input[inputmode="decimal"]` ones (amtField fields, `f-open`, `f-toamt`, `f-fee`, `f-aval`):
+    they show thousands commas while typing (`formatAmountInput()` from the `input` listener, skipped while read-only in
+    calculator mode; caret kept beside the same digit; the keypad's "," becomes the decimal point or is dropped), and
+    `openSheet`/`openSheet2` group pre-filled values (`groupAmountInputs`, `groupDigits` in `js/core.js`, groups of three
+    for every currency). Readers always parse through `evalAmt()`, which strips the commas; never `parseFloat` a field.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
@@ -206,7 +220,7 @@ Built originally in a claude.ai chat; continue development from here.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
 - Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.0.0) is the release `versionName`; debug builds get
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.0) is the release `versionName`; debug builds get
     `-dev.<run>`. `versionCode` = `GITHUB_RUN_NUMBER` (per workflow file — keep `build-apk.yml`'s name).
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
     signed with the committed `app/debug.keystore` (android/androiddebugkey/android) so every CI build updates the last.
