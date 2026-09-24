@@ -54,7 +54,8 @@ Built originally in a claude.ai chat; continue development from here.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
     Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
     account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring, balance bar (opens the
-    period's entries), − / Transfer / + buttons. New entries default to the day being viewed.
+    period's entries; a "↺ Today" chip above it whenever Home isn't on today), − / Transfer / + buttons, then Loan / Lend
+    function buttons (own pastel tokens `--loan-*` / `--lend-*`, like `--minus-*` / `--plus-*`). New entries default to the day being viewed.
   - Ring: `ringLayout(n, W)` spaces n tiles evenly on a circle around the donut, clockwise from just left of 12 o'clock;
     tiles shrink as n grows, so it stays round and there is never a gap.
     `ringHTML(cats, {mode})` draws tiles, donut and leader lines for Home and the Settings preview. Donut slices are ordered

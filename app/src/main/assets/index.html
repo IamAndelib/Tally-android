@@ -19,6 +19,7 @@
   --spent:#BA1A1A;--spent-container:#FFDAD6;--on-spent-container:#410002;
   --got:#146C2E;--got-container:#A3F5A8;--on-got-container:#002106;
   --minus-bg:#FADCDD;--minus-fg:#9A4550;--plus-bg:#D3F0DC;--plus-fg:#2F6B45;
+  --loan-bg:#E9DDFF;--loan-fg:#4F2D8F;--lend-bg:#D4ECFB;--lend-fg:#0B5A86;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -30,6 +31,7 @@
   --spent:#FFB4AB;--spent-container:#93000A;--on-spent-container:#FFDAD6;
   --got:#88D990;--got-container:#005320;--on-got-container:#A3F5A8;
   --minus-bg:#4A3236;--minus-fg:#F6C1C6;--plus-bg:#2A4133;--plus-fg:#B5E4C1;
+  --loan-bg:#382F4F;--loan-fg:#D8C8FF;--lend-bg:#1F3A4C;--lend-fg:#B6DDF6;
   color-scheme:dark;}}
 :root[data-theme="dark"]{
   --primary:#BAC3FF;--on-primary:#08218A;--primary-container:#293CA0;--on-primary-container:#DEE0FF;
@@ -40,6 +42,7 @@
   --spent:#FFB4AB;--spent-container:#93000A;--on-spent-container:#FFDAD6;
   --got:#88D990;--got-container:#005320;--on-got-container:#A3F5A8;
   --minus-bg:#4A3236;--minus-fg:#F6C1C6;--plus-bg:#2A4133;--plus-fg:#B5E4C1;
+  --loan-bg:#382F4F;--loan-fg:#D8C8FF;--lend-bg:#1F3A4C;--lend-fg:#B6DDF6;
   color-scheme:dark;}
 </style>
 <style id="dyn"></style>
@@ -243,7 +246,13 @@ body.hasnav main{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 body.hasnav .snack{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 /* loans */
 .loanbtns{display:flex;gap:12px;margin-top:18px}
-.loanbtns .btn{flex:1}
+.loanbtns .fbtn{flex:1;height:64px;border-radius:24px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:1.05rem;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.06)}
+.fbtn.loan{background:var(--loan-bg);color:var(--loan-fg)}.fbtn.lend{background:var(--lend-bg);color:var(--lend-fg)}
+.fbtn .emb{width:32px;height:32px}
+.todayrow{display:flex;justify-content:flex-end;margin:10px 0 -4px}
+.todaychip{height:32px;padding:0 12px 0 8px;border-radius:16px;display:inline-flex;align-items:center;gap:4px;font-size:.85rem;font-weight:600;background:var(--primary-container);color:var(--on-primary-container)}
+.todaychip .ic{width:18px;height:18px}
+#ic-emo-box .field{text-align:center}#ic-emo-box #ic-emo{display:block;margin:0 auto}
 .st{display:inline-block;font-size:.7rem;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--surface-highest);color:var(--on-surface-variant)}
 .st.active{background:var(--secondary-container);color:var(--on-secondary-container)}
 .st.partly{background:var(--tertiary-container);color:var(--on-tertiary-container)}
@@ -378,6 +387,7 @@ const P={
  schedule:"M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
  history:"M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z",
  settings:"M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z",
+ reset:"M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 2.97-2.17 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93 0-4.42-3.58-8-8-8zm-6 8c0-1.65.67-3.15 1.76-4.24L6.34 7.34C4.9 8.79 4 10.79 4 13c0 4.08 3.05 7.44 7 7.93v-2.02c-2.83-.48-5-2.94-5-5.91z",
  edit:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
 };
 const ic=n=>'<svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="'+P[n]+'"/></svg>';
@@ -616,7 +626,7 @@ function emblem(o,cls,title){
     (p?'<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="'+p[0]+'"/></svg>':'<span class="emo">'+esc(o&&o.e||"•")+"</span>")+"</span>";
 }
 const accEmb=a=>({i:a.i||(a.e?"":TYPE_ICON[a.type]),e:a.e,c:a.c||TYPE_COL[a.type]});
-const LOAN_EMB={borrow:{i:"handshake",c:"#5f7389"},lend:{i:"volunteer_activism",c:"#0288d1"}};
+const LOAN_EMB={borrow:{i:"handshake",c:"#6a3fb5"},lend:{i:"volunteer_activism",c:"#0288d1"}};
 /* search: every word must match the start of a word in the name or tags; whole-word matches rank first */
 function iconSearch(q){
   const words=q.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),names=Object.keys(ICONS);
@@ -631,7 +641,7 @@ let ICPICK=null;
 function iconPicker(cur,color,onPick){
   openSheet2("Choose an emblem",'<div class="qbar"><input id="ic-q" type="search" placeholder="Search: coffee, car, gift…" autocomplete="off" aria-label="Search emblems"></div>'+
     '<div id="iclist" class="icgrid"></div><div id="ic-emo-box" hidden><label class="field"><span>Type an emoji</span><input id="ic-emo" maxlength="8" style="width:110px;text-align:center;font-size:1.5rem"></label><div class="gap"></div><button class="btn" data-act="ic-emo-ok">Use this emoji</button></div>'+
-    '<button class="btn text" data-act="ic-emoji" style="margin-top:8px">Use an emoji instead</button>');
+    '<button class="btn text" data-act="ic-emoji" style="margin:8px auto 0;width:auto">Use an emoji instead</button>');
   ICPICK={cur,color,onPick};icList("");
 }
 function icList(q){
@@ -736,11 +746,12 @@ function homeView(){
 
   const total=r2(act.filter(a=>a.currency===cur).reduce((s,a)=>s+b[a.id],0));
   const n=periodTxns().length;
+  if(!(V.period==="day"&&V.anchor===today()))h+='<div class="todayrow"><button class="todaychip" data-act="go-today" aria-label="Back to today">'+ic("reset")+"Today</button></div>";
   h+='<button class="balbar" data-act="entries">'+ic("list")+'<span class="l">Balance'+(n?" · "+n+" "+(n===1?"entry":"entries"):"")+"</span><b>"+esc(money(total,cur))+"</b></button>";
   h+='<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="Add spending">'+ic("remove")+'</button>'+
     '<button class="fab xfer" data-act="tr-new" aria-label="Transfer between accounts">'+ic("swap")+'<span>Transfer</span></button>'+
     '<button class="fab plus" data-act="add-in" aria-label="Add money received">'+ic("add")+"</button></div>";
-  h+='<div class="loanbtns"><button class="btn tonal" data-act="loan-new" data-v="borrow">'+emblem(LOAN_EMB.borrow,"sm")+'Loan</button><button class="btn tonal" data-act="loan-new" data-v="lend">'+emblem(LOAN_EMB.lend,"sm")+'Lend</button></div>';
+  h+='<div class="loanbtns"><button class="fbtn loan" data-act="loan-new" data-v="borrow">'+emblem(LOAN_EMB.borrow)+'Loan</button><button class="fbtn lend" data-act="loan-new" data-v="lend">'+emblem(LOAN_EMB.lend)+'Lend</button></div>';
   return h;
 }
 function checkCard(b,cur){
@@ -1421,6 +1432,7 @@ document.addEventListener("click",ev=>{
     case "pd-month":setPeriod({period:"month",anchor:v+"-01"});break;
     case "pd-today":setPeriod({period:PD.tab==="month"?"month":"day",anchor:today()});break;
     case "pd-close":closePop();break;
+    case "go-today":V.period="day";V.anchor=today();render();break;
     case "prev":shiftPeriod(-1);render();break;
     case "next":if(canNext()){shiftPeriod(1);render();}break;
     case "cur-next":{const cs=currencies();V.cur=cs[(cs.indexOf(viewCur())+1)%cs.length];render();break;}
