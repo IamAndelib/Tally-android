@@ -1,3 +1,4 @@
 - Tally opens on its logo instead of a blank white flash.
 - Today in the Day | Range | Month picker always goes back to today, also from the Month tab.
-- Smoother category arranging; categories pop and glow when tapped; system haptics.
+- Smoother category arranging; categories pop and glow when tapped; haptic clicks (with a switch).
+- Swipe between accounts in History.

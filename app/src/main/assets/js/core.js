@@ -245,6 +245,7 @@ let FX = {};
    A short vibration where the shell has no haptic() (older builds, a browser). */
 const HAPTIC_MS = { tap: 8, key: 6, tick: 5, long: 14, confirm: 12 };
 const buzz = kind => {
+  if (S.settings.haptics === false) return; // Settings → Feel → Vibration on tap
   try {
     if (window.Android && Android.haptic) Android.haptic(kind);
     else if (navigator.vibrate) navigator.vibrate(HAPTIC_MS[kind] || 8);

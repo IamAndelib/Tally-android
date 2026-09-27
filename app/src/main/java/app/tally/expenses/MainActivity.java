@@ -312,21 +312,21 @@ public class MainActivity extends Activity {
         /**
          * Haptic feedback: the phone's own tuned click / tick waveforms, played on the vibrator directly.
          * performHapticFeedback would follow the system "touch feedback" switch, which many phones ship turned off
-         * (while keyboards keep their own vibration setting), so it was never felt. "key" and "tick" are a light
-         * tick, "tap" and "confirm" a click, "long" a heavy click. The Vibrator is thread-safe: no UI thread needed.
+         * (while keyboards keep their own vibration setting), so it was never felt. "long" is a heavy click, everything
+         * else ("tap", "key", "tick", "confirm") a click: the lighter tick effect is too faint to feel on many phones.
+         * The Vibrator is thread-safe: no UI thread needed. The page skips the call when Settings → Vibration is off.
          */
         @JavascriptInterface
         public void haptic(final String kind) {
             Vibrator v = vibrator();
             if (v == null || !v.hasVibrator()) return;
             String k = kind == null ? "" : kind;
-            boolean light = k.equals("key") || k.equals("tick"), heavy = k.equals("long");
+            boolean heavy = k.equals("long");
             try {
                 if (Build.VERSION.SDK_INT >= 29) {
-                    v.vibrate(VibrationEffect.createPredefined(light ? VibrationEffect.EFFECT_TICK
-                            : heavy ? VibrationEffect.EFFECT_HEAVY_CLICK : VibrationEffect.EFFECT_CLICK));
+                    v.vibrate(VibrationEffect.createPredefined(heavy ? VibrationEffect.EFFECT_HEAVY_CLICK : VibrationEffect.EFFECT_CLICK));
                 } else {
-                    long ms = light ? 6 : heavy ? 14 : 8; // as HAPTIC_MS in js/core.js
+                    long ms = heavy ? 14 : 8; // as HAPTIC_MS in js/core.js
                     if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE));
                     else v.vibrate(ms);
                 }

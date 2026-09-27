@@ -491,6 +491,83 @@ const ago = n => {
   await page.evaluate(() => closeSheet());
   ok((await page.evaluate(() => window.__haptics)).includes("long"), "picking a category up gives a long-press haptic");
 
+  // ---- 15. a haptic click on every tap, and the Settings switch that turns them all off
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank, cash], txns: [], loans: [], assets: [] });
+  await page.evaluate(() => (window.__haptics = []));
+  await act("tr-new");
+  await settle();
+  ok((await page.evaluate(() => window.__haptics)).includes("tap"), "tapping Home's Transfer button clicks");
+  await page.evaluate(() => closeSheet());
+  await act("go", "settings");
+  await settle();
+  await act("haptics");
+  await settle();
+  ok((await state()).settings.haptics === false, "the Vibration on tap switch turns haptics off (saved)");
+  await page.evaluate(() => (window.__haptics = []));
+  await act("theme", "dark");
+  await act("theme", "system");
+  ok((await page.evaluate(() => window.__haptics)).length === 0, "with it off, taps don't vibrate");
+  await act("haptics");
+  await settle();
+  ok(
+    (await state()).settings.haptics === true && (await page.evaluate(() => window.__haptics)).length === 1,
+    "turning it back on clicks once"
+  );
+
+  // ---- 16. History: swipe sideways between account filters (All → Bank → Cash and back)
+  await seed({
+    v: 6,
+    settings: { cur: "CAD" },
+    accounts: [bank, cash],
+    txns: [
+      { id: "t1", ts: 1, date: today(), type: "expense", amount: 5, account: "a", cat: "food", note: "" },
+      { id: "t2", ts: 2, date: today(), type: "expense", amount: 7, account: "c", cat: "food", note: "" },
+    ],
+    loans: [],
+    assets: [],
+  });
+  const tctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
+  const tp = await tctx.newPage();
+  await tp.goto(appUrl);
+  await tp.evaluate(
+    s => localStorage.setItem("tally:v1", s),
+    await page.evaluate(() => localStorage.getItem("tally:v1"))
+  );
+  await tp.reload();
+  await tp.evaluate(() => {
+    V.screen = "history";
+    render();
+  });
+  const tcdp = await tctx.newCDPSession(tp);
+  const T = (type, x, y) =>
+    tcdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  const swipe = async (x0, y0, dx, dy = 0) => {
+    await T("touchStart", x0, y0);
+    await T("touchMove", x0 + dx / 2, y0 + dy / 2);
+    await T("touchMove", x0 + dx, y0 + dy);
+    await T("touchEnd");
+    await tp.waitForTimeout(200);
+  };
+  const hAcc = () => tp.evaluate(() => V.hAcc);
+  const list = await (await tp.$("#app .list")).boundingBox();
+  const lx = list.x + list.width / 2,
+    ly = list.y + 30;
+  await swipe(lx + 60, ly, -120);
+  ok((await hAcc()) === "a", "swipe left: All → Bank");
+  await swipe(lx + 60, ly, -120);
+  const onCash = await tp.evaluate(() => [V.hAcc, $('.strip [data-v="c"]').getAttribute("aria-pressed")]);
+  ok(onCash[0] === "c" && onCash[1] === "true", "swipe left again: Cash, its chip pressed " + onCash);
+  await swipe(lx + 60, ly, -120);
+  ok((await hAcc()) === "c", "at the last account it stops");
+  await swipe(lx - 60, ly, 120);
+  ok((await hAcc()) === "a", "swipe right: back to Bank");
+  await swipe(lx - 60, ly, 40, 120);
+  ok((await hAcc()) === "a", "a mostly vertical swipe changes nothing");
+  const strip = await (await tp.$(".strip")).boundingBox();
+  await swipe(strip.x + strip.width / 2 + 60, strip.y + strip.height / 2, -120);
+  ok((await hAcc()) === "a", "a swipe on the chip strip itself changes nothing");
+  await tctx.close();
+
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

@@ -15,7 +15,6 @@ document.addEventListener("click", ev => {
   if (!el) return;
   const act = el.dataset.act,
     v = el.dataset.v;
-  if (el.classList.contains("cat")) buzz("tap"); // category tiles: a light click with their pop
   if (act === "sheet-bg") {
     if (ev.target === el) closeSheet();
     return;
@@ -29,6 +28,7 @@ document.addEventListener("click", ev => {
     return;
   }
   if (el.tagName === "SELECT" || el.tagName === "INPUT") return;
+  if (act !== "calc-key") buzz("tap"); // every tap clicks (keypad keys already did, on touch-down)
   switch (act) {
     case "home":
       V.screen = "home";
@@ -104,6 +104,9 @@ document.addEventListener("click", ev => {
       break;
     case "rem-dues":
       toggleReminder("dues");
+      break;
+    case "haptics":
+      toggleHaptics();
       break;
     case "period-open":
       periodDialog(v === "hist" ? HP : V);
@@ -436,9 +439,7 @@ document.addEventListener("click", ev => {
       }
       break;
     case "hacc":
-      V.hAcc = v;
-      if (V.sel) V.sel = new Set();
-      render();
+      setHistAcc(v);
       break;
     case "sel-start":
       V.sel = new Set();

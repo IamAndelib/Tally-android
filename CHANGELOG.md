@@ -13,8 +13,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
   appears, also when opened from the home-screen widget. If Tally is already running, the widget, quick add and
   reminders go straight back into it without the splash.
 - Tapping a category makes its icon pop and glow instead of showing a grey box; holding and dragging one in Settings
-  lifts just its slightly enlarged icon. Taps, keypad keys, long-presses, drags and saves use the phone's own crisp
-  haptic clicks and ticks instead of a plain buzz.
+  lifts just its slightly enlarged icon.
+- Haptics: every tap, keypad key, long-press and save gives a crisp click from the phone's own haptics, and dragging a
+  category clicks as it passes each slot. Settings → Feel → "Vibration on tap" turns it off.
+- In History, swipe sideways to move between the account filters (All → each account and back).
 - Arranging spending categories in Settings feels smoother and more predictable: the dragged category goes to the
   slot it's over (anywhere around the ring, wherever you grabbed it), neighbours make way the short way round instead
   of the whole ring shifting, tiles slide into place, and the category glides into its slot when you let go.

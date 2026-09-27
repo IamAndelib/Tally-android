@@ -226,6 +226,9 @@ Built originally in a claude.ai chat; continue development from here.
     its own text width and get clipped, because `button{overflow:hidden}` (kept globally so the press-state layer
     stays inside each button's rounded corners) disables a flex item's usual "don't shrink past your content" floor;
     the Home account-balance strip's own buttons (`.acc`) already carried the equivalent `flex:none` for this reason.
+    A sideways swipe on the History page (not on the strip, which scrolls itself) moves to the neighbouring filter
+    chip — finger left = next (All → first account → …), right = back, stopping at the ends (`hsw` in `js/gestures.js`,
+    `histAccs()` + `setHistAcc(id)` in `js/screens.js`, shared with the chips; `body.hist #app{touch-action:pan-y}`).
   - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent,
     and removes a loan (with its payments) only when **all** its draws are selected — otherwise just those entries go.
     After any draw is added/edited/deleted, `relinkLoan(id)` resets `l.account` (newest draw's) and `l.date` (oldest
@@ -255,11 +258,13 @@ Built originally in a claude.ai chat; continue development from here.
     their icon pops (`scale(1.14)`) and, on Home, glows in its own colour (`--ec`, set inline by `emblem()`); in
     Settings (ring + grid) only the enlargement, and a dragged category's ghost is just its icon at the same
     `scale(1.14)`, no card, shadow or glow. Haptics: `buzz(kind)` → `Android.haptic(kind)` → the phone's own tuned
-    effects played on the `Vibrator` (`VibrationEffect.createPredefined`: TICK for "key"/"tick", CLICK for
-    "tap"/"confirm", HEAVY_CLICK for "long"; one-shots before API 29). Not `performHapticFeedback`: that obeys the
-    system touch-feedback switch, off by default on many phones, so nothing was felt. "tap" category click, "key"
-    keypad key on touch-down, "tick" ring slot change, "long" long-press pick-up, "confirm" saves/drops;
-    `navigator.vibrate` only as a fallback without the bridge.
+    effects played on the `Vibrator` (`VibrationEffect.createPredefined`: HEAVY_CLICK for "long", CLICK for everything
+    else — TICK was too faint to feel; one-shots before API 29). Not `performHapticFeedback`: that obeys the system
+    touch-feedback switch, off by default on many phones, so nothing was felt. Every `[data-act]` tap clicks ("tap",
+    from the click dispatcher, so starting a scroll never buzzes); "key" keypad keys on touch-down; "tick" each slot a
+    dragged category passes (ring and grid) and each swipe (Home period, summary chart, History account); "long"
+    long-press pick-up; "confirm" saves/drops. `settings.haptics` (Settings → Feel → "Vibration on tap",
+    `toggleHaptics()`) turns all of it off; `navigator.vibrate` only as a fallback without the bridge.
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
     Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
     so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.

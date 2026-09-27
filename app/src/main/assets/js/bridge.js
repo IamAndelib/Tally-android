@@ -58,6 +58,13 @@ function syncReminders() {
     );
   } catch (e) {}
 }
+/* Settings switch for haptics on taps, drags and saves; turning it on gives one click to feel */
+function toggleHaptics() {
+  S.settings.haptics = S.settings.haptics === false;
+  save();
+  render();
+  if (S.settings.haptics) buzz("tap");
+}
 /* Settings switch for the evening nudge ("daily") or due-day reminders ("dues") */
 function toggleReminder(k) {
   const r = S.settings.remind;

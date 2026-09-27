@@ -337,6 +337,10 @@ a {
   margin: 4px -4px 0;
   touch-action: pan-y;
 }
+/* History: sideways swipes belong to the app (they switch the account filter); the chip strip still scrolls itself */
+body.hist #app {
+  touch-action: pan-y;
+}
 .ring.edit {
   margin: 0 -4px;
   background: var(--surface-container);

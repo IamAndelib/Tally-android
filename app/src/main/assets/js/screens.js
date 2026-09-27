@@ -16,6 +16,7 @@ function render() {
   else app.innerHTML = homeView();
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
   document.body.classList.toggle("hasnav", tabs);
+  document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
       [
@@ -484,6 +485,16 @@ function dayGroups(list) {
   });
   return cur ? h + "</div>" : h;
 }
+/* History's account filter ("" = All), from its chips or a sideways swipe; the chosen chip scrolls into view */
+function setHistAcc(id) {
+  V.hAcc = id || "";
+  if (V.sel) V.sel = new Set();
+  render();
+  const chip = $('.strip [data-act="hacc"][aria-pressed="true"]');
+  if (chip && chip.scrollIntoView) chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+/* the History filter chips in order: All, then the accounts shown */
+const histAccs = () => [""].concat(S.accounts.filter(a => !a.archived || a.id === V.hAcc).map(a => a.id));
 function historyList() {
   const [s, e] = range(HP);
   let list = S.txns.filter(t => t.date >= s && t.date <= e);
@@ -531,7 +542,7 @@ function historyView() {
     ">" +
     ic("right") +
     "</button></div>";
-  const accs = S.accounts.filter(a => !a.archived || a.id === V.hAcc);
+  const accs = S.accounts.filter(a => !a.archived || a.id === V.hAcc); // same order as histAccs()
   if (accs.length > 1)
     h +=
       '<div class="strip" style="margin-top:8px"><button class="chip" data-act="hacc" data-v="" aria-pressed="' +
@@ -597,6 +608,11 @@ function settingsView() {
       )
       .join("") +
     "</div>";
+  h +=
+    '<div class="sec">Feel</div><div class="list"><div class="setrow"><span class="mid"><div>Vibration on tap</div><div class="s">Taps, drags and saves</div></span>' +
+    '<button class="sw" role="switch" data-act="haptics" aria-checked="' +
+    (S.settings.haptics !== false) +
+    '" aria-label="Vibration on tap"></button></div></div>';
   h +=
     '<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>' +
     esc(curLabel(S.settings.cur)) +

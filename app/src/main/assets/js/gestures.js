@@ -16,7 +16,8 @@ function swallowNextClick() {
 }
 let sw = null,
   LP = null,
-  smSw = null;
+  smSw = null,
+  hsw = null;
 /* true while a dropped ring tile glides into its slot (no new drag until the page has redrawn) */
 let ringSettling = false;
 /* like a phone keyboard's backspace: after 400 ms held, delete every 70 ms, faster (35 ms) after about a second */
@@ -43,6 +44,8 @@ function pressStart(x, y, target) {
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
   smSw = target.closest("#sm .smchart") ? { x, y } : null;
+  /* History: a sideways swipe on the page (not on the chip strip, which scrolls) moves between account filters */
+  hsw = !layer && V.screen === "history" && !V.sel && !target.closest(".strip") ? { x, y } : null;
   /* holding the calculator's ⌫ keeps deleting (a quick tap is still one delete, through the click) */
   const bs = CALC && target.closest('.calc [data-act="calc-key"][data-v="⌫"]');
   if (bs) {
@@ -156,9 +159,11 @@ function pressEnd(x, y) {
       if (dx > 0) {
         shiftPeriod(-1);
         render();
+        buzz("tick");
       } else if (canNext()) {
         shiftPeriod(1);
         render();
+        buzz("tick");
       }
     }
   }
@@ -171,10 +176,24 @@ function pressEnd(x, y) {
       const nb = $('#sm [data-act="sm-nav"][data-v="1"]');
       if (dx > 0) smNav(-1);
       else if (nb && !nb.disabled) smNav(1);
+      buzz("tick");
       swallowNextClick();
     }
   }
   smSw = null;
+  /* History: finger left → the next account chip (All → DBBL → Bkash), right → back; stops at the ends */
+  if (hsw && x != null && !(LP && LP.active) && V.screen === "history" && !V.sel) {
+    const dx = x - hsw.x,
+      dy = y - hsw.y,
+      ids = histAccs(),
+      i = ids.indexOf(V.hAcc || ""),
+      j = i + (dx < 0 ? 1 : -1);
+    if (ids.length > 2 && Math.abs(dx) > 60 && Math.abs(dy) < 50 && j >= 0 && j < ids.length) {
+      setHistAcc(ids[j]);
+      buzz("tick");
+    }
+  }
+  hsw = null;
   if (LP && LP.kind === "repeat") {
     stopRepeat();
     if (LP.fired) swallowNextClick(); // the release shouldn't delete one more
@@ -283,6 +302,7 @@ function dragMove(x, y) {
   const tiles = [...L.grid.querySelectorAll(".tile")];
   if (tiles.indexOf(L.el) < tiles.indexOf(t)) t.after(L.el);
   else t.before(L.el);
+  buzz("tick");
 }
 /* Settings ring: the lifted tile's slot follows the angle of its centre around the ring, so there is no dead zone
    between slots; it changes only once the tile is well into the next slot (no flicker on a border), and the tiles
@@ -388,6 +408,7 @@ document.addEventListener(
     if (e.touches.length === 1) pressStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
     else {
       sw = null;
+      hsw = null;
       if (LP) {
         clearTimeout(LP.timer);
         stopRepeat();
