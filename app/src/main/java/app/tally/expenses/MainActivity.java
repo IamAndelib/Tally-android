@@ -1,15 +1,24 @@
 package app.tally.expenses;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.media.AudioAttributes;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
@@ -41,6 +50,25 @@ public class MainActivity extends Activity {
     private String pendingSave;
     /** "loan:<id>[:pay]" from a tapped reminder, delivered to the page once it has loaded. */
     private String pendingOpen;
+    /** False while the launch screen (the logo) is up: until the page calls Android.ready(), or 3 s at most. */
+    private boolean ready;
+    /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
+    private Integer pageColor;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    /**
+     * How the widget, its quick add and reminders open the app: dressed like the launcher's own intent (MAIN +
+     * LAUNCHER), because Android only resumes an already-running app from its last screen for such intents, and shows
+     * the splash again for anything else. CLEAR_TOP + SINGLE_TOP still hand {@code open} to onNewIntent.
+     */
+    static Intent openIntent(Context ctx, String open) {
+        Intent i = new Intent(ctx, MainActivity.class)
+                .setAction(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (open != null) i.putExtra("open", open);
+        return i;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +77,22 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        // launch screen: the window background (Android 7-11) or the system splash (12+) shows the logo until the
+        // page has drawn; the WebView is hidden until then and never shows its default white
+        web.setBackgroundColor(getColor(R.color.surface));
+        web.setVisibility(View.INVISIBLE);
+        if (Build.VERSION.SDK_INT >= 31) {
+            final View content = findViewById(android.R.id.content);
+            content.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+                @Override
+                public boolean onPreDraw() {
+                    if (!ready) return false;
+                    content.getViewTreeObserver().removeOnPreDrawListener(this);
+                    return true;
+                }
+            });
+        }
+        handler.postDelayed(this::showPage, 3000);
         if (Build.VERSION.SDK_INT >= 30) {
             root.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
@@ -108,7 +152,11 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "Android");
 
-        pendingOpen = getIntent().getStringExtra("open");
+        // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
+        // reopen the quick-add form or payment sheet it once asked for
+        if (savedInstanceState == null && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
+            pendingOpen = getIntent().getStringExtra("open");
+        }
         // after the process was killed the WebView can come back empty: load the page whenever restoring fails
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
             web.loadUrl("https://" + HOST + "/assets/index.html");
@@ -134,6 +182,14 @@ public class MainActivity extends Activity {
         setIntent(intent);
         pendingOpen = intent.getStringExtra("open");
         deliverOpen();
+    }
+
+    /** Ends the launch screen: called by the page (Android.ready) once it has rendered, or by the 3 s fallback. */
+    private void showPage() {
+        if (ready || isDestroyed()) return;
+        ready = true;
+        if (pageColor != null) root.setBackgroundColor(pageColor);
+        web.setVisibility(View.VISIBLE);
     }
 
     private void deliverOpen() {
@@ -203,6 +259,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
         if (web != null) web.destroy();
         super.onDestroy();
     }
@@ -244,7 +301,74 @@ public class MainActivity extends Activity {
         });
     }
 
+    private Vibrator vibrator; // looked up once, on the first haptic
+
+    @SuppressWarnings("deprecation")
+    private Vibrator vibrator() {
+        if (vibrator != null) return vibrator;
+        if (Build.VERSION.SDK_INT >= 31) {
+            VibratorManager m = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            vibrator = m == null ? null : m.getDefaultVibrator();
+        } else vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        return vibrator;
+    }
+
+    /** Pulse lengths (ms) for strengths 1–5 where there are no predefined effects; the page's fallback uses the same. */
+    private static final int[] PULSE_MS = {8, 14, 20, 30, 45};
+
+    /**
+     * The haptic for strength n (1–5), each stronger than the one before: 1–3 are the phone's own tick, click and
+     * heavy click (API 29+), 4–5 longer full-strength pulses, which even a basic vibration motor makes clearly felt.
+     */
+    @TargetApi(26)
+    private static VibrationEffect effect(Vibrator v, int n) {
+        if (Build.VERSION.SDK_INT >= 29 && n <= 3) {
+            return VibrationEffect.createPredefined(n == 1 ? VibrationEffect.EFFECT_TICK
+                    : n == 2 ? VibrationEffect.EFFECT_CLICK : VibrationEffect.EFFECT_HEAVY_CLICK);
+        }
+        int amp = !v.hasAmplitudeControl() ? VibrationEffect.DEFAULT_AMPLITUDE : n >= 3 ? 255 : n == 2 ? 170 : 100;
+        return VibrationEffect.createOneShot(PULSE_MS[n - 1], amp);
+    }
+
+    /**
+     * Plays e as media vibration. Without attributes, Android 12+ files short effects under "touch feedback", which the
+     * phone's own touch-vibration setting scales down or silences (often off), so taps were barely felt. The app has
+     * its own on/off switch and strength instead.
+     */
+    @TargetApi(26)
+    @SuppressWarnings("deprecation")
+    private static void play(Vibrator v, VibrationEffect e) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            v.vibrate(e, android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_MEDIA));
+        } else {
+            v.vibrate(e, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build());
+        }
+    }
+
     private class Bridge {
+        /**
+         * Haptic feedback on the vibrator directly (performHapticFeedback follows the phone's touch-feedback switch,
+         * often off, so it was never felt). {@code level} is Settings → Feel → Strength, 1 (the phone's lightest tick)
+         * … 5 (strong); "long" (a long-press) plays one level up. See {@link #effect} and {@link #play}.
+         * The Vibrator is thread-safe: no UI thread needed. The page skips the call when vibration is switched off.
+         */
+        @JavascriptInterface
+        public void haptic(final String kind, final int level) {
+            Vibrator v = vibrator();
+            if (v == null || !v.hasVibrator()) return;
+            int n = Math.max(1, Math.min(5, level + ("long".equals(kind) ? 1 : 0)));
+            try {
+                if (Build.VERSION.SDK_INT >= 26) play(v, effect(v, n));
+                else v.vibrate(PULSE_MS[n - 1]);
+            } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
+        }
+
+        /** The page has rendered: end the launch screen. */
+        @JavascriptInterface
+        public void ready() {
+            runOnUiThread(MainActivity.this::showPage);
+        }
+
         @JavascriptInterface
         public String getVersion() {
             return BuildConfig.VERSION_NAME;
@@ -292,7 +416,10 @@ public class MainActivity extends Activity {
                 w.setStatusBarColor(c);
                 w.setNavigationBarColor(c);
                 web.setBackgroundColor(c);
-                root.setBackgroundColor(c); // shows behind the (transparent) system bars on Android 15+
+                // root shows behind the (transparent) system bars on Android 15+; it is coloured only once the page
+                // shows, so until then the logo in the window background stays visible
+                pageColor = c;
+                if (ready) root.setBackgroundColor(c);
                 View decor = w.getDecorView();
                 int flags = decor.getSystemUiVisibility();
                 int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;

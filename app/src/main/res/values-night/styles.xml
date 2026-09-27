@@ -1,4 +1,10 @@
 <resources>
+    <!-- dark mode starts dark: same as values/styles.xml on a dark parent (@color/surface is dark here) -->
+    <style name="AppTheme.Base" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
     <style name="QuickAdd" parent="@android:style/Theme.DeviceDefault.Dialog.NoActionBar">
         <item name="android:windowCloseOnTouchOutside">true</item>
     </style>

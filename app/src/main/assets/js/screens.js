@@ -16,6 +16,7 @@ function render() {
   else app.innerHTML = homeView();
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
   document.body.classList.toggle("hasnav", tabs);
+  document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
       [
@@ -484,6 +485,16 @@ function dayGroups(list) {
   });
   return cur ? h + "</div>" : h;
 }
+/* History's account filter ("" = All), from its chips or a sideways swipe; the chosen chip scrolls into view */
+function setHistAcc(id) {
+  V.hAcc = id || "";
+  if (V.sel) V.sel = new Set();
+  render();
+  const chip = $('.strip [data-act="hacc"][aria-pressed="true"]');
+  if (chip && chip.scrollIntoView) chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+/* the History filter chips in order: All, then the accounts shown */
+const histAccs = () => [""].concat(S.accounts.filter(a => !a.archived || a.id === V.hAcc).map(a => a.id));
 function historyList() {
   const [s, e] = range(HP);
   let list = S.txns.filter(t => t.date >= s && t.date <= e);
@@ -531,7 +542,7 @@ function historyView() {
     ">" +
     ic("right") +
     "</button></div>";
-  const accs = S.accounts.filter(a => !a.archived || a.id === V.hAcc);
+  const accs = S.accounts.filter(a => !a.archived || a.id === V.hAcc); // same order as histAccs()
   if (accs.length > 1)
     h +=
       '<div class="strip" style="margin-top:8px"><button class="chip" data-act="hacc" data-v="" aria-pressed="' +
@@ -582,6 +593,37 @@ function catGrid(kind) {
     '</span><span class="cn">Add</span></button></div>'
   );
 }
+/* the vibration-strength slider (Material 3 discrete slider): 5 stops, a bar handle that reaches both ends, the
+   active track left of it and the inactive one right, stop dots on both; dragged in gestures.js */
+function sliderHtml(n, off) {
+  let dots = "";
+  for (let i = 0; i < 5; i++)
+    dots += '<span class="ms-dot' + (i < n - 1 ? " on" : i === n - 1 ? " cur" : "") + '" style="--i:' + i + '"></span>';
+  return (
+    '<div class="mslider' +
+    (off ? " off" : "") +
+    '" id="f-hlevel" role="slider" tabindex="' +
+    (off ? "-1" : "0") +
+    '" aria-label="Vibration strength" aria-valuemin="1" aria-valuemax="5" aria-valuenow="' +
+    n +
+    '"' +
+    (off ? ' aria-disabled="true"' : "") +
+    ' style="--f:' +
+    (n - 1) / 4 +
+    '"><span class="ms-act"></span><span class="ms-in"></span>' +
+    dots +
+    '<span class="ms-thumb"></span></div>'
+  );
+}
+/* moves the slider to stop n in place (no re-render): handle, tracks and which dots sit on the active track */
+function sliderShow(el, n) {
+  el.style.setProperty("--f", (n - 1) / 4);
+  el.setAttribute("aria-valuenow", n);
+  el.querySelectorAll(".ms-dot").forEach((d, i) => {
+    d.classList.toggle("on", i < n - 1);
+    d.classList.toggle("cur", i === n - 1);
+  });
+}
 function settingsView() {
   let h = subBar("Settings");
   const th = S.settings.theme || "system";
@@ -597,6 +639,16 @@ function settingsView() {
       )
       .join("") +
     "</div>";
+  h +=
+    '<div class="sec">Feel</div><div class="list"><div class="setrow"><span class="mid"><div>Vibration on tap</div><div class="s">Taps, drags and saves</div></span>' +
+    '<button class="sw" role="switch" data-act="haptics" aria-checked="' +
+    (S.settings.haptics !== false) +
+    '" aria-label="Vibration on tap"></button></div>' +
+    '<div class="setrow hlevel' +
+    (S.settings.haptics === false ? " off" : "") +
+    '"><span class="mid"><div>Strength</div>' +
+    sliderHtml(S.settings.hapticLevel || 3, S.settings.haptics === false) +
+    '<div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
   h +=
     '<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>' +
     esc(curLabel(S.settings.cur)) +
@@ -663,7 +715,7 @@ function settingsView() {
         })()
       : "";
   h +=
-    '<div class="sec">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
+    '<div class="sec center">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
     (ver ? " · Version " + esc(ver) : "") +
     '<br>By <a href="https://github.com/IamAndelib">IamAndelib</a>' +
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';

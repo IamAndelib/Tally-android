@@ -39,6 +39,11 @@ const ago = n => {
       saveFile(name, mime, text) {
         window.__saved.push({ name, text });
       },
+      haptic(kind, level) {
+        (window.__haptics = window.__haptics || []).push(kind);
+        (window.__hlevels = window.__hlevels || []).push(level);
+        window.__hlevel = level;
+      },
     };
   });
   const page = await ctx.newPage();
@@ -346,6 +351,415 @@ const ago = n => {
   await page.evaluate(() => restoreFile({ files: [{ text: () => Promise.reject(new Error("io")) }], value: "x" }));
   await settle();
   ok((await snackText()).includes("Couldn't read that file"), "a file that can't be read says so");
+
+  // ---- 12. Today in the Day | Range | Month picker always means today, even from the Month tab
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  const lastMonth = ago(40).slice(0, 7);
+  await act("period-open");
+  await act("pd-tab", "month");
+  await act("pd-month", lastMonth);
+  await act("period-open");
+  await act("pd-tab", "month");
+  await act("pd-today");
+  let pv = await page.evaluate(() => [V.period, V.anchor, $(".plabel").textContent.trim()]);
+  ok(pv[0] === "day" && pv[1] === today() && pv[2].startsWith("Today"), "Home: Month tab → Today shows today: " + pv);
+  await act("go", "history");
+  await settle();
+  await act("period-open", "hist");
+  await act("pd-tab", "month");
+  await act("pd-today");
+  pv = await page.evaluate(() => [HP.period, HP.anchor]);
+  ok(pv[0] === "day" && pv[1] === today(), "History: Month tab → Today shows today: " + pv);
+
+  // ---- 13. Settings ring arranger: follows the tile's angle, shifts the short way round, glides into place
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  await act("go", "settings");
+  await settle();
+  const outOrder = async () => (await state()).cats.filter(c => c.kind === "out" && !c.hidden).map(c => c.id);
+  const box = async id => (await page.$(`.ring.edit .tile[data-v="${id}"]`)).boundingBox();
+  // keep the ring mid-screen, away from the edges where a drag scrolls the page
+  const midRing = () => page.evaluate(() => document.querySelector(".ring.edit").scrollIntoView({ block: "center" }));
+  const ringDrag = async (id, grab, to) => {
+    const b = await box(id),
+      gx = b.x + b.width * grab,
+      gy = b.y + b.height * grab;
+    await page.mouse.move(gx, gy);
+    await page.mouse.down();
+    await page.waitForTimeout(450);
+    await page.mouse.move(gx + 4, gy + 4, { steps: 2 });
+    await page.mouse.move(to.x + (gx - b.x - b.width / 2), to.y + (gy - b.y - b.height / 2), { steps: 12 });
+    await page.waitForTimeout(250);
+    await page.mouse.up();
+    await page.waitForTimeout(350);
+  };
+  const centre = async id => {
+    const b = await box(id);
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  let o0 = await outOrder();
+  const n = o0.length;
+  await midRing();
+  // first slot (just left of 12 o'clock) onto the last one (just right of it): only those two trade places
+  await ringDrag(o0[0], 0.5, await centre(o0[n - 1]));
+  let o1 = await outOrder();
+  ok(
+    o1[0] === o0[n - 1] && o1[n - 1] === o0[0] && o1.slice(1, n - 1).join() === o0.slice(1, n - 1).join(),
+    "across the top: only the two neighbours trade places, the rest stay: " + o1.join(",")
+  );
+  // grabbed near its corner, the tile lands where the tile is, not where the finger is
+  o0 = o1;
+  await midRing();
+  await ringDrag(o0[1], 0.15, await centre(o0[3]));
+  o1 = await outOrder();
+  ok(o1[3] === o0[1] && o1[1] === o0[2] && o1[2] === o0[3], "grabbed off-centre it still lands on the slot under it");
+  // let go over the middle of the donut: nothing moves
+  o0 = o1;
+  await midRing();
+  const ring = await (await page.$(".ring.edit .dwrap")).boundingBox();
+  await ringDrag(o0[5], 0.5, { x: ring.x + ring.width / 2, y: ring.y + ring.height / 2 });
+  const o2 = await outOrder();
+  ok(o2.join() === o0.join(), "dropped over the middle: order unchanged: " + o0.join(",") + " → " + o2.join(","));
+  ok(!(await page.$(".ghost")) && !(await page.$(".ring.edit .placeholder")), "the lifted tile settled and is gone");
+
+  // ---- 14. touch feedback: the category icon pops and glows (no squircle), system haptics, icon-only drag ghost
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  const tb = await (await page.$("#ring .cat")).boundingBox();
+  await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  const fb = await page.evaluate(() => {
+    const b = document.querySelector("#ring .cat.pressed"),
+      ci = b && b.querySelector(".ci");
+    return (
+      b && {
+        layer: getComputedStyle(b, "::before").opacity,
+        scale: getComputedStyle(ci).transform,
+        glow: getComputedStyle(ci).boxShadow,
+      }
+    );
+  });
+  ok(
+    fb && fb.layer === "0" && fb.scale.startsWith("matrix(1.14") && fb.glow !== "none",
+    "pressed category: no squircle, icon pops and glows " + JSON.stringify(fb)
+  );
+  await page.mouse.up();
+  await settle();
+  ok(
+    (await page.evaluate(() => window.__haptics || [])).includes("tap"),
+    "tapping a category clicks the phone's haptics"
+  );
+  await page.evaluate(() => closeSheet());
+  await act("go", "settings");
+  await settle();
+  await page.evaluate(() => document.querySelector(".ring.edit").scrollIntoView({ block: "center" }));
+  const sb = await (await page.$(".ring.edit .tile")).boundingBox();
+  await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  await page.mouse.move(sb.x + sb.width / 2 + 20, sb.y + sb.height / 2 + 20, { steps: 3 });
+  const gh = await page.evaluate(() => {
+    const g = document.querySelector(".ghost"),
+      ci = g && g.querySelector(".ci");
+    return (
+      g && {
+        bg: getComputedStyle(g).backgroundColor,
+        scale: getComputedStyle(ci).transform,
+        glow: getComputedStyle(ci).boxShadow,
+      }
+    );
+  });
+  await page.screenshot({ path: OUT + "/drag-icon.png" });
+  await page.mouse.up();
+  await page.waitForTimeout(350);
+  ok(
+    gh && gh.bg === "rgba(0, 0, 0, 0)" && gh.scale.startsWith("matrix(1.14") && gh.glow === "none",
+    "dragging lifts just the slightly enlarged icon: no card, no glow " + JSON.stringify(gh)
+  );
+  // holding a Settings tile: enlarged, no glow
+  const st = await (await page.$(".ring.edit .tile")).boundingBox();
+  await page.mouse.move(st.x + st.width / 2, st.y + st.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(150);
+  const held = await page.evaluate(() => {
+    const ci = document.querySelector(".ring.edit .cat.pressed .ci");
+    return ci && { scale: getComputedStyle(ci).transform, glow: getComputedStyle(ci).boxShadow };
+  });
+  await page.mouse.up();
+  await settle();
+  ok(
+    held && held.scale.startsWith("matrix(1.14") && held.glow === "none",
+    "holding a category in Settings: enlarged, no glow " + JSON.stringify(held)
+  );
+  await page.evaluate(() => closeSheet());
+  ok((await page.evaluate(() => window.__haptics)).includes("long"), "picking a category up gives a long-press haptic");
+
+  // ---- 15. a haptic click on every tap, and the Settings switch that turns them all off
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank, cash], txns: [], loans: [], assets: [] });
+  await page.evaluate(() => (window.__haptics = []));
+  await act("tr-new");
+  await settle();
+  ok((await page.evaluate(() => window.__haptics)).includes("tap"), "tapping Home's Transfer button clicks");
+  await page.evaluate(() => closeSheet());
+  await act("go", "settings");
+  await settle();
+  await act("haptics");
+  await settle();
+  ok((await state()).settings.haptics === false, "the Vibration on tap switch turns haptics off (saved)");
+  await page.evaluate(() => (window.__haptics = []));
+  await act("theme", "dark");
+  await act("theme", "system");
+  ok((await page.evaluate(() => window.__haptics)).length === 0, "with it off, taps don't vibrate");
+  await act("haptics");
+  await settle();
+  ok(
+    (await state()).settings.haptics === true && (await page.evaluate(() => window.__haptics)).length === 1,
+    "turning it back on clicks once"
+  );
+
+  // ---- 16. History: swipe sideways between account filters (All → Bank → Cash and back)
+  await seed({
+    v: 6,
+    settings: { cur: "CAD" },
+    accounts: [bank, cash],
+    txns: [
+      { id: "t1", ts: 1, date: today(), type: "expense", amount: 5, account: "a", cat: "food", note: "" },
+      { id: "t2", ts: 2, date: today(), type: "expense", amount: 7, account: "c", cat: "food", note: "" },
+    ],
+    loans: [],
+    assets: [],
+  });
+  const tctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
+  const tp = await tctx.newPage();
+  await tp.goto(appUrl);
+  await tp.evaluate(
+    s => localStorage.setItem("tally:v1", s),
+    await page.evaluate(() => localStorage.getItem("tally:v1"))
+  );
+  await tp.reload();
+  await tp.evaluate(() => {
+    V.screen = "history";
+    render();
+  });
+  const tcdp = await tctx.newCDPSession(tp);
+  const T = (type, x, y) =>
+    tcdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  const swipe = async (x0, y0, dx, dy = 0) => {
+    await T("touchStart", x0, y0);
+    await T("touchMove", x0 + dx / 2, y0 + dy / 2);
+    await T("touchMove", x0 + dx, y0 + dy);
+    await T("touchEnd");
+    await tp.waitForTimeout(200);
+  };
+  const hAcc = () => tp.evaluate(() => V.hAcc);
+  const list = await (await tp.$("#app .list")).boundingBox();
+  const lx = list.x + list.width / 2,
+    ly = list.y + 30;
+  await swipe(lx + 60, ly, -120);
+  ok((await hAcc()) === "a", "swipe left: All → Bank");
+  await swipe(lx + 60, ly, -120);
+  const onCash = await tp.evaluate(() => [V.hAcc, $('.strip [data-v="c"]').getAttribute("aria-pressed")]);
+  ok(onCash[0] === "c" && onCash[1] === "true", "swipe left again: Cash, its chip pressed " + onCash);
+  await swipe(lx + 60, ly, -120);
+  ok((await hAcc()) === "c", "at the last account it stops");
+  await swipe(lx - 60, ly, 120);
+  ok((await hAcc()) === "a", "swipe right: back to Bank");
+  await swipe(lx - 60, ly, 40, 120);
+  ok((await hAcc()) === "a", "a mostly vertical swipe changes nothing");
+  const strip = await (await tp.$(".strip")).boundingBox();
+  await swipe(strip.x + strip.width / 2 + 60, strip.y + strip.height / 2, -120);
+  ok((await hAcc()) === "a", "a swipe on the chip strip itself changes nothing");
+  await tctx.close();
+
+  // ---- 17. round 26: label room under a selected category, donut centre modes, haptic strength, About, symbols
+  await seed({
+    v: 6,
+    settings: { cur: "CAD" },
+    accounts: [bank],
+    txns: [
+      { id: "e1", ts: 1, date: today(), type: "expense", amount: 30, account: "a", cat: "food", note: "" },
+      { id: "i1", ts: 2, date: today(), type: "income", amount: 50, account: "a", cat: "income", note: "" },
+    ],
+    loans: [],
+    assets: [],
+  });
+  await page.evaluate(() => txSheet(null, "income"));
+  await settle();
+  const room = await page.evaluate(() => {
+    const b = document.querySelector('.catgrid .cat[aria-pressed="true"]') || document.querySelector(".catgrid .cat");
+    return {
+      gap: parseFloat(getComputedStyle(b).rowGap),
+      ringBottom: b.querySelector(".ci").getBoundingClientRect().bottom + 5,
+      labelTop: b.querySelector(".cn").getBoundingClientRect().top,
+    };
+  });
+  ok(room.gap >= 8 && room.ringBottom < room.labelTop, "the selected ring clears its label " + JSON.stringify(room));
+  await page.evaluate(() => closeSheet());
+  const middle = () =>
+    page.evaluate(() => ({
+      s: [...document.querySelectorAll("#ring .dcenter .s, #ring .dcenter .g")].map(e => e.textContent).join("|"),
+      slices: document.querySelectorAll("#ring svg.donut circle[stroke-dasharray]").length,
+      pct: [...document.querySelectorAll("#ring .cp")].map(e => e.textContent).join(""),
+    }));
+  let c = await middle();
+  ok(c.s.includes("50") && c.s.includes("30"), "default: the middle shows income and spending " + c.s);
+  await act("go", "settings");
+  await settle();
+  const modes = [];
+  for (let k = 0; k < 4; k++) {
+    await page.evaluate(() => (window.__haptics = []));
+    await act("donut-mode");
+    await settle();
+    modes.push([
+      (await state()).settings.donut,
+      await page.textContent(".ring.edit .dmode"),
+      (await page.evaluate(() => window.__haptics)).length,
+    ]);
+  }
+  ok(
+    JSON.stringify(modes.map(m => m[0])) === '["none","out","in","both"]' &&
+      modes.map(m => m[1]).join("/") === "No stats/Spending/Income/Spending + income" &&
+      modes.every(m => m[2] > 0),
+    "tapping the Settings donut cycles what the middle shows, with a haptic each time " + JSON.stringify(modes)
+  );
+  for (const [mode, want] of [
+    ["out", s => s.includes("30") && !s.includes("50")],
+    ["in", s => s.includes("50") && !s.includes("30")],
+    ["none", s => s === ""],
+  ]) {
+    await page.evaluate(m => {
+      S.settings.donut = m;
+      V.screen = "home";
+      render();
+    }, mode);
+    c = await middle();
+    ok(want(c.s) && c.slices > 0 && c.pct.includes("%"), "Home middle in " + mode + ": " + JSON.stringify(c));
+  }
+  await page.evaluate(() => {
+    S.settings.donut = "both";
+    V.screen = "settings";
+    render();
+  });
+  // the Material slider: 5 stops, reaches both ends, each stop crossed plays its level
+  await page.evaluate(() => document.getElementById("f-hlevel").scrollIntoView({ block: "center" }));
+  const geo = () =>
+    page.evaluate(() => {
+      const el = document.getElementById("f-hlevel"),
+        r = el.getBoundingClientRect(),
+        t = el.querySelector(".ms-thumb").getBoundingClientRect(),
+        title = el.parentNode.firstElementChild.getBoundingClientRect();
+      return {
+        n: +el.getAttribute("aria-valuenow"),
+        dots: el.querySelectorAll(".ms-dot").length,
+        l: t.left - r.left,
+        rr: r.right - t.right,
+        titleL: title.left - r.left,
+        x: r.left,
+        y: r.top + r.height / 2,
+        w: r.width,
+      };
+    });
+  let g = await geo();
+  ok(
+    g.dots === 5 && g.n === 3 && Math.abs(g.titleL) < 1,
+    "slider: 5 stop dots, level 3, full row width " + JSON.stringify(g)
+  );
+  await page.evaluate(() => (window.__hlevels = []));
+  await page.mouse.move(g.x + 1, g.y);
+  await page.mouse.down();
+  await page.waitForTimeout(160);
+  g = await geo();
+  ok(
+    g.n === 1 && (await state()).settings.hapticLevel === 1 && g.l <= 1,
+    "pressing the far left: level 1, handle at the left end " + JSON.stringify(g)
+  );
+  await page.mouse.move(g.x + g.w - 1, g.y, { steps: 16 });
+  await page.mouse.up();
+  await page.waitForTimeout(160);
+  g = await geo();
+  const felt = await page.evaluate(() => window.__hlevels);
+  ok(
+    g.n === 5 && (await state()).settings.hapticLevel === 5 && g.rr < 1 && JSON.stringify(felt) === "[1,2,3,4,5]",
+    "dragging right plays every stop in turn and reaches the right end " + JSON.stringify([g, felt])
+  );
+  await page.focus("#f-hlevel");
+  await page.keyboard.press("ArrowLeft");
+  ok((await state()).settings.hapticLevel === 4, "← on the focused slider steps down");
+  await act("haptics");
+  await settle();
+  ok(
+    await page.evaluate(() => {
+      const el = document.getElementById("f-hlevel");
+      return el.classList.contains("off") && el.getAttribute("aria-disabled") === "true";
+    }),
+    "with vibration off the slider is faded and disabled"
+  );
+  await act("haptics");
+  await settle();
+  ok(
+    (await page.evaluate(() => getComputedStyle(document.querySelector(".sec.center")).textAlign)) === "center",
+    "the About heading is centred"
+  );
+  const syms = await page.evaluate(() => {
+    const r = [canDraw("€"), canDraw("\u{10FFFD}")];
+    DRAWN.set("\u20c0", false); // as on a phone without a font for the Kyrgyz som sign
+    r.push(curSym("KGS"));
+    return r;
+  });
+  ok(
+    syms[0] === true && syms[1] === false && syms[2] === "",
+    "undrawable currency signs show no box " + JSON.stringify(syms)
+  );
+
+  // ---- 18. 1.2.0 QC: one haptic for the keypad's keyboard button, a wipe keeps preferences, the saved tile pops
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  await page.click("#ring .cat");
+  await settle();
+  await act("calc-toggle");
+  await page.evaluate(() => (window.__haptics = []));
+  await page.click('.calc:not([hidden]) [data-act="calc-kbd"]');
+  await settle();
+  ok(
+    JSON.stringify(await page.evaluate(() => window.__haptics)) === '["key"]',
+    "the keypad's keyboard button vibrates once: " + JSON.stringify(await page.evaluate(() => window.__haptics))
+  );
+  await page.fill("#f-amt", "12");
+  const savedCat = await page.evaluate(() => F.cat);
+  await act("tx-save");
+  await settle();
+  ok(
+    (await page.evaluate(() => [...document.querySelectorAll("#ring .cat.saved")].map(b => b.dataset.v))).join() ===
+      savedCat,
+    "after a save only that category's Home tile pops"
+  );
+  ok(
+    (await page.evaluate(() => getComputedStyle(document.querySelector("#ring .cat.saved .ci")).animationName)) ===
+      "catpop",
+    "the saved tile plays catpop"
+  );
+  await page.evaluate(() => render());
+  ok((await page.$$("#ring .cat.saved")).length === 0, "the pop is one-shot: gone on the next render");
+  await seed({
+    v: 6,
+    settings: { cur: "CAD", haptics: false, hapticLevel: 5, donut: "none" },
+    accounts: [bank],
+    txns: [],
+    loans: [],
+    assets: [],
+  });
+  await act("go", "settings");
+  await settle();
+  await act("wipe");
+  await settle();
+  await act("ask-ok");
+  await settle();
+  S = await state();
+  ok(
+    S.accounts.length === 0 &&
+      S.settings.haptics === false &&
+      S.settings.hapticLevel === 5 &&
+      S.settings.donut === "none",
+    "Delete all data keeps vibration, strength and the donut middle: " + JSON.stringify(S.settings)
+  );
 
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));

@@ -695,7 +695,7 @@ function reopenLoan(id) {
       },
       { row: id }
     );
-    buzz(12);
+    buzz("confirm");
     return;
   }
   if (i.st !== "cleared") return;
@@ -709,7 +709,7 @@ function reopenLoan(id) {
     },
     { row: id }
   );
-  buzz(12);
+  buzz("confirm");
 }
 /* the snooze: move the due date on from whichever is later, the old due date or today */
 function extendLoan(l, days) {

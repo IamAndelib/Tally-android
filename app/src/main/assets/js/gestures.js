@@ -16,7 +16,10 @@ function swallowNextClick() {
 }
 let sw = null,
   LP = null,
-  smSw = null;
+  smSw = null,
+  hsw = null;
+/* true while a dropped ring tile glides into its slot (no new drag until the page has redrawn) */
+let ringSettling = false;
 /* like a phone keyboard's backspace: after 400 ms held, delete every 70 ms, faster (35 ms) after about a second */
 function startRepeat(key) {
   const L = (LP = { kind: "repeat", key, fired: 0 });
@@ -24,7 +27,7 @@ function startRepeat(key) {
     if (LP !== L || L.stopped) return;
     if (!CALC || CALC.pos <= 0) return stopRepeat();
     calcKey("⌫");
-    if (!L.fired++) buzz(8);
+    if (!L.fired++) buzz("long");
     L.t2 = setTimeout(step, L.fired > 12 ? 35 : 70);
   };
   L.t1 = setTimeout(step, 400);
@@ -41,6 +44,8 @@ function pressStart(x, y, target) {
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
   smSw = target.closest("#sm .smchart") ? { x, y } : null;
+  /* History: a sideways swipe on the page (not on the chip strip, which scrolls) moves between account filters */
+  hsw = !layer && V.screen === "history" && !V.sel && !target.closest(".strip") ? { x, y } : null;
   /* holding the calculator's ⌫ keeps deleting (a quick tap is still one delete, through the click) */
   const bs = CALC && target.closest('.calc [data-act="calc-key"][data-v="⌫"]');
   if (bs) {
@@ -62,7 +67,7 @@ function pressStart(x, y, target) {
     LP = rc.disabled ? null : { kind: "range", x, y, from: rc.dataset.v, cur: rc.dataset.v, moved: false };
     return;
   }
-  const tile = target.closest(".cgrid .tile, .ring.edit .tile"),
+  const tile = !ringSettling && target.closest(".cgrid .tile, .ring.edit .tile"),
     row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="tx-open"]');
   const mv = (V.screen === "assets" || V.screen === "liabs") && target.closest(".tx[data-drag]");
   const hold = target.closest("#sheet .chip[data-ctype]") || target.closest('#f-dots .dot[data-act="f-col"]');
@@ -72,7 +77,7 @@ function pressStart(x, y, target) {
       if (!LP) return;
       LP.active = true;
       swallowNextClick();
-      buzz(12);
+      buzz("long");
       const el = LP.el;
       LP = null;
       pressOff(true);
@@ -91,9 +96,7 @@ function pressStart(x, y, target) {
       if (!LP) return;
       LP.active = true;
       swallowNextClick();
-      try {
-        if (navigator.vibrate) navigator.vibrate(12);
-      } catch (e) {}
+      buzz("long");
       if (LP.kind === "sel") {
         V.sel = new Set([LP.el.dataset.v]);
         render();
@@ -156,9 +159,11 @@ function pressEnd(x, y) {
       if (dx > 0) {
         shiftPeriod(-1);
         render();
+        buzz("tick");
       } else if (canNext()) {
         shiftPeriod(1);
         render();
+        buzz("tick");
       }
     }
   }
@@ -171,10 +176,24 @@ function pressEnd(x, y) {
       const nb = $('#sm [data-act="sm-nav"][data-v="1"]');
       if (dx > 0) smNav(-1);
       else if (nb && !nb.disabled) smNav(1);
+      buzz("tick");
       swallowNextClick();
     }
   }
   smSw = null;
+  /* History: finger left → the next account chip (All → DBBL → Bkash), right → back; stops at the ends */
+  if (hsw && x != null && !(LP && LP.active) && V.screen === "history" && !V.sel) {
+    const dx = x - hsw.x,
+      dy = y - hsw.y,
+      ids = histAccs(),
+      i = ids.indexOf(V.hAcc || ""),
+      j = i + (dx < 0 ? 1 : -1);
+    if (ids.length > 2 && Math.abs(dx) > 60 && Math.abs(dy) < 50 && j >= 0 && j < ids.length) {
+      setHistAcc(ids[j]);
+      buzz("tick");
+    }
+  }
+  hsw = null;
   if (LP && LP.kind === "repeat") {
     stopRepeat();
     if (LP.fired) swallowNextClick(); // the release shouldn't delete one more
@@ -208,6 +227,7 @@ function dragBegin() {
     r = el.getBoundingClientRect(),
     g = el.cloneNode(true);
   g.classList.add("ghost");
+  g.classList.remove("pressed");
   g.removeAttribute("data-act");
   Object.assign(g.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
   document.body.appendChild(g);
@@ -216,6 +236,8 @@ function dragBegin() {
     ghost: g,
     dx: LP.cx - r.left,
     dy: LP.cy - r.top,
+    w: r.width,
+    h: r.height,
     grid: el.closest(".cgrid"),
     ring: el.closest(".ring.edit"),
   });
@@ -243,7 +265,7 @@ function rowDrop() {
   if (!ok) return; /* dropped elsewhere: nothing changes */
   const [type, id] = L.el.dataset.drag.split(":");
   S.settings.dragTip = true;
-  buzz(12);
+  buzz("confirm");
   if (type === "acc") setArchived(id, L.to === "arch");
   else if (/-done$/.test(L.to)) clearLoan(id);
   else reopenLoan(id);
@@ -252,8 +274,12 @@ function dragMove(x, y) {
   const L = LP;
   L.ghost.style.left = x - L.dx + "px";
   L.ghost.style.top = y - L.dy + "px";
-  if (y < 70) scrollBy(0, -10);
-  else if (y > innerHeight - (document.body.classList.contains("hasnav") ? 150 : 70)) scrollBy(0, 10);
+  /* near an edge the page scrolls along; for the ring only while part of it is still off-screen that way, so a ring
+     that fits never creeps under the finger */
+  const rb = L.ring && L.ring.getBoundingClientRect(),
+    low = innerHeight - (document.body.classList.contains("hasnav") ? 150 : 70);
+  if (y < 70 && (!rb || rb.top < 0)) scrollBy(0, -10);
+  else if (y > low && (!rb || rb.bottom > low)) scrollBy(0, 10);
   if (L.kind === "move") {
     const hit = document.elementFromPoint(x, y),
       z = hit && hit.closest(".dropbox"),
@@ -267,30 +293,7 @@ function dragMove(x, y) {
     return;
   }
   if (L.ring) {
-    /* move to the nearest slot of the home-screen layout; other tiles slide over */
-    const rr = L.ring.getBoundingClientRect(),
-      px = x - rr.left,
-      py = y - rr.top,
-      id = L.el.dataset.v;
-    let k = -1,
-      bd = Infinity;
-    RE.L.slots.forEach((s, i) => {
-      if (i >= RE.order.length) return;
-      const dd = Math.hypot(s.x - px, s.y - py);
-      if (dd < bd) {
-        bd = dd;
-        k = i;
-      }
-    });
-    const cur = RE.order.indexOf(id);
-    if (k < 0 || bd > RE.L.u * 0.75 || k === cur) return;
-    RE.order.splice(cur, 1);
-    RE.order.splice(k, 0, id);
-    L.ring.querySelectorAll(".tile").forEach(b => {
-      const s = RE.L.slots[RE.order.indexOf(b.dataset.v)];
-      b.style.left = s.x - RE.L.u / 2 + "px";
-      b.style.top = s.y - RE.L.u / 2 + "px";
-    });
+    ringDragTo(L, x, y);
     return;
   }
   const hit = document.elementFromPoint(x, y),
@@ -299,13 +302,38 @@ function dragMove(x, y) {
   const tiles = [...L.grid.querySelectorAll(".tile")];
   if (tiles.indexOf(L.el) < tiles.indexOf(t)) t.after(L.el);
   else t.before(L.el);
+  buzz("tick");
 }
-function dragEnd() {
-  const L = LP;
-  L.ghost.remove();
-  L.el.classList.remove("placeholder");
-  const kind = L.ring ? "out" : L.grid.dataset.kind,
-    order = L.ring ? RE.order.slice() : [...L.grid.querySelectorAll(".tile")].map(b => b.dataset.v);
+/* Settings ring: the lifted tile's slot follows the angle of its centre around the ring, so there is no dead zone
+   between slots; it changes only once the tile is well into the next slot (no flicker on a border), and the tiles
+   in between shift the shorter way round the circle, like beads on a string, never the long way across the top */
+function ringDragTo(L, x, y) {
+  const lay = RE.L,
+    n = RE.order.length,
+    rr = L.ring.getBoundingClientRect(),
+    gx = x - L.dx + L.w / 2 - rr.left - lay.cx,
+    gy = y - L.dy + L.h / 2 - rr.top - lay.cy;
+  if (n < 2 || Math.hypot(gx, gy) < lay.u * 0.6) return; // over the middle of the donut: stay where it is
+  const id = L.el.dataset.v,
+    cur = RE.order.indexOf(id),
+    circ = d => d - Math.round(d / n) * n, // signed distance around the ring, in slots
+    f = ((Math.atan2(gy, gx) + TAU / 4) / TAU) * n + 0.5; // slot i sits at -90° + (i - 0.5)/n·360° (ringLayout)
+  if (Math.abs(circ(f - cur)) < 0.65) return;
+  const k = ((Math.round(f) % n) + n) % n,
+    d = circ(k - cur),
+    step = Math.sign(d);
+  if (!step) return;
+  for (let i = cur; i !== k; i = (i + step + n) % n) RE.order[i] = RE.order[(i + step + n) % n];
+  RE.order[k] = id;
+  L.ring.querySelectorAll(".tile").forEach(b => {
+    const s = lay.slots[RE.order.indexOf(b.dataset.v)];
+    b.style.left = s.x - lay.u / 2 + "px";
+    b.style.top = s.y - lay.u / 2 + "px";
+  });
+  buzz("tick");
+}
+/* a new category order (ids of one kind, in order) into S.cats; hidden ones keep their place at the end */
+function setCatOrder(kind, order) {
   const pick = k =>
     k === kind
       ? order
@@ -314,8 +342,62 @@ function dragEnd() {
           .concat(S.cats.filter(c => c.kind === k && c.hidden))
       : S.cats.filter(c => c.kind === k);
   S.cats = pick("out").concat(pick("in"));
+}
+function dragEnd() {
+  const L = LP;
+  if (L.ring) {
+    /* saved at once; the lifted tile glides into its slot, then the page redraws */
+    setCatOrder("out", RE.order.slice());
+    save();
+    const lay = RE.L,
+      rr = L.ring.getBoundingClientRect(),
+      s = lay.slots[RE.order.indexOf(L.el.dataset.v)];
+    ringSettling = true;
+    L.ghost.classList.add("settle");
+    L.ghost.style.left = rr.left + s.x - lay.u / 2 + "px";
+    L.ghost.style.top = rr.top + s.y - lay.u / 2 + "px";
+    setTimeout(() => {
+      ringSettling = false;
+      L.ghost.remove();
+      L.el.classList.remove("placeholder");
+      commit();
+    }, 200);
+    return;
+  }
+  L.ghost.remove();
+  L.el.classList.remove("placeholder");
+  setCatOrder(
+    L.grid.dataset.kind,
+    [...L.grid.querySelectorAll(".tile")].map(b => b.dataset.v)
+  );
   commit();
 }
+/* Settings → Feel → Strength slider: press or drag to the nearest of its 5 stops; every stop crossed plays its level */
+let MS = null;
+function msLevel(el, x) {
+  const r = el.getBoundingClientRect();
+  return Math.round(Math.min(1, Math.max(0, (x - r.left - 2) / (r.width - 4))) * 4) + 1;
+}
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest && e.target.closest(".mslider");
+  if (!el || el.classList.contains("off")) return;
+  MS = { el, id: e.pointerId };
+  try {
+    el.setPointerCapture(e.pointerId);
+  } catch (x) {}
+  el.classList.add("drag");
+  setHapticLevel(msLevel(el, e.clientX), true); // the level under the finger, felt at once
+});
+document.addEventListener("pointermove", e => {
+  if (MS && e.pointerId === MS.id) setHapticLevel(msLevel(MS.el, e.clientX));
+});
+const msEnd = e => {
+  if (!MS || e.pointerId !== MS.id) return;
+  MS.el.classList.remove("drag");
+  MS = null;
+};
+document.addEventListener("pointerup", msEnd);
+document.addEventListener("pointercancel", msEnd);
 let lastTouch = 0;
 const fromTouch = () => Date.now() - lastTouch < 800;
 /* pressed look: on at touch-down, off at release (kept ~90ms so a quick tap is still seen), off at once if the finger scrolls */
@@ -327,6 +409,7 @@ function pressOn(t, x, y) {
   const b = t && t.closest && t.closest("button");
   if (!b || b.disabled) return;
   PRESS = b;
+  if (b.closest(".calc")) buzz("key"); // keypad keys click on touch-down, like the phone's keyboard
   pressAt = Date.now();
   pressXY = [x, y];
   b.classList.add("pressed");
@@ -351,6 +434,7 @@ document.addEventListener(
     if (e.touches.length === 1) pressStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
     else {
       sw = null;
+      hsw = null;
       if (LP) {
         clearTimeout(LP.timer);
         stopRepeat();

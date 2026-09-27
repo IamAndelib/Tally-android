@@ -9,7 +9,14 @@ const LS = "tally:v1";
 function blank() {
   return {
     v: 6,
-    settings: { cur: "CAD", theme: "system", remind: { daily: true, time: "21:00", dues: true } },
+    settings: {
+      cur: "CAD",
+      theme: "system",
+      haptics: true,
+      hapticLevel: 3,
+      donut: "both",
+      remind: { daily: true, time: "21:00", dues: true },
+    },
     accounts: [],
     types: [],
     cats: CATS.map(c => ({ ...c })),
@@ -51,6 +58,9 @@ function migrate(o) {
     time: /^([01]\d|2[0-3]):[0-5]\d$/.test(r.time) ? r.time : "21:00",
     dues: r.dues !== false,
   };
+  s.settings.haptics = s.settings.haptics !== false;
+  s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(+s.settings.hapticLevel) || 3));
+  if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
   ["lastAcc", "lastAccIn"].forEach(k => {
     if (s.settings[k] != null) s.settings[k] = sid(s.settings[k]);
   });

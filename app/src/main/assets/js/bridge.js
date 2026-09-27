@@ -58,6 +58,24 @@ function syncReminders() {
     );
   } catch (e) {}
 }
+/* Settings switch for haptics on taps, drags and saves; turning it on gives one click to feel */
+function toggleHaptics() {
+  S.settings.haptics = S.settings.haptics === false;
+  save();
+  render();
+  if (S.settings.haptics) buzz("tap");
+}
+/* Settings → Feel → Strength: moves the slider, saves the level and plays it — when the stop changes, or always with
+   `force` (the first touch), so the finger feels every level it passes */
+function setHapticLevel(v, force) {
+  const n = Math.min(5, Math.max(1, Math.round(+v) || 3)),
+    el = $("#f-hlevel");
+  if (el) sliderShow(el, n);
+  if (n === S.settings.hapticLevel && !force) return;
+  S.settings.hapticLevel = n;
+  save();
+  buzz("tap");
+}
 /* Settings switch for the evening nudge ("daily") or due-day reminders ("dues") */
 function toggleReminder(k) {
   const r = S.settings.remind;

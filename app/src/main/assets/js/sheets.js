@@ -662,11 +662,11 @@ function saveTx() {
       };
   guardOverdraw(mutate, t.date, () => {
     closeSheet();
-    buzz(10);
+    buzz("confirm");
     withUndo(
       id ? "Saved" : (t.type === "income" ? "+" : "−") + money(amt, acc(t.account).currency) + " · " + cat(t.cat).name,
       mutate,
-      { row: id || nid, cat: t.cat, center: true }
+      { row: id || nid, cat: t.cat }
     );
   });
 }

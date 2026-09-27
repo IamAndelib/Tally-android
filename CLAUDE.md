@@ -32,13 +32,27 @@ Built originally in a claude.ai chat; continue development from here.
       `setAndAllowWhileIdle`, channel "Reminders"; `BootReceiver` re-arms after reboot/update). Notification buttons
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
+  - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
+    logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
+    (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, which only
+    applies when the caller doesn't pick a style — the home screen picks a plain colour for widget taps, hence
+    `OpenActivity`). The 3 s fallback lives on a `handler` cleared in `onDestroy`; `showPage()` ignores a destroyed
+    activity. The `open` extra is read in `onCreate` only for a fresh launch (not `savedInstanceState`, not
+    `FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`), so a Recents relaunch doesn't reopen an old quick-add form or payment sheet. The WebView stays hidden (background `surface`, never white) until the page
+    calls `Android.ready()` at the end of `js/main.js` (not from rAF: a hidden WebView may never run it), or 3 s at
+    most; `setBars` colours `root` only once the page shows, so the logo stays visible until then.
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
   - The page installs its hooks last, in `js/main.js`, so the shell can never call into a half-loaded page:
     `tallyBack`→`goBack()`, `tallyOpen`→`openFromNative()`, `tallyResume`→`onAppResume()`, `tallyTheme`→`onSystemTheme()`,
     `tallySaved`→`onFileSaved()`. Escape in a desktop browser calls `goBack()` too.
   - Home-screen widget `TallyWidget` (AppWidgetProvider, `res/layout/widget_tally.xml`, `res/xml/tally_widget_info.xml`, 4×1,
-    Material You colours via `values-v31` system colours): today's total balance + "Spent today", body opens the app, + opens
+    Material You colours via `values-v31` system colours): today's total balance + "Spent today", body opens the app
+    through the invisible `OpenActivity` (the home screen starts widget taps with a plain-colour splash; started from our
+    own activity, MainActivity gets its logo splash, like the + path), + opens
     `QuickAddActivity` (small dialog: Spent / Received / Transfer → MainActivity with `open=add:out|add:in|add:tr`).
+    Every in-app open (widget, quick add, reminders) uses `MainActivity.openIntent(ctx, open)`: MAIN + LAUNCHER +
+    NEW_TASK|CLEAR_TOP|SINGLE_TOP, because Android only resumes a running app from its last screen (no splash) for
+    launcher-style intents; the `open` extra still reaches `onNewIntent`.
     The page is the source of truth: `syncWidget()` (from `commit()`, start, resume) sends formatted numbers through
     `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
 - The app is a web page in `app/src/main/assets` (vanilla JS, no framework, no build step):
@@ -57,7 +71,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
@@ -153,7 +167,8 @@ Built originally in a claude.ai chat; continue development from here.
     70 ms, 35 ms after ~12 deletes; stops when the caret reaches 0, the finger slides off the key, or `calcClose`; a
     release after any repeat swallows its click).
     `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
-    above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
+    above the keypad, whose final top it takes from layout (`innerHeight - offsetHeight`): the keypad is still sliding
+    up (`animation: up`, 40px) when this runs, so its bounding box would under-scroll. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
     `CALC.inp` is the field's element: `calcClose` only writes the result into that same element, and `goBack()`
     drops a stale `CALC` whose field left the page (its sheet closed while the keypad was open).
     `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
@@ -179,7 +194,7 @@ Built originally in a claude.ai chat; continue development from here.
   - Sheet back link: an entry opened from the entries list (`#ent-list`) sets `BACKTO`; `closeSheet()` then reopens the list
     (after any save/delete, same scroll) instead of dropping to Home.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
-    Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
+    Day | Range | Month dialog (its **Today** always means day = today, from any tab): calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
     account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()` in the donut's currency: Days = 7 vertical bars, Weeks = 8 horizontal
     bar rows ("3–9 Aug"; no cramped x-axis), Months = a category donut of one month (‹ › one month) with a legend list of every
     category and %; tap a bar/row for its total, comparison with the one before (daily average for an unfinished week/month),
@@ -211,6 +226,9 @@ Built originally in a claude.ai chat; continue development from here.
     its own text width and get clipped, because `button{overflow:hidden}` (kept globally so the press-state layer
     stays inside each button's rounded corners) disables a flex item's usual "don't shrink past your content" floor;
     the Home account-balance strip's own buttons (`.acc`) already carried the equivalent `flex:none` for this reason.
+    A sideways swipe on the History page (not on the strip, which scrolls itself) moves to the neighbouring filter
+    chip — finger left = next (All → first account → …), right = back, stopping at the ends (`hsw` in `js/gestures.js`,
+    `histAccs()` + `setHistAcc(id)` in `js/screens.js`, shared with the chips; `body.hist #app{touch-action:pan-y}`).
   - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent,
     and removes a loan (with its payments) only when **all** its draws are selected — otherwise just those entries go.
     After any draw is added/edited/deleted, `relinkLoan(id)` resets `l.account` (newest draw's) and `l.date` (oldest
@@ -218,17 +236,52 @@ Built originally in a claude.ai chat; continue development from here.
     paid back than lent/borrowed (worse than it already is).
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
+    `ringDragTo()`: the target slot follows the **angle of the lifted tile's centre** (not the finger) around the ring,
+    so there are no dead zones; it only changes once the tile is 0.65 of a slot past its current one (hysteresis),
+    nothing changes over the donut's middle, and the tiles in between shift the **shorter way round** the circle
+    (never the long way across the top). Tiles slide (`.rt` left/top, 0.22s emphasized-decelerate), each slot change
+    buzzes, and on release the order is saved at once while the ghost glides into its slot (`.ghost.settle`, 0.2s,
+    `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
+    it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-    "Delete all data" is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
+    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, `notifAsked`, haptics, strength,
+    donut middle) and is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
     small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,
     repo) — any link whose host isn't the app's own asset host already opens in the system browser via
     `shouldOverrideUrlLoading` (`MainActivity.java`), so these need no `data-act`/bridge wiring of their own.
   - Every add/edit/delete of entries goes through `withUndo(msg, change, fx)` (snapshot of `S.txns` + `S.loans` + `S.accounts`, Undo in the snackbar);
-    `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` pops a ring tile, `FX.center` bumps the donut total).
+    `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` gives the saved expense's Home ring tile `.saved` → one `catpop`, the tap's pop + glow).
   - Feedback must feel instant and calm (user tested ripples/scales/page animations as laggy): a 10% state layer on press, set by
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
-    row (`FX.row`), snackbar and sheet slide in, dialog fade, haptic `buzz()` (VIBRATE). No ripple, no scale, no page animation.
+    row (`FX.row`), snackbar and sheet slide in, dialog fade, haptics. No ripple, no page animation. Requested exception:
+    category tiles (`.cat`, Home ring / Settings ring / grid) have no state layer and `overflow: visible`; while pressed
+    their icon pops (`scale(1.14)`) and, on Home, glows in its own colour (`--ec`, set inline by `emblem()`); in
+    Settings (ring + grid) only the enlargement, and a dragged category's ghost is just its icon at the same
+    `scale(1.14)`, no card, shadow or glow. Haptics: `buzz(kind)` → `Android.haptic(kind)` → the phone's own tuned
+    effects played on the `Vibrator` (cached in `MainActivity.vibrator`; which effect per level: see Strength below). Not `performHapticFeedback`: that obeys the system
+    touch-feedback switch, off by default on many phones, so nothing was felt. Every `[data-act]` tap clicks ("tap",
+    from the click dispatcher, so starting a scroll never buzzes); "key" every keypad button (keys, ⌫, the keyboard button) on touch-down in
+    `pressOn`, so the dispatcher skips its "tap" for anything inside `.calc`; "tick" each slot a
+    dragged category passes (ring and grid) and each swipe (Home period, summary chart, History account); "long"
+    long-press pick-up; "confirm" saves/drops. `settings.haptics` (Settings → Feel → "Vibration on tap",
+    `toggleHaptics()`) turns all of it off; `navigator.vibrate` only as a fallback without the bridge.
+    Strength: `settings.hapticLevel` 1–5 (default 3) goes to `Android.haptic(kind, level)`: 1 EFFECT_TICK (the phone's
+    lightest), 2 EFFECT_CLICK, 3 EFFECT_HEAVY_CLICK, 4–5 full-amplitude one-shots of 30 / 45 ms (`PULSE_MS`, also the
+    pre-API-29 and browser fallback lengths); "long" plays one level up. Every haptic is played as **media** vibration
+    (`VibrationAttributes.USAGE_MEDIA`, `AudioAttributes.USAGE_MEDIA` before API 33): without attributes Android 12+
+    files short effects under touch feedback, which the phone's own touch-vibration setting scales down or silences.
+    The slider is a Material 3 discrete slider built in HTML (`sliderHtml()` / `sliderShow()` in `js/screens.js`,
+    `.mslider` in `css/app.css`): 5 stop dots, a 4px bar handle whose centre is `2px + f·(100% − 4px)` (`--f` =
+    (level−1)/4) so it reaches both ends, active/inactive tracks with a 6px gap either side; pointer events in
+    `js/gestures.js` (`msLevel`) jump to the nearest stop and `setHapticLevel(n, force)` plays each stop crossed;
+    ←/→/Home/End when focused; faded + `pointer-events:none` while vibration is off. Home donut middle: `settings.donut` = out | in | both (default) | none, cycled by
+    tapping the Settings donut (`cycleDonut()`, `DONUT_MODES` in `js/ring.js`; its centre, with a `.dhole`, swells while
+    pressed); only the middle changes — slices, leader lines and tile %s always stay. Picker grids (`.catgrid .cat`)
+    have a 9px icon–label gap so the selected ring (5px) clears the label. Currency signs: `canDraw(s)` (`js/core.js`)
+    compares a character with a code point no font has on a tiny canvas; `curSym()` drops, and `money()` swaps to the
+    ISO code for, a sign the phone can't draw (tofu, e.g. the Kyrgyz som ⃀). 59 of 159 currencies have no CLDR symbol
+    at all (only the code shows).
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
     Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
     so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.
@@ -244,8 +297,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.1) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10101) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.0) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10200) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the

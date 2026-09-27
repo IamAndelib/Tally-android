@@ -56,6 +56,8 @@ function emblem(o, cls) {
     (cls || "emb") +
     ' emb" style="background:' +
     c +
+    ";--ec:" +
+    c +
     ";color:" +
     fg +
     '">' +

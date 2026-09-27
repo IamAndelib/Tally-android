@@ -44,6 +44,9 @@ const daysFromNow = n => {
       getVersion() {
         return "1.0.0";
       },
+      ready() {
+        window.__ready = (window.__ready || 0) + 1;
+      },
     };
   });
   const page = await ctx.newPage();
@@ -82,6 +85,11 @@ const daysFromNow = n => {
   };
 
   await page.goto(appUrl);
+  await settle();
+  ok(
+    (await page.evaluate(() => window.__ready)) === 1,
+    "start-up tells the shell once that the page is drawn (ends the launch screen)"
+  );
 
   // ---- 1. a hidden palette colour in settings no longer breaks loading
   await seed({ ...base, settings: { cur: "BDT", hiddenCols: ["#15a06f"] } });

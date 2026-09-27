@@ -5,6 +5,35 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-09-27
+
+### Added
+
+- **Haptics:** every tap, keypad key, long-press and save gives a crisp click, and dragging a category clicks as it
+  passes each slot. Settings → Feel has an on/off switch and a 5-stop strength slider, from your phone's lightest tick
+  to a strong pulse; it plays even when the phone's own touch vibration is turned down or off.
+- Tap the donut in Settings to choose what the middle of the Home donut shows: spending, income, both, or nothing.
+- In History, swipe sideways to move between the account filters (All → each account and back).
+- After you save an expense, its category's icon on Home pops once, so you see where the money went.
+
+### Changed
+
+- Tally opens on its logo, in your light or dark colours, instead of a blank white flash, also from the home-screen
+  widget. If Tally is already running, the widget, quick add and reminders go straight back into it.
+- Arranging spending categories in Settings is smoother and more predictable: the dragged category goes to the slot
+  it's over, neighbours make way the short way round, tiles slide, and the category glides into place when you let go.
+- Tapping a category makes its icon pop and glow instead of showing a grey box; dragging one in Settings lifts just its
+  slightly enlarged icon.
+- A selected category in the pickers has room between its ring and its name; the About footer is centred.
+
+### Fixed
+
+- **Today** in the Day | Range | Month picker always goes back to today, also from the Month tab (it used to show the
+  whole month).
+- A currency sign your phone has no font for (e.g. the Kyrgyz som) no longer shows as an empty box; the code is used.
+- Opening the calculator on an amount field low in a form could leave the field half hidden behind the keypad.
+- Reopening Tally from Recents after Android closed it no longer pops up an old quick-add form or payment sheet again.
+
 ## [1.1.1] — 2026-09-27
 
 ### Changed
@@ -84,6 +113,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.0
 [1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1
 [1.1.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.0
 [1.0.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.0.0

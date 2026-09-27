@@ -100,6 +100,39 @@ button.pressed:not(:disabled)::before {
   opacity: 0.1;
   transition: none;
 }
+/* category tiles (Home ring, Settings ring and grid) have no state-layer squircle: while pressed, the icon pops up a
+   little and glows in its own colour (--ec, set by emblem()), and settles back on release */
+button.cat.pressed:not(:disabled)::before {
+  opacity: 0;
+}
+button.cat {
+  overflow: visible; /* let the pop and glow spill past the tile instead of being cut into a square */
+}
+.cat .ci {
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.18s;
+}
+.cat.pressed .ci {
+  transform: scale(1.14);
+  box-shadow: 0 0 14px 2px var(--ec, transparent);
+  transition-duration: 0.09s;
+}
+/* just saved: the Home tile pops once the same way, so you see where the money went (FX.cat) */
+.cat.saved .ci {
+  animation: catpop 0.32s cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes catpop {
+  40% {
+    transform: scale(1.14);
+    box-shadow: 0 0 14px 2px var(--ec, transparent);
+  }
+}
+/* in Settings (hold to drag) only the slight enlargement, no glow */
+.ring.edit .cat.pressed .ci,
+.cgrid .cat.pressed .ci {
+  box-shadow: none;
+}
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
@@ -314,6 +347,10 @@ a {
   margin: 4px -4px 0;
   touch-action: pan-y;
 }
+/* History: sideways swipes belong to the app (they switch the account filter); the chip strip still scrolls itself */
+body.hist #app {
+  touch-action: pan-y;
+}
 .ring.edit {
   margin: 0 -4px;
   background: var(--surface-container);
@@ -382,9 +419,10 @@ a {
   gap: 2px;
   padding: 4px 0 0;
   border-radius: 16px;
+  /* Settings ring: tiles slide to their new slot while one is dragged (Material "emphasized decelerate") */
   transition:
-    left 0.2s,
-    top 0.2s;
+    left 0.22s cubic-bezier(0.2, 0, 0, 1),
+    top 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 .rt .ci {
   width: var(--d);
@@ -418,6 +456,33 @@ a {
   color: var(--spent);
   letter-spacing: -0.01em;
   white-space: nowrap;
+}
+.dcenter .s.in {
+  color: var(--got);
+}
+/* Settings preview: the donut's hole with the current choice; it swells a little while pressed */
+.ring.edit .dwrap {
+  overflow: visible;
+}
+.ring.edit .dcenter {
+  isolation: isolate; /* keeps .dhole inside it, above the donut */
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+.ring.edit .dwrap.pressed .dcenter {
+  transform: scale(1.08);
+  transition-duration: 0.09s;
+}
+.dhole {
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background: var(--surface);
+  z-index: -1;
+}
+.dcenter .dmode {
+  font-size: clamp(0.8rem, calc(var(--D, 160px) * 0.085), 1rem);
+  font-weight: 600;
+  line-height: 1.25;
 }
 .dcenter .s.zero {
   color: var(--on-surface-variant);
@@ -1010,6 +1075,10 @@ textarea {
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
+/* room under the icon for the selected ring (5px) without the label moving when a category is picked */
+.catgrid .cat {
+  gap: 9px;
+}
 .catgrid .cat[aria-pressed="true"] .ci {
   box-shadow:
     0 0 0 3px var(--surface-low),
@@ -1192,6 +1261,9 @@ textarea {
   font-weight: 600;
   color: var(--primary);
   margin: 24px 4px 8px;
+}
+.sec.center {
+  text-align: center;
 }
 .welcome {
   text-align: center;
@@ -1629,6 +1701,73 @@ body.hasnav .snack {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
 }
+/* Settings → Feel: vibration strength, a Material 3 discrete slider; faded and off while vibration is switched off.
+   --f = (level − 1) / 4. The 4px handle's centre is 2px + f·(100% − 4px), so it touches both ends; the tracks keep a
+   6px gap either side of it; the 5 stop dots sit inside the rounded track ends (6px … 100% − 6px). */
+.mslider {
+  position: relative;
+  height: 44px;
+  margin-top: 6px;
+  touch-action: pan-y;
+  cursor: pointer;
+}
+.ms-act,
+.ms-in {
+  position: absolute;
+  top: 14px;
+  height: 16px;
+  transition: width 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+.ms-act {
+  left: 0;
+  width: max(0px, calc(var(--f) * (100% - 4px) - 6px));
+  background: var(--primary);
+  border-radius: 8px 2px 2px 8px;
+}
+.ms-in {
+  right: 0;
+  width: max(0px, calc(100% - var(--f) * (100% - 4px) - 10px));
+  background: var(--secondary-container);
+  border-radius: 2px 8px 8px 2px;
+}
+.ms-thumb {
+  position: absolute;
+  top: 0;
+  left: calc(var(--f) * (100% - 4px));
+  width: 4px;
+  height: 44px;
+  border-radius: 2px;
+  background: var(--primary);
+  transition: left 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+.mslider.drag .ms-thumb {
+  transform: scaleX(0.5); /* M3: the handle narrows while held */
+}
+.ms-dot {
+  position: absolute;
+  top: 20px;
+  left: calc(4px + var(--i) * (100% - 12px) / 4);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.ms-dot.on {
+  background: var(--on-primary);
+}
+.ms-dot.cur {
+  visibility: hidden;
+}
+.mslider.off {
+  pointer-events: none;
+}
+.hlevel .hends {
+  display: flex;
+  justify-content: space-between;
+}
+.hlevel.off {
+  opacity: 0.38;
+}
 .sw {
   width: 52px;
   height: 32px;
@@ -1802,6 +1941,30 @@ body.hasnav .snack {
   border-radius: 16px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   margin: 0;
+}
+/* a lifted category: no card behind it, just its icon, slightly enlarged (as while held), no glow */
+.ghost.cat {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.ghost.cat .ci {
+  transform: scale(1.14);
+  box-shadow: none;
+}
+.ghost.settle.cat .ci {
+  transform: none;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+/* a dropped ring tile gliding into its slot */
+.ghost.settle {
+  transition:
+    left 0.2s cubic-bezier(0.2, 0, 0, 1),
+    top 0.2s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.2s;
+  transform: none;
+  box-shadow: none;
 }
 .tile-add .ci {
   border: 2px dashed var(--outline);

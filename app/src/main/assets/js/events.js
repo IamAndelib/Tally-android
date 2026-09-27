@@ -28,6 +28,7 @@ document.addEventListener("click", ev => {
     return;
   }
   if (el.tagName === "SELECT" || el.tagName === "INPUT") return;
+  if (!el.closest(".calc")) buzz("tap"); // every tap clicks (the keypad's buttons already did, on touch-down)
   switch (act) {
     case "home":
       V.screen = "home";
@@ -104,6 +105,12 @@ document.addEventListener("click", ev => {
     case "rem-dues":
       toggleReminder("dues");
       break;
+    case "haptics":
+      toggleHaptics();
+      break;
+    case "donut-mode":
+      cycleDonut();
+      break;
     case "period-open":
       periodDialog(v === "hist" ? HP : V);
       break;
@@ -133,7 +140,7 @@ document.addEventListener("click", ev => {
       setPeriod({ period: "month", anchor: v + "-01" });
       break;
     case "pd-today":
-      setPeriod({ period: PD.tab === "month" ? "month" : "day", anchor: today() });
+      setPeriod({ period: "day", anchor: today() }); // always today's figures, whichever tab is open
       break;
     case "pd-close":
       closePop();
@@ -249,9 +256,6 @@ document.addEventListener("click", ev => {
     }
     case "tr-new":
       trSheet();
-      break;
-    case "tr-from-acc":
-      trSheet(null, v);
       break;
     case "tr-from":
       trPickFrom(v);
@@ -435,9 +439,7 @@ document.addEventListener("click", ev => {
       }
       break;
     case "hacc":
-      V.hAcc = v;
-      if (V.sel) V.sel = new Set();
-      render();
+      setHistAcc(v);
       break;
     case "sel-start":
       V.sel = new Set();
@@ -550,7 +552,11 @@ document.addEventListener("change", ev => {
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") goBack();
-  else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
+  else if (e.target.id === "f-hlevel" && /^(Arrow(Left|Right|Up|Down)|Home|End)$/.test(e.key)) {
+    e.preventDefault();
+    const n = S.settings.hapticLevel || 3;
+    setHapticLevel(e.key === "Home" ? 1 : e.key === "End" ? 5 : n + (/Right|Up/.test(e.key) ? 1 : -1));
+  } else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
     e.preventDefault();
     (e.target.id === "nt-name" ? addType : useHex)();
   } else if (e.key === "Enter" && e.target.id === "cur-q") {
