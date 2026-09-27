@@ -118,6 +118,16 @@ button.cat {
   box-shadow: 0 0 14px 2px var(--ec, transparent);
   transition-duration: 0.09s;
 }
+/* just saved: the Home tile pops once the same way, so you see where the money went (FX.cat) */
+.cat.saved .ci {
+  animation: catpop 0.32s cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes catpop {
+  40% {
+    transform: scale(1.14);
+    box-shadow: 0 0 14px 2px var(--ec, transparent);
+  }
+}
 /* in Settings (hold to drag) only the slight enlargement, no glow */
 .ring.edit .cat.pressed .ci,
 .cgrid .cat.pressed .ci {

@@ -301,13 +301,16 @@ public class MainActivity extends Activity {
         });
     }
 
+    private Vibrator vibrator; // looked up once, on the first haptic
+
     @SuppressWarnings("deprecation")
     private Vibrator vibrator() {
+        if (vibrator != null) return vibrator;
         if (Build.VERSION.SDK_INT >= 31) {
             VibratorManager m = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-            return m == null ? null : m.getDefaultVibrator();
-        }
-        return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            vibrator = m == null ? null : m.getDefaultVibrator();
+        } else vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        return vibrator;
     }
 
     /** Pulse lengths (ms) for strengths 1–5 where there are no predefined effects; the page's fallback uses the same. */

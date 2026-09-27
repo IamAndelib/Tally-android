@@ -244,13 +244,14 @@ Built originally in a claude.ai chat; continue development from here.
     `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
     it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-    "Delete all data" is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
+    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, `notifAsked`, haptics, strength,
+    donut middle) and is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
     small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,
     repo) — any link whose host isn't the app's own asset host already opens in the system browser via
     `shouldOverrideUrlLoading` (`MainActivity.java`), so these need no `data-act`/bridge wiring of their own.
   - Every add/edit/delete of entries goes through `withUndo(msg, change, fx)` (snapshot of `S.txns` + `S.loans` + `S.accounts`, Undo in the snackbar);
-    `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` pops a ring tile, `FX.center` bumps the donut total).
+    `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` gives the saved expense's Home ring tile `.saved` → one `catpop`, the tap's pop + glow).
   - Feedback must feel instant and calm (user tested ripples/scales/page animations as laggy): a 10% state layer on press, set by
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
     row (`FX.row`), snackbar and sheet slide in, dialog fade, haptics. No ripple, no page animation. Requested exception:
@@ -258,10 +259,10 @@ Built originally in a claude.ai chat; continue development from here.
     their icon pops (`scale(1.14)`) and, on Home, glows in its own colour (`--ec`, set inline by `emblem()`); in
     Settings (ring + grid) only the enlargement, and a dragged category's ghost is just its icon at the same
     `scale(1.14)`, no card, shadow or glow. Haptics: `buzz(kind)` → `Android.haptic(kind)` → the phone's own tuned
-    effects played on the `Vibrator` (`VibrationEffect.createPredefined`: HEAVY_CLICK for "long", CLICK for everything
-    else — TICK was too faint to feel; one-shots before API 29). Not `performHapticFeedback`: that obeys the system
+    effects played on the `Vibrator` (cached in `MainActivity.vibrator`; which effect per level: see Strength below). Not `performHapticFeedback`: that obeys the system
     touch-feedback switch, off by default on many phones, so nothing was felt. Every `[data-act]` tap clicks ("tap",
-    from the click dispatcher, so starting a scroll never buzzes); "key" keypad keys on touch-down; "tick" each slot a
+    from the click dispatcher, so starting a scroll never buzzes); "key" every keypad button (keys, ⌫, the keyboard button) on touch-down in
+    `pressOn`, so the dispatcher skips its "tap" for anything inside `.calc`; "tick" each slot a
     dragged category passes (ring and grid) and each swipe (Home period, summary chart, History account); "long"
     long-press pick-up; "confirm" saves/drops. `settings.haptics` (Settings → Feel → "Vibration on tap",
     `toggleHaptics()`) turns all of it off; `navigator.vibrate` only as a fallback without the bridge.
@@ -296,8 +297,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.2) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10102) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.0) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10200) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the

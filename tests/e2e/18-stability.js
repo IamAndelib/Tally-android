@@ -710,6 +710,57 @@ const ago = n => {
     "undrawable currency signs show no box " + JSON.stringify(syms)
   );
 
+  // ---- 18. 1.2.0 QC: one haptic for the keypad's keyboard button, a wipe keeps preferences, the saved tile pops
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  await page.click("#ring .cat");
+  await settle();
+  await act("calc-toggle");
+  await page.evaluate(() => (window.__haptics = []));
+  await page.click('.calc:not([hidden]) [data-act="calc-kbd"]');
+  await settle();
+  ok(
+    JSON.stringify(await page.evaluate(() => window.__haptics)) === '["key"]',
+    "the keypad's keyboard button vibrates once: " + JSON.stringify(await page.evaluate(() => window.__haptics))
+  );
+  await page.fill("#f-amt", "12");
+  const savedCat = await page.evaluate(() => F.cat);
+  await act("tx-save");
+  await settle();
+  ok(
+    (await page.evaluate(() => [...document.querySelectorAll("#ring .cat.saved")].map(b => b.dataset.v))).join() ===
+      savedCat,
+    "after a save only that category's Home tile pops"
+  );
+  ok(
+    (await page.evaluate(() => getComputedStyle(document.querySelector("#ring .cat.saved .ci")).animationName)) ===
+      "catpop",
+    "the saved tile plays catpop"
+  );
+  await page.evaluate(() => render());
+  ok((await page.$$("#ring .cat.saved")).length === 0, "the pop is one-shot: gone on the next render");
+  await seed({
+    v: 6,
+    settings: { cur: "CAD", haptics: false, hapticLevel: 5, donut: "none" },
+    accounts: [bank],
+    txns: [],
+    loans: [],
+    assets: [],
+  });
+  await act("go", "settings");
+  await settle();
+  await act("wipe");
+  await settle();
+  await act("ask-ok");
+  await settle();
+  S = await state();
+  ok(
+    S.accounts.length === 0 &&
+      S.settings.haptics === false &&
+      S.settings.hapticLevel === 5 &&
+      S.settings.donut === "none",
+    "Delete all data keeps vibration, strength and the donut middle: " + JSON.stringify(S.settings)
+  );
+
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

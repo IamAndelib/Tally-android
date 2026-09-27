@@ -28,7 +28,7 @@ document.addEventListener("click", ev => {
     return;
   }
   if (el.tagName === "SELECT" || el.tagName === "INPUT") return;
-  if (act !== "calc-key") buzz("tap"); // every tap clicks (keypad keys already did, on touch-down)
+  if (!el.closest(".calc")) buzz("tap"); // every tap clicks (the keypad's buttons already did, on touch-down)
   switch (act) {
     case "home":
       V.screen = "home";
@@ -256,9 +256,6 @@ document.addEventListener("click", ev => {
     }
     case "tr-new":
       trSheet();
-      break;
-    case "tr-from-acc":
-      trSheet(null, v);
       break;
     case "tr-from":
       trPickFrom(v);

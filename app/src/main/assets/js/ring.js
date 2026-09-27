@@ -67,7 +67,7 @@ function ringHTML(cats, o) {
     const v = home ? o.by[p.c.id] || 0 : 0;
     return (
       '<button class="cat rt' +
-      (home ? "" : " tile") +
+      (home ? (FX.cat === p.c.id ? " saved" : "") : " tile") +
       '" style="left:' +
       (p.x - u / 2).toFixed(1) +
       "px;top:" +

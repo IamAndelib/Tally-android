@@ -51,7 +51,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Looking back**
 
 - **History** for any day, date range or month, filtered by account, with each account's running balance under every
-  entry. Hold an entry to select several and delete them together.
+  entry; swipe sideways to move between accounts. Hold an entry to select several and delete them together.
 - **Spending summary:** tap the donut for the last 7 days, 8 weeks, or a month by category, compared with the period
   before.
 
@@ -61,7 +61,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   payment*, *+1 day* and *+1 week* buttons.
 - **Home-screen widget** with today's balance, today's spending and a quick-add button.
 - **Material You:** follows your wallpaper colours on Android 12+, light and dark themes, and an emblem and colour for
-  every category, account and asset.
+  every category, account and asset. Choose what the middle of the donut shows.
+- **Haptic feedback** on every tap, with an on/off switch and a strength slider.
 
 **Your data**
 

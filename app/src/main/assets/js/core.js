@@ -272,7 +272,7 @@ function snack(msg, undo) {
     undo ? 5000 : 2600
   );
 }
-/* FX: one-shot feedback for the next render (FX.row flashes a row, FX.cat pops a ring tile, FX.center bumps the donut total) */
+/* FX: one-shot feedback for the next render (FX.row flashes a row, FX.cat pops that category's Home ring tile) */
 let FX = {};
 /* haptic feedback through Android.haptic(kind, level): the level is Settings → Feel → Strength, 1 (the phone's lightest
    tick) … 5 (a strong pulse); "long" (a long-press) plays one level up. Kinds: "tap" any tap, "key" a keypad key,

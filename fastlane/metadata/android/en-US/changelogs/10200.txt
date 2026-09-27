@@ -1,0 +1,7 @@
+- Haptics on every tap, with an on/off switch and a strength slider (Settings → Feel).
+- Choose what the middle of the donut shows: tap it in Settings.
+- Swipe between accounts in History.
+- Tally opens on its logo instead of a blank white flash.
+- Smoother category arranging; categories pop when tapped and after a save.
+- Today in the Day | Range | Month picker always goes back to today.
+- Currency signs without a font show their code instead of an empty box.

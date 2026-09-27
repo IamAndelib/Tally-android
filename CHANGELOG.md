@@ -5,32 +5,32 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [1.1.2] — 2026-09-27
+## [1.2.0] — 2026-09-27
+
+### Added
+
+- **Haptics:** every tap, keypad key, long-press and save gives a crisp click, and dragging a category clicks as it
+  passes each slot. Settings → Feel has an on/off switch and a 5-stop strength slider, from your phone's lightest tick
+  to a strong pulse; it plays even when the phone's own touch vibration is turned down or off.
+- Tap the donut in Settings to choose what the middle of the Home donut shows: spending, income, both, or nothing.
+- In History, swipe sideways to move between the account filters (All → each account and back).
+- After you save an expense, its category's icon on Home pops once, so you see where the money went.
 
 ### Changed
 
-- Tally opens on its logo, in your light or dark colours, instead of a blank white screen that flashes before the app
-  appears, also when opened from the home-screen widget. If Tally is already running, the widget, quick add and
-  reminders go straight back into it without the splash.
-- Tapping a category makes its icon pop and glow instead of showing a grey box; holding and dragging one in Settings
-  lifts just its slightly enlarged icon.
-- Haptics: every tap, keypad key, long-press and save gives a crisp click from the phone's own haptics, and dragging a
-  category clicks as it passes each slot. Settings → Feel → "Vibration on tap" turns it off.
-- In History, swipe sideways to move between the account filters (All → each account and back).
-- Settings → Feel → Strength: a Material slider with 5 stops, from your phone's lightest tick to a strong pulse; each
-  stop plays as you slide over it. Haptics now play at that strength even when the phone's own touch vibration is
-  turned down or off.
-- Tap the donut in Settings to choose what the middle of the Home donut shows: spending, income, both, or nothing.
+- Tally opens on its logo, in your light or dark colours, instead of a blank white flash, also from the home-screen
+  widget. If Tally is already running, the widget, quick add and reminders go straight back into it.
+- Arranging spending categories in Settings is smoother and more predictable: the dragged category goes to the slot
+  it's over, neighbours make way the short way round, tiles slide, and the category glides into place when you let go.
+- Tapping a category makes its icon pop and glow instead of showing a grey box; dragging one in Settings lifts just its
+  slightly enlarged icon.
 - A selected category in the pickers has room between its ring and its name; the About footer is centred.
-- A currency sign your phone has no font for (e.g. the Kyrgyz som) no longer shows as an empty box; the code is used.
-- Arranging spending categories in Settings feels smoother and more predictable: the dragged category goes to the
-  slot it's over (anywhere around the ring, wherever you grabbed it), neighbours make way the short way round instead
-  of the whole ring shifting, tiles slide into place, and the category glides into its slot when you let go.
 
 ### Fixed
 
 - **Today** in the Day | Range | Month picker always goes back to today, also from the Month tab (it used to show the
   whole month).
+- A currency sign your phone has no font for (e.g. the Kyrgyz som) no longer shows as an empty box; the code is used.
 - Opening the calculator on an amount field low in a form could leave the field half hidden behind the keypad.
 - Reopening Tally from Recents after Android closed it no longer pops up an old quick-add form or payment sheet again.
 
@@ -113,6 +113,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.0
 [1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1
 [1.1.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.0
 [1.0.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.0.0
