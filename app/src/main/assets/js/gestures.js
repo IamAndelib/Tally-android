@@ -17,11 +17,36 @@ function swallowNextClick() {
 let sw = null,
   LP = null,
   smSw = null;
+/* like a phone keyboard's backspace: after 400 ms held, delete every 70 ms, faster (35 ms) after about a second */
+function startRepeat(key) {
+  const L = (LP = { kind: "repeat", key, fired: 0 });
+  const step = () => {
+    if (LP !== L || L.stopped) return;
+    if (!CALC || CALC.pos <= 0) return stopRepeat();
+    calcKey("⌫");
+    if (!L.fired++) buzz(8);
+    L.t2 = setTimeout(step, L.fired > 12 ? 35 : 70);
+  };
+  L.t1 = setTimeout(step, 400);
+}
+/* stops the repeat but keeps LP until release, so the release's click can be swallowed */
+function stopRepeat() {
+  if (!LP || LP.kind !== "repeat") return;
+  clearTimeout(LP.t1);
+  clearTimeout(LP.t2);
+  LP.stopped = true;
+}
 function pressStart(x, y, target) {
   swallowClick = false;
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
   smSw = target.closest("#sm .smchart") ? { x, y } : null;
+  /* holding the calculator's ⌫ keeps deleting (a quick tap is still one delete, through the click) */
+  const bs = CALC && target.closest('.calc [data-act="calc-key"][data-v="⌫"]');
+  if (bs) {
+    startRepeat(bs);
+    return;
+  }
   /* a press on the calculator's caret grabs it (elsewhere on the display, a swipe scrolls and a tap places it) */
   const mirror = CALC && target.closest(".caretmirror");
   const caret = mirror && mirror.querySelector(".blink");
@@ -80,6 +105,11 @@ function pressStart(x, y, target) {
 }
 function pressMove(x, y, ev) {
   if (!LP) return;
+  if (LP.kind === "repeat") {
+    const r = LP.key.getBoundingClientRect();
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) stopRepeat(); // slid off the key
+    return;
+  }
   if (LP.kind === "caret") {
     if (ev.cancelable) ev.preventDefault();
     if (!LP.moved && Math.abs(x - LP.x) < 4) return;
@@ -145,6 +175,12 @@ function pressEnd(x, y) {
     }
   }
   smSw = null;
+  if (LP && LP.kind === "repeat") {
+    stopRepeat();
+    if (LP.fired) swallowNextClick(); // the release shouldn't delete one more
+    LP = null;
+    return;
+  }
   if (LP && LP.kind === "caret") {
     if (LP.moved) swallowNextClick();
     LP = null;
@@ -317,6 +353,7 @@ document.addEventListener(
       sw = null;
       if (LP) {
         clearTimeout(LP.timer);
+        stopRepeat();
         LP = null;
       }
     }
@@ -364,5 +401,5 @@ document.addEventListener("mouseup", () => {
   }
 });
 document.addEventListener("contextmenu", e => {
-  if (e.target.closest(".tile,.tx,.dd,.chip,.dot")) e.preventDefault();
+  if (e.target.closest(".tile,.tx,.dd,.chip,.dot,.calc button")) e.preventDefault();
 });

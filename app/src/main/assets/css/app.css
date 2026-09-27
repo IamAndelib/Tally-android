@@ -932,6 +932,10 @@ select option {
   animation: up 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 .calc button {
+  /* keys are held (⌫ repeats): no text selection or long-press menu */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   height: 56px;
   border-radius: 12px;
   background: var(--surface-high);

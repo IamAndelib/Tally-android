@@ -145,6 +145,9 @@ Built originally in a claude.ai chat; continue development from here.
     hidden scrollbar, 14px end padding); `calcCaretIntoView()` keeps the caret visible after every sync, so a long
     expression slides left. A press within 28px of the caret grabs it (`LP.kind==="caret"` in `js/gestures.js` →
     `calcDragCaret()`, which also scrolls near the edges); elsewhere a swipe scrolls natively and a tap places the caret.
+    Holding ⌫ repeats it (`LP.kind==="repeat"`, `startRepeat/stopRepeat` in `js/gestures.js`: 400 ms delay, then every
+    70 ms, 35 ms after ~12 deletes; stops when the caret reaches 0, the finger slides off the key, or `calcClose`; a
+    release after any repeat swallows its click; `.calc button` has no text selection / long-press menu).
     `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
     above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
     `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android

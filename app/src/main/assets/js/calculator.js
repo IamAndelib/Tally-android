@@ -198,6 +198,7 @@ function calcKeepFieldVisible(inp, panel) {
   else if (r.top < 8) scroller.scrollTop -= 8 - r.top;
 }
 function calcClose(id, btn, use) {
+  stopRepeat();
   const inp = $("#" + id);
   if (use && CALC && CALC.id === id && CALC.expr) {
     const val = calcEval(CALC.expr);
