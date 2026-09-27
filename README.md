@@ -57,8 +57,9 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 **Around the phone**
 
-- **Reminders:** an evening nudge if nothing was written that day, and due-date reminders for loans with *Record
-  payment*, *+1 day* and *+1 week* buttons.
+- **Reminders**, each at the time you pick: an evening nudge if nothing was written that day, a daily balance check,
+  and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons.
+  Settings says what (notifications, on-time alarms, battery) could hold them back, with a button to fix each.
 - **Home-screen widget** with today's balance, today's spending and a quick-add button.
 - **Material You:** follows your wallpaper colours on Android 12+, light and dark themes, and an emblem and colour for
   every category, account and asset. Choose what the middle of the donut shows.
@@ -68,6 +69,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - Everything stays on the phone. No account, no ads, no analytics, **no network requests**.
 - **Backup and restore** (a JSON file you keep anywhere) and **CSV export** of every entry.
+- **Daily auto backup** into one file, "Tally backup.json", in a folder you pick; it stays there even if Tally is
+  uninstalled.
 - **Undo** for every change.
 
 ## Requirements
@@ -121,8 +124,9 @@ backup (**Settings → Backup**). If Android's own device backup is on, Android 
 
 | Permission | Why |
 | --- | --- |
-| Notifications | the evening nudge and loan due-date reminders (only if you keep them on) |
-| Run at startup | to re-arm reminders after the phone restarts |
+| Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on) |
+| Alarms & reminders | so reminders and the daily backup happen at the exact time you chose |
+| Run at startup | to re-arm reminders and the daily backup after the phone restarts |
 | Vibrate | a short tick when saving |
 | Internet | declared because the app's screen is a WebView; Tally itself makes no network requests |
 
@@ -183,6 +187,7 @@ app/src/main/
   java/app/tally/expenses/
     MainActivity.java     the WebView shell and the window.Android bridge
     ReminderReceiver.java notifications and alarms;  BootReceiver.java re-arms them
+    BackupReceiver.java   the daily auto backup into the folder you picked
     TallyWidget.java      home-screen widget;        QuickAddActivity.java its + dialog
 tests/                    end-to-end tests (Playwright) and lint
 tools/gen_icons.py        regenerates js/icons.js

@@ -13,7 +13,8 @@ Built originally in a claude.ai chat; continue development from here.
   optional fee (ATM, cash-out charge) saved as a linked spending entry.
 - Easy correction when the app doesn't match reality: "Set actual balance" records a balance fix.
 - Loans (you borrowed) and lendings (you lent): due dates, partial payments, status; Assets / Liabilities tabs with net worth.
-- Reminders: evening nudge when nothing was written that day; due-day reminders with Record payment / +1 day / +1 week.
+- Reminders: evening nudge when nothing was written that day; a daily balance check; due-day reminders with Record payment / +1 day / +1 week. Each at a time the user picks.
+- Daily automatic backup: one file ("Tally backup.json") in a folder the user picks once, kept indefinitely.
 - Keep the UI small, simple and fast (user has mild ADHD; avoid clutter and long text). No budgeting, no statement import (removed on purpose; may return later).
 
 ## Architecture
@@ -28,10 +29,35 @@ Built originally in a claude.ai chat; continue development from here.
     - `getColors()` returns `{dark, a1,a2,a3,n1,n2}`: light/dark mode plus, on Android 12+, the Material You tonal palettes
       (13 hex tones each, tone 100 → 0). `onResume`/`onConfigurationChanged` push the same JSON to `window.tallyTheme(...)`.
     - `setBars(color, dark)` colours the status/navigation bars to match the page surface.
-    - `setReminders(json)` / `takeActions()` / `requestNotifications()`: see `ReminderReceiver.java` (AlarmManager
-      `setAndAllowWhileIdle`, channel "Reminders"; `BootReceiver` re-arms after reboot/update). Notification buttons
+    - `setReminders(json)` / `takeActions()` / `requestNotifications()`: see `ReminderReceiver.java`. The page
+      (`syncReminders()`) sends `{daily:{on,h,m}, check:{on,h,m,text,checked}, duesAt:{h,m}, lastEntry, dues:[…]}`.
+      Every alarm goes through `ReminderReceiver.arm()`: `setExactAndAllowWhileIdle` when allowed (always < API 31; on
+      12+ `canScheduleExactAlarms()`, permission `SCHEDULE_EXACT_ALARM`, user-granted on 14+ under "Alarms &
+      reminders"; never `USE_EXACT_ALARM`, Play reserves it for clocks/calendars), else `setAndAllowWhileIdle`.
+      `BootReceiver` re-arms reminders and the backup after boot, update, `TIME_SET`, `TIMEZONE_CHANGED` and
+      `SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED`. Channels (`channels()`, created at start): `nudge`, `check`,
+      `reminders` (loan due days, the original id), `backup` (failures only). The nudge / check show at most once a
+      day (`shown:nudge` / `shown:check`); the check is skipped when `checked` (= `settings.lastCheck`) is today and
+      opens `open=check` (Home, today, the morning check card). Notification buttons
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
-      → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
+      → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs, re-reads
+      `is24h`, re-renders Settings so the health card follows permission changes).
+    - `reminderHealth()` → `{notif, exact, battery}` (battery only checked on makers known to kill background alarms,
+      dontkillmyapp.com list; elsewhere `true`) and `openSetting("notif"|"exact"|"battery")`: Settings → Reminders shows
+      a "may arrive late" card (`healthCard()`) with one fix button each (`rem-fix` → `fixReminders()`; "notif" asks
+      for the permission the first time, then opens the app's notification settings; "Battery is fine" sets
+      `settings.batteryOk`), only while a reminder is on and something fails.
+    - Auto backup (`BackupReceiver.java`): while `settings.backup.on`, `save()` → `mirrorSoon()` (800 ms debounce)
+      → `Android.setBackupData(JSON.stringify(S))`, written atomically to app-private `files/snapshot.json` and marked
+      dirty, so the daily alarm (`setBackup({on,h,m})`) needs no WebView. `pickBackupFolder()` →
+      `ACTION_OPEN_DOCUMENT_TREE` + persistable permission (the old one released) → first backup at once →
+      `window.tallyFolder(err)` (`onFolderPicked`: null = cancelled, stays off; "" = done). Each run writes
+      "Tally backup.json" via a temp "Tally backup (new).json" + delete + rename (in place with `"wt"` where the
+      provider can't rename), only when dirty (or forced: Back up now / new folder), **never with an empty state**
+      (after Delete all data or an unreadable start). Failures → `backup` channel notification → `open=backup`
+      (Settings, `#bk`). `backupStatus()` → `{folder, last, error}`; `backupNow()` runs on the bridge thread. The
+      file is exactly the manual backup, so Restore reads it.
+    - `is24h()` = `DateFormat.is24HourFormat` (the phone's 12/24-hour switch): the time wheel and `timeLabel()`.
   - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
     logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
     (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, which only
@@ -71,7 +97,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, batteryOk, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
@@ -216,7 +242,12 @@ Built originally in a claude.ai chat; continue development from here.
     it (custom → dropped, palette → `settings.hiddenCols`; typing its hex brings it back; things already in that colour keep it). `PALETTE`'s first 12 are the default category colours, chosen so ring neighbours stay distinct under
     colour-blindness simulation (OKLab ΔE ≥ 8, normal vision ≥ 15) on the light and dark surfaces; re-check if you reorder them.
   - Dates/times never use native pickers: `dateField()` renders a field button (`data-v` = YYYY-MM-DD, optional min/max/opt),
-    `datePicker()` opens a Material dialog in `#pop` built on `calGrid()` (shared with the period dialog); `timePicker()` for the nudge time.
+    `datePicker()` opens a Material dialog in `#pop` built on `calGrid()` (shared with the period dialog); `timePicker(title, cur, onPick)` (`pickTime(k)` for
+    nudge | check | due | backup) is scroll wheels like the phone's clock: hours : minutes (+ AM/PM on a 12-hour
+    phone), 3 rows of `W_ROW` = 56px, `scroll-snap`, centre row bold `--on-surface`, others `--outline`; hours and
+    minutes are listed 3× and recentred to the middle copy 120 ms after scrolling stops (`wheelScrolled`), so they
+    wrap; every row passed ticks (`buzz("tick")`; the dispatcher skips "tap" inside `.wheel`), a tapped row glides
+    to the centre (`tp-row`), ↑/↓ on a focused wheel; OK (`tp-ok` → `timeOk()`) reads each wheel's scrollTop.
   - Sheets are built once and then patched in place (`setPressed`, `trSync`), never re-rendered while open.
     `#sheet2` is a second layer for pickers opened from a sheet (currency picker: search, in use / popular / all ISO currencies).
   - History has its own period `HP` (default this month) with the same ‹ label ▾ › bar and Day | Range | Month dialog as Home:

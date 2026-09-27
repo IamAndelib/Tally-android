@@ -10,6 +10,8 @@ applyNativeActions();
 render();
 syncReminders();
 syncWidget();
+syncBackup();
+mirrorNow();
 if (unreadable)
   askDialog(
     "Couldn't open your saved data",
@@ -31,6 +33,7 @@ Object.assign(window, {
   tallyResume: onAppResume,
   tallyTheme: onSystemTheme,
   tallySaved: onFileSaved,
+  tallyFolder: onFolderPicked,
 });
 /* the page is drawn: the shell ends its launch screen (the logo). Called right away, not from requestAnimationFrame,
    which a still-hidden WebView may never run. */

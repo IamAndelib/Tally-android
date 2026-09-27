@@ -77,7 +77,8 @@ function restoreFile(input) {
     () => snack("Couldn't read that file")
   );
 }
-/* keeps the preferences: main currency, theme, reminders, haptics and the donut's middle */
+/* keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto backup (which never
+   overwrites its file with an empty notebook) */
 function wipeAll() {
   askDialog(
     "Delete all data?",
@@ -92,6 +93,8 @@ function wipeAll() {
         haptics: S.settings.haptics,
         hapticLevel: S.settings.hapticLevel,
         donut: S.settings.donut,
+        backup: S.settings.backup,
+        batteryOk: S.settings.batteryOk,
       };
       S = blank();
       Object.assign(S.settings, keep);

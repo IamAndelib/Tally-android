@@ -321,9 +321,19 @@ const ok = (c, m) => {
   ok(rem.daily.on === false, "evening nudge off");
   await act("rem-daily");
   await noNative("settings");
-  await page.click("#f-rtime");
+  await act("pick-time", "nudge");
   await page.screenshot({ path: OUT + "/time-picker.png" });
-  await act("tm-pick", "20:30");
+  // turn the wheels to 20:30 (8:30 PM where the locale is 12-hour) and press OK
+  await page.evaluate(() => {
+    const set = (id, v) => {
+      const c = TP.cols.find(x => x.id === id);
+      document.getElementById("tp-" + id).scrollTop = ((c.loop ? c.vals.length : 0) + c.vals.indexOf(v)) * W_ROW;
+    };
+    set("h", is24h() ? 20 : 8);
+    set("m", 30);
+    if (!is24h()) set("ap", "PM");
+  });
+  await act("tp-ok");
   rem = await page.evaluate(() => window.__rem);
   ok(rem.daily.on && rem.daily.h === 20 && rem.daily.m === 30, "nudge time 20:30");
   await act("rem-dues");

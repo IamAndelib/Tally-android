@@ -5,6 +5,21 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Daily auto backup:** pick a folder once and Tally keeps one file there, "Tally backup.json", rewritten every day at
+  your time when something changed. It stays after an uninstall, and Settings → Restore reads it.
+- **Balance check reminder:** a daily notification with your balances; tapping it opens the morning check.
+- Settings shows what could keep reminders from arriving (notifications, on-time alarms, battery) with a fix for each.
+
+### Changed
+
+- The time picker is a scroll wheel like your phone's clock (hours : minutes, AM/PM on a 12-hour phone), with any
+  minute of the day; times follow the phone's 12 / 24-hour setting.
+- Loan and lending due-day reminders come at a time you pick (09:00 until you change it).
+- Reminders arrive at the exact time where Android allows it, follow the local time after a time-zone change, and
+  each kind has its own notification channel.
+
 ## [1.2.0] — 2026-09-27
 
 ### Added

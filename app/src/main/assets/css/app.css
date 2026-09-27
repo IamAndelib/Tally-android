@@ -1502,12 +1502,58 @@ textarea {
   font-size: 1.6rem;
   font-weight: 600;
 }
-.tgrid {
-  grid-template-columns: repeat(4, 1fr);
+/* time picker: scroll wheels like the phone's clock (hours : minutes [AM/PM]); 3 rows of 56px (W_ROW in layers.js),
+   the middle one bold and bright, its neighbours faded; rows snap to the middle */
+.wheel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 0 4px;
+  font-variant-numeric: tabular-nums;
 }
-.tgrid button {
-  height: 44px;
-  font-size: 0.85rem;
+.wcol {
+  height: 168px;
+  width: 84px;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  border-radius: 16px;
+  outline-offset: -2px;
+}
+.wcol::-webkit-scrollbar {
+  display: none;
+}
+.wcol.ap {
+  width: 72px;
+}
+.wpad,
+.witem {
+  height: 56px;
+}
+.witem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-size: 2.4rem;
+  font-weight: 400;
+  color: var(--outline);
+  transition: color 0.12s;
+}
+.wcol.ap .witem {
+  font-size: 1.5rem;
+}
+.witem.sel {
+  font-weight: 600;
+  color: var(--on-surface);
+}
+.wsep {
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  padding-bottom: 6px;
 }
 /* bottom navigation */
 .nav {
@@ -1700,6 +1746,34 @@ body.hasnav .snack {
 .setrow .s {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
+}
+.setrow .s.err {
+  color: var(--spent);
+}
+.setrow .btn {
+  width: auto;
+  flex: none;
+}
+.setrow .mid div {
+  overflow-wrap: anywhere;
+}
+/* a reminder's time in Settings */
+.fieldbtn.tbtn {
+  width: auto;
+  height: 44px;
+  gap: 6px;
+  flex: none;
+}
+/* Settings → Reminders: what keeps them from arriving on time, one fix per button */
+.rhealth {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--spent-container);
+  color: var(--on-spent-container);
+  border-radius: 20px;
+  padding: 14px;
+  margin: 0 0 10px;
 }
 /* Settings → Feel: vibration strength, a Material 3 discrete slider; faded and off while vibration is switched off.
    --f = (level − 1) / 4. The 4px handle's centre is 2px + f·(100% − 4px), so it touches both ends; the tracks keep a

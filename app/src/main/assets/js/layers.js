@@ -198,35 +198,155 @@ function dpSet(v) {
       : "No due date yet";
   }
 }
+/* the phone's 12 / 24-hour setting (Android.is24h), else the locale's; re-read on resume (H24 = null) */
+let H24 = null;
+function is24h() {
+  if (H24 == null) {
+    try {
+      H24 =
+        window.Android && Android.is24h
+          ? !!Android.is24h()
+          : !/^h1[12]$/.test(new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hourCycle);
+    } catch (e) {
+      H24 = true;
+    }
+  }
+  return H24;
+}
 const timeLabel = hm => {
-  const [h, m] = hm.split(":").map(Number);
-  return new Date(2024, 0, 1, h, m).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const [h, m] = hm.split(":").map(Number),
+    h24 = is24h();
+  return new Date(2024, 0, 1, h, m).toLocaleTimeString(undefined, {
+    hour: h24 ? "2-digit" : "numeric",
+    minute: "2-digit",
+    hourCycle: h24 ? "h23" : "h12",
+  });
 };
-function timePicker() {
-  const cur = (S.settings.remind || {}).time || "21:00",
-    times = [];
-  for (let h = 16; h < 24; h++) for (const m of ["00", "30"]) times.push(pad(h) + ":" + m);
+/* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM on a 12-hour phone), the
+   centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above and below, so
+   row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times and quietly
+   moved back to the middle copy once scrolling settles. Every row passed ticks (buzz). OK hands "HH:MM" to onPick. */
+const W_ROW = 56;
+let TP = null;
+function timePicker(title, cur, onPick) {
+  const [h, m] = cur.split(":").map(Number),
+    h24 = is24h();
+  const cols = [
+    {
+      id: "h",
+      label: "Hour",
+      vals: h24 ? [...Array(24).keys()] : [12, ...Array.from({ length: 11 }, (_, i) => i + 1)],
+    },
+    { id: "m", label: "Minute", vals: [...Array(60).keys()] },
+  ];
+  if (!h24) cols.push({ id: "ap", label: "AM or PM", vals: ["AM", "PM"] });
+  cols.forEach(c => {
+    c.loop = c.id !== "ap";
+    c.copies = c.loop ? 3 : 1;
+    const v = c.id === "h" ? (h24 ? h : h % 12 || 12) : c.id === "m" ? m : h < 12 ? "AM" : "PM";
+    c.idx = (c.loop ? c.vals.length : 0) + c.vals.indexOf(v);
+  });
+  TP = { cols, onPick };
+  const txt = (c, v) => (c.id === "ap" ? v : c.id === "h" && !h24 ? String(v) : pad(v));
+  const col = c => {
+    let rows = "";
+    for (let i = 0; i < c.vals.length * c.copies; i++)
+      rows +=
+        '<div class="witem' +
+        (i === c.idx ? " sel" : "") +
+        '" data-act="tp-row" data-v="' +
+        c.id +
+        ":" +
+        i +
+        '">' +
+        esc(txt(c, c.vals[i % c.vals.length])) +
+        "</div>";
+    return (
+      '<div class="wcol' +
+      (c.loop ? "" : " ap") +
+      '" id="tp-' +
+      c.id +
+      '" tabindex="0" role="listbox" aria-label="' +
+      c.label +
+      '"><div class="wpad"></div>' +
+      rows +
+      '<div class="wpad"></div></div>'
+    );
+  };
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Nudge time"><div class="dp-h"><div class="t">Evening nudge at</div><div class="big">' +
-    esc(timeLabel(cur)) +
-    '</div></div><div class="mgrid tgrid">' +
-    times
-      .map(
-        x =>
-          '<button class="' +
-          (x === cur ? "sel" : "") +
-          '" data-act="tm-pick" data-v="' +
-          x +
-          '">' +
-          esc(timeLabel(x)) +
-          "</button>"
-      )
-      .join("") +
-    '</div><div class="dlg-act"><span></span><button class="btn text" data-act="pd-close">Cancel</button></div></div></div>';
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog tp" role="dialog" aria-modal="true" aria-label="' +
+    esc(title) +
+    '"><div class="dp-h"><div class="t">' +
+    esc(title) +
+    '</div></div><div class="wheel">' +
+    col(cols[0]) +
+    '<span class="wsep">:</span>' +
+    cols.slice(1).map(col).join("") +
+    '</div><div class="dlg-act"><button class="btn text" data-act="pd-close">Cancel</button>' +
+    '<button class="btn text" data-act="tp-ok">OK</button></div></div></div>';
+  cols.forEach(c => {
+    const el = $("#tp-" + c.id);
+    el.scrollTop = c.idx * W_ROW;
+    el.addEventListener("scroll", () => wheelScrolled(c, el));
+  });
+}
+/* live: the row now in the middle is highlighted and ticks; once still, a wrapping wheel moves back to its middle copy */
+function wheelScrolled(c, el) {
+  const n = c.vals.length * c.copies,
+    i = Math.max(0, Math.min(n - 1, Math.round(el.scrollTop / W_ROW)));
+  if (i !== c.idx) {
+    const rows = el.querySelectorAll(".witem");
+    rows[c.idx].classList.remove("sel");
+    rows[i].classList.add("sel");
+    c.idx = i;
+    buzz("tick");
+  }
+  clearTimeout(c.t);
+  c.t = setTimeout(() => {
+    const len = c.vals.length;
+    if (!c.loop || !TP || (c.idx >= len && c.idx < 2 * len)) return;
+    const j = len + (c.idx % len),
+      rows = el.querySelectorAll(".witem");
+    rows[c.idx].classList.remove("sel");
+    rows[j].classList.add("sel");
+    el.scrollTop += (j - c.idx) * W_ROW;
+    c.idx = j;
+  }, 120);
+}
+/* a tap on a faded row, or ↑/↓ on a focused wheel: glide that row to the middle */
+function wheelTo(id, i) {
+  const c = TP && TP.cols.find(x => x.id === id),
+    el = $("#tp-" + id);
+  if (!c || !el) return;
+  el.scrollTo({ top: Math.max(0, Math.min(c.vals.length * c.copies - 1, i)) * W_ROW, behavior: "smooth" });
+}
+function wheelRow(v) {
+  const [id, i] = v.split(":");
+  wheelTo(id, +i);
+}
+function wheelStep(id, d) {
+  const c = TP && TP.cols.find(x => x.id === id);
+  if (c) wheelTo(id, c.idx + d);
+}
+function timeOk() {
+  if (!TP) return;
+  const val = id => {
+    const c = TP.cols.find(x => x.id === id),
+      el = $("#tp-" + id);
+    return c && c.vals[Math.round(el.scrollTop / W_ROW) % c.vals.length];
+  };
+  let h = val("h");
+  const ap = val("ap"),
+    m = val("m"),
+    pick = TP.onPick;
+  if (ap) h = (h % 12) + (ap === "PM" ? 12 : 0);
+  closePop();
+  pick(pad(h) + ":" + pad(m));
 }
 const closePop = () => {
   $("#pop").innerHTML = "";
   PD = null;
+  TP = null;
   DP = null;
   ASK = null;
   ASK_ALT = null;

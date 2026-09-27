@@ -2,6 +2,8 @@ package app.tally.expenses;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -14,9 +16,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.provider.Settings;
+import android.text.format.DateFormat;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
@@ -42,6 +47,7 @@ public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final int PICK_FILE = 1;
     private static final int SAVE_FILE = 2;
+    private static final int PICK_FOLDER = 4;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
@@ -151,6 +157,7 @@ public class MainActivity extends Activity {
         });
 
         web.addJavascriptInterface(new Bridge(), "Android");
+        ReminderReceiver.channels(this); // listed in Android's settings from the start, one per kind of reminder
 
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
@@ -290,7 +297,33 @@ public class MainActivity extends Activity {
             }
             pendingSave = null;
             web.evaluateJavascript("window.tallySaved&&window.tallySaved(" + ok + ")", null);
+        } else if (requestCode == PICK_FOLDER) {
+            Uri tree = resultCode == RESULT_OK && data != null ? data.getData() : null;
+            if (tree == null) {
+                folderPicked(null);
+                return;
+            }
+            try {
+                getContentResolver().takePersistableUriPermission(tree,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            } catch (SecurityException e) {
+                folderPicked(null);
+                return;
+            }
+            BackupReceiver.setFolder(this, tree);
+            // the first backup right away, off the UI thread; the page then shows the folder and the result
+            new Thread(() -> {
+                String err = BackupReceiver.run(getApplicationContext(), true);
+                runOnUiThread(() -> folderPicked(err == null ? "" : err));
+            }).start();
         }
+    }
+
+    /** Tells the page how picking a backup folder went: null = cancelled, "" = backed up, else the problem. */
+    private void folderPicked(String err) {
+        if (web == null || isDestroyed()) return;
+        String arg = err == null ? "null" : JSONObject.quote(err);
+        web.evaluateJavascript("window.tallyFolder&&window.tallyFolder(" + arg + ")", null);
     }
 
     @Override
@@ -388,6 +421,91 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String takeActions() {
             return ReminderReceiver.takeActions(MainActivity.this);
+        }
+
+        /** The daily backup's settings: {on, h, m}. */
+        @JavascriptInterface
+        public void setBackup(String json) {
+            BackupReceiver.setConfig(MainActivity.this, json);
+        }
+
+        /** The page's data, mirrored after every save while auto backup is on (see BackupReceiver). */
+        @JavascriptInterface
+        public void setBackupData(String json) {
+            BackupReceiver.setData(MainActivity.this, json);
+        }
+
+        /** {folder, last, error} for Settings. */
+        @JavascriptInterface
+        public String backupStatus() {
+            return BackupReceiver.status(MainActivity.this);
+        }
+
+        /** "Back up now": runs on the bridge's own thread (not the UI thread); "" when done, else the problem. */
+        @JavascriptInterface
+        public String backupNow() {
+            String err = BackupReceiver.run(getApplicationContext(), true);
+            return err == null ? "" : err;
+        }
+
+        /** Opens Android's folder picker for the daily backup; the answer comes back through window.tallyFolder. */
+        @JavascriptInterface
+        public void pickBackupFolder() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                try {
+                    startActivityForResult(i, PICK_FOLDER);
+                } catch (ActivityNotFoundException e) {
+                    folderPicked(null);
+                }
+            });
+        }
+
+        /**
+         * What could keep reminders from arriving on time: {notif} notifications allowed, {exact} exact alarms
+         * allowed (Android 12+), {battery} not restricted — only asked on makers known to stop background alarms of
+         * battery-optimised apps (dontkillmyapp.com); elsewhere Android's exact alarms already get through.
+         */
+        @JavascriptInterface
+        public String reminderHealth() {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            boolean notif = nm == null || nm.areNotificationsEnabled();
+            boolean exact = Build.VERSION.SDK_INT < 31 || am == null || am.canScheduleExactAlarms();
+            String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
+            boolean strict = maker.matches(".*(xiaomi|redmi|poco|oppo|realme|oneplus|vivo|iqoo|huawei|honor|samsung|meizu|asus|nokia|tecno|infinix|itel).*");
+            boolean battery = !strict || pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+            return "{\"notif\":" + notif + ",\"exact\":" + exact + ",\"battery\":" + battery + "}";
+        }
+
+        /** Opens the Android screen that fixes one reminderHealth item: "notif", "exact" or "battery". */
+        @JavascriptInterface
+        public void openSetting(final String kind) {
+            runOnUiThread(() -> {
+                Uri pkg = Uri.parse("package:" + getPackageName());
+                Intent i;
+                if ("notif".equals(kind) && Build.VERSION.SDK_INT >= 26) {
+                    i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                } else if ("exact".equals(kind) && Build.VERSION.SDK_INT >= 31) {
+                    i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg);
+                } else {
+                    i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg); // battery → Unrestricted lives here
+                }
+                try {
+                    startActivity(i);
+                } catch (ActivityNotFoundException e) {
+                    try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)); }
+                    catch (ActivityNotFoundException ignored) { }
+                }
+            });
+        }
+
+        /** The phone's 12 / 24-hour setting, for the time picker and time labels. */
+        @JavascriptInterface
+        public boolean is24h() {
+            return DateFormat.is24HourFormat(MainActivity.this);
         }
 
         /** Android 13+ asks the user before an app may post notifications. */

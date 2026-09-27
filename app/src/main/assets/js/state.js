@@ -15,7 +15,8 @@ function blank() {
       haptics: true,
       hapticLevel: 3,
       donut: "both",
-      remind: { daily: true, time: "21:00", dues: true },
+      remind: { daily: true, time: "21:00", dues: true, dueTime: "09:00", check: true, checkTime: "08:00" },
+      backup: { on: false, time: "23:00" },
     },
     accounts: [],
     types: [],
@@ -52,12 +53,20 @@ function migrate(o) {
   Object.assign(s.settings, o.settings && typeof o.settings === "object" ? o.settings : {});
   s.settings.cur = isCur(s.settings.cur) ? s.settings.cur : "CAD";
   if (!["system", "light", "dark"].includes(s.settings.theme)) s.settings.theme = "system";
-  const r = s.settings.remind && typeof s.settings.remind === "object" ? s.settings.remind : {};
+  const obj = v => (v && typeof v === "object" ? v : {}),
+    hm = (v, d) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : d),
+    r = obj(s.settings.remind),
+    bk = obj(s.settings.backup);
   s.settings.remind = {
     daily: r.daily !== false,
-    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(r.time) ? r.time : "21:00",
+    time: hm(r.time, "21:00"),
     dues: r.dues !== false,
+    dueTime: hm(r.dueTime, "09:00"),
+    check: r.check !== false,
+    checkTime: hm(r.checkTime, "08:00"),
   };
+  s.settings.backup = { on: bk.on === true, time: hm(bk.time, "23:00") };
+  s.settings.batteryOk = s.settings.batteryOk === true;
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(+s.settings.hapticLevel) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
@@ -249,6 +258,7 @@ function save() {
   } catch (e) {
     snack("Couldn't save on this phone");
   }
+  mirrorSoon();
 }
 function commit() {
   save();

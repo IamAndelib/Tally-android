@@ -18,33 +18,50 @@ import org.json.JSONObject;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
 /**
  * Shows Tally's reminders. The page sends its reminder settings with Android.setReminders(json):
- *   {daily:{on,h,m}, lastEntry:"yyyy-MM-dd", dues:[{id,date,kind:"borrow"|"lend",who,amount}]}
+ *   {daily:{on,h,m}, lastEntry:"yyyy-MM-dd", check:{on,h,m,text,checked}, duesAt:{h,m},
+ *    dues:[{id,date,kind:"borrow"|"lend",who,amount}]}
  * - daily: at h:m, "Nothing written today" if lastEntry is not today; re-armed for the next day.
- * - dues: on the due date at 09:00 (and each morning while overdue), with "Record payment", "+1 day", "+1 week".
+ * - check: at h:m, "Do your balances still match?" with the balances in text, unless checked (the day the balances
+ *   were last confirmed) is today. Tapping it opens the morning check on Home.
+ * - dues: on the due date at duesAt (and each day while overdue), with "Record payment", "+1 day", "+1 week".
  *   The +N buttons move the stored date and queue {type:"extend",id,days} for the page (Android.takeActions()).
+ * Every alarm is exact when the phone allows it (see {@link #arm}); each daily notice shows at most once a day.
  */
 public class ReminderReceiver extends BroadcastReceiver {
     static final String A_DAILY = "app.tally.expenses.DAILY";
+    static final String A_CHECK = "app.tally.expenses.CHECK";
     static final String A_DUE = "app.tally.expenses.DUE";
     static final String A_EXTEND = "app.tally.expenses.EXTEND";
     private static final String PREFS = "tally_reminders";
-    private static final String CHANNEL = "reminders";
-    private static final int DAILY_ID = 1;
-    private static final int DUE_HOUR = 9;
+    /** Channels: loan due days keep the original id (and whatever the user set for it). */
+    static final String CH_DUES = "reminders", CH_NUDGE = "nudge", CH_CHECK = "check", CH_BACKUP = "backup";
+    private static final int DAILY_ID = 1, CHECK_ID = 2;
 
     @Override
     public void onReceive(Context ctx, Intent in) {
         String a = in.getAction();
+        SharedPreferences p = prefs(ctx);
+        String t = today();
         if (A_DAILY.equals(a)) {
-            if (!today().equals(prefs(ctx).getString("lastEntry", ""))) {
-                show(ctx, DAILY_ID, "Nothing written in Tally today",
+            if (!t.equals(p.getString("lastEntry", "")) && !t.equals(p.getString("shown:nudge", ""))) {
+                show(ctx, CH_NUDGE, DAILY_ID, "Nothing written in Tally today",
                         "Take a minute to note what you spent.", openApp(ctx, null, DAILY_ID), null);
+                p.edit().putString("shown:nudge", t).apply();
+            }
+        } else if (A_CHECK.equals(a)) {
+            JSONObject ck = config(ctx).optJSONObject("check");
+            if (ck != null && ck.optBoolean("on") && !t.equals(ck.optString("checked"))
+                    && !t.equals(p.getString("shown:check", ""))) {
+                show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
+                        openApp(ctx, "check", CHECK_ID), null);
+                p.edit().putString("shown:check", t).apply();
             }
         } else if (A_DUE.equals(a)) {
             JSONObject d = findDue(ctx, in.getStringExtra("id"));
@@ -74,26 +91,42 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     // ---------- alarms ----------
 
+    /**
+     * Arms one alarm: exact when allowed (always before Android 12; on 12+ once "Alarms & reminders" is allowed),
+     * otherwise inexact, which Android may deliver minutes (or, for a rarely used app, hours) late.
+     */
+    static void arm(AlarmManager am, long when, PendingIntent pi) {
+        if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+            try {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+                return;
+            } catch (SecurityException ignored) { } // permission withdrawn in between: fall back
+        }
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+    }
+
+    /** The next h:m from now (today if still ahead, else tomorrow). */
+    static long nextAt(int h, int m) {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.HOUR_OF_DAY, h);
+        c.set(Calendar.MINUTE, m);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        if (c.getTimeInMillis() <= System.currentTimeMillis() + 1000) c.add(Calendar.DAY_OF_MONTH, 1);
+        return c.getTimeInMillis();
+    }
+
     static void schedule(Context ctx) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         JSONObject cfg = config(ctx);
         long now = System.currentTimeMillis();
 
-        PendingIntent daily = broadcast(ctx, A_DAILY, null, DAILY_ID);
-        JSONObject dl = cfg.optJSONObject("daily");
-        if (dl != null && dl.optBoolean("on", true)) {
-            Calendar c = Calendar.getInstance();
-            c.set(Calendar.HOUR_OF_DAY, dl.optInt("h", 21));
-            c.set(Calendar.MINUTE, dl.optInt("m", 0));
-            c.set(Calendar.SECOND, 0);
-            c.set(Calendar.MILLISECOND, 0);
-            if (c.getTimeInMillis() <= now + 1000) c.add(Calendar.DAY_OF_MONTH, 1);
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), daily);
-        } else {
-            am.cancel(daily);
-        }
+        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, true);
+        armDaily(ctx, am, cfg.optJSONObject("check"), A_CHECK, CHECK_ID, 8, false);
 
+        JSONObject at = cfg.optJSONObject("duesAt");
+        int dh = at == null ? 9 : at.optInt("h", 9), dm = at == null ? 0 : at.optInt("m", 0);
         SharedPreferences p = prefs(ctx);
         try {
             JSONArray armed = new JSONArray(p.getString("armed", "[]"));
@@ -110,28 +143,37 @@ public class ReminderReceiver extends BroadcastReceiver {
             if (id.isEmpty() || c == null) continue;
             long when;
             if (date.compareTo(t) > 0) {
-                c.set(Calendar.HOUR_OF_DAY, DUE_HOUR);
+                c.set(Calendar.HOUR_OF_DAY, dh);
+                c.set(Calendar.MINUTE, dm);
                 when = c.getTimeInMillis();
             } else if (!t.equals(p.getString("shown:" + id, ""))) {
-                // due today or overdue and not shown yet today: at 09:00, or in a minute if that has passed
-                Calendar nine = Calendar.getInstance();
-                nine.set(Calendar.HOUR_OF_DAY, DUE_HOUR);
-                nine.set(Calendar.MINUTE, 0);
-                nine.set(Calendar.SECOND, 0);
-                when = Math.max(nine.getTimeInMillis(), now + 60_000);
+                // due today or overdue and not shown yet today: at the set time, or in a minute if that has passed
+                Calendar c2 = Calendar.getInstance();
+                c2.set(Calendar.HOUR_OF_DAY, dh);
+                c2.set(Calendar.MINUTE, dm);
+                c2.set(Calendar.SECOND, 0);
+                when = Math.max(c2.getTimeInMillis(), now + 60_000);
             } else {
-                // already reminded today: again tomorrow morning while it stays open
-                Calendar nine = Calendar.getInstance();
-                nine.add(Calendar.DAY_OF_MONTH, 1);
-                nine.set(Calendar.HOUR_OF_DAY, DUE_HOUR);
-                nine.set(Calendar.MINUTE, 0);
-                nine.set(Calendar.SECOND, 0);
-                when = nine.getTimeInMillis();
+                // already reminded today: again tomorrow at the set time while it stays open
+                Calendar c2 = Calendar.getInstance();
+                c2.add(Calendar.DAY_OF_MONTH, 1);
+                c2.set(Calendar.HOUR_OF_DAY, dh);
+                c2.set(Calendar.MINUTE, dm);
+                c2.set(Calendar.SECOND, 0);
+                when = c2.getTimeInMillis();
             }
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, broadcast(ctx, A_DUE, id, code(id)));
+            arm(am, when, broadcast(ctx, A_DUE, id, code(id)));
             nowArmed.put(id);
         }
         p.edit().putString("armed", nowArmed.toString()).apply();
+    }
+
+    /** A once-a-day notice (the nudge, the balance check): armed at its h:m while on, cancelled when off. */
+    private static void armDaily(Context ctx, AlarmManager am, JSONObject o, String action, int req, int defH, boolean defOn) {
+        PendingIntent pi = broadcast(ctx, action, null, req);
+        if (o == null) o = new JSONObject();
+        if (o.optBoolean("on", defOn)) arm(am, nextAt(o.optInt("h", defH), o.optInt("m", 0)), pi);
+        else am.cancel(pi);
     }
 
     // ---------- notifications ----------
@@ -150,21 +192,34 @@ public class ReminderReceiver extends BroadcastReceiver {
                 action(ctx, "+1 day", extendIntent(ctx, id, 1, base + 2)),
                 action(ctx, "+1 week", extendIntent(ctx, id, 7, base + 3)),
         };
-        show(ctx, base, title, text, openApp(ctx, "loan:" + id, base), actions);
+        show(ctx, CH_DUES, base, title, text, openApp(ctx, "loan:" + id, base), actions);
         prefs(ctx).edit().putString("shown:" + id, today()).apply();
     }
 
-    private static void show(Context ctx, int nid, String title, String text, PendingIntent tap, Notification.Action[] actions) {
+    /** Creates (or renames) Tally's channels, so each kind can be silenced on its own in Android's settings. */
+    static void channels(Context ctx) {
+        if (Build.VERSION.SDK_INT < 26) return;
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        nm.createNotificationChannels(Arrays.asList(
+                new NotificationChannel(CH_NUDGE, "Evening nudge", NotificationManager.IMPORTANCE_DEFAULT),
+                new NotificationChannel(CH_CHECK, "Balance check", NotificationManager.IMPORTANCE_DEFAULT),
+                new NotificationChannel(CH_DUES, "Loan & lending due days", NotificationManager.IMPORTANCE_DEFAULT),
+                new NotificationChannel(CH_BACKUP, "Backup problems", NotificationManager.IMPORTANCE_DEFAULT)));
+    }
+
+    static void show(Context ctx, String channel, int nid, String title, String text, PendingIntent tap, Notification.Action[] actions) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         Notification.Builder b;
         if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Reminders", NotificationManager.IMPORTANCE_DEFAULT));
-            b = new Notification.Builder(ctx, CHANNEL);
+            channels(ctx);
+            b = new Notification.Builder(ctx, channel);
         } else {
             b = new Notification.Builder(ctx);
         }
         b.setSmallIcon(R.drawable.ic_launcher).setContentTitle(title).setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setAutoCancel(true).setContentIntent(tap);
         if (actions != null) for (Notification.Action a : actions) b.addAction(a);
         try { nm.notify(nid, b.build()); } catch (SecurityException ignored) { } // notifications not allowed
@@ -200,7 +255,7 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     // ---------- helpers ----------
 
-    private static PendingIntent openApp(Context ctx, String open, int req) {
+    static PendingIntent openApp(Context ctx, String open, int req) {
         return PendingIntent.getActivity(ctx, req, MainActivity.openIntent(ctx, open),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
@@ -237,7 +292,7 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     private static SimpleDateFormat fmt() { return new SimpleDateFormat("yyyy-MM-dd", Locale.US); }
 
-    private static String today() { return fmt().format(new Date()); }
+    static String today() { return fmt().format(new Date()); }
 
     private static Calendar parse(String s) {
         try {

@@ -655,23 +655,35 @@ function settingsView() {
     "</span>" +
     ic("down") +
     "</button>";
-  const r = S.settings.remind || {};
+  const r = S.settings.remind,
+    remRow = (k, act, title, sub, on, time) =>
+      '<div class="setrow"><span class="mid"><div>' +
+      title +
+      '</div><div class="s">' +
+      sub +
+      '</div></span><button class="fieldbtn tbtn" data-act="pick-time" data-v="' +
+      k +
+      '"' +
+      (on ? "" : " disabled") +
+      "><span>" +
+      esc(timeLabel(time)) +
+      "</span>" +
+      ic("schedule") +
+      '</button><button class="sw" role="switch" data-act="' +
+      act +
+      '" aria-checked="' +
+      on +
+      '" aria-label="' +
+      title +
+      '"></button></div>';
   h +=
-    '<div class="sec">Reminders</div><div class="list">' +
-    '<div class="setrow"><span class="mid"><div>Evening nudge</div><div class="s">If nothing was written that day</div></span><button class="fieldbtn" id="f-rtime" data-act="pick-time" style="width:auto;height:44px;gap:6px"' +
-    (r.daily === false ? " disabled" : "") +
-    "><span>" +
-    esc(timeLabel(r.time || "21:00")) +
-    "</span>" +
-    ic("schedule") +
-    "</button>" +
-    '<button class="sw" role="switch" data-act="rem-daily" aria-checked="' +
-    (r.daily !== false) +
-    '" aria-label="Evening nudge"></button></div>' +
-    '<div class="setrow"><span class="mid"><div>Loan & lending due days</div><div class="s">Morning of the day, with +1 day / +1 week</div></span>' +
-    '<button class="sw" role="switch" data-act="rem-dues" aria-checked="' +
-    (r.dues !== false) +
-    '" aria-label="Due day reminders"></button></div></div>';
+    '<div class="sec">Reminders</div>' +
+    healthCard() +
+    '<div class="list">' +
+    remRow("nudge", "rem-daily", "Evening nudge", "If nothing was written that day", r.daily, r.time) +
+    remRow("check", "rem-check", "Balance check", "Do your balances still match?", r.check, r.checkTime) +
+    remRow("due", "rem-dues", "Loan &amp; lending due days", "On the day, with +1 day / +1 week", r.dues, r.dueTime) +
+    "</div>";
   h +=
     '<div class="sec">Spending categories</div><p class="hint" style="margin:0 4px 8px">Laid out exactly like your home screen. Tap to edit, hold and drag to move.</p>' +
     ringHTML(outCats(), { mode: "edit" }) +
@@ -698,6 +710,7 @@ function settingsView() {
   const noData = !S.accounts.length && !S.txns.length && !S.loans.length && !S.assets.length;
   h +=
     '<div class="sec">Your data</div><p class="muted small" style="margin:0 4px 12px">Everything stays on this phone. Uninstalling deletes it, so save a backup now and then.</p>' +
+    autoBackupHtml() +
     '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>' +
     '<label class="btn tonal" style="position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label><div class="gap"></div>' +
     '<button class="btn tonal" data-act="export">Export entries (CSV)</button><div class="gap"></div>' +
@@ -720,4 +733,69 @@ function settingsView() {
     '<br>By <a href="https://github.com/IamAndelib">IamAndelib</a>' +
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
   return h;
+}
+/* Settings → Reminders: what may keep reminders from arriving on time, with one fix each (only when a reminder is on) */
+function healthCard() {
+  const r = S.settings.remind,
+    hh = (r.daily || r.check || r.dues) && reminderHealth();
+  if (!hh) return "";
+  const fixes = [];
+  if (!hh.notif) fixes.push(["notif", "Allow notifications"]);
+  if (!hh.exact) fixes.push(["exact", "Allow on-time alarms"]);
+  const batt = !hh.battery && !S.settings.batteryOk;
+  if (batt) fixes.push(["battery", "Don't restrict battery"]);
+  if (!fixes.length) return "";
+  return (
+    '<section class="rhealth"><b>' +
+    (hh.notif ? "Reminders may arrive late" : "Reminders can't show") +
+    "</b>" +
+    fixes
+      .map(([k, t]) => '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">' + t + "</button>")
+      .join("") +
+    (batt ? '<button class="btn text" data-act="rem-fix" data-v="battery-ok">Battery is fine</button>' : "") +
+    "</section>"
+  );
+}
+/* when the last automatic backup was written: "Today, 23:00" or "Mon 3 Aug, 23:00" */
+function backupWhen(ms) {
+  const d = new Date(ms),
+    day = iso(d);
+  return (day === today() ? "Today" : dayLabel(day)) + ", " + timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes()));
+}
+/* Settings → Your data: the daily automatic backup into one file in a folder the user picked (Android only) */
+function autoBackupHtml() {
+  const bs = backupStatus();
+  if (!bs) return "";
+  const b = S.settings.backup,
+    sub = !b.on
+      ? "Every day, to a folder you pick"
+      : bs.error
+        ? esc(bs.error)
+        : bs.last
+          ? "Last backup: " + esc(backupWhen(bs.last))
+          : "Not backed up yet";
+  return (
+    '<div class="list" id="bk"><div class="setrow"><span class="mid"><div>Auto backup</div><div class="s' +
+    (b.on && bs.error ? " err" : "") +
+    '">' +
+    sub +
+    "</div></span>" +
+    (b.on
+      ? '<button class="fieldbtn tbtn" data-act="pick-time" data-v="backup"><span>' +
+        esc(timeLabel(b.time)) +
+        "</span>" +
+        ic("schedule") +
+        "</button>"
+      : "") +
+    '<button class="sw" role="switch" data-act="bk-auto" aria-checked="' +
+    b.on +
+    '" aria-label="Auto backup"></button></div>' +
+    (b.on
+      ? '<div class="setrow"><span class="mid"><div>Tally backup.json</div><div class="s">' +
+        esc(bs.folder || "No folder") +
+        '</div></span><button class="btn text" data-act="bk-folder">Change</button></div>' +
+        '<div class="setrow"><button class="btn text" data-act="bk-now">Back up now</button></div>'
+      : "") +
+    '</div><div class="gap"></div>'
+  );
 }
