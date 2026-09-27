@@ -41,6 +41,7 @@ const ago = n => {
       },
       haptic(kind, level) {
         (window.__haptics = window.__haptics || []).push(kind);
+        (window.__hlevels = window.__hlevels || []).push(level);
         window.__hlevel = level;
       },
     };
@@ -638,20 +639,59 @@ const ago = n => {
     V.screen = "settings";
     render();
   });
-  await page.evaluate(() => {
-    const r = document.getElementById("f-hlevel");
-    r.value = "5";
-    r.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+  // the Material slider: 5 stops, reaches both ends, each stop crossed plays its level
+  await page.evaluate(() => document.getElementById("f-hlevel").scrollIntoView({ block: "center" }));
+  const geo = () =>
+    page.evaluate(() => {
+      const el = document.getElementById("f-hlevel"),
+        r = el.getBoundingClientRect(),
+        t = el.querySelector(".ms-thumb").getBoundingClientRect(),
+        title = el.parentNode.firstElementChild.getBoundingClientRect();
+      return {
+        n: +el.getAttribute("aria-valuenow"),
+        dots: el.querySelectorAll(".ms-dot").length,
+        l: t.left - r.left,
+        rr: r.right - t.right,
+        titleL: title.left - r.left,
+        x: r.left,
+        y: r.top + r.height / 2,
+        w: r.width,
+      };
+    });
+  let g = await geo();
   ok(
-    (await state()).settings.hapticLevel === 5 && (await page.evaluate(() => window.__hlevel)) === 5,
-    "the strength slider saves level 5 and plays a sample at it"
+    g.dots === 5 && g.n === 3 && Math.abs(g.titleL) < 1,
+    "slider: 5 stop dots, level 3, full row width " + JSON.stringify(g)
   );
+  await page.evaluate(() => (window.__hlevels = []));
+  await page.mouse.move(g.x + 1, g.y);
+  await page.mouse.down();
+  await page.waitForTimeout(160);
+  g = await geo();
+  ok(
+    g.n === 1 && (await state()).settings.hapticLevel === 1 && g.l <= 1,
+    "pressing the far left: level 1, handle at the left end " + JSON.stringify(g)
+  );
+  await page.mouse.move(g.x + g.w - 1, g.y, { steps: 16 });
+  await page.mouse.up();
+  await page.waitForTimeout(160);
+  g = await geo();
+  const felt = await page.evaluate(() => window.__hlevels);
+  ok(
+    g.n === 5 && (await state()).settings.hapticLevel === 5 && g.rr < 1 && JSON.stringify(felt) === "[1,2,3,4,5]",
+    "dragging right plays every stop in turn and reaches the right end " + JSON.stringify([g, felt])
+  );
+  await page.focus("#f-hlevel");
+  await page.keyboard.press("ArrowLeft");
+  ok((await state()).settings.hapticLevel === 4, "← on the focused slider steps down");
   await act("haptics");
   await settle();
   ok(
-    await page.evaluate(() => document.getElementById("f-hlevel").disabled),
-    "with vibration off the slider is disabled"
+    await page.evaluate(() => {
+      const el = document.getElementById("f-hlevel");
+      return el.classList.contains("off") && el.getAttribute("aria-disabled") === "true";
+    }),
+    "with vibration off the slider is faded and disabled"
   );
   await act("haptics");
   await settle();

@@ -372,6 +372,32 @@ function dragEnd() {
   );
   commit();
 }
+/* Settings → Feel → Strength slider: press or drag to the nearest of its 5 stops; every stop crossed plays its level */
+let MS = null;
+function msLevel(el, x) {
+  const r = el.getBoundingClientRect();
+  return Math.round(Math.min(1, Math.max(0, (x - r.left - 2) / (r.width - 4))) * 4) + 1;
+}
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest && e.target.closest(".mslider");
+  if (!el || el.classList.contains("off")) return;
+  MS = { el, id: e.pointerId };
+  try {
+    el.setPointerCapture(e.pointerId);
+  } catch (x) {}
+  el.classList.add("drag");
+  setHapticLevel(msLevel(el, e.clientX), true); // the level under the finger, felt at once
+});
+document.addEventListener("pointermove", e => {
+  if (MS && e.pointerId === MS.id) setHapticLevel(msLevel(MS.el, e.clientX));
+});
+const msEnd = e => {
+  if (!MS || e.pointerId !== MS.id) return;
+  MS.el.classList.remove("drag");
+  MS = null;
+};
+document.addEventListener("pointerup", msEnd);
+document.addEventListener("pointercancel", msEnd);
 let lastTouch = 0;
 const fromTouch = () => Date.now() - lastTouch < 800;
 /* pressed look: on at touch-down, off at release (kept ~90ms so a quick tap is still seen), off at once if the finger scrolls */

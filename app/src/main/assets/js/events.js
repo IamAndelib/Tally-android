@@ -544,7 +544,6 @@ document.addEventListener("input", ev => {
   else if (id === "cur-q") curList(ev.target.value);
   else if (id === "ic-q") icList(ev.target.value);
   else if (id === "hx-in") hexPreview();
-  else if (id === "f-hlevel") setHapticLevel(ev.target.value);
   else if (id === "f-person" && F && F.kind === "loanf") {
     F.merge = null;
     mergeHint();
@@ -556,7 +555,11 @@ document.addEventListener("change", ev => {
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") goBack();
-  else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
+  else if (e.target.id === "f-hlevel" && /^(Arrow(Left|Right|Up|Down)|Home|End)$/.test(e.key)) {
+    e.preventDefault();
+    const n = S.settings.hapticLevel || 3;
+    setHapticLevel(e.key === "Home" ? 1 : e.key === "End" ? 5 : n + (/Right|Up/.test(e.key) ? 1 : -1));
+  } else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
     e.preventDefault();
     (e.target.id === "nt-name" ? addType : useHex)();
   } else if (e.key === "Enter" && e.target.id === "cur-q") {

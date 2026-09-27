@@ -593,6 +593,37 @@ function catGrid(kind) {
     '</span><span class="cn">Add</span></button></div>'
   );
 }
+/* the vibration-strength slider (Material 3 discrete slider): 5 stops, a bar handle that reaches both ends, the
+   active track left of it and the inactive one right, stop dots on both; dragged in gestures.js */
+function sliderHtml(n, off) {
+  let dots = "";
+  for (let i = 0; i < 5; i++)
+    dots += '<span class="ms-dot' + (i < n - 1 ? " on" : i === n - 1 ? " cur" : "") + '" style="--i:' + i + '"></span>';
+  return (
+    '<div class="mslider' +
+    (off ? " off" : "") +
+    '" id="f-hlevel" role="slider" tabindex="' +
+    (off ? "-1" : "0") +
+    '" aria-label="Vibration strength" aria-valuemin="1" aria-valuemax="5" aria-valuenow="' +
+    n +
+    '"' +
+    (off ? ' aria-disabled="true"' : "") +
+    ' style="--f:' +
+    (n - 1) / 4 +
+    '"><span class="ms-act"></span><span class="ms-in"></span>' +
+    dots +
+    '<span class="ms-thumb"></span></div>'
+  );
+}
+/* moves the slider to stop n in place (no re-render): handle, tracks and which dots sit on the active track */
+function sliderShow(el, n) {
+  el.style.setProperty("--f", (n - 1) / 4);
+  el.setAttribute("aria-valuenow", n);
+  el.querySelectorAll(".ms-dot").forEach((d, i) => {
+    d.classList.toggle("on", i < n - 1);
+    d.classList.toggle("cur", i === n - 1);
+  });
+}
 function settingsView() {
   let h = subBar("Settings");
   const th = S.settings.theme || "system";
@@ -615,11 +646,9 @@ function settingsView() {
     '" aria-label="Vibration on tap"></button></div>' +
     '<div class="setrow hlevel' +
     (S.settings.haptics === false ? " off" : "") +
-    '"><span class="mid"><div>Strength</div><input type="range" id="f-hlevel" min="1" max="5" step="1" value="' +
-    (S.settings.hapticLevel || 3) +
-    '" aria-label="Vibration strength"' +
-    (S.settings.haptics === false ? " disabled" : "") +
-    '><div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
+    '"><span class="mid"><div>Strength</div>' +
+    sliderHtml(S.settings.hapticLevel || 3, S.settings.haptics === false) +
+    '<div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
   h +=
     '<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>' +
     esc(curLabel(S.settings.cur)) +

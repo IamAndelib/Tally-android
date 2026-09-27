@@ -274,16 +274,17 @@ function snack(msg, undo) {
 }
 /* FX: one-shot feedback for the next render (FX.row flashes a row, FX.cat pops a ring tile, FX.center bumps the donut total) */
 let FX = {};
-/* haptic feedback: the phone's own tuned click / tick effects, played directly (Android.haptic):
-   "tap" a category, "key" a keypad key, "tick" a drag passing a slot, "long" a long-press, "confirm" a save.
-   A short vibration where the shell has no haptic() (older builds, a browser). */
-const HAPTIC_MS = { tap: 8, key: 6, tick: 5, long: 14, confirm: 12 };
+/* haptic feedback through Android.haptic(kind, level): the level is Settings → Feel → Strength, 1 (the phone's lightest
+   tick) … 5 (a strong pulse); "long" (a long-press) plays one level up. Kinds: "tap" any tap, "key" a keypad key,
+   "tick" a drag passing a slot or a swipe, "long" a long-press, "confirm" a save. A plain vibration of the same
+   length where the shell has no haptic() (a browser). */
+const PULSE_MS = [8, 14, 20, 30, 45]; // per strength 1–5, as MainActivity's fallback pulses
 const buzz = kind => {
   if (S.settings.haptics === false) return; // Settings → Feel → Vibration on tap
   const level = S.settings.hapticLevel || 3; // Settings → Feel → Strength, 1 (light) … 5 (strong)
   try {
     if (window.Android && Android.haptic) Android.haptic(kind, level);
-    else if (navigator.vibrate) navigator.vibrate(Math.round(((HAPTIC_MS[kind] || 8) * (level + 1)) / 4));
+    else if (navigator.vibrate) navigator.vibrate(PULSE_MS[Math.min(5, level + (kind === "long" ? 1 : 0)) - 1]);
   } catch (e) {}
 };
 /* short label for date fields: Today / Yesterday / 22 Sep (year only if not this year) */

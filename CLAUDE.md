@@ -265,10 +265,16 @@ Built originally in a claude.ai chat; continue development from here.
     dragged category passes (ring and grid) and each swipe (Home period, summary chart, History account); "long"
     long-press pick-up; "confirm" saves/drops. `settings.haptics` (Settings → Feel → "Vibration on tap",
     `toggleHaptics()`) turns all of it off; `navigator.vibrate` only as a fallback without the bridge.
-    Strength: `settings.hapticLevel` 1–5 (default 3; the "Strength" slider `#f-hlevel`, faded/disabled while vibration
-    is off, `setHapticLevel()` plays a sample) goes to `Android.haptic(kind, level)`: 1–2 a scaled
-    `Composition.PRIMITIVE_CLICK` (else EFFECT_TICK), 3 EFFECT_CLICK, 4 EFFECT_HEAVY_CLICK, 5 a full-amplitude 22 ms
-    pulse; "long" plays one level up. Home donut middle: `settings.donut` = out | in | both (default) | none, cycled by
+    Strength: `settings.hapticLevel` 1–5 (default 3) goes to `Android.haptic(kind, level)`: 1 EFFECT_TICK (the phone's
+    lightest), 2 EFFECT_CLICK, 3 EFFECT_HEAVY_CLICK, 4–5 full-amplitude one-shots of 30 / 45 ms (`PULSE_MS`, also the
+    pre-API-29 and browser fallback lengths); "long" plays one level up. Every haptic is played as **media** vibration
+    (`VibrationAttributes.USAGE_MEDIA`, `AudioAttributes.USAGE_MEDIA` before API 33): without attributes Android 12+
+    files short effects under touch feedback, which the phone's own touch-vibration setting scales down or silences.
+    The slider is a Material 3 discrete slider built in HTML (`sliderHtml()` / `sliderShow()` in `js/screens.js`,
+    `.mslider` in `css/app.css`): 5 stop dots, a 4px bar handle whose centre is `2px + f·(100% − 4px)` (`--f` =
+    (level−1)/4) so it reaches both ends, active/inactive tracks with a 6px gap either side; pointer events in
+    `js/gestures.js` (`msLevel`) jump to the nearest stop and `setHapticLevel(n, force)` plays each stop crossed;
+    ←/→/Home/End when focused; faded + `pointer-events:none` while vibration is off. Home donut middle: `settings.donut` = out | in | both (default) | none, cycled by
     tapping the Settings donut (`cycleDonut()`, `DONUT_MODES` in `js/ring.js`; its centre, with a `.dhole`, swells while
     pressed); only the middle changes — slices, leader lines and tile %s always stay. Picker grids (`.catgrid .cat`)
     have a 9px icon–label gap so the selected ring (5px) clears the label. Currency signs: `canDraw(s)` (`js/core.js`)

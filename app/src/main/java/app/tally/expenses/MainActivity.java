@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.media.AudioAttributes;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -309,28 +310,43 @@ public class MainActivity extends Activity {
         return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
-    /** The haptic for strength n (1–5), API 29+: see {@link Bridge#haptic}. */
-    @TargetApi(29)
+    /** Pulse lengths (ms) for strengths 1–5 where there are no predefined effects; the page's fallback uses the same. */
+    private static final int[] PULSE_MS = {8, 14, 20, 30, 45};
+
+    /**
+     * The haptic for strength n (1–5), each stronger than the one before: 1–3 are the phone's own tick, click and
+     * heavy click (API 29+), 4–5 longer full-strength pulses, which even a basic vibration motor makes clearly felt.
+     */
+    @TargetApi(26)
     private static VibrationEffect effect(Vibrator v, int n) {
-        if (n <= 2) {
-            if (Build.VERSION.SDK_INT >= 30 && v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)) {
-                return VibrationEffect.startComposition()
-                        .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, n == 1 ? 0.35f : 0.65f).compose();
-            }
-            return VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK);
+        if (Build.VERSION.SDK_INT >= 29 && n <= 3) {
+            return VibrationEffect.createPredefined(n == 1 ? VibrationEffect.EFFECT_TICK
+                    : n == 2 ? VibrationEffect.EFFECT_CLICK : VibrationEffect.EFFECT_HEAVY_CLICK);
         }
-        if (n == 3) return VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK);
-        if (n == 4) return VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK);
-        return VibrationEffect.createOneShot(22, v.hasAmplitudeControl() ? 255 : VibrationEffect.DEFAULT_AMPLITUDE);
+        int amp = !v.hasAmplitudeControl() ? VibrationEffect.DEFAULT_AMPLITUDE : n >= 3 ? 255 : n == 2 ? 170 : 100;
+        return VibrationEffect.createOneShot(PULSE_MS[n - 1], amp);
+    }
+
+    /**
+     * Plays e as media vibration. Without attributes, Android 12+ files short effects under "touch feedback", which the
+     * phone's own touch-vibration setting scales down or silences (often off), so taps were barely felt. The app has
+     * its own on/off switch and strength instead.
+     */
+    @TargetApi(26)
+    @SuppressWarnings("deprecation")
+    private static void play(Vibrator v, VibrationEffect e) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            v.vibrate(e, android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_MEDIA));
+        } else {
+            v.vibrate(e, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build());
+        }
     }
 
     private class Bridge {
         /**
-         * Haptic feedback on the vibrator directly (performHapticFeedback would follow the system "touch feedback"
-         * switch, which many phones ship turned off, so it was never felt). {@code level} is Settings → Feel →
-         * Strength, 1 (light) … 5 (strong); "long" (a long-press) plays one level stronger than taps.
-         * 1–2: a scaled-down click (composition primitive where supported, else the light tick effect);
-         * 3: the phone's standard click (the default); 4: its heavy click; 5: a firm full-strength pulse.
+         * Haptic feedback on the vibrator directly (performHapticFeedback follows the phone's touch-feedback switch,
+         * often off, so it was never felt). {@code level} is Settings → Feel → Strength, 1 (the phone's lightest tick)
+         * … 5 (strong); "long" (a long-press) plays one level up. See {@link #effect} and {@link #play}.
          * The Vibrator is thread-safe: no UI thread needed. The page skips the call when vibration is switched off.
          */
         @JavascriptInterface
@@ -339,9 +355,8 @@ public class MainActivity extends Activity {
             if (v == null || !v.hasVibrator()) return;
             int n = Math.max(1, Math.min(5, level + ("long".equals(kind) ? 1 : 0)));
             try {
-                if (Build.VERSION.SDK_INT >= 29) v.vibrate(effect(v, n));
-                else if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(4 + 3 * n, VibrationEffect.DEFAULT_AMPLITUDE));
-                else v.vibrate(4 + 3 * n);
+                if (Build.VERSION.SDK_INT >= 26) play(v, effect(v, n));
+                else v.vibrate(PULSE_MS[n - 1]);
             } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
         }
 

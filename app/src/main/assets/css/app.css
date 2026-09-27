@@ -1691,11 +1691,65 @@ body.hasnav .snack {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
 }
-/* Settings → Feel: vibration strength; faded and off while vibration is switched off */
-.hlevel input[type="range"] {
-  width: 100%;
-  margin: 10px 0 2px;
-  accent-color: var(--primary);
+/* Settings → Feel: vibration strength, a Material 3 discrete slider; faded and off while vibration is switched off.
+   --f = (level − 1) / 4. The 4px handle's centre is 2px + f·(100% − 4px), so it touches both ends; the tracks keep a
+   6px gap either side of it; the 5 stop dots sit inside the rounded track ends (6px … 100% − 6px). */
+.mslider {
+  position: relative;
+  height: 44px;
+  margin-top: 6px;
+  touch-action: pan-y;
+  cursor: pointer;
+}
+.ms-act,
+.ms-in {
+  position: absolute;
+  top: 14px;
+  height: 16px;
+  transition: width 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+.ms-act {
+  left: 0;
+  width: max(0px, calc(var(--f) * (100% - 4px) - 6px));
+  background: var(--primary);
+  border-radius: 8px 2px 2px 8px;
+}
+.ms-in {
+  right: 0;
+  width: max(0px, calc(100% - var(--f) * (100% - 4px) - 10px));
+  background: var(--secondary-container);
+  border-radius: 2px 8px 8px 2px;
+}
+.ms-thumb {
+  position: absolute;
+  top: 0;
+  left: calc(var(--f) * (100% - 4px));
+  width: 4px;
+  height: 44px;
+  border-radius: 2px;
+  background: var(--primary);
+  transition: left 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+.mslider.drag .ms-thumb {
+  transform: scaleX(0.5); /* M3: the handle narrows while held */
+}
+.ms-dot {
+  position: absolute;
+  top: 20px;
+  left: calc(4px + var(--i) * (100% - 12px) / 4);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.ms-dot.on {
+  background: var(--on-primary);
+}
+.ms-dot.cur {
+  visibility: hidden;
+}
+.mslider.off {
+  pointer-events: none;
 }
 .hlevel .hends {
   display: flex;
