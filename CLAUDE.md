@@ -34,7 +34,8 @@ Built originally in a claude.ai chat; continue development from here.
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
   - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
     logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
-    (12+, held by an `OnPreDrawListener`). The WebView stays hidden (background `surface`, never white) until the page
+    (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, so launches
+    from the widget, its quick add or a reminder show the logo too instead of a plain colour). The WebView stays hidden (background `surface`, never white) until the page
     calls `Android.ready()` at the end of `js/main.js` (not from rAF: a hidden WebView may never run it), or 3 s at
     most; `setBars` colours `root` only once the page shows, so the logo stays visible until then.
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
