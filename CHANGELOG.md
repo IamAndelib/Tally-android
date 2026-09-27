@@ -10,6 +10,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Hold ⌫ in the calculator to keep deleting, like on a phone keyboard.
+- Long-pressing labels or empty space no longer brings up text-selection handles.
 - Targets Android 15 (API 35), as Google Play requires; the app keeps clear of the status bar, navigation bar and
   keyboard now that Android draws apps edge to edge.
 - Releases also include an Android App Bundle (.aab) for Google Play.

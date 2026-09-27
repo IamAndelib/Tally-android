@@ -147,7 +147,7 @@ Built originally in a claude.ai chat; continue development from here.
     `calcDragCaret()`, which also scrolls near the edges); elsewhere a swipe scrolls natively and a tap places the caret.
     Holding ⌫ repeats it (`LP.kind==="repeat"`, `startRepeat/stopRepeat` in `js/gestures.js`: 400 ms delay, then every
     70 ms, 35 ms after ~12 deletes; stops when the caret reaches 0, the finger slides off the key, or `calcClose`; a
-    release after any repeat swallows its click; `.calc button` has no text selection / long-press menu).
+    release after any repeat swallows its click).
     `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
     above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
     `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
@@ -217,6 +217,8 @@ Built originally in a claude.ai chat; continue development from here.
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
     row (`FX.row`), snackbar and sheet slide in, dialog fade, haptic `buzz()` (VIBRATE). No ripple, no scale, no page animation.
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
+    Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
+    so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.
     Calendar range: a touch only becomes a drag after 12px, so a jittery tap stays a tap. Don't reuse existing class names
     (`.pop` = dialog layer, `.row`, `.nav .in`) for effects.
     `commit()` also calls `syncReminders()`.

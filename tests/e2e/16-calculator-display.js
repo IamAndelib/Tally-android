@@ -237,6 +237,45 @@ const ok = (c, m) => {
     await page.click('#calc-f-amt [data-act="calc-kbd"]');
     await settle();
 
+    // ---- 7. no text selection outside typing fields (long-press / drag never shows selection handles)
+    await page.click('[data-act="calc-toggle"][data-v="f-amt"]');
+    await settle();
+    const sel = await page.evaluate(() =>
+      [".calcbar", ".calcres", ".amtwrap .cur", ".caretmirror", "body", "#f-note"].map(
+        q => getComputedStyle(document.querySelector(q)).userSelect
+      )
+    );
+    ok(
+      JSON.stringify(sel) === JSON.stringify(["none", "none", "none", "none", "none", "text"]),
+      "text selection is off except in typing fields: " + JSON.stringify(sel) + tag
+    );
+    const from = await page.evaluate(() => {
+      const r = document.querySelector(".calcbar").getBoundingClientRect(),
+        c = document.querySelector(".amtwrap .cur").getBoundingClientRect();
+      return { x1: r.left + 10, y1: r.top + r.height / 2, x2: c.left + 2, y2: c.top + c.height / 2 };
+    });
+    await page.mouse.move(from.x1, from.y1);
+    await page.mouse.down();
+    await page.waitForTimeout(800);
+    await page.mouse.move(from.x2, from.y2, { steps: 8 });
+    await page.mouse.up();
+    ok(
+      (await page.evaluate(() => String(getSelection()))) === "",
+      "holding and dragging over the keypad bar and label selects nothing" + tag
+    );
+    await page.click('#calc-f-amt [data-act="calc-kbd"]');
+    await settle();
+    await page.fill("#f-note", "Tea");
+    await page.focus("#f-note");
+    await page.keyboard.press("Control+A");
+    ok(
+      (await page.evaluate(() => {
+        const i = document.getElementById("f-note");
+        return i.value.slice(i.selectionStart, i.selectionEnd);
+      })) === "Tea",
+      "text in a typing field can still be selected" + tag
+    );
+
     ok(errors.length === 0, "no page errors: " + JSON.stringify(errors) + tag);
     await ctx.close();
   }
