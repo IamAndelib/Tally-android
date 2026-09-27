@@ -223,6 +223,13 @@ Built originally in a claude.ai chat; continue development from here.
     paid back than lent/borrowed (worse than it already is).
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
+    `ringDragTo()`: the target slot follows the **angle of the lifted tile's centre** (not the finger) around the ring,
+    so there are no dead zones; it only changes once the tile is 0.65 of a slot past its current one (hysteresis),
+    nothing changes over the donut's middle, and the tiles in between shift the **shorter way round** the circle
+    (never the long way across the top). Tiles slide (`.rt` left/top, 0.22s emphasized-decelerate), each slot change
+    buzzes, and on release the order is saved at once while the ghost glides into its slot (`.ghost.settle`, 0.2s,
+    `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
+    it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
     "Delete all data" is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a

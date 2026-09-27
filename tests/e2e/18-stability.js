@@ -366,6 +366,56 @@ const ago = n => {
   pv = await page.evaluate(() => [HP.period, HP.anchor]);
   ok(pv[0] === "day" && pv[1] === today(), "History: Month tab → Today shows today: " + pv);
 
+  // ---- 13. Settings ring arranger: follows the tile's angle, shifts the short way round, glides into place
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  await act("go", "settings");
+  await settle();
+  const outOrder = async () => (await state()).cats.filter(c => c.kind === "out" && !c.hidden).map(c => c.id);
+  const box = async id => (await page.$(`.ring.edit .tile[data-v="${id}"]`)).boundingBox();
+  // keep the ring mid-screen, away from the edges where a drag scrolls the page
+  const midRing = () => page.evaluate(() => document.querySelector(".ring.edit").scrollIntoView({ block: "center" }));
+  const ringDrag = async (id, grab, to) => {
+    const b = await box(id),
+      gx = b.x + b.width * grab,
+      gy = b.y + b.height * grab;
+    await page.mouse.move(gx, gy);
+    await page.mouse.down();
+    await page.waitForTimeout(450);
+    await page.mouse.move(gx + 4, gy + 4, { steps: 2 });
+    await page.mouse.move(to.x + (gx - b.x - b.width / 2), to.y + (gy - b.y - b.height / 2), { steps: 12 });
+    await page.waitForTimeout(250);
+    await page.mouse.up();
+    await page.waitForTimeout(350);
+  };
+  const centre = async id => {
+    const b = await box(id);
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  let o0 = await outOrder();
+  const n = o0.length;
+  await midRing();
+  // first slot (just left of 12 o'clock) onto the last one (just right of it): only those two trade places
+  await ringDrag(o0[0], 0.5, await centre(o0[n - 1]));
+  let o1 = await outOrder();
+  ok(
+    o1[0] === o0[n - 1] && o1[n - 1] === o0[0] && o1.slice(1, n - 1).join() === o0.slice(1, n - 1).join(),
+    "across the top: only the two neighbours trade places, the rest stay: " + o1.join(",")
+  );
+  // grabbed near its corner, the tile lands where the tile is, not where the finger is
+  o0 = o1;
+  await midRing();
+  await ringDrag(o0[1], 0.15, await centre(o0[3]));
+  o1 = await outOrder();
+  ok(o1[3] === o0[1] && o1[1] === o0[2] && o1[2] === o0[3], "grabbed off-centre it still lands on the slot under it");
+  // let go over the middle of the donut: nothing moves
+  o0 = o1;
+  await midRing();
+  const ring = await (await page.$(".ring.edit .dwrap")).boundingBox();
+  await ringDrag(o0[5], 0.5, { x: ring.x + ring.width / 2, y: ring.y + ring.height / 2 });
+  const o2 = await outOrder();
+  ok(o2.join() === o0.join(), "dropped over the middle: order unchanged: " + o0.join(",") + " → " + o2.join(","));
+  ok(!(await page.$(".ghost")) && !(await page.$(".ring.edit .placeholder")), "the lifted tile settled and is gone");
+
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

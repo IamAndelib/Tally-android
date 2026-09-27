@@ -382,9 +382,10 @@ a {
   gap: 2px;
   padding: 4px 0 0;
   border-radius: 16px;
+  /* Settings ring: tiles slide to their new slot while one is dragged (Material "emphasized decelerate") */
   transition:
-    left 0.2s,
-    top 0.2s;
+    left 0.22s cubic-bezier(0.2, 0, 0, 1),
+    top 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 .rt .ci {
   width: var(--d);
@@ -1802,6 +1803,16 @@ body.hasnav .snack {
   border-radius: 16px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   margin: 0;
+}
+/* a dropped ring tile gliding into its slot */
+.ghost.settle {
+  transition:
+    left 0.2s cubic-bezier(0.2, 0, 0, 1),
+    top 0.2s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.2s;
+  transform: none;
+  box-shadow: none;
 }
 .tile-add .ci {
   border: 2px dashed var(--outline);

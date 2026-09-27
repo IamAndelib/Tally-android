@@ -11,6 +11,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - Tally opens on its logo, in your light or dark colours, instead of a blank white screen that flashes before the app
   appears.
+- Arranging spending categories in Settings feels smoother and more predictable: the dragged category goes to the
+  slot it's over (anywhere around the ring, wherever you grabbed it), neighbours make way the short way round instead
+  of the whole ring shifting, tiles slide into place, and the category glides into its slot when you let go.
 
 ### Fixed
 

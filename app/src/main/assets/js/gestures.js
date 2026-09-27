@@ -17,6 +17,8 @@ function swallowNextClick() {
 let sw = null,
   LP = null,
   smSw = null;
+/* true while a dropped ring tile glides into its slot (no new drag until the page has redrawn) */
+let ringSettling = false;
 /* like a phone keyboard's backspace: after 400 ms held, delete every 70 ms, faster (35 ms) after about a second */
 function startRepeat(key) {
   const L = (LP = { kind: "repeat", key, fired: 0 });
@@ -62,7 +64,7 @@ function pressStart(x, y, target) {
     LP = rc.disabled ? null : { kind: "range", x, y, from: rc.dataset.v, cur: rc.dataset.v, moved: false };
     return;
   }
-  const tile = target.closest(".cgrid .tile, .ring.edit .tile"),
+  const tile = !ringSettling && target.closest(".cgrid .tile, .ring.edit .tile"),
     row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="tx-open"]');
   const mv = (V.screen === "assets" || V.screen === "liabs") && target.closest(".tx[data-drag]");
   const hold = target.closest("#sheet .chip[data-ctype]") || target.closest('#f-dots .dot[data-act="f-col"]');
@@ -216,6 +218,8 @@ function dragBegin() {
     ghost: g,
     dx: LP.cx - r.left,
     dy: LP.cy - r.top,
+    w: r.width,
+    h: r.height,
     grid: el.closest(".cgrid"),
     ring: el.closest(".ring.edit"),
   });
@@ -252,8 +256,12 @@ function dragMove(x, y) {
   const L = LP;
   L.ghost.style.left = x - L.dx + "px";
   L.ghost.style.top = y - L.dy + "px";
-  if (y < 70) scrollBy(0, -10);
-  else if (y > innerHeight - (document.body.classList.contains("hasnav") ? 150 : 70)) scrollBy(0, 10);
+  /* near an edge the page scrolls along; for the ring only while part of it is still off-screen that way, so a ring
+     that fits never creeps under the finger */
+  const rb = L.ring && L.ring.getBoundingClientRect(),
+    low = innerHeight - (document.body.classList.contains("hasnav") ? 150 : 70);
+  if (y < 70 && (!rb || rb.top < 0)) scrollBy(0, -10);
+  else if (y > low && (!rb || rb.bottom > low)) scrollBy(0, 10);
   if (L.kind === "move") {
     const hit = document.elementFromPoint(x, y),
       z = hit && hit.closest(".dropbox"),
@@ -267,30 +275,7 @@ function dragMove(x, y) {
     return;
   }
   if (L.ring) {
-    /* move to the nearest slot of the home-screen layout; other tiles slide over */
-    const rr = L.ring.getBoundingClientRect(),
-      px = x - rr.left,
-      py = y - rr.top,
-      id = L.el.dataset.v;
-    let k = -1,
-      bd = Infinity;
-    RE.L.slots.forEach((s, i) => {
-      if (i >= RE.order.length) return;
-      const dd = Math.hypot(s.x - px, s.y - py);
-      if (dd < bd) {
-        bd = dd;
-        k = i;
-      }
-    });
-    const cur = RE.order.indexOf(id);
-    if (k < 0 || bd > RE.L.u * 0.75 || k === cur) return;
-    RE.order.splice(cur, 1);
-    RE.order.splice(k, 0, id);
-    L.ring.querySelectorAll(".tile").forEach(b => {
-      const s = RE.L.slots[RE.order.indexOf(b.dataset.v)];
-      b.style.left = s.x - RE.L.u / 2 + "px";
-      b.style.top = s.y - RE.L.u / 2 + "px";
-    });
+    ringDragTo(L, x, y);
     return;
   }
   const hit = document.elementFromPoint(x, y),
@@ -300,12 +285,36 @@ function dragMove(x, y) {
   if (tiles.indexOf(L.el) < tiles.indexOf(t)) t.after(L.el);
   else t.before(L.el);
 }
-function dragEnd() {
-  const L = LP;
-  L.ghost.remove();
-  L.el.classList.remove("placeholder");
-  const kind = L.ring ? "out" : L.grid.dataset.kind,
-    order = L.ring ? RE.order.slice() : [...L.grid.querySelectorAll(".tile")].map(b => b.dataset.v);
+/* Settings ring: the lifted tile's slot follows the angle of its centre around the ring, so there is no dead zone
+   between slots; it changes only once the tile is well into the next slot (no flicker on a border), and the tiles
+   in between shift the shorter way round the circle, like beads on a string, never the long way across the top */
+function ringDragTo(L, x, y) {
+  const lay = RE.L,
+    n = RE.order.length,
+    rr = L.ring.getBoundingClientRect(),
+    gx = x - L.dx + L.w / 2 - rr.left - lay.cx,
+    gy = y - L.dy + L.h / 2 - rr.top - lay.cy;
+  if (n < 2 || Math.hypot(gx, gy) < lay.u * 0.6) return; // over the middle of the donut: stay where it is
+  const id = L.el.dataset.v,
+    cur = RE.order.indexOf(id),
+    circ = d => d - Math.round(d / n) * n, // signed distance around the ring, in slots
+    f = ((Math.atan2(gy, gx) + TAU / 4) / TAU) * n + 0.5; // slot i sits at -90° + (i - 0.5)/n·360° (ringLayout)
+  if (Math.abs(circ(f - cur)) < 0.65) return;
+  const k = ((Math.round(f) % n) + n) % n,
+    d = circ(k - cur),
+    step = Math.sign(d);
+  if (!step) return;
+  for (let i = cur; i !== k; i = (i + step + n) % n) RE.order[i] = RE.order[(i + step + n) % n];
+  RE.order[k] = id;
+  L.ring.querySelectorAll(".tile").forEach(b => {
+    const s = lay.slots[RE.order.indexOf(b.dataset.v)];
+    b.style.left = s.x - lay.u / 2 + "px";
+    b.style.top = s.y - lay.u / 2 + "px";
+  });
+  buzz(6);
+}
+/* a new category order (ids of one kind, in order) into S.cats; hidden ones keep their place at the end */
+function setCatOrder(kind, order) {
   const pick = k =>
     k === kind
       ? order
@@ -314,6 +323,34 @@ function dragEnd() {
           .concat(S.cats.filter(c => c.kind === k && c.hidden))
       : S.cats.filter(c => c.kind === k);
   S.cats = pick("out").concat(pick("in"));
+}
+function dragEnd() {
+  const L = LP;
+  if (L.ring) {
+    /* saved at once; the lifted tile glides into its slot, then the page redraws */
+    setCatOrder("out", RE.order.slice());
+    save();
+    const lay = RE.L,
+      rr = L.ring.getBoundingClientRect(),
+      s = lay.slots[RE.order.indexOf(L.el.dataset.v)];
+    ringSettling = true;
+    L.ghost.classList.add("settle");
+    L.ghost.style.left = rr.left + s.x - lay.u / 2 + "px";
+    L.ghost.style.top = rr.top + s.y - lay.u / 2 + "px";
+    setTimeout(() => {
+      ringSettling = false;
+      L.ghost.remove();
+      L.el.classList.remove("placeholder");
+      commit();
+    }, 200);
+    return;
+  }
+  L.ghost.remove();
+  L.el.classList.remove("placeholder");
+  setCatOrder(
+    L.grid.dataset.kind,
+    [...L.grid.querySelectorAll(".tile")].map(b => b.dataset.v)
+  );
   commit();
 }
 let lastTouch = 0;
