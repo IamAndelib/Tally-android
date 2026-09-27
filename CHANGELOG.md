@@ -17,6 +17,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Haptics: every tap, keypad key, long-press and save gives a crisp click from the phone's own haptics, and dragging a
   category clicks as it passes each slot. Settings → Feel → "Vibration on tap" turns it off.
 - In History, swipe sideways to move between the account filters (All → each account and back).
+- Settings → Feel → Strength: a slider from light to strong vibration.
+- Tap the donut in Settings to choose what the middle of the Home donut shows: spending, income, both, or nothing.
+- A selected category in the pickers has room between its ring and its name; the About footer is centred.
+- A currency sign your phone has no font for (e.g. the Kyrgyz som) no longer shows as an empty box; the code is used.
 - Arranging spending categories in Settings feels smoother and more predictable: the dragged category goes to the
   slot it's over (anywhere around the ring, wherever you grabbed it), neighbours make way the short way round instead
   of the whole ring shifting, tiles slide into place, and the category glides into its slot when you let go.

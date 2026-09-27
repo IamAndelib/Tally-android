@@ -119,6 +119,37 @@ const addDays = (s, n) => {
   return iso(d);
 };
 const r2 = n => Math.round(n * 100) / 100;
+/* whether the phone has a font for every non-ASCII character of s. A missing glyph ("tofu") draws exactly like a code
+   point no font has (U+10FFFD), so compare the two on a tiny canvas; the answer is cached per string. */
+const DRAWN = new Map();
+let INK0 = null;
+function canDraw(s) {
+  s = String(s || "");
+  if (!/[^\x20-\x7e]/.test(s)) return true;
+  if (DRAWN.has(s)) return DRAWN.get(s);
+  let ok = true;
+  try {
+    const cv = document.createElement("canvas"),
+      g = cv.getContext("2d");
+    cv.width = cv.height = 32;
+    const ink = t => {
+      g.clearRect(0, 0, 32, 32);
+      g.font = "24px Onest, sans-serif";
+      g.textBaseline = "middle";
+      if (t) g.fillText(t, 4, 16);
+      return g.getImageData(0, 0, 32, 32).data.join("");
+    };
+    INK0 = INK0 || { tofu: ink("\u{10FFFD}"), blank: ink("") };
+    ok = [...s]
+      .filter(ch => /[^\x20-\x7e]/.test(ch) && !/\s/.test(ch))
+      .every(ch => {
+        const p = ink(ch);
+        return p !== INK0.tofu && p !== INK0.blank;
+      });
+  } catch (e) {}
+  DRAWN.set(s, ok);
+  return ok;
+}
 /* formatters are slow to build and money() runs for every row, so each kind is built once */
 const NF = new Map();
 function money(n, cur, short) {
@@ -137,6 +168,9 @@ function money(n, cur, short) {
     }
     try {
       f = new Intl.NumberFormat(undefined, o);
+      /* a currency sign this phone has no font for (e.g. the Kyrgyz som ⃀) would show as a box: use the code */
+      const sym = (f.formatToParts(0).find(p => p.type === "currency") || {}).value;
+      if (sym && !canDraw(sym)) f = new Intl.NumberFormat(undefined, Object.assign(o, { currencyDisplay: "code" }));
     } catch (e) {
       return cur + " " + r2(n).toLocaleString();
     }
@@ -246,9 +280,10 @@ let FX = {};
 const HAPTIC_MS = { tap: 8, key: 6, tick: 5, long: 14, confirm: 12 };
 const buzz = kind => {
   if (S.settings.haptics === false) return; // Settings → Feel → Vibration on tap
+  const level = S.settings.hapticLevel || 3; // Settings → Feel → Strength, 1 (light) … 5 (strong)
   try {
-    if (window.Android && Android.haptic) Android.haptic(kind);
-    else if (navigator.vibrate) navigator.vibrate(HAPTIC_MS[kind] || 8);
+    if (window.Android && Android.haptic) Android.haptic(kind, level);
+    else if (navigator.vibrate) navigator.vibrate(Math.round(((HAPTIC_MS[kind] || 8) * (level + 1)) / 4));
   } catch (e) {}
 };
 /* short label for date fields: Today / Yesterday / 22 Sep (year only if not this year) */

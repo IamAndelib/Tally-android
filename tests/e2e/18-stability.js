@@ -39,8 +39,9 @@ const ago = n => {
       saveFile(name, mime, text) {
         window.__saved.push({ name, text });
       },
-      haptic(kind) {
+      haptic(kind, level) {
         (window.__haptics = window.__haptics || []).push(kind);
+        window.__hlevel = level;
       },
     };
   });
@@ -567,6 +568,107 @@ const ago = n => {
   await swipe(strip.x + strip.width / 2 + 60, strip.y + strip.height / 2, -120);
   ok((await hAcc()) === "a", "a swipe on the chip strip itself changes nothing");
   await tctx.close();
+
+  // ---- 17. round 26: label room under a selected category, donut centre modes, haptic strength, About, symbols
+  await seed({
+    v: 6,
+    settings: { cur: "CAD" },
+    accounts: [bank],
+    txns: [
+      { id: "e1", ts: 1, date: today(), type: "expense", amount: 30, account: "a", cat: "food", note: "" },
+      { id: "i1", ts: 2, date: today(), type: "income", amount: 50, account: "a", cat: "income", note: "" },
+    ],
+    loans: [],
+    assets: [],
+  });
+  await page.evaluate(() => txSheet(null, "income"));
+  await settle();
+  const room = await page.evaluate(() => {
+    const b = document.querySelector('.catgrid .cat[aria-pressed="true"]') || document.querySelector(".catgrid .cat");
+    return {
+      gap: parseFloat(getComputedStyle(b).rowGap),
+      ringBottom: b.querySelector(".ci").getBoundingClientRect().bottom + 5,
+      labelTop: b.querySelector(".cn").getBoundingClientRect().top,
+    };
+  });
+  ok(room.gap >= 8 && room.ringBottom < room.labelTop, "the selected ring clears its label " + JSON.stringify(room));
+  await page.evaluate(() => closeSheet());
+  const middle = () =>
+    page.evaluate(() => ({
+      s: [...document.querySelectorAll("#ring .dcenter .s, #ring .dcenter .g")].map(e => e.textContent).join("|"),
+      slices: document.querySelectorAll("#ring svg.donut circle[stroke-dasharray]").length,
+      pct: [...document.querySelectorAll("#ring .cp")].map(e => e.textContent).join(""),
+    }));
+  let c = await middle();
+  ok(c.s.includes("50") && c.s.includes("30"), "default: the middle shows income and spending " + c.s);
+  await act("go", "settings");
+  await settle();
+  const modes = [];
+  for (let k = 0; k < 4; k++) {
+    await page.evaluate(() => (window.__haptics = []));
+    await act("donut-mode");
+    await settle();
+    modes.push([
+      (await state()).settings.donut,
+      await page.textContent(".ring.edit .dmode"),
+      (await page.evaluate(() => window.__haptics)).length,
+    ]);
+  }
+  ok(
+    JSON.stringify(modes.map(m => m[0])) === '["none","out","in","both"]' &&
+      modes.map(m => m[1]).join("/") === "No stats/Spending/Income/Spending + income" &&
+      modes.every(m => m[2] > 0),
+    "tapping the Settings donut cycles what the middle shows, with a haptic each time " + JSON.stringify(modes)
+  );
+  for (const [mode, want] of [
+    ["out", s => s.includes("30") && !s.includes("50")],
+    ["in", s => s.includes("50") && !s.includes("30")],
+    ["none", s => s === ""],
+  ]) {
+    await page.evaluate(m => {
+      S.settings.donut = m;
+      V.screen = "home";
+      render();
+    }, mode);
+    c = await middle();
+    ok(want(c.s) && c.slices > 0 && c.pct.includes("%"), "Home middle in " + mode + ": " + JSON.stringify(c));
+  }
+  await page.evaluate(() => {
+    S.settings.donut = "both";
+    V.screen = "settings";
+    render();
+  });
+  await page.evaluate(() => {
+    const r = document.getElementById("f-hlevel");
+    r.value = "5";
+    r.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  ok(
+    (await state()).settings.hapticLevel === 5 && (await page.evaluate(() => window.__hlevel)) === 5,
+    "the strength slider saves level 5 and plays a sample at it"
+  );
+  await act("haptics");
+  await settle();
+  ok(
+    await page.evaluate(() => document.getElementById("f-hlevel").disabled),
+    "with vibration off the slider is disabled"
+  );
+  await act("haptics");
+  await settle();
+  ok(
+    (await page.evaluate(() => getComputedStyle(document.querySelector(".sec.center")).textAlign)) === "center",
+    "the About heading is centred"
+  );
+  const syms = await page.evaluate(() => {
+    const r = [canDraw("€"), canDraw("\u{10FFFD}")];
+    DRAWN.set("\u20c0", false); // as on a phone without a font for the Kyrgyz som sign
+    r.push(curSym("KGS"));
+    return r;
+  });
+  ok(
+    syms[0] === true && syms[1] === false && syms[2] === "",
+    "undrawable currency signs show no box " + JSON.stringify(syms)
+  );
 
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));

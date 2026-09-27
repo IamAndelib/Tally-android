@@ -71,7 +71,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues}, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
@@ -265,6 +265,16 @@ Built originally in a claude.ai chat; continue development from here.
     dragged category passes (ring and grid) and each swipe (Home period, summary chart, History account); "long"
     long-press pick-up; "confirm" saves/drops. `settings.haptics` (Settings → Feel → "Vibration on tap",
     `toggleHaptics()`) turns all of it off; `navigator.vibrate` only as a fallback without the bridge.
+    Strength: `settings.hapticLevel` 1–5 (default 3; the "Strength" slider `#f-hlevel`, faded/disabled while vibration
+    is off, `setHapticLevel()` plays a sample) goes to `Android.haptic(kind, level)`: 1–2 a scaled
+    `Composition.PRIMITIVE_CLICK` (else EFFECT_TICK), 3 EFFECT_CLICK, 4 EFFECT_HEAVY_CLICK, 5 a full-amplitude 22 ms
+    pulse; "long" plays one level up. Home donut middle: `settings.donut` = out | in | both (default) | none, cycled by
+    tapping the Settings donut (`cycleDonut()`, `DONUT_MODES` in `js/ring.js`; its centre, with a `.dhole`, swells while
+    pressed); only the middle changes — slices, leader lines and tile %s always stay. Picker grids (`.catgrid .cat`)
+    have a 9px icon–label gap so the selected ring (5px) clears the label. Currency signs: `canDraw(s)` (`js/core.js`)
+    compares a character with a code point no font has on a tiny canvas; `curSym()` drops, and `money()` swaps to the
+    ISO code for, a sign the phone can't draw (tofu, e.g. the Kyrgyz som ⃀). 59 of 159 currencies have no CLDR symbol
+    at all (only the code shows).
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
     Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
     so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.

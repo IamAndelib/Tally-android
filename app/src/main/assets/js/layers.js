@@ -367,7 +367,7 @@ function curSym(c) {
     const p = new Intl.NumberFormat(undefined, { style: "currency", currency: c, currencyDisplay: "narrowSymbol" })
       .formatToParts(0)
       .find(x => x.type === "currency");
-    if (p && p.value !== c) s = p.value;
+    if (p && p.value !== c && canDraw(p.value)) s = p.value; // no symbol rather than a tofu box
   } catch (e) {}
   return (curSyms[c] = s);
 }

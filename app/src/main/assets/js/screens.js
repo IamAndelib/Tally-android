@@ -612,7 +612,14 @@ function settingsView() {
     '<div class="sec">Feel</div><div class="list"><div class="setrow"><span class="mid"><div>Vibration on tap</div><div class="s">Taps, drags and saves</div></span>' +
     '<button class="sw" role="switch" data-act="haptics" aria-checked="' +
     (S.settings.haptics !== false) +
-    '" aria-label="Vibration on tap"></button></div></div>';
+    '" aria-label="Vibration on tap"></button></div>' +
+    '<div class="setrow hlevel' +
+    (S.settings.haptics === false ? " off" : "") +
+    '"><span class="mid"><div>Strength</div><input type="range" id="f-hlevel" min="1" max="5" step="1" value="' +
+    (S.settings.hapticLevel || 3) +
+    '" aria-label="Vibration strength"' +
+    (S.settings.haptics === false ? " disabled" : "") +
+    '><div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
   h +=
     '<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>' +
     esc(curLabel(S.settings.cur)) +
@@ -679,7 +686,7 @@ function settingsView() {
         })()
       : "";
   h +=
-    '<div class="sec">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
+    '<div class="sec center">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
     (ver ? " · Version " + esc(ver) : "") +
     '<br>By <a href="https://github.com/IamAndelib">IamAndelib</a>' +
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';

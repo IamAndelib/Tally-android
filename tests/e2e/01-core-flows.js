@@ -349,6 +349,8 @@ const ok = (c, m) => {
   );
   ok(JSON.stringify(homePos) === JSON.stringify(setPos), "settings preview matches home positions");
   const orderBefore = (await state()).cats.filter(c => c.kind === "out" && !c.hidden).map(c => c.id);
+  // the ring sits below Theme / Feel / currency / reminders: bring it mid-screen, away from the drag's edge scrolling
+  await page.evaluate(() => document.querySelector(".ring.edit").scrollIntoView({ block: "center" }));
   const t1 = await (await page.$(`.ring.edit [data-v="${orderBefore[0]}"]`)).boundingBox();
   const t4 = await (await page.$(`.ring.edit [data-v="${orderBefore[3]}"]`)).boundingBox();
   await page.mouse.move(t1.x + t1.width / 2, t1.y + t1.height / 2);

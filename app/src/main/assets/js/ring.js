@@ -36,6 +36,15 @@ function nearestInSlice(a, start, w) {
   return circDist(a, start + e) < circDist(a, start + w - e) ? start + e : start + w - e;
 }
 let RE = null; /* the Settings preview's layout + order while it is on screen */
+/* what the middle of the Home donut shows (settings.donut); tapping the Settings donut steps through them in order */
+const DONUT_MODES = ["out", "in", "both", "none"];
+const DONUT_LABEL = { out: "Spending", in: "Income", both: "Spending + income", none: "No stats" };
+function cycleDonut() {
+  const i = DONUT_MODES.indexOf(S.settings.donut);
+  S.settings.donut = DONUT_MODES[(i < 0 ? DONUT_MODES.indexOf("both") : i) + 1] || DONUT_MODES[0];
+  save();
+  render();
+}
 function ringHTML(cats, o) {
   const home = o.mode === "home",
     W = Math.max(240, $("#app").clientWidth - 24),
@@ -225,32 +234,47 @@ function ringHTML(cats, o) {
     Math.max(11, Math.min(22, D * 0.11, (0.62 * D) / (Math.max(3, String(txt).length) * 0.6))).toFixed(1) + "px";
   let center;
   if (home) {
-    const cs = currencies();
+    const cs = currencies(),
+      mode = DONUT_MODES.includes(S.settings.donut) ? S.settings.donut : "both";
+    /* what the middle shows (Settings: tap the donut): spent, received, both, or nothing; the ring itself never changes */
+    const big = (n, cls, sign) =>
+      '<div class="s' +
+      (n ? cls : " zero") +
+      '" style="font-size:' +
+      fit(money(n, o.cur, true)) +
+      '">' +
+      (n && sign ? sign : "") +
+      esc(money(n, o.cur, true)) +
+      "</div>";
+    let mid = "";
+    if (mode === "out") mid = big(o.spent, "") + (!o.spent ? '<div class="hint">Tap a category</div>' : "");
+    else if (mode === "in") mid = big(o.got, " in", "+");
+    else if (mode === "both")
+      mid =
+        (o.got ? '<div class="g">+' + esc(money(o.got, o.cur, true)) + "</div>" : "") +
+        big(o.spent, "") +
+        (!o.spent && !o.got ? '<div class="hint">Tap a category</div>' : "");
     center =
       '<button class="dwrap" data-act="summary" aria-label="Spending summary" style="' +
       box +
       '">' +
       donut +
       '<div class="dcenter">' +
-      (o.got ? '<div class="g">+' + esc(money(o.got, o.cur, true)) + "</div>" : "") +
-      '<div class="s' +
-      (o.spent ? "" : " zero") +
-      '" style="font-size:' +
-      fit(money(o.spent, o.cur, true)) +
-      '">' +
-      esc(money(o.spent, o.cur, true)) +
-      "</div>" +
-      (!o.spent && !o.got ? '<div class="hint">Tap a category</div>' : "") +
-      (cs.length > 1 ? '<span class="curbtn" data-act="cur-next" role="button">' + esc(o.cur) + " ⇄</span>" : "") +
+      mid +
+      (cs.length > 1 && mode !== "none"
+        ? '<span class="curbtn" data-act="cur-next" role="button">' + esc(o.cur) + " ⇄</span>"
+        : "") +
       "</div></button>";
   } else {
     RE = { L, order: cats.map(c => c.id) };
     center =
-      '<div class="dwrap" style="' +
+      '<button class="dwrap" data-act="donut-mode" aria-label="What the middle of the donut shows" style="' +
       box +
       '">' +
       donut +
-      '<div class="dcenter"><div class="hint">Spending</div></div></div>';
+      '<div class="dcenter"><span class="dhole"></span><div class="dmode">' +
+      DONUT_LABEL[DONUT_MODES.includes(S.settings.donut) ? S.settings.donut : "both"] +
+      '</div><div class="hint">Tap to change</div></div></button>';
   }
   return (
     '<div class="ring' +

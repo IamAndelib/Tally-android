@@ -65,6 +65,14 @@ function toggleHaptics() {
   render();
   if (S.settings.haptics) buzz("tap");
 }
+/* Settings → Feel → Strength: saves the level and plays a sample at it (only when the step actually changes) */
+function setHapticLevel(v) {
+  const n = Math.min(5, Math.max(1, Math.round(+v) || 3));
+  if (n === S.settings.hapticLevel) return;
+  S.settings.hapticLevel = n;
+  save();
+  buzz("tap");
+}
 /* Settings switch for the evening nudge ("daily") or due-day reminders ("dues") */
 function toggleReminder(k) {
   const r = S.settings.remind;

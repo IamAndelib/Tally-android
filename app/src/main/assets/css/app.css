@@ -447,6 +447,33 @@ body.hist #app {
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
+.dcenter .s.in {
+  color: var(--got);
+}
+/* Settings preview: the donut's hole with the current choice; it swells a little while pressed */
+.ring.edit .dwrap {
+  overflow: visible;
+}
+.ring.edit .dcenter {
+  isolation: isolate; /* keeps .dhole inside it, above the donut */
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+.ring.edit .dwrap.pressed .dcenter {
+  transform: scale(1.08);
+  transition-duration: 0.09s;
+}
+.dhole {
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background: var(--surface);
+  z-index: -1;
+}
+.dcenter .dmode {
+  font-size: clamp(0.8rem, calc(var(--D, 160px) * 0.085), 1rem);
+  font-weight: 600;
+  line-height: 1.25;
+}
 .dcenter .s.zero {
   color: var(--on-surface-variant);
   font-weight: 600;
@@ -1038,6 +1065,10 @@ textarea {
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
+/* room under the icon for the selected ring (5px) without the label moving when a category is picked */
+.catgrid .cat {
+  gap: 9px;
+}
 .catgrid .cat[aria-pressed="true"] .ci {
   box-shadow:
     0 0 0 3px var(--surface-low),
@@ -1220,6 +1251,9 @@ textarea {
   font-weight: 600;
   color: var(--primary);
   margin: 24px 4px 8px;
+}
+.sec.center {
+  text-align: center;
 }
 .welcome {
   text-align: center;
@@ -1656,6 +1690,19 @@ body.hasnav .snack {
 .setrow .s {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
+}
+/* Settings → Feel: vibration strength; faded and off while vibration is switched off */
+.hlevel input[type="range"] {
+  width: 100%;
+  margin: 10px 0 2px;
+  accent-color: var(--primary);
+}
+.hlevel .hends {
+  display: flex;
+  justify-content: space-between;
+}
+.hlevel.off {
+  opacity: 0.38;
 }
 .sw {
   width: 52px;

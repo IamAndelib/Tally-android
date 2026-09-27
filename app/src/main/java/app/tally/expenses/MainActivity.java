@@ -1,5 +1,6 @@
 package app.tally.expenses;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -308,28 +309,39 @@ public class MainActivity extends Activity {
         return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
+    /** The haptic for strength n (1–5), API 29+: see {@link Bridge#haptic}. */
+    @TargetApi(29)
+    private static VibrationEffect effect(Vibrator v, int n) {
+        if (n <= 2) {
+            if (Build.VERSION.SDK_INT >= 30 && v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)) {
+                return VibrationEffect.startComposition()
+                        .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, n == 1 ? 0.35f : 0.65f).compose();
+            }
+            return VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK);
+        }
+        if (n == 3) return VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK);
+        if (n == 4) return VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK);
+        return VibrationEffect.createOneShot(22, v.hasAmplitudeControl() ? 255 : VibrationEffect.DEFAULT_AMPLITUDE);
+    }
+
     private class Bridge {
         /**
-         * Haptic feedback: the phone's own tuned click / tick waveforms, played on the vibrator directly.
-         * performHapticFeedback would follow the system "touch feedback" switch, which many phones ship turned off
-         * (while keyboards keep their own vibration setting), so it was never felt. "long" is a heavy click, everything
-         * else ("tap", "key", "tick", "confirm") a click: the lighter tick effect is too faint to feel on many phones.
-         * The Vibrator is thread-safe: no UI thread needed. The page skips the call when Settings → Vibration is off.
+         * Haptic feedback on the vibrator directly (performHapticFeedback would follow the system "touch feedback"
+         * switch, which many phones ship turned off, so it was never felt). {@code level} is Settings → Feel →
+         * Strength, 1 (light) … 5 (strong); "long" (a long-press) plays one level stronger than taps.
+         * 1–2: a scaled-down click (composition primitive where supported, else the light tick effect);
+         * 3: the phone's standard click (the default); 4: its heavy click; 5: a firm full-strength pulse.
+         * The Vibrator is thread-safe: no UI thread needed. The page skips the call when vibration is switched off.
          */
         @JavascriptInterface
-        public void haptic(final String kind) {
+        public void haptic(final String kind, final int level) {
             Vibrator v = vibrator();
             if (v == null || !v.hasVibrator()) return;
-            String k = kind == null ? "" : kind;
-            boolean heavy = k.equals("long");
+            int n = Math.max(1, Math.min(5, level + ("long".equals(kind) ? 1 : 0)));
             try {
-                if (Build.VERSION.SDK_INT >= 29) {
-                    v.vibrate(VibrationEffect.createPredefined(heavy ? VibrationEffect.EFFECT_HEAVY_CLICK : VibrationEffect.EFFECT_CLICK));
-                } else {
-                    long ms = heavy ? 14 : 8; // as HAPTIC_MS in js/core.js
-                    if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE));
-                    else v.vibrate(ms);
-                }
+                if (Build.VERSION.SDK_INT >= 29) v.vibrate(effect(v, n));
+                else if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(4 + 3 * n, VibrationEffect.DEFAULT_AMPLITUDE));
+                else v.vibrate(4 + 3 * n);
             } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
         }
 

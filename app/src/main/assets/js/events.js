@@ -108,6 +108,9 @@ document.addEventListener("click", ev => {
     case "haptics":
       toggleHaptics();
       break;
+    case "donut-mode":
+      cycleDonut();
+      break;
     case "period-open":
       periodDialog(v === "hist" ? HP : V);
       break;
@@ -541,6 +544,7 @@ document.addEventListener("input", ev => {
   else if (id === "cur-q") curList(ev.target.value);
   else if (id === "ic-q") icList(ev.target.value);
   else if (id === "hx-in") hexPreview();
+  else if (id === "f-hlevel") setHapticLevel(ev.target.value);
   else if (id === "f-person" && F && F.kind === "loanf") {
     F.merge = null;
     mergeHint();
