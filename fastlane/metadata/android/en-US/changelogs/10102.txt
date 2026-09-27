@@ -1,0 +1,2 @@
+- Tally opens on its logo instead of a blank white flash.
+- Today in the Day | Range | Month picker always goes back to today, also from the Month tab.

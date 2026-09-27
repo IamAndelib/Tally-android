@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-09-27
+
+### Changed
+
+- Tally opens on its logo, in your light or dark colours, instead of a blank white screen that flashes before the app
+  appears.
+
+### Fixed
+
+- **Today** in the Day | Range | Month picker always goes back to today, also from the Month tab (it used to show the
+  whole month).
+
 ## [1.1.1] — 2026-09-27
 
 ### Changed

@@ -9,7 +9,10 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
@@ -41,6 +44,10 @@ public class MainActivity extends Activity {
     private String pendingSave;
     /** "loan:<id>[:pay]" from a tapped reminder, delivered to the page once it has loaded. */
     private String pendingOpen;
+    /** False while the launch screen (the logo) is up: until the page calls Android.ready(), or 3 s at most. */
+    private boolean ready;
+    /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
+    private Integer pageColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +56,22 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        // launch screen: the window background (Android 7-11) or the system splash (12+) shows the logo until the
+        // page has drawn; the WebView is hidden until then and never shows its default white
+        web.setBackgroundColor(getColor(R.color.surface));
+        web.setVisibility(View.INVISIBLE);
+        if (Build.VERSION.SDK_INT >= 31) {
+            final View content = findViewById(android.R.id.content);
+            content.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+                @Override
+                public boolean onPreDraw() {
+                    if (!ready) return false;
+                    content.getViewTreeObserver().removeOnPreDrawListener(this);
+                    return true;
+                }
+            });
+        }
+        new Handler(Looper.getMainLooper()).postDelayed(this::showPage, 3000);
         if (Build.VERSION.SDK_INT >= 30) {
             root.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
@@ -134,6 +157,14 @@ public class MainActivity extends Activity {
         setIntent(intent);
         pendingOpen = intent.getStringExtra("open");
         deliverOpen();
+    }
+
+    /** Ends the launch screen: called by the page (Android.ready) once it has rendered, or by the 3 s fallback. */
+    private void showPage() {
+        if (ready) return;
+        ready = true;
+        if (pageColor != null) root.setBackgroundColor(pageColor);
+        web.setVisibility(View.VISIBLE);
     }
 
     private void deliverOpen() {
@@ -245,6 +276,12 @@ public class MainActivity extends Activity {
     }
 
     private class Bridge {
+        /** The page has rendered: end the launch screen. */
+        @JavascriptInterface
+        public void ready() {
+            runOnUiThread(MainActivity.this::showPage);
+        }
+
         @JavascriptInterface
         public String getVersion() {
             return BuildConfig.VERSION_NAME;
@@ -292,7 +329,10 @@ public class MainActivity extends Activity {
                 w.setStatusBarColor(c);
                 w.setNavigationBarColor(c);
                 web.setBackgroundColor(c);
-                root.setBackgroundColor(c); // shows behind the (transparent) system bars on Android 15+
+                // root shows behind the (transparent) system bars on Android 15+; it is coloured only once the page
+                // shows, so until then the logo in the window background stays visible
+                pageColor = c;
+                if (ready) root.setBackgroundColor(c);
                 View decor = w.getDecorView();
                 int flags = decor.getSystemUiVisibility();
                 int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;

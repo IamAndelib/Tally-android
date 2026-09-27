@@ -347,6 +347,25 @@ const ago = n => {
   await settle();
   ok((await snackText()).includes("Couldn't read that file"), "a file that can't be read says so");
 
+  // ---- 12. Today in the Day | Range | Month picker always means today, even from the Month tab
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  const lastMonth = ago(40).slice(0, 7);
+  await act("period-open");
+  await act("pd-tab", "month");
+  await act("pd-month", lastMonth);
+  await act("period-open");
+  await act("pd-tab", "month");
+  await act("pd-today");
+  let pv = await page.evaluate(() => [V.period, V.anchor, $(".plabel").textContent.trim()]);
+  ok(pv[0] === "day" && pv[1] === today() && pv[2].startsWith("Today"), "Home: Month tab → Today shows today: " + pv);
+  await act("go", "history");
+  await settle();
+  await act("period-open", "hist");
+  await act("pd-tab", "month");
+  await act("pd-today");
+  pv = await page.evaluate(() => [HP.period, HP.anchor]);
+  ok(pv[0] === "day" && pv[1] === today(), "History: Month tab → Today shows today: " + pv);
+
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

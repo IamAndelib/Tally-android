@@ -32,6 +32,11 @@ Built originally in a claude.ai chat; continue development from here.
       `setAndAllowWhileIdle`, channel "Reminders"; `BootReceiver` re-arms after reboot/update). Notification buttons
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
+  - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
+    logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
+    (12+, held by an `OnPreDrawListener`). The WebView stays hidden (background `surface`, never white) until the page
+    calls `Android.ready()` at the end of `js/main.js` (not from rAF: a hidden WebView may never run it), or 3 s at
+    most; `setBars` colours `root` only once the page shows, so the logo stays visible until then.
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
   - The page installs its hooks last, in `js/main.js`, so the shell can never call into a half-loaded page:
     `tallyBack`→`goBack()`, `tallyOpen`→`openFromNative()`, `tallyResume`→`onAppResume()`, `tallyTheme`→`onSystemTheme()`,
@@ -179,7 +184,7 @@ Built originally in a claude.ai chat; continue development from here.
   - Sheet back link: an entry opened from the entries list (`#ent-list`) sets `BACKTO`; `closeSheet()` then reopens the list
     (after any save/delete, same scroll) instead of dropping to Home.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
-    Day | Range | Month dialog: calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
+    Day | Range | Month dialog (its **Today** always means day = today, from any tab): calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
     account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()` in the donut's currency: Days = 7 vertical bars, Weeks = 8 horizontal
     bar rows ("3–9 Aug"; no cramped x-axis), Months = a category donut of one month (‹ › one month) with a legend list of every
     category and %; tap a bar/row for its total, comparison with the one before (daily average for an unfinished week/month),
@@ -244,8 +249,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.1) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10101) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.2) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10102) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the

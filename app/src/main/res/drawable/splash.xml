@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- launch screen for Android 7–11: the page's surface colour with the logo in the middle -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/surface" />
+    <item android:drawable="@drawable/ic_launcher" android:gravity="center" android:width="120dp" android:height="120dp" />
+</layer-list>

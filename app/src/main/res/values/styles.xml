@@ -1,9 +1,12 @@
 <resources>
-    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#FBF8FF</item>
-        <item name="android:navigationBarColor">#FBF8FF</item>
-        <item name="android:windowBackground">@color/surface</item>
+    <!-- the app window: starts on the page's surface colour with the logo in the middle (drawable/splash) until the
+         page has drawn; Android 12+ uses its own splash screen instead (values-v31) -->
+    <style name="AppTheme.Base" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
+    <style name="AppTheme" parent="AppTheme.Base" />
     <!-- the widget's quick-add dialog; DeviceDefault = Material You look on Android 12+ -->
     <style name="QuickAdd" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
         <item name="android:windowCloseOnTouchOutside">true</item>

@@ -133,7 +133,7 @@ document.addEventListener("click", ev => {
       setPeriod({ period: "month", anchor: v + "-01" });
       break;
     case "pd-today":
-      setPeriod({ period: PD.tab === "month" ? "month" : "day", anchor: today() });
+      setPeriod({ period: "day", anchor: today() }); // always today's figures, whichever tab is open
       break;
     case "pd-close":
       closePop();
