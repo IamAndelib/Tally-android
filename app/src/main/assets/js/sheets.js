@@ -370,7 +370,7 @@ function accOpen(id) {
     "</div>";
   h +=
     '<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>' +
-    amtField("f-actual", a.currency, "", { label: "Actual balance", placeholder: r2(bal) }) +
+    amtField("f-actual", a.currency, "", { label: "Actual balance", placeholder: groupDigits(r2(bal)) }) +
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
   h +=
     '<div class="gap"></div><div class="row">' +
@@ -696,7 +696,12 @@ function saveTr() {
       return;
     }
   }
-  const fee = F.showFee ? evalAmt(v.fee) || 0 : 0;
+  const feeText = F.showFee ? String(v.fee || "").trim() : "",
+    fee = feeText ? evalAmt(feeText) : 0;
+  if (fee == null) {
+    snack("That fee isn't a number");
+    return;
+  }
   if (fee < 0) {
     snack("Fee can't be negative");
     return;

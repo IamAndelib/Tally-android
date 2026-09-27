@@ -102,7 +102,7 @@ function calcEval(expr) {
   }
   terms.push(sign * val);
   const tot = terms.reduce((a, b) => a + b, 0);
-  return isFinite(tot) ? r2(tot) : null;
+  return amtOk(r2(tot));
 }
 let CALC = null;
 /* the calculator's amount field is readOnly (so it can't show a native caret) — this mirrors its text with a
@@ -167,7 +167,8 @@ function calcOpen(id, btn) {
     .forEach(b => b.setAttribute("aria-expanded", "false"));
   const inp = $("#" + id),
     start = inp ? inp.value.replace(/[^0-9.+\-×÷−]/g, "") : "";
-  CALC = { id, expr: start, pos: start.length };
+  /* inp: the field this calculator belongs to; once its sheet is gone the calculator is stale (see goBack) */
+  CALC = { id, expr: start, pos: start.length, inp };
   if (inp) {
     inp.readOnly = true;
     inp.setAttribute("inputmode", "none");
@@ -200,7 +201,7 @@ function calcKeepFieldVisible(inp, panel) {
 function calcClose(id, btn, use) {
   stopRepeat();
   const inp = $("#" + id);
-  if (use && CALC && CALC.id === id && CALC.expr) {
+  if (use && CALC && CALC.id === id && CALC.inp === inp && CALC.expr) {
     const val = calcEval(CALC.expr);
     if (val != null && inp) inp.value = String(val);
   }
@@ -266,8 +267,10 @@ function calcKey(k) {
     CALC.pos--;
   } else if (OP.test(k)) {
     if (!before && k !== "−") return;
-    if (before && OP.test(before.slice(-1))) CALC.expr = before.slice(0, -1) + k + after;
-    else {
+    if (before && OP.test(before.slice(-1))) {
+      if (before.length === 1 && k !== "−") return; // a lone leading − can't become × ÷ +
+      CALC.expr = before.slice(0, -1) + k + after;
+    } else {
       CALC.expr = before + k + after;
       CALC.pos++;
     }

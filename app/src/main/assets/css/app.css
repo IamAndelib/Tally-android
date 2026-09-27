@@ -1005,9 +1005,6 @@ textarea {
   color: var(--on-surface-variant);
   margin: 6px 2px 0;
 }
-.err {
-  color: var(--spent);
-}
 .catgrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

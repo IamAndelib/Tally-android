@@ -62,6 +62,10 @@ Built originally in a claude.ai chat; continue development from here.
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
     file (`unreadable`); the app never silently drops saved data. Restoring a backup `migrate()` can't read snacks.
+    `migrate()` also sanitises (backups can come from anywhere): every id and reference goes through `sid()` (the app's
+    own `[A-Za-z0-9-]` ids pass, anything else is remapped consistently), `TYPES`/`ICONS` keys via `hasOwnProperty`,
+    currencies must be 3 capital letters (else main currency / CAD), colours `#rrggbb`, numbers finite, theme and
+    `remind` normalised; a loan whose `account` is gone is repaired from its newest draw instead of dropped.
     `migrate()` upgrades any saved state or backup (v1 included) on load/restore without changing balances
     (v4: emblems; built-in categories still on their old default emoji/colour get the new emblem/colour, user choices are kept.
     v6: loans become multi-draw — for each old loan with a `due`, that date moves onto its one existing principal transaction).
@@ -150,6 +154,8 @@ Built originally in a claude.ai chat; continue development from here.
     release after any repeat swallows its click).
     `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
     above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
+    `CALC.inp` is the field's element: `calcClose` only writes the result into that same element, and `goBack()`
+    drops a stale `CALC` whose field left the page (its sheet closed while the keypad was open).
     `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
     back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
@@ -160,6 +166,9 @@ Built originally in a claude.ai chat; continue development from here.
     calculator mode; caret kept beside the same digit; the keypad's "," becomes the decimal point or is dropped), and
     `openSheet`/`openSheet2` group pre-filled values (`groupAmountInputs`, `groupDigits` in `js/core.js`, groups of three
     for every currency). Readers always parse through `evalAmt()`, which strips the commas; never `parseFloat` a field.
+    `evalAmt()` also reads the calculator's own expression (`−`, `×`, `÷` via `calcEval`), so Save with the keypad open
+    saves its result; it returns `null` unless the amount is finite and below 1e12 (`amtOk`, also used by `calcEval`).
+    `money()` caches its `Intl.NumberFormat`s (`NF`), which are slow to build.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
@@ -202,7 +211,11 @@ Built originally in a claude.ai chat; continue development from here.
     its own text width and get clipped, because `button{overflow:hidden}` (kept globally so the press-state layer
     stays inside each button's rounded corners) disables a flex item's usual "don't shrink past your content" floor;
     the Home account-balance strip's own buttons (`.acc`) already carried the equivalent `flex:none` for this reason.
-  - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent.
+  - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent,
+    and removes a loan (with its payments) only when **all** its draws are selected — otherwise just those entries go.
+    After any draw is added/edited/deleted, `relinkLoan(id)` resets `l.account` (newest draw's) and `l.date` (oldest
+    draw's); the loan sheet's row Delete is `deleteLoanEntry(id)`. `saveLoanDraw` refuses an edit that would leave more
+    paid back than lent/borrowed (worse than it already is).
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.

@@ -4,7 +4,13 @@
 "use strict";
 
 function exportCsv() {
-  const q = s => '"' + String(s ?? "").replace(/"/g, '""') + '"';
+  /* quoted text; a leading = + - @ gets a ' so a spreadsheet shows it instead of running it as a formula */
+  const q = s =>
+    '"' +
+    String(s ?? "")
+      .replace(/^[=+\-@\t\r]/, "'$&")
+      .replace(/"/g, '""') +
+    '"';
   const kind = t =>
     t.type === "loan" ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir : t.type;
   const lines = [
@@ -36,37 +42,40 @@ function restoreFile(input) {
   const f = input.files[0];
   input.value = "";
   if (!f) return;
-  f.text().then(t => {
-    let o;
-    try {
-      o = JSON.parse(t);
-    } catch (e) {
-      snack("That isn't a Tally backup file");
-      return;
-    }
-    if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
-      snack("That isn't a Tally backup file");
-      return;
-    }
-    askDialog(
-      "Restore this backup?",
-      "Replaces everything on this phone with " + o.accounts.length + " accounts and " + o.txns.length + " entries.",
-      "Restore",
-      () => {
-        let n;
-        try {
-          n = migrate(o);
-        } catch (e) {
-          snack("That backup couldn't be read");
-          return;
-        }
-        S = n;
-        commit();
-        applyTheme();
-        snack("Backup restored");
+  f.text().then(
+    t => {
+      let o;
+      try {
+        o = JSON.parse(t);
+      } catch (e) {
+        snack("That isn't a Tally backup file");
+        return;
       }
-    );
-  });
+      if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
+        snack("That isn't a Tally backup file");
+        return;
+      }
+      askDialog(
+        "Restore this backup?",
+        "Replaces everything on this phone with " + o.accounts.length + " accounts and " + o.txns.length + " entries.",
+        "Restore",
+        () => {
+          let n;
+          try {
+            n = migrate(o);
+          } catch (e) {
+            snack("That backup couldn't be read");
+            return;
+          }
+          S = n;
+          commit();
+          applyTheme();
+          snack("Backup restored");
+        }
+      );
+    },
+    () => snack("Couldn't read that file")
+  );
 }
 /* keeps the main currency, theme and reminder settings */
 function wipeAll() {

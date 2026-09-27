@@ -109,8 +109,10 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(), "Android");
 
         pendingOpen = getIntent().getStringExtra("open");
-        if (savedInstanceState != null) web.restoreState(savedInstanceState);
-        else web.loadUrl("https://" + HOST + "/assets/index.html");
+        // after the process was killed the WebView can come back empty: load the page whenever restoring fails
+        if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
+            web.loadUrl("https://" + HOST + "/assets/index.html");
+        }
     }
 
     @Override

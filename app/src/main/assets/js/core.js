@@ -119,21 +119,30 @@ const addDays = (s, n) => {
   return iso(d);
 };
 const r2 = n => Math.round(n * 100) / 100;
+/* formatters are slow to build and money() runs for every row, so each kind is built once */
+const NF = new Map();
 function money(n, cur, short) {
   cur = cur || S.settings.cur;
-  const o = { style: "currency", currency: cur, maximumFractionDigits: 2 };
-  if (short) {
-    o.currencyDisplay = "narrowSymbol";
-    if (Math.abs(n) >= 1000) {
-      o.maximumFractionDigits = 0;
-      o.minimumFractionDigits = 0;
+  const big = !!short && Math.abs(n) >= 1000,
+    k = cur + (short ? (big ? "|s0" : "|s") : "");
+  let f = NF.get(k);
+  if (!f) {
+    const o = { style: "currency", currency: cur, maximumFractionDigits: 2 };
+    if (short) {
+      o.currencyDisplay = "narrowSymbol";
+      if (big) {
+        o.maximumFractionDigits = 0;
+        o.minimumFractionDigits = 0;
+      }
     }
+    try {
+      f = new Intl.NumberFormat(undefined, o);
+    } catch (e) {
+      return cur + " " + r2(n).toLocaleString();
+    }
+    NF.set(k, f);
   }
-  try {
-    return new Intl.NumberFormat(undefined, o).format(n);
-  } catch (e) {
-    return cur + " " + r2(n).toLocaleString();
-  }
+  return f.format(n);
 }
 const signed = (n, cur) => (n > 0 ? "+" : n < 0 ? "−" : "") + money(Math.abs(n), cur);
 function shiftMonth(m, d) {
@@ -190,10 +199,16 @@ function formatAmountInput(inp, ev) {
     inp.setSelectionRange(i, i);
   } catch (e) {}
 }
-/* amount field: accepts "12.50", "1,250.50", "12,50", and quick sums like "12+3.5" (readers never see the grouping) */
+/* an amount is a finite number below a trillion (a pasted run of digits would otherwise save as Infinity) */
+const amtOk = n => (n != null && isFinite(n) && Math.abs(n) < 1e12 ? n : null);
+/* amount field: accepts "12.50", "1,250.50", "12,50", quick sums like "12+3.5", and the calculator's own
+   expression ("12×3", "50−5") when Save is tapped with the keypad still open (readers never see the grouping) */
 function evalAmt(v) {
-  let s = String(v ?? "").replace(/\s+/g, "");
+  let s = String(v ?? "")
+    .replace(/\s+/g, "")
+    .replace(/−/g, "-");
   if (!s) return null;
+  if (/[×÷]/.test(s)) return /^[\d.,+\-×÷]+$/.test(s) ? amtOk(calcEval(s.replace(/,/g, ""))) : null;
   if (/^[-+]?\d+,\d{1,2}$/.test(s)) s = s.replace(",", ".");
   else s = s.replace(/,/g, "");
   if (!/^[-+]?(\d+\.?\d*|\.\d+)([-+](\d+\.?\d*|\.\d+))*$/.test(s)) return null;
@@ -202,7 +217,7 @@ function evalAmt(v) {
     tot += (sg === "-" ? -1 : 1) * parseFloat(n);
     return m;
   });
-  return r2(tot);
+  return amtOk(r2(tot));
 }
 let snackT = null,
   undoFn = null;

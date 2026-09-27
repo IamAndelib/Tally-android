@@ -205,8 +205,8 @@ const daysFromNow = n => {
   await act("acc-open", "w");
   await settle();
   ok(
-    (await page.getAttribute("#f-actual", "placeholder")) === "4750",
-    "balance fix field suggests the current balance"
+    (await page.getAttribute("#f-actual", "placeholder")) === "4,750",
+    "balance fix field suggests the current balance, grouped (4,750)"
   );
   ok(
     !!(await page.$('#sheet [data-act="calc-toggle"][data-v="f-actual"]')),

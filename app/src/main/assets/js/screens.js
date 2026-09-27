@@ -491,6 +491,7 @@ function historyList() {
   return list.sort(byNewest);
 }
 function historyView() {
+  if (V.hAcc && !acc(V.hAcc)) V.hAcc = ""; // its account was deleted, or a backup restored
   const list = historyList();
   let h;
   if (V.sel) {

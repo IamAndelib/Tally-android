@@ -135,8 +135,12 @@ function saveOut(name, mime, text) {
    (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
 function goBack() {
   if (CALC) {
-    calcClose(CALC.id, calcToggleBtn(CALC.id), true);
-    return true;
+    if (CALC.inp && CALC.inp.isConnected) {
+      calcClose(CALC.id, calcToggleBtn(CALC.id), true);
+      return true;
+    }
+    stopRepeat(); // its sheet closed while it was open: forget it and go on
+    CALC = null;
   }
   if ($("#pop").innerHTML) {
     closePop();
