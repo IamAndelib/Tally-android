@@ -456,16 +456,39 @@ const ago = n => {
   await page.waitForTimeout(450);
   await page.mouse.move(sb.x + sb.width / 2 + 20, sb.y + sb.height / 2 + 20, { steps: 3 });
   const gh = await page.evaluate(() => {
-    const g = document.querySelector(".ghost");
-    return g && { bg: getComputedStyle(g).backgroundColor, scale: getComputedStyle(g.querySelector(".ci")).transform };
+    const g = document.querySelector(".ghost"),
+      ci = g && g.querySelector(".ci");
+    return (
+      g && {
+        bg: getComputedStyle(g).backgroundColor,
+        scale: getComputedStyle(ci).transform,
+        glow: getComputedStyle(ci).boxShadow,
+      }
+    );
   });
   await page.screenshot({ path: OUT + "/drag-icon.png" });
   await page.mouse.up();
   await page.waitForTimeout(350);
   ok(
-    gh && gh.bg === "rgba(0, 0, 0, 0)" && gh.scale.startsWith("matrix(1.22"),
-    "dragging lifts just the enlarged icon, no card " + JSON.stringify(gh)
+    gh && gh.bg === "rgba(0, 0, 0, 0)" && gh.scale.startsWith("matrix(1.14") && gh.glow === "none",
+    "dragging lifts just the slightly enlarged icon: no card, no glow " + JSON.stringify(gh)
   );
+  // holding a Settings tile: enlarged, no glow
+  const st = await (await page.$(".ring.edit .tile")).boundingBox();
+  await page.mouse.move(st.x + st.width / 2, st.y + st.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(150);
+  const held = await page.evaluate(() => {
+    const ci = document.querySelector(".ring.edit .cat.pressed .ci");
+    return ci && { scale: getComputedStyle(ci).transform, glow: getComputedStyle(ci).boxShadow };
+  });
+  await page.mouse.up();
+  await settle();
+  ok(
+    held && held.scale.startsWith("matrix(1.14") && held.glow === "none",
+    "holding a category in Settings: enlarged, no glow " + JSON.stringify(held)
+  );
+  await page.evaluate(() => closeSheet());
   ok((await page.evaluate(() => window.__haptics)).includes("long"), "picking a category up gives a long-press haptic");
 
   await page.screenshot({ path: OUT + "/end.png" });

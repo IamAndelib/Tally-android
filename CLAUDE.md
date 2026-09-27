@@ -252,11 +252,14 @@ Built originally in a claude.ai chat; continue development from here.
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
     row (`FX.row`), snackbar and sheet slide in, dialog fade, haptics. No ripple, no page animation. Requested exception:
     category tiles (`.cat`, Home ring / Settings ring / grid) have no state layer and `overflow: visible`; while pressed
-    their icon pops (`scale(1.14)`) and glows in its own colour (`--ec`, set inline by `emblem()`); a dragged category's
-    ghost is just its icon, enlarged (`scale(1.22)`) with shadow + glow, no card. Haptics: `buzz(kind)` →
-    `Android.haptic(kind)` → `performHapticFeedback` (the phone's own haptics, following its touch-feedback setting):
-    "tap" category click, "key" keypad key on touch-down, "tick" ring slot change, "long" long-press pick-up, "confirm"
-    saves/drops; `navigator.vibrate` only as a fallback without the bridge.
+    their icon pops (`scale(1.14)`) and, on Home, glows in its own colour (`--ec`, set inline by `emblem()`); in
+    Settings (ring + grid) only the enlargement, and a dragged category's ghost is just its icon at the same
+    `scale(1.14)`, no card, shadow or glow. Haptics: `buzz(kind)` → `Android.haptic(kind)` → the phone's own tuned
+    effects played on the `Vibrator` (`VibrationEffect.createPredefined`: TICK for "key"/"tick", CLICK for
+    "tap"/"confirm", HEAVY_CLICK for "long"; one-shots before API 29). Not `performHapticFeedback`: that obeys the
+    system touch-feedback switch, off by default on many phones, so nothing was felt. "tap" category click, "key"
+    keypad key on touch-down, "tick" ring slot change, "long" long-press pick-up, "confirm" saves/drops;
+    `navigator.vibrate` only as a fallback without the bridge.
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
     Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
     so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.

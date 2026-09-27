@@ -12,7 +12,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.HapticFeedbackConstants;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
@@ -297,25 +299,38 @@ public class MainActivity extends Activity {
         });
     }
 
+    @SuppressWarnings("deprecation")
+    private Vibrator vibrator() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            VibratorManager m = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            return m == null ? null : m.getDefaultVibrator();
+        }
+        return (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+    }
+
     private class Bridge {
         /**
-         * The phone's own haptic feedback (follows its touch-feedback setting): "tap", "key", "tick", "long",
-         * "confirm"; anything else is a light tap.
+         * Haptic feedback: the phone's own tuned click / tick waveforms, played on the vibrator directly.
+         * performHapticFeedback would follow the system "touch feedback" switch, which many phones ship turned off
+         * (while keyboards keep their own vibration setting), so it was never felt. "key" and "tick" are a light
+         * tick, "tap" and "confirm" a click, "long" a heavy click. The Vibrator is thread-safe: no UI thread needed.
          */
         @JavascriptInterface
         public void haptic(final String kind) {
-            runOnUiThread(() -> {
-                if (isDestroyed()) return;
-                int c;
-                switch (kind == null ? "" : kind) {
-                    case "key": c = HapticFeedbackConstants.KEYBOARD_TAP; break;
-                    case "tick": c = Build.VERSION.SDK_INT >= 34 ? HapticFeedbackConstants.SEGMENT_TICK : HapticFeedbackConstants.CLOCK_TICK; break;
-                    case "long": c = HapticFeedbackConstants.LONG_PRESS; break;
-                    case "confirm": c = Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY; break;
-                    default: c = HapticFeedbackConstants.VIRTUAL_KEY;
+            Vibrator v = vibrator();
+            if (v == null || !v.hasVibrator()) return;
+            String k = kind == null ? "" : kind;
+            boolean light = k.equals("key") || k.equals("tick"), heavy = k.equals("long");
+            try {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    v.vibrate(VibrationEffect.createPredefined(light ? VibrationEffect.EFFECT_TICK
+                            : heavy ? VibrationEffect.EFFECT_HEAVY_CLICK : VibrationEffect.EFFECT_CLICK));
+                } else {
+                    long ms = light ? 6 : heavy ? 14 : 8; // as HAPTIC_MS in js/core.js
+                    if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE));
+                    else v.vibrate(ms);
                 }
-                web.performHapticFeedback(c);
-            });
+            } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
         }
 
         /** The page has rendered: end the launch screen. */

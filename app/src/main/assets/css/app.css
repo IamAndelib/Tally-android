@@ -118,6 +118,11 @@ button.cat {
   box-shadow: 0 0 14px 2px var(--ec, transparent);
   transition-duration: 0.09s;
 }
+/* in Settings (hold to drag) only the slight enlargement, no glow */
+.ring.edit .cat.pressed .ci,
+.cgrid .cat.pressed .ci {
+  box-shadow: none;
+}
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
@@ -1822,24 +1827,19 @@ body.hasnav .snack {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   margin: 0;
 }
-/* a lifted category: no card behind it, just its icon, enlarged with a shadow and its own glow */
+/* a lifted category: no card behind it, just its icon, slightly enlarged (as while held), no glow */
 .ghost.cat {
   background: transparent;
   box-shadow: none;
   transform: none;
 }
 .ghost.cat .ci {
-  transform: scale(1.22);
-  box-shadow:
-    0 6px 14px rgba(0, 0, 0, 0.3),
-    0 0 16px 2px var(--ec, transparent);
+  transform: scale(1.14);
+  box-shadow: none;
 }
 .ghost.settle.cat .ci {
   transform: none;
-  box-shadow: none;
-  transition:
-    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.2s;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 /* a dropped ring tile gliding into its slot */
 .ghost.settle {
