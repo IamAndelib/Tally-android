@@ -100,6 +100,24 @@ button.pressed:not(:disabled)::before {
   opacity: 0.1;
   transition: none;
 }
+/* category tiles (Home ring, Settings ring and grid) have no state-layer squircle: while pressed, the icon pops up a
+   little and glows in its own colour (--ec, set by emblem()), and settles back on release */
+button.cat.pressed:not(:disabled)::before {
+  opacity: 0;
+}
+button.cat {
+  overflow: visible; /* let the pop and glow spill past the tile instead of being cut into a square */
+}
+.cat .ci {
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.18s;
+}
+.cat.pressed .ci {
+  transform: scale(1.14);
+  box-shadow: 0 0 14px 2px var(--ec, transparent);
+  transition-duration: 0.09s;
+}
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
@@ -1803,6 +1821,25 @@ body.hasnav .snack {
   border-radius: 16px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   margin: 0;
+}
+/* a lifted category: no card behind it, just its icon, enlarged with a shadow and its own glow */
+.ghost.cat {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.ghost.cat .ci {
+  transform: scale(1.22);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.3),
+    0 0 16px 2px var(--ec, transparent);
+}
+.ghost.settle.cat .ci {
+  transform: none;
+  box-shadow: none;
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.2s;
 }
 /* a dropped ring tile gliding into its slot */
 .ghost.settle {

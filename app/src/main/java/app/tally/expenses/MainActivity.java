@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
@@ -49,6 +50,7 @@ public class MainActivity extends Activity {
     private boolean ready;
     /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
     private Integer pageColor;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     /**
      * How the widget, its quick add and reminders open the app: dressed like the launcher's own intent (MAIN +
@@ -86,7 +88,7 @@ public class MainActivity extends Activity {
                 }
             });
         }
-        new Handler(Looper.getMainLooper()).postDelayed(this::showPage, 3000);
+        handler.postDelayed(this::showPage, 3000);
         if (Build.VERSION.SDK_INT >= 30) {
             root.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
@@ -146,7 +148,11 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "Android");
 
-        pendingOpen = getIntent().getStringExtra("open");
+        // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
+        // reopen the quick-add form or payment sheet it once asked for
+        if (savedInstanceState == null && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
+            pendingOpen = getIntent().getStringExtra("open");
+        }
         // after the process was killed the WebView can come back empty: load the page whenever restoring fails
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
             web.loadUrl("https://" + HOST + "/assets/index.html");
@@ -176,7 +182,7 @@ public class MainActivity extends Activity {
 
     /** Ends the launch screen: called by the page (Android.ready) once it has rendered, or by the 3 s fallback. */
     private void showPage() {
-        if (ready) return;
+        if (ready || isDestroyed()) return;
         ready = true;
         if (pageColor != null) root.setBackgroundColor(pageColor);
         web.setVisibility(View.VISIBLE);
@@ -249,6 +255,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
         if (web != null) web.destroy();
         super.onDestroy();
     }
@@ -291,6 +298,26 @@ public class MainActivity extends Activity {
     }
 
     private class Bridge {
+        /**
+         * The phone's own haptic feedback (follows its touch-feedback setting): "tap", "key", "tick", "long",
+         * "confirm"; anything else is a light tap.
+         */
+        @JavascriptInterface
+        public void haptic(final String kind) {
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                int c;
+                switch (kind == null ? "" : kind) {
+                    case "key": c = HapticFeedbackConstants.KEYBOARD_TAP; break;
+                    case "tick": c = Build.VERSION.SDK_INT >= 34 ? HapticFeedbackConstants.SEGMENT_TICK : HapticFeedbackConstants.CLOCK_TICK; break;
+                    case "long": c = HapticFeedbackConstants.LONG_PRESS; break;
+                    case "confirm": c = Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY; break;
+                    default: c = HapticFeedbackConstants.VIRTUAL_KEY;
+                }
+                web.performHapticFeedback(c);
+            });
+        }
+
         /** The page has rendered: end the launch screen. */
         @JavascriptInterface
         public void ready() {

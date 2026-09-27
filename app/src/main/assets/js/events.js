@@ -15,6 +15,7 @@ document.addEventListener("click", ev => {
   if (!el) return;
   const act = el.dataset.act,
     v = el.dataset.v;
+  if (el.classList.contains("cat")) buzz("tap"); // category tiles: a light click with their pop
   if (act === "sheet-bg") {
     if (ev.target === el) closeSheet();
     return;

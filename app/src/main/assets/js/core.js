@@ -240,10 +240,14 @@ function snack(msg, undo) {
 }
 /* FX: one-shot feedback for the next render (FX.row flashes a row, FX.cat pops a ring tile, FX.center bumps the donut total) */
 let FX = {};
-/* short haptic tick (VIBRATE) */
-const buzz = ms => {
+/* haptic feedback through the phone's own haptics (Android.haptic; they follow its touch-feedback setting):
+   "tap" a category, "key" a keypad key, "tick" a drag passing a slot, "long" a long-press, "confirm" a save.
+   A short vibration where the shell has no haptic() (older builds, a browser). */
+const HAPTIC_MS = { tap: 8, key: 6, tick: 5, long: 14, confirm: 12 };
+const buzz = kind => {
   try {
-    if (navigator.vibrate) navigator.vibrate(ms);
+    if (window.Android && Android.haptic) Android.haptic(kind);
+    else if (navigator.vibrate) navigator.vibrate(HAPTIC_MS[kind] || 8);
   } catch (e) {}
 };
 /* short label for date fields: Today / Yesterday / 22 Sep (year only if not this year) */

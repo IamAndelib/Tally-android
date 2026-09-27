@@ -39,6 +39,9 @@ const ago = n => {
       saveFile(name, mime, text) {
         window.__saved.push({ name, text });
       },
+      haptic(kind) {
+        (window.__haptics = window.__haptics || []).push(kind);
+      },
     };
   });
   const page = await ctx.newPage();
@@ -415,6 +418,55 @@ const ago = n => {
   const o2 = await outOrder();
   ok(o2.join() === o0.join(), "dropped over the middle: order unchanged: " + o0.join(",") + " → " + o2.join(","));
   ok(!(await page.$(".ghost")) && !(await page.$(".ring.edit .placeholder")), "the lifted tile settled and is gone");
+
+  // ---- 14. touch feedback: the category icon pops and glows (no squircle), system haptics, icon-only drag ghost
+  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  const tb = await (await page.$("#ring .cat")).boundingBox();
+  await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  const fb = await page.evaluate(() => {
+    const b = document.querySelector("#ring .cat.pressed"),
+      ci = b && b.querySelector(".ci");
+    return (
+      b && {
+        layer: getComputedStyle(b, "::before").opacity,
+        scale: getComputedStyle(ci).transform,
+        glow: getComputedStyle(ci).boxShadow,
+      }
+    );
+  });
+  ok(
+    fb && fb.layer === "0" && fb.scale.startsWith("matrix(1.14") && fb.glow !== "none",
+    "pressed category: no squircle, icon pops and glows " + JSON.stringify(fb)
+  );
+  await page.mouse.up();
+  await settle();
+  ok(
+    (await page.evaluate(() => window.__haptics || [])).includes("tap"),
+    "tapping a category clicks the phone's haptics"
+  );
+  await page.evaluate(() => closeSheet());
+  await act("go", "settings");
+  await settle();
+  await page.evaluate(() => document.querySelector(".ring.edit").scrollIntoView({ block: "center" }));
+  const sb = await (await page.$(".ring.edit .tile")).boundingBox();
+  await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  await page.mouse.move(sb.x + sb.width / 2 + 20, sb.y + sb.height / 2 + 20, { steps: 3 });
+  const gh = await page.evaluate(() => {
+    const g = document.querySelector(".ghost");
+    return g && { bg: getComputedStyle(g).backgroundColor, scale: getComputedStyle(g.querySelector(".ci")).transform };
+  });
+  await page.screenshot({ path: OUT + "/drag-icon.png" });
+  await page.mouse.up();
+  await page.waitForTimeout(350);
+  ok(
+    gh && gh.bg === "rgba(0, 0, 0, 0)" && gh.scale.startsWith("matrix(1.22"),
+    "dragging lifts just the enlarged icon, no card " + JSON.stringify(gh)
+  );
+  ok((await page.evaluate(() => window.__haptics)).includes("long"), "picking a category up gives a long-press haptic");
 
   await page.screenshot({ path: OUT + "/end.png" });
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));

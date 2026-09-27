@@ -192,8 +192,10 @@ function calcKeepFieldVisible(inp, panel) {
   const sheet = inp.closest(".p"),
     line = inp.closest(".amtwrap") || inp;
   if (sheet && panel) sheet.style.paddingBottom = panel.offsetHeight + 16 + "px";
+  /* where the keypad will end up, from its layout: it is still sliding up (up to 40px lower) when this runs, so its
+     bounding box would put the limit too low and leave the field half behind it */
   const r = line.getBoundingClientRect(),
-    limit = (panel ? panel.getBoundingClientRect().top : innerHeight) - 12,
+    limit = innerHeight - (panel ? panel.offsetHeight : 0) - 12,
     scroller = sheet || document.scrollingElement;
   if (r.bottom > limit) scroller.scrollTop += r.bottom - limit;
   else if (r.top < 8) scroller.scrollTop -= 8 - r.top;

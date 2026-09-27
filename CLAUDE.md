@@ -34,8 +34,11 @@ Built originally in a claude.ai chat; continue development from here.
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs).
   - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
     logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
-    (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, so launches
-    from the widget, its quick add or a reminder show the logo too instead of a plain colour). The WebView stays hidden (background `surface`, never white) until the page
+    (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, which only
+    applies when the caller doesn't pick a style — the home screen picks a plain colour for widget taps, hence
+    `OpenActivity`). The 3 s fallback lives on a `handler` cleared in `onDestroy`; `showPage()` ignores a destroyed
+    activity. The `open` extra is read in `onCreate` only for a fresh launch (not `savedInstanceState`, not
+    `FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`), so a Recents relaunch doesn't reopen an old quick-add form or payment sheet. The WebView stays hidden (background `surface`, never white) until the page
     calls `Android.ready()` at the end of `js/main.js` (not from rAF: a hidden WebView may never run it), or 3 s at
     most; `setBars` colours `root` only once the page shows, so the logo stays visible until then.
   - Back button calls `window.tallyBack()` (closes dialog / sheet / returns to Home) before exiting.
@@ -164,7 +167,8 @@ Built originally in a claude.ai chat; continue development from here.
     70 ms, 35 ms after ~12 deletes; stops when the caret reaches 0, the finger slides off the key, or `calcClose`; a
     release after any repeat swallows its click).
     `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
-    above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
+    above the keypad, whose final top it takes from layout (`innerHeight - offsetHeight`): the keypad is still sliding
+    up (`animation: up`, 40px) when this runs, so its bounding box would under-scroll. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
     `CALC.inp` is the field's element: `calcClose` only writes the result into that same element, and `goBack()`
     drops a stale `CALC` whose field left the page (its sheet closed while the keypad was open).
     `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
@@ -246,7 +250,13 @@ Built originally in a claude.ai chat; continue development from here.
     `fx` = one-shot feedback for the next render (`FX.row` flashes a row, `FX.cat` pops a ring tile, `FX.center` bumps the donut total).
   - Feedback must feel instant and calm (user tested ripples/scales/page animations as laggy): a 10% state layer on press, set by
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
-    row (`FX.row`), snackbar and sheet slide in, dialog fade, haptic `buzz()` (VIBRATE). No ripple, no scale, no page animation.
+    row (`FX.row`), snackbar and sheet slide in, dialog fade, haptics. No ripple, no page animation. Requested exception:
+    category tiles (`.cat`, Home ring / Settings ring / grid) have no state layer and `overflow: visible`; while pressed
+    their icon pops (`scale(1.14)`) and glows in its own colour (`--ec`, set inline by `emblem()`); a dragged category's
+    ghost is just its icon, enlarged (`scale(1.22)`) with shadow + glow, no card. Haptics: `buzz(kind)` →
+    `Android.haptic(kind)` → `performHapticFeedback` (the phone's own haptics, following its touch-feedback setting):
+    "tap" category click, "key" keypad key on touch-down, "tick" ring slot change, "long" long-press pick-up, "confirm"
+    saves/drops; `navigator.vibrate` only as a fallback without the bridge.
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
     Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
     so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.

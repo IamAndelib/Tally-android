@@ -26,7 +26,7 @@ function startRepeat(key) {
     if (LP !== L || L.stopped) return;
     if (!CALC || CALC.pos <= 0) return stopRepeat();
     calcKey("⌫");
-    if (!L.fired++) buzz(8);
+    if (!L.fired++) buzz("long");
     L.t2 = setTimeout(step, L.fired > 12 ? 35 : 70);
   };
   L.t1 = setTimeout(step, 400);
@@ -74,7 +74,7 @@ function pressStart(x, y, target) {
       if (!LP) return;
       LP.active = true;
       swallowNextClick();
-      buzz(12);
+      buzz("long");
       const el = LP.el;
       LP = null;
       pressOff(true);
@@ -93,9 +93,7 @@ function pressStart(x, y, target) {
       if (!LP) return;
       LP.active = true;
       swallowNextClick();
-      try {
-        if (navigator.vibrate) navigator.vibrate(12);
-      } catch (e) {}
+      buzz("long");
       if (LP.kind === "sel") {
         V.sel = new Set([LP.el.dataset.v]);
         render();
@@ -210,6 +208,7 @@ function dragBegin() {
     r = el.getBoundingClientRect(),
     g = el.cloneNode(true);
   g.classList.add("ghost");
+  g.classList.remove("pressed");
   g.removeAttribute("data-act");
   Object.assign(g.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
   document.body.appendChild(g);
@@ -247,7 +246,7 @@ function rowDrop() {
   if (!ok) return; /* dropped elsewhere: nothing changes */
   const [type, id] = L.el.dataset.drag.split(":");
   S.settings.dragTip = true;
-  buzz(12);
+  buzz("confirm");
   if (type === "acc") setArchived(id, L.to === "arch");
   else if (/-done$/.test(L.to)) clearLoan(id);
   else reopenLoan(id);
@@ -311,7 +310,7 @@ function ringDragTo(L, x, y) {
     b.style.left = s.x - lay.u / 2 + "px";
     b.style.top = s.y - lay.u / 2 + "px";
   });
-  buzz(6);
+  buzz("tick");
 }
 /* a new category order (ids of one kind, in order) into S.cats; hidden ones keep their place at the end */
 function setCatOrder(kind, order) {
@@ -364,6 +363,7 @@ function pressOn(t, x, y) {
   const b = t && t.closest && t.closest("button");
   if (!b || b.disabled) return;
   PRESS = b;
+  if (b.closest(".calc")) buzz("key"); // keypad keys click on touch-down, like the phone's keyboard
   pressAt = Date.now();
   pressXY = [x, y];
   b.classList.add("pressed");
