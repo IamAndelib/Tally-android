@@ -72,14 +72,9 @@ document.addEventListener("click", ev => {
       F.editAcc = v;
       setPressed("ed-acc", v);
       break;
-    case "loanpay-del": {
-      const id = v;
-      closeSheet();
-      withUndo("Payment deleted", () => {
-        S.txns = S.txns.filter(x => x.id !== id);
-      });
+    case "loanpay-del":
+      deleteLoanEntry(v);
       break;
-    }
     case "loan-writeoff":
       writeOffLoan();
       break;

@@ -62,6 +62,10 @@ Built originally in a claude.ai chat; continue development from here.
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
     file (`unreadable`); the app never silently drops saved data. Restoring a backup `migrate()` can't read snacks.
+    `migrate()` also sanitises (backups can come from anywhere): every id and reference goes through `sid()` (the app's
+    own `[A-Za-z0-9-]` ids pass, anything else is remapped consistently), `TYPES`/`ICONS` keys via `hasOwnProperty`,
+    currencies must be 3 capital letters (else main currency / CAD), colours `#rrggbb`, numbers finite, theme and
+    `remind` normalised; a loan whose `account` is gone is repaired from its newest draw instead of dropped.
     `migrate()` upgrades any saved state or backup (v1 included) on load/restore without changing balances
     (v4: emblems; built-in categories still on their old default emoji/colour get the new emblem/colour, user choices are kept.
     v6: loans become multi-draw — for each old loan with a `due`, that date moves onto its one existing principal transaction).
@@ -145,8 +149,13 @@ Built originally in a claude.ai chat; continue development from here.
     hidden scrollbar, 14px end padding); `calcCaretIntoView()` keeps the caret visible after every sync, so a long
     expression slides left. A press within 28px of the caret grabs it (`LP.kind==="caret"` in `js/gestures.js` →
     `calcDragCaret()`, which also scrolls near the edges); elsewhere a swipe scrolls natively and a tap places the caret.
+    Holding ⌫ repeats it (`LP.kind==="repeat"`, `startRepeat/stopRepeat` in `js/gestures.js`: 400 ms delay, then every
+    70 ms, 35 ms after ~12 deletes; stops when the caret reaches 0, the finger slides off the key, or `calcClose`; a
+    release after any repeat swallows its click).
     `calcKeepFieldVisible()` pads the sheet's `.p` by the keypad height (reset on close) and scrolls the amount line
     above the keypad. Tests close the calculator through `calc-kbd` (their `act()` routes a hidden `calc-toggle` there).
+    `CALC.inp` is the field's element: `calcClose` only writes the result into that same element, and `goBack()`
+    drops a stale `CALC` whose field left the page (its sheet closed while the keypad was open).
     `goBack()` (`window.tallyBack`) checks `CALC` first, before the sheet/dialog stack: closed-app-style Android
     back (or the in-app Escape/back path) while the calculator is open closes just the calculator and applies its
     result, the same as tapping the toggle again, rather than closing the sheet underneath it. Deliberately **not** applied to transfer's
@@ -157,6 +166,9 @@ Built originally in a claude.ai chat; continue development from here.
     calculator mode; caret kept beside the same digit; the keypad's "," becomes the decimal point or is dropped), and
     `openSheet`/`openSheet2` group pre-filled values (`groupAmountInputs`, `groupDigits` in `js/core.js`, groups of three
     for every currency). Readers always parse through `evalAmt()`, which strips the commas; never `parseFloat` a field.
+    `evalAmt()` also reads the calculator's own expression (`−`, `×`, `÷` via `calcEval`), so Save with the keypad open
+    saves its result; it returns `null` unless the amount is finite and below 1e12 (`amtOk`, also used by `calcEval`).
+    `money()` caches its `Intl.NumberFormat`s (`NF`), which are slow to build.
   - Money sources other than credit cards shouldn't go below zero: every save that moves money out goes through
     `guardOverdraw(mutate, date, proceed)` (simulates on a copy; warns if an account ends below zero now or at the end of that
     day and lower than before). The user chose warn + "Save anyway", not a hard block.
@@ -199,7 +211,11 @@ Built originally in a claude.ai chat; continue development from here.
     its own text width and get clipped, because `button{overflow:hidden}` (kept globally so the press-state layer
     stays inside each button's rounded corners) disables a flex item's usual "don't shrink past your content" floor;
     the Home account-balance strip's own buttons (`.acc`) already carried the equivalent `flex:none` for this reason.
-  - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent.
+  - History: hold an entry (or the select icon) for multi-select delete; `deleteEntries()` keeps transfer fees consistent,
+    and removes a loan (with its payments) only when **all** its draws are selected — otherwise just those entries go.
+    After any draw is added/edited/deleted, `relinkLoan(id)` resets `l.account` (newest draw's) and `l.date` (oldest
+    draw's); the loan sheet's row Delete is `deleteLoanEntry(id)`. `saveLoanDraw` refuses an edit that would leave more
+    paid back than lent/borrowed (worse than it already is).
   - Settings: spending categories are shown as the exact home ring (grey donut placeholder); tap to edit (emblem, colour),
     hold-and-drag to move between slots (touch + mouse, `pressStart/Move/End`, `RE` holds the preview layout/order).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
@@ -214,14 +230,27 @@ Built originally in a claude.ai chat; continue development from here.
     JS (`pressOn/pressOff` → `.pressed`, since `:active` is unreliable for touch in WebView), a soft background flash on the changed
     row (`FX.row`), snackbar and sheet slide in, dialog fade, haptic `buzz()` (VIBRATE). No ripple, no scale, no page animation.
     The one requested flourish: a tapped bottom-nav tab's icon flips once (`FLIP` → `.ic.flip`, not replayed on re-render).
+    Text selection is off app-wide (`body{user-select:none;-webkit-touch-callout:none}`, back on for `input`/`textarea`),
+    so long-presses never show selection handles; `caretRangeFromPoint` still works in the calculator mirror.
     Calendar range: a touch only becomes a drag after 12px, so a jittery tap stays a tap. Don't reuse existing class names
     (`.pop` = dialog layer, `.row`, `.nav .in`) for effects.
     `commit()` also calls `syncReminders()`.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk 34, minSdk 24).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.0) is the release `versionName`; debug builds get
-    `-dev.<run>`. `versionCode` = `GITHUB_RUN_NUMBER` (per workflow file — keep `build-apk.yml`'s name).
+- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk/targetSdk 35 with
+  `android.suppressUnsupportedCompileSdk=35`, minSdk 24). Android 15 forces edge-to-edge: `MainActivity` wraps the
+  WebView in a `FrameLayout` (`root`) padded by the system-bar/cutout/IME insets (API 30+), and `setBars` also colours
+  `root`, which shows behind the transparent bars.
+- Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
+  User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
+  `docs/privacy-policy.md` (must be hosted publicly).
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.1.1) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10101) so F-Droid's
+    rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
+    `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
+  - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the
+    release job refuses to publish without it) is shared by F-Droid, IzzyOnDroid and the Play kit (`docs/play/listing.md`).
+    Guides: `docs/PLAY_STORE.md`, `docs/FDROID.md`; F-Droid recipe draft `docs/fdroid/app.tally.expenses.yml`.
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
     signed with the committed `app/debug.keystore` (android/androiddebugkey/android) so every CI build updates the last.
     Never replace the keystore: installed copies would stop accepting updates.
@@ -235,7 +264,7 @@ Built originally in a claude.ai chat; continue development from here.
     `v<tallyVersion>` has no GitHub Release yet (a tag must equal it), CHANGELOG must have that section; builds + signs
     from the secrets, verifies cert/versionName/non-debuggable with apksigner/aapt, and `gh release create` publishes
     `Tally-vX.Y.Z.apk` + `.sha256` with the CHANGELOG section as notes, creating the tag at that commit.
-  - Releasing: bump `tallyVersion` + CHANGELOG in a PR and merge it into `main` (this session's git proxy can't push
+  - Releasing: bump `tallyVersion` + `tallyVersionCode` + CHANGELOG + fastlane changelog in a PR and merge it into `main` (this session's git proxy can't push
     tags, which is why CI creates them).
 - Tests: `tests/` (`npm ci`; `npm test` runs `e2e/NN-*.js` against a throwaway server, `npm test -- 15` for one suite;
   `npm run lint`; `npm run format`). Locally: `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.

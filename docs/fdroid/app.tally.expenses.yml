@@ -1,0 +1,29 @@
+# Draft F-Droid metadata for Tally. It goes into https://gitlab.com/fdroid/fdroiddata as metadata/app.tally.expenses.yml
+# (see docs/FDROID.md). Descriptions, screenshots and changelogs come from fastlane/metadata/ in the app's repository.
+Categories:
+  - Money
+License: MIT
+AuthorName: IamAndelib
+WebSite: https://github.com/IamAndelib/Tally-android
+SourceCode: https://github.com/IamAndelib/Tally-android
+IssueTracker: https://github.com/IamAndelib/Tally-android/issues
+Changelog: https://github.com/IamAndelib/Tally-android/blob/main/CHANGELOG.md
+
+AutoName: Tally
+
+RepoType: git
+Repo: https://github.com/IamAndelib/Tally-android.git
+
+Builds:
+  - versionName: 1.1.1
+    versionCode: 10101
+    commit: v1.1.1
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+UpdateCheckData: gradle.properties|tallyVersionCode=(\d+)|gradle.properties|tallyVersion=(.+)
+CurrentVersion: 1.1.1
+CurrentVersionCode: 10101

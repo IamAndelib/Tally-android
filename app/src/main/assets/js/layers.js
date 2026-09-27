@@ -404,9 +404,9 @@ function curList(q) {
   const match = c => !q || c.toLowerCase().includes(q) || curName(c).toLowerCase().includes(q);
   const row = c =>
     '<button class="tx" data-act="cur-pick" data-v="' +
-    c +
+    esc(c) +
     '"><span class="code">' +
-    c +
+    esc(c) +
     '</span><span class="mid"><div class="d">' +
     esc(curName(c) || c) +
     '</div></span><span class="a muted">' +

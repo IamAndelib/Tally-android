@@ -191,12 +191,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how the pieces fit together and how t
 
 ## Releasing
 
-1. In a pull request, bump `tallyVersion` in `gradle.properties` and add its section to `CHANGELOG.md`.
+1. In a pull request, bump `tallyVersion` and `tallyVersionCode` in `gradle.properties`, add the version's section to
+   `CHANGELOG.md` and its short notes to `fastlane/metadata/android/en-US/changelogs/<tallyVersionCode>.txt`.
 2. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
    from the `RELEASE_KEYSTORE_BASE64` and `RELEASE_KEYSTORE_PASSWORD` repository secrets), verifies the signature,
    and publishes the GitHub Release `vX.Y.Z` — tag, APK, SHA-256 and the changelog section as notes.
 
 Pushing a tag `vX.Y.Z` that matches the version does the same.
+
+## Stores
+
+Guides for publishing: [Google Play](docs/PLAY_STORE.md) and [F-Droid / IzzyOnDroid](docs/FDROID.md). Store texts and
+screenshots live in `fastlane/metadata/android/en-US/`.
 
 ## License
 

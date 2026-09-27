@@ -5,6 +5,36 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-09-27
+
+### Changed
+
+- Hold ⌫ in the calculator to keep deleting, like on a phone keyboard.
+- Long-pressing labels or empty space no longer brings up text-selection handles.
+- Targets Android 15 (API 35), as Google Play requires; the app keeps clear of the status bar, navigation bar and
+  keyboard now that Android draws apps edge to edge.
+- Releases also include an Android App Bundle (.aab) for Google Play.
+- Ready for F-Droid and IzzyOnDroid: store texts and screenshots in `fastlane/`, and release version codes fixed in
+  `gradle.properties` (1.1.1 = 10101) so anyone rebuilding from source gets the same app.
+
+### Fixed
+
+- Deleting one lending or loan entry of a person in History no longer deletes that person's whole loan and all its
+  payments; only the chosen entries go.
+- A loan could vanish after restarting if the account of a deleted or edited draw was later deleted. It now follows
+  its remaining entries, and loans already in that state are repaired when the app starts.
+- Tapping Save with the calculator still open saves its result (12×3 saved nothing before; − and ÷ didn't work either).
+- Closing a form with the calculator open no longer leaves it half-active, where the next Back pressed would write
+  the old result into a new form.
+- The calculator can't start with × ÷ or + any more.
+- Editing a loan payment or draw can't make it paid back more than was lent or borrowed (the extra was lost).
+- A transfer fee that isn't a number is no longer silently dropped.
+- History's account filter resets when its account is gone, instead of showing an empty list.
+- A backup file that can't be read now says so.
+- Backups are checked more strictly on restore: odd ids, currencies, colours and numbers are cleaned up, so a damaged
+  or hand-edited file can't break the app. CSV exports can't be read by a spreadsheet as formulas.
+- Faster lists: money formats are built once instead of for every row.
+
 ## [1.1.0] — 2026-09-24
 
 ### Changed
@@ -54,5 +84,6 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1
 [1.1.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.0
 [1.0.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.0.0

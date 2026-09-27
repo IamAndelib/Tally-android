@@ -50,8 +50,7 @@ public class TallyWidget extends AppWidgetProvider {
     public void onReceive(Context ctx, Intent in) {
         super.onReceive(ctx, in);
         String a = in.getAction();
-        if (A_TICK.equals(a) || Intent.ACTION_TIME_CHANGED.equals(a) || Intent.ACTION_TIMEZONE_CHANGED.equals(a)
-                || Intent.ACTION_DATE_CHANGED.equals(a)) {
+        if (A_TICK.equals(a) || Intent.ACTION_TIME_CHANGED.equals(a) || Intent.ACTION_TIMEZONE_CHANGED.equals(a)) {
             refresh(ctx);
         }
     }

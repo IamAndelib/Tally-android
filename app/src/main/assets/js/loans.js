@@ -46,6 +46,25 @@ function stLabel(l, st) {
   }[st];
 }
 const loanWho = l => l.person || "Someone";
+/* after a draw is added, edited or deleted: the loan's account is its newest draw's, its date the oldest draw's */
+function relinkLoan(id) {
+  const l = loan(id),
+    d = l ? loanInfo(l).draws : [];
+  if (!d.length) return;
+  l.account = d[d.length - 1].account;
+  l.date = d[0].date;
+}
+/* Delete on a row of the loan sheet (never the loan's only draw) */
+function deleteLoanEntry(id) {
+  const t = S.txns.find(x => x.id === id),
+    l = t && t.type === "loan" && loan(t.loan);
+  if (!l || (t.principal && loanInfo(l).draws.length <= 1)) return;
+  closeSheet();
+  withUndo(t.principal ? "Deleted" : "Payment deleted", () => {
+    S.txns = S.txns.filter(x => x.id !== id);
+    relinkLoan(l.id);
+  });
+}
 function loanRow(l, drag) {
   const i = loanInfo(l),
     lend = l.kind === "lend";
@@ -382,7 +401,21 @@ function saveLoanDraw() {
     snack("That date is before the loan itself");
     return;
   }
-  const txnId = F.editTxn;
+  const txnId = F.editTxn,
+    t0 = S.txns.find(x => x.id === txnId);
+  if (!t0) return;
+  /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan */
+  const i = loanInfo(l),
+    total = r2(i.total + (t0.principal ? amt - t0.amount : 0)),
+    paid = r2(i.paid + (t0.principal ? 0 : amt - t0.amount));
+  if (paid - total > Math.max(0, i.paid - i.total) + 0.005) {
+    snack(
+      t0.principal
+        ? "Already paid back " + money(i.paid, i.cur)
+        : "Only " + money(r2(i.left + t0.amount), i.cur) + " is left"
+    );
+    return;
+  }
   const mutate = () => {
     const t = S.txns.find(x => x.id === txnId);
     if (!t) return;
@@ -390,6 +423,7 @@ function saveLoanDraw() {
     t.account = acc2;
     t.date = date2;
     if (setDue) t.due = due2;
+    relinkLoan(l.id);
   };
   guardOverdraw(mutate, date2, () => {
     closeSheet2();
@@ -437,11 +471,7 @@ function saveLoan() {
     l = merge || { id: newId(), kind: F.lk, person, account, date, note, status: "open" };
   const mutate = () => {
     if (!merge) S.loans.push(Object.assign({}, l));
-    else {
-      const l2 = loan(l.id);
-      if (l2) l2.account = account;
-    }
-    S.txns.push({
+    const t = {
       id: pid,
       ts,
       type: "loan",
@@ -451,9 +481,11 @@ function saveLoan() {
       amount: amt,
       account,
       date,
-      due,
-      note,
-    });
+    };
+    if (due) t.due = due;
+    t.note = note;
+    S.txns.push(t);
+    if (merge) relinkLoan(l.id);
   };
   guardOverdraw(mutate, date, () => {
     S.settings.lastAcc = account;

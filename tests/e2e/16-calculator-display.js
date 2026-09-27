@@ -194,6 +194,88 @@ const ok = (c, m) => {
     );
     ok(after.pad === "" && after.btn !== "none", "the sheet and the calculator button are back to normal" + tag);
 
+    // ---- 6. holding ⌫ keeps deleting; a quick tap deletes one
+    await page.click('[data-act="calc-toggle"][data-v="f-amt"]');
+    await settle();
+    const expr = () => page.evaluate(() => (CALC ? CALC.expr : null));
+    const bsBox = await page.evaluate(() => {
+      const r = document.querySelector('.calc [data-act="calc-key"][data-v="⌫"]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    const full = await expr();
+    await page.click('.calc [data-act="calc-key"][data-v="⌫"]');
+    ok((await expr()) === full.slice(0, -1), "a quick tap on ⌫ deletes one character" + tag);
+    const before = await expr();
+    await page.mouse.move(bsBox.x, bsBox.y);
+    await page.mouse.down();
+    await page.waitForTimeout(1000);
+    await page.mouse.up();
+    const afterHold = await expr();
+    await page.waitForTimeout(300);
+    ok(
+      before.length - afterHold.length >= 5 && before.startsWith(afterHold),
+      "holding ⌫ for a second deletes several characters: " + before + " → " + afterHold + tag
+    );
+    ok((await expr()) === afterHold, "releasing doesn't delete one more" + tag);
+    // hold, then slide off the key: deletion stops
+    await type(["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+    await page.mouse.move(bsBox.x, bsBox.y);
+    await page.mouse.down();
+    await page.waitForTimeout(600);
+    await page.mouse.move(bsBox.x, bsBox.y - 250);
+    const offKey = await expr();
+    await page.waitForTimeout(500);
+    ok((await expr()) === offKey, "sliding off ⌫ stops the deleting" + tag);
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+    // hold until everything is gone
+    await page.mouse.move(bsBox.x, bsBox.y);
+    await page.mouse.down();
+    await page.waitForTimeout(2500);
+    await page.mouse.up();
+    ok((await expr()) === "", "holding long enough clears the whole expression" + tag);
+    await page.click('#calc-f-amt [data-act="calc-kbd"]');
+    await settle();
+
+    // ---- 7. no text selection outside typing fields (long-press / drag never shows selection handles)
+    await page.click('[data-act="calc-toggle"][data-v="f-amt"]');
+    await settle();
+    const sel = await page.evaluate(() =>
+      [".calcbar", ".calcres", ".amtwrap .cur", ".caretmirror", "body", "#f-note"].map(
+        q => getComputedStyle(document.querySelector(q)).userSelect
+      )
+    );
+    ok(
+      JSON.stringify(sel) === JSON.stringify(["none", "none", "none", "none", "none", "text"]),
+      "text selection is off except in typing fields: " + JSON.stringify(sel) + tag
+    );
+    const from = await page.evaluate(() => {
+      const r = document.querySelector(".calcbar").getBoundingClientRect(),
+        c = document.querySelector(".amtwrap .cur").getBoundingClientRect();
+      return { x1: r.left + 10, y1: r.top + r.height / 2, x2: c.left + 2, y2: c.top + c.height / 2 };
+    });
+    await page.mouse.move(from.x1, from.y1);
+    await page.mouse.down();
+    await page.waitForTimeout(800);
+    await page.mouse.move(from.x2, from.y2, { steps: 8 });
+    await page.mouse.up();
+    ok(
+      (await page.evaluate(() => String(getSelection()))) === "",
+      "holding and dragging over the keypad bar and label selects nothing" + tag
+    );
+    await page.click('#calc-f-amt [data-act="calc-kbd"]');
+    await settle();
+    await page.fill("#f-note", "Tea");
+    await page.focus("#f-note");
+    await page.keyboard.press("Control+A");
+    ok(
+      (await page.evaluate(() => {
+        const i = document.getElementById("f-note");
+        return i.value.slice(i.selectionStart, i.selectionEnd);
+      })) === "Tea",
+      "text in a typing field can still be selected" + tag
+    );
+
     ok(errors.length === 0, "no page errors: " + JSON.stringify(errors) + tag);
     await ctx.close();
   }

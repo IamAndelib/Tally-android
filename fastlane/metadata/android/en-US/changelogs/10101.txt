@@ -1,0 +1,7 @@
+- Fixes: deleting one loan entry in History kept deleting the whole loan; Save with the calculator open (12×3);
+  stricter backup checks; faster lists.
+- Hold ⌫ in the calculator to keep deleting.
+- Long-pressing labels no longer brings up text-selection handles.
+- Amounts get thousands commas as you type (123,986).
+- Bigger calculator button and keys; the display scrolls with a draggable caret; live result above the keys.
+- Targets Android 15; stays clear of the system bars and keyboard.

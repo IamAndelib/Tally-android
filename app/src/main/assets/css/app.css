@@ -37,6 +37,10 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 body {
+  /* an app, not a document: long-pressing labels, rows or empty space never starts a text selection */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   margin: 0;
   background: var(--surface);
   color: var(--on-surface);
@@ -931,6 +935,12 @@ select option {
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.22);
   animation: up 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
+/* typing fields keep normal selection, caret and paste */
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
 .calc button {
   height: 56px;
   border-radius: 12px;
@@ -994,9 +1004,6 @@ select option {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
   margin: 6px 2px 0;
-}
-.err {
-  color: var(--spent);
 }
 .catgrid {
   display: grid;
