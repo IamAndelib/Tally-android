@@ -43,8 +43,13 @@ Built originally in a claude.ai chat; continue development from here.
     `tallyBack`→`goBack()`, `tallyOpen`→`openFromNative()`, `tallyResume`→`onAppResume()`, `tallyTheme`→`onSystemTheme()`,
     `tallySaved`→`onFileSaved()`. Escape in a desktop browser calls `goBack()` too.
   - Home-screen widget `TallyWidget` (AppWidgetProvider, `res/layout/widget_tally.xml`, `res/xml/tally_widget_info.xml`, 4×1,
-    Material You colours via `values-v31` system colours): today's total balance + "Spent today", body opens the app, + opens
+    Material You colours via `values-v31` system colours): today's total balance + "Spent today", body opens the app
+    through the invisible `OpenActivity` (the home screen starts widget taps with a plain-colour splash; started from our
+    own activity, MainActivity gets its logo splash, like the + path), + opens
     `QuickAddActivity` (small dialog: Spent / Received / Transfer → MainActivity with `open=add:out|add:in|add:tr`).
+    Every in-app open (widget, quick add, reminders) uses `MainActivity.openIntent(ctx, open)`: MAIN + LAUNCHER +
+    NEW_TASK|CLEAR_TOP|SINGLE_TOP, because Android only resumes a running app from its last screen (no splash) for
+    launcher-style intents; the `open` extra still reaches `onNewIntent`.
     The page is the source of truth: `syncWidget()` (from `commit()`, start, resume) sends formatted numbers through
     `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
 - The app is a web page in `app/src/main/assets` (vanilla JS, no framework, no build step):

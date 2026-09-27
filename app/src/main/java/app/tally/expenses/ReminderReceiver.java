@@ -201,10 +201,8 @@ public class ReminderReceiver extends BroadcastReceiver {
     // ---------- helpers ----------
 
     private static PendingIntent openApp(Context ctx, String open, int req) {
-        Intent i = new Intent(ctx, MainActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        if (open != null) i.putExtra("open", open);
-        return PendingIntent.getActivity(ctx, req, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getActivity(ctx, req, MainActivity.openIntent(ctx, open),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private static PendingIntent extendIntent(Context ctx, String id, int days, int req) {

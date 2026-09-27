@@ -68,8 +68,10 @@ public class TallyWidget extends AppWidgetProvider {
         v.setTextViewText(R.id.w_balance, balance);
         v.setTextViewText(R.id.w_spent, spent);
 
-        Intent open = new Intent(ctx, MainActivity.class);
-        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        // through OpenActivity (like the + goes through QuickAddActivity): the home screen starts widget taps with a
+        // plain-colour splash, so the app itself is started one step later, from our own activity, and gets its logo
+        Intent open = new Intent(ctx, OpenActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
         v.setOnClickPendingIntent(R.id.w_body, PendingIntent.getActivity(ctx, 40, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
 

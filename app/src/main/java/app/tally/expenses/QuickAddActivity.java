@@ -1,7 +1,6 @@
 package app.tally.expenses;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 
 /** The widget's +: a small dialog over the home screen with Spent / Received / Transfer. Picking one opens Tally on that form. */
@@ -16,10 +15,7 @@ public class QuickAddActivity extends Activity {
     }
 
     private void go(String what) {
-        Intent i = new Intent(this, MainActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        i.putExtra("open", what);
-        startActivity(i);
+        startActivity(MainActivity.openIntent(this, what));
         finish();
     }
 }

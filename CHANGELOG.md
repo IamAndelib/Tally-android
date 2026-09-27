@@ -10,7 +10,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Tally opens on its logo, in your light or dark colours, instead of a blank white screen that flashes before the app
-  appears; on Android 13+ also when opened from the home-screen widget or a reminder.
+  appears, also when opened from the home-screen widget. If Tally is already running, the widget, quick add and
+  reminders go straight back into it without the splash.
 - Arranging spending categories in Settings feels smoother and more predictable: the dragged category goes to the
   slot it's over (anywhere around the ring, wherever you grabbed it), neighbours make way the short way round instead
   of the whole ring shifting, tiles slide into place, and the category glides into its slot when you let go.

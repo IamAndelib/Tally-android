@@ -2,6 +2,7 @@ package app.tally.expenses;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -48,6 +49,20 @@ public class MainActivity extends Activity {
     private boolean ready;
     /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
     private Integer pageColor;
+
+    /**
+     * How the widget, its quick add and reminders open the app: dressed like the launcher's own intent (MAIN +
+     * LAUNCHER), because Android only resumes an already-running app from its last screen for such intents, and shows
+     * the splash again for anything else. CLEAR_TOP + SINGLE_TOP still hand {@code open} to onNewIntent.
+     */
+    static Intent openIntent(Context ctx, String open) {
+        Intent i = new Intent(ctx, MainActivity.class)
+                .setAction(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (open != null) i.putExtra("open", open);
+        return i;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

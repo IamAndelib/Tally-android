@@ -31,6 +31,14 @@
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/QuickAdd" />
+        <!-- the widget body's tap: invisible, only opens MainActivity (see OpenActivity.java) -->
+        <activity
+            android:name=".OpenActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <receiver
             android:name=".TallyWidget"
