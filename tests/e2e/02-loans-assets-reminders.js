@@ -107,7 +107,7 @@ const ok = (c, m) => {
   }
   const center = () => page.evaluate(() => document.querySelector(".dcenter").textContent);
 
-  ok((await page.evaluate(() => window.__asked)) === 1, "asks for notification permission once on start");
+  ok((await page.evaluate(() => window.__asked)) === 0, "the page asks nothing on start (the shell's own prompts do)");
   ok(
     (await page.isVisible('#nav [data-v="assets"]')) && (await page.isVisible('#nav [data-v="liabs"]')),
     "bottom tabs shown"

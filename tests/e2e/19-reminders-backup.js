@@ -283,15 +283,22 @@ const stub = () => {
     "a failed backup notice opens Settings"
   );
 
-  // ---- 4. the "may arrive late" card
+  // ---- 4. the permissions card: one row with Allow per permission Android was denied
   await page.evaluate(() => {
     window.__cfg.health = { notif: true, exact: false, battery: false };
     render();
   });
   ok(
-    (await page.$$('.rhealth [data-act="rem-fix"]')).length === 3 &&
+    (await page.textContent(".rhealth")).includes("Permissions") &&
+      JSON.stringify(await page.$$eval('.rhealth [data-act="rem-fix"]', b => b.map(x => x.dataset.v))) ===
+        '["exact","battery"]' &&
       (await page.isVisible('[data-act="rem-fix"][data-v="exact"]')),
-    "card offers on-time alarms and battery"
+    "card lists just the denied ones: on-time alarms and battery"
+  );
+  ok(
+    !(await page.textContent(".rhealth")).includes("Battery is fine") &&
+      (await page.$$eval('.rhealth [data-act="rem-fix"]', b => b.every(x => x.textContent === "Allow"))),
+    "each row has one Allow button, no 'Battery is fine'"
   );
   await page.evaluate(() => document.querySelector(".rhealth").scrollIntoView({ block: "center" }));
   await page.screenshot({ path: OUT + "/health.png" });
@@ -299,31 +306,45 @@ const stub = () => {
   await act("rem-fix", "battery");
   ok(
     JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["exact","battery"]',
-    "buttons open Android's settings"
-  );
-  await act("rem-fix", "battery-ok");
-  await settle();
-  ok(
-    !(await page.$('[data-act="rem-fix"][data-v="battery"]')) && (await page.$('[data-act="rem-fix"][data-v="exact"]')),
-    "'Battery is fine' hides just that item"
+    "Allow opens Android's own screen or popup"
   );
   await page.evaluate(() => {
     window.__cfg.health = { notif: false, exact: true, battery: true };
     window.__calls = [];
-    S.settings.notifAsked = false;
     render();
   });
-  ok((await page.textContent(".rhealth")).includes("can't show"), "notifications blocked: says they can't show");
+  ok(
+    (await page.$$('.rhealth [data-act="rem-fix"]')).length === 1 &&
+      (await page.textContent(".rhealth")).includes("Reminders can't show without them"),
+    "notifications denied: just that row"
+  );
   await act("rem-fix", "notif");
   ok(
     (await calls("openSetting")).pop()[1] === "notif",
     "Allow notifications goes to the shell (Android's prompt while it can, else the settings page)"
   );
+  // the card follows a permission answer at once, without leaving Settings
   await page.evaluate(() => {
+    window.__cfg.health.notif = true;
+    window.tallyPerms();
+  });
+  await settle();
+  ok(
+    !(await page.$(".rhealth")) && (await page.evaluate(() => V.screen)) === "settings",
+    "allowed: the card disappears at once"
+  );
+  await page.evaluate(() => {
+    window.__cfg.health = { notif: true, exact: true, battery: false };
     ["daily", "check", "dues"].forEach(k => (S.settings.remind[k] = false));
     render();
   });
   ok(!(await page.$(".rhealth")), "no card while every reminder is off");
+  await page.evaluate(() => (window.__calls = []));
+  await act("rem-daily");
+  ok(
+    (await calls("askNotif")).length === 1 && (await page.isVisible('[data-act="rem-fix"][data-v="battery"]')),
+    "switching a reminder on asks the shell for notifications; the battery row shows on any phone"
+  );
   await page.evaluate(() => {
     ["daily", "check", "dues"].forEach(k => (S.settings.remind[k] = true));
     window.__cfg.health = { notif: true, exact: true, battery: true };
@@ -580,66 +601,27 @@ const stub = () => {
     "auto backup off: Restore opens the picker"
   );
 
-  // ---- 8. first open: Android's notification prompt, then on-time alarms, then battery, each once
-  page = await newPage({ health: { notif: true, exact: false, battery: true, idle: false } });
+  // ---- 8. first open: Android's own prompts come from the shell, so the page itself asks nothing
+  page = await newPage({ health: { notif: false, exact: false, battery: false } });
   await page.goto(appUrl);
   await settle();
-  ok(
-    (await calls("askNotif")).length === 1 && !(await page.evaluate(() => $("#pop").innerHTML)),
-    "first open: Android's notification prompt, before any account exists"
-  );
-  await page.evaluate(() => window.tallyPerms()); // the shell: the prompt was answered
-  await settle();
-  ok((await page.textContent("#pop")).includes("Reminders on time?"), "then: the on-time alarms dialog");
-  await page.screenshot({ path: OUT + "/exact-dialog.png" });
-  await act("ask-ok");
-  ok(JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["exact"]', "Open settings: Alarms & reminders");
-  await page.evaluate(() => window.tallyPerms()); // back from Android's settings
-  await settle();
-  ok(
-    JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["exact","battery"]',
-    "then: Android's run-in-background popup"
-  );
-  await page.evaluate(() => window.tallyPerms());
-  await page.reload();
-  await settle();
-  S = await state();
   ok(
     (await calls("askNotif")).length === 0 &&
       (await calls("openSetting")).length === 0 &&
-      !(await page.evaluate(() => $("#pop").innerHTML)) &&
-      S.settings.notifAsked &&
-      S.settings.exactAsked &&
-      S.settings.batteryAsked,
-    "each step is asked only once"
+      !(await page.evaluate(() => $("#pop").innerHTML)),
+    "start: no page dialog, no request from the page"
   );
-  // an existing user (asked for notifications long ago): only the new steps, and battery only when restricted
-  page = await newPage({ health: { notif: true, exact: false, battery: true, idle: true } });
-  await page.goto(appUrl);
-  await seed(Object.assign(base(), { settings: { cur: "CAD", notifAsked: true } }));
-  ok(
-    (await calls("askNotif")).length === 0 && (await page.textContent("#pop")).includes("Reminders on time?"),
-    "existing user: no notification prompt again, the on-time dialog once"
+  // old page-side flags from an earlier version are dropped
+  await seed(
+    Object.assign(base(), {
+      settings: { cur: "CAD", notifAsked: true, exactAsked: true, batteryAsked: true, batteryOk: true },
+    })
   );
-  await act("pd-close");
-  await page.evaluate(() => window.tallyPerms());
-  await settle();
-  ok((await calls("openSetting")).length === 0, "Not now: nothing opens; battery already unrestricted is skipped");
-  // the card follows a permission answer at once, without leaving Settings
-  await page.evaluate(() => {
-    window.__cfg.health = { notif: false, exact: true, battery: true, idle: true };
-    V.screen = "settings";
-    render();
-  });
-  ok(!!(await page.$('[data-act="rem-fix"][data-v="notif"]')), "card offers Allow notifications");
-  await page.evaluate(() => {
-    window.__cfg.health.notif = true;
-    window.tallyPerms();
-  });
-  await settle();
+  const live = await page.evaluate(() => S.settings);
   ok(
-    !(await page.$(".rhealth")) && (await page.evaluate(() => V.screen)) === "settings",
-    "allowed: the card disappears at once"
+    ["notifAsked", "exactAsked", "batteryAsked", "batteryOk"].every(k => !(k in live)) &&
+      (await calls("askNotif")).length === 0,
+    "migrate drops the old permission flags"
   );
   // going to the background hands over data a save left waiting, and only then
   await page.evaluate(() => {

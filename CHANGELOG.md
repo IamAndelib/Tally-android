@@ -7,18 +7,22 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- On first open Tally asks for what reminders need, each once: Android's notification prompt, the "Alarms & reminders"
-  switch (so they come on time), and Android's "run in the background" popup (so the phone doesn't put Tally to sleep).
+- On first open Android's own prompts come one after another, each once: notifications, the "Alarms & reminders"
+  switch (so reminders come on time) and unrestricted battery (so the phone doesn't pause Tally). Saying no to one
+  doesn't skip the rest.
+
+### Changed
+
+- Settings → Reminders shows a small "Permissions" card listing only what's denied, each with an "Allow" button; a row
+  disappears once allowed. "Battery is fine" is gone.
+- Lighter on battery: the home-screen widget no longer wakes the phone every 30 minutes, the app stops all work while
+  in the background, and an unchanged notebook never triggers a backup write.
 
 ### Fixed
 
 - The Reminders card in Settings could offer "Allow notifications" although they were allowed; it now checks Android's
   permission itself and updates the moment a permission changes.
-
-### Changed
-
-- Lighter on battery: the home-screen widget no longer wakes the phone every 30 minutes, the app stops all work while
-  in the background, and an unchanged notebook never triggers a backup write.
+- A phone that had never shown Android's notification prompt for Tally (for example after restoring data) now gets it.
 
 ## [1.2.1] — 2026-09-28
 

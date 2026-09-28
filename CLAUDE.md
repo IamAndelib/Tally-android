@@ -50,22 +50,26 @@ Built originally in a claude.ai chat; continue development from here.
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs, re-reads
       `is24h`, re-renders Settings so the health card follows permission changes).
-    - `reminderHealth()` → `{notif, exact, battery, idle}`: `notif` = `POST_NOTIFICATIONS` granted (API 33+) **and**
-      `areNotificationsEnabled()`; `idle` = `isIgnoringBatteryOptimizations` (every phone); `battery` = `idle`, but
-      only checked on makers known to kill background alarms (dontkillmyapp.com list; elsewhere `true`).
-      `openSetting("notif"|"exact"|"battery")`: "notif" shows Android's prompt while it still can (never asked, tracked
-      in the shell's `tally_perms` prefs, or `shouldShowRequestPermissionRationale`), else the notification settings
-      page (also when a button-asked prompt is refused for good); "exact" → `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`;
-      "battery" → Android's `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` popup (permission
-      `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `@SuppressLint("BatteryLife")` on purpose — note for a Play listing).
-      Settings → Reminders shows a "may arrive late" card (`healthCard()`) with one fix button each (`rem-fix` →
-      `fixReminders()`; "Battery is fine" sets `settings.batteryOk`), only while a reminder is on and something fails.
-    - **First-open permission flow** (`permFlow()` in `js/bridge.js`, run at start, on `tallyPerms` and on resume,
-      never over a dialog/sheet), each step once: `askNotify()` → Android's prompt (`notifAsked`; the shell answers
-      with `window.tallyPerms` from `onRequestPermissionsResult`, or at once when there's nothing to ask) → on-time
-      alarms dialog "Reminders on time?" → `openSetting("exact")` (`exactAsked`, only if `!exact`) → battery popup
-      (`batteryAsked`, only if `idle === false`). `onPerms()` (`tallyPerms`) re-renders Settings so the card follows
-      at once. Wipe and restore keep `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`.
+    - `reminderHealth()` → `{notif, exact, battery}`: `notif` = `POST_NOTIFICATIONS` granted (API 33+) **and**
+      `areNotificationsEnabled()`; `exact` = `canScheduleExactAlarms()` (12+); `battery` = `isIgnoringBatteryOptimizations`
+      (every phone). `openSetting("notif"|"exact"|"battery")`: "notif" shows Android's prompt while it still can
+      (`canPromptNotif()`: never asked, tracked in the shell's `tally_perms` prefs, or
+      `shouldShowRequestPermissionRationale`), else the notification settings page (also when a button-asked prompt is
+      refused for good); "exact" → `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`; "battery" → Android's
+      `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` popup (permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`,
+      `@SuppressLint("BatteryLife")` on purpose — note for a Play listing). Settings → Reminders shows a "Permissions"
+      card (`healthCard()`, `.rhealth`) with one row per denied item (Notifications / On-time alarms / Unrestricted
+      battery), each with an "Allow" button (`rem-fix` → `fixReminders()` → `openSetting`), only while a reminder is
+      on; a row goes as soon as it's allowed (`onPerms()` on `tallyPerms` and on resume re-renders Settings).
+    - **First-open permission chain** lives in the shell, not the page: `permStep()` in `MainActivity`, started once
+      per launch 300 ms after `Android.ready()`: Android's notification prompt (13+; `onRequestPermissionsResult` →
+      next step) → the "Alarms & reminders" switch screen (12+, only if `!canScheduleExactAlarms()`; Android has no
+      popup for it) → the battery popup (only if battery-optimised). Each step once per install (prefs `tally_perms`:
+      `notif`, `exact`, `battery`, set when reached), skipped when already allowed; `chaining` makes `onResume`
+      continue only after a screen the chain opened. Denying never stops the chain. The page asks nothing at start;
+      `askNotify()` (a reminder switched on, a loan due date) calls `Android.requestNotifications()`, which prompts
+      only while `canPromptNotif()` and not granted, else just answers `tallyPerms`. The page keeps no permission
+      flags (`migrate()` drops the old `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`).
     - Battery: `MainActivity.onPause` runs `window.tallyPause` (`flushMirror()`: hands over only data waiting in the
       mirror debounce) and then `web.onPause(); web.pauseTimers()` (unless resumed meanwhile); `onResume` resumes them
       first. `BackupReceiver.setData` skips identical data (no write, not marked dirty). The widget has
@@ -96,7 +100,7 @@ Built originally in a claude.ai chat; continue development from here.
       dialog "Restore Tally backup.json?" with counts + "saved …" and alt "Choose another file"; otherwise (or no
       file) `Android.pickRestoreFile()` → `ACTION_OPEN_DOCUMENT` (`*/*`) → the shell reads the bytes
       (`readDoc`, ≤ 20 MB) → `window.tallyRestore(text, err)` (`onRestorePicked`). Both end in `restoreText(t,
-      auto)` (check + confirm + `migrate`); restoring keeps this phone's `backup`, `batteryOk`, `notifAsked`. The
+      auto)` (check + confirm + `migrate`); restoring keeps this phone's `backup`. The
       `<input type="file">` (`restoreFile`) remains only without the bridge (browser). "Your data": with auto backup
       on, Back up now replaces Save backup (hidden) and the intro says there's a daily copy.
     - `is24h()` = `DateFormat.is24HourFormat` (the phone's 12/24-hour switch): the time wheel and `timeLabel()`.
@@ -139,7 +143,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, batteryOk, notifAsked, exactAsked, batteryAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
@@ -317,7 +321,7 @@ Built originally in a claude.ai chat; continue development from here.
     `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
     it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, `notifAsked`, haptics, strength,
+    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, haptics, strength,
     donut middle) and is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
     small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,

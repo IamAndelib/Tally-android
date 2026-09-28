@@ -8,6 +8,7 @@ import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.AudioAttributes;
@@ -51,8 +52,12 @@ public class MainActivity extends Activity {
     private static final int NOTIF_REQ = 3;
     /** Set while the activity is in the background (the WebView pauses once the page has saved what it must). */
     private boolean paused;
-    /** The notification prompt came from Settings' "Allow notifications" button (not the first-open flow). */
+    /** The notification prompt came from a Settings "Allow" button: refused for good, it opens the settings page. */
     private boolean notifFromButton;
+    /** The first-open chain (permStep) has opened a system screen; coming back moves on to its next step. */
+    private boolean chaining;
+    /** The first-open chain runs once per launch, when the page is first drawn. */
+    private boolean chainStarted;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
@@ -181,6 +186,7 @@ public class MainActivity extends Activity {
         web.onResume();
         pushTheme();
         web.evaluateJavascript("window.tallyResume&&window.tallyResume()", null);
+        if (chaining) permStep();
     }
 
     /**
@@ -200,19 +206,63 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** The answer to Android's notification prompt: the page re-checks and moves on to the next permission. */
+    /** The answer to Android's notification prompt: the page re-checks, and the first-open chain moves on. */
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode != NOTIF_REQ) return;
         boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        boolean fromButton = notifFromButton;
+        notifFromButton = false;
         // asked from Settings' button and Android didn't show its prompt (denied for good): open the settings page
-        if (!granted && notifFromButton && Build.VERSION.SDK_INT >= 33
+        if (!granted && fromButton && Build.VERSION.SDK_INT >= 33
                 && !shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS")) {
             openNotifSettings();
         }
-        notifFromButton = false;
         perms();
+        if (!fromButton) permStep();
+    }
+
+    /**
+     * First open: Android's own prompts, one after another: notifications (13+), the "Alarms & reminders" switch
+     * (12+; Android has no popup for it, its switch screen is the native way), then "Stop optimising battery usage?".
+     * Each step comes once per install (the shell's tally_perms prefs, never the page's data) and is skipped when
+     * already allowed. Whatever is denied later shows as a row with Allow in Settings → Reminders.
+     */
+    @SuppressLint("BatteryLife") // on purpose: the owner wants reminders and the backup never held back
+    private void permStep() {
+        chaining = false;
+        if (isFinishing() || isDestroyed()) return;
+        SharedPreferences p = getSharedPreferences("tally_perms", MODE_PRIVATE);
+        Uri pkg = Uri.parse("package:" + getPackageName());
+        if (!p.getBoolean("notif", false)) {
+            p.edit().putBoolean("notif", true).apply();
+            if (askNotifPermission()) return; // the answer calls permStep again
+        }
+        if (!p.getBoolean("exact", false)) {
+            p.edit().putBoolean("exact", true).apply();
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (Build.VERSION.SDK_INT >= 31 && am != null && !am.canScheduleExactAlarms()
+                    && chainTo(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg))) return;
+        }
+        if (!p.getBoolean("battery", false)) {
+            p.edit().putBoolean("battery", true).apply();
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())
+                    && chainTo(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg))) return;
+        }
+        perms();
+    }
+
+    /** Opens one system screen of the first-open chain; onResume continues it. False if the phone has no such screen. */
+    private boolean chainTo(Intent i) {
+        try {
+            startActivity(i);
+            chaining = true;
+            return true;
+        } catch (ActivityNotFoundException e) {
+            return false;
+        }
     }
 
     private void perms() {
@@ -225,9 +275,16 @@ public class MainActivity extends Activity {
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED) {
             return false;
         }
-        getSharedPreferences("tally_perms", MODE_PRIVATE).edit().putBoolean("notifAsked", true).apply();
+        getSharedPreferences("tally_perms", MODE_PRIVATE).edit().putBoolean("notif", true).apply();
         requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIF_REQ);
         return true;
+    }
+
+    /** Android 13+'s prompt can still show: never asked on this install, or refused only once so far. */
+    private boolean canPromptNotif() {
+        return Build.VERSION.SDK_INT >= 33
+                && (!getSharedPreferences("tally_perms", MODE_PRIVATE).getBoolean("notif", false)
+                    || shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS"));
     }
 
     private void openNotifSettings() {
@@ -475,10 +532,15 @@ public class MainActivity extends Activity {
             } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
         }
 
-        /** The page has rendered: end the launch screen. */
+        /** The page has rendered: end the launch screen, then (once per launch) the first-open permission prompts. */
         @JavascriptInterface
         public void ready() {
-            runOnUiThread(MainActivity.this::showPage);
+            runOnUiThread(() -> {
+                showPage();
+                if (chainStarted) return;
+                chainStarted = true;
+                handler.postDelayed(MainActivity.this::permStep, 300); // over the drawn app, not the launch screen
+            });
         }
 
         @JavascriptInterface
@@ -563,8 +625,7 @@ public class MainActivity extends Activity {
 
         /**
          * What could keep reminders from arriving on time: {notif} notifications allowed, {exact} exact alarms
-         * allowed (Android 12+), {battery} not restricted — only asked on makers known to stop background alarms of
-         * battery-optimised apps (dontkillmyapp.com); elsewhere Android's exact alarms already get through.
+         * allowed (Android 12+), {battery} Tally isn't battery-optimised (the phone may otherwise hold its alarms).
          */
         @JavascriptInterface
         public String reminderHealth() {
@@ -575,17 +636,14 @@ public class MainActivity extends Activity {
             boolean notif = (nm == null || nm.areNotificationsEnabled()) && (Build.VERSION.SDK_INT < 33
                     || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED);
             boolean exact = Build.VERSION.SDK_INT < 31 || am == null || am.canScheduleExactAlarms();
-            String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
-            boolean strict = maker.matches(".*(xiaomi|redmi|poco|oppo|realme|oneplus|vivo|iqoo|huawei|honor|samsung|meizu|asus|nokia|tecno|infinix|itel).*");
-            boolean idle = pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
-            boolean battery = !strict || idle;
-            return "{\"notif\":" + notif + ",\"exact\":" + exact + ",\"battery\":" + battery + ",\"idle\":" + idle + "}";
+            boolean battery = pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+            return "{\"notif\":" + notif + ",\"exact\":" + exact + ",\"battery\":" + battery + "}";
         }
 
         /**
-         * Fixes one reminderHealth item. "notif": Android's own prompt while it can still show it (never asked here, or
-         * asked once and refused), else Tally's notification settings. "exact": Android's "Alarms & reminders" switch.
-         * "battery": Android's "Let Tally always run in the background?" popup, else App info (Battery → Unrestricted).
+         * Settings' Allow buttons. "notif": Android's own prompt while it can still show it, else Tally's notification
+         * settings. "exact": Android's "Alarms & reminders" switch. "battery": Android's "Stop optimising battery
+         * usage?" popup. Anything else, or a phone without that screen: App info.
          */
         @SuppressLint("BatteryLife") // on purpose: the owner wants reminders and the backup never held back
         @JavascriptInterface
@@ -593,9 +651,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 Uri pkg = Uri.parse("package:" + getPackageName());
                 if ("notif".equals(kind)) {
-                    boolean prompt = Build.VERSION.SDK_INT >= 33
-                            && (!getSharedPreferences("tally_perms", MODE_PRIVATE).getBoolean("notifAsked", false)
-                                || shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS"));
+                    boolean prompt = canPromptNotif();
                     notifFromButton = prompt;
                     if (!(prompt && askNotifPermission())) openNotifSettings();
                     return;
@@ -624,14 +680,14 @@ public class MainActivity extends Activity {
         }
 
         /**
-         * First open: Android 13+'s notification prompt. The page always hears back (window.tallyPerms), on the answer,
-         * or at once when there is nothing to ask (older Android, already allowed), and moves on to the next step.
+         * A reminder was switched on: Android 13+'s notification prompt, only while it can still show and the
+         * permission is missing (never a settings page unasked). The page hears back through window.tallyPerms.
          */
         @JavascriptInterface
         public void requestNotifications() {
             runOnUiThread(() -> {
                 notifFromButton = false;
-                if (!askNotifPermission()) perms();
+                if (!(canPromptNotif() && askNotifPermission())) perms();
             });
         }
 

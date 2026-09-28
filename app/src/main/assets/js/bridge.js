@@ -127,45 +127,16 @@ function pickTime(k) {
     render();
   });
 }
+/* a reminder was switched on (or a due date set): Android's notification prompt, which the shell shows only while
+   the permission is missing and Android still lets it ask. Android's own first-open prompts come from the shell. */
 function askNotify() {
-  if (S.settings.notifAsked || !(window.Android && Android.requestNotifications)) return;
-  S.settings.notifAsked = true;
-  save();
   try {
-    Android.requestNotifications();
+    if (window.Android && Android.requestNotifications) Android.requestNotifications();
   } catch (e) {}
 }
-/* The first-open permission steps, each asked once, in order: Android's notification prompt, then on Android 12+ a
-   short dialog that opens the "Alarms & reminders" switch (Android has no popup for it), then Android's "run in the
-   background" popup. A step already allowed is skipped. Runs at start and whenever the shell reports a permission
-   answer (window.tallyPerms) or the app comes back; never over another dialog or sheet. */
-function permFlow() {
-  if (!window.Android || $("#pop").innerHTML || $("#sheet").innerHTML) return;
-  if (!S.settings.notifAsked) return askNotify(); // the shell answers with tallyPerms → back here
-  const h = reminderHealth();
-  if (!h) return;
-  if (!h.exact && !S.settings.exactAsked) {
-    S.settings.exactAsked = true;
-    save();
-    askDialog(
-      "Reminders on time?",
-      "Android needs one switch so reminders and the daily backup come at the time you set.",
-      "Open settings",
-      () => fixReminders("exact"),
-      { cancel: "Not now" }
-    );
-    return;
-  }
-  if (h.idle === false && !S.settings.batteryAsked) {
-    S.settings.batteryAsked = true;
-    save();
-    fixReminders("battery");
-  }
-}
-/* window.tallyPerms: a permission answer came back; show it at once (Settings' card) and take the next step */
+/* window.tallyPerms / resume: a permission may have changed; Settings' permissions card follows at once */
 function onPerms() {
   if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render();
-  permFlow();
 }
 /* +1 day / +1 week tapped on a notification while the app was closed */
 function applyNativeActions() {
@@ -276,14 +247,9 @@ function reminderHealth() {
     return null;
   }
 }
-/* one fix per item of the card; "notif": the shell shows Android's prompt while it still can, else the settings page */
+/* an Allow button on the permissions card; "notif": the shell shows Android's prompt while it still can, else the
+   settings page; "exact": the Alarms & reminders switch; "battery": Android's battery popup */
 function fixReminders(kind) {
-  if (kind === "battery-ok") {
-    S.settings.batteryOk = true;
-    save();
-    render();
-    return;
-  }
   try {
     Android.openSetting(kind);
   } catch (e) {}

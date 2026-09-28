@@ -66,7 +66,8 @@ function migrate(o) {
     checkTime: hm(r.checkTime, "08:00"),
   };
   s.settings.backup = { on: bk.on === true, time: hm(bk.time, "23:00") };
-  ["batteryOk", "exactAsked", "batteryAsked"].forEach(k => (s.settings[k] = s.settings[k] === true));
+  /* the first-open prompts now live in the shell (per install), and the battery row simply goes once allowed */
+  ["batteryOk", "notifAsked", "exactAsked", "batteryAsked"].forEach(k => delete s.settings[k]);
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(+s.settings.hapticLevel) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";

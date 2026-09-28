@@ -743,25 +743,38 @@ function settingsView() {
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
   return h;
 }
-/* Settings → Reminders: what may keep reminders from arriving on time, with one fix each (only when a reminder is on) */
+/* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder is on).
+   A row goes as soon as its permission is allowed (tallyPerms / resume re-render). */
 function healthCard() {
   const r = S.settings.remind,
     hh = (r.daily || r.check || r.dues) && reminderHealth();
   if (!hh) return "";
-  const fixes = [];
-  if (!hh.notif) fixes.push(["notif", "Allow notifications"]);
-  if (!hh.exact) fixes.push(["exact", "Allow on-time alarms"]);
-  const batt = !hh.battery && !S.settings.batteryOk;
-  if (batt) fixes.push(["battery", "Don't restrict battery"]);
-  if (!fixes.length) return "";
+  const rows = [
+    ["notif", "Notifications", "Reminders can't show without them"],
+    ["exact", "On-time alarms", "So reminders come at the time you set"],
+    ["battery", "Unrestricted battery", "So the phone doesn't pause Tally"],
+  ].filter(([k]) => hh[k] === false);
+  if (!rows.length) return "";
   return (
-    '<section class="rhealth"><b>' +
-    (hh.notif ? "Reminders may arrive late" : "Reminders can't show") +
-    "</b>" +
-    fixes
-      .map(([k, t]) => '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">' + t + "</button>")
+    '<section class="rhealth list"><div class="rh-head">' +
+    (ICONS.warning
+      ? '<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="' +
+        ICONS.warning[0] +
+        '"/></svg>'
+      : "") +
+    "<b>Permissions</b></div>" +
+    rows
+      .map(
+        ([k, t, sub]) =>
+          '<div class="setrow"><span class="mid"><div>' +
+          t +
+          '</div><div class="s">' +
+          sub +
+          '</div></span><button class="btn tonal" data-act="rem-fix" data-v="' +
+          k +
+          '">Allow</button></div>'
+      )
       .join("") +
-    (batt ? '<button class="btn text" data-act="rem-fix" data-v="battery-ok">Battery is fine</button>' : "") +
     "</section>"
   );
 }

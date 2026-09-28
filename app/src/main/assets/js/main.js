@@ -20,7 +20,6 @@ if (unreadable)
     () => saveOut("tally-unreadable-" + today() + ".json", "application/json", unreadable),
     { cancel: "Not now" }
   );
-else permFlow();
 /* follow the phone's light/dark switch */
 {
   const mq = matchMedia("(prefers-color-scheme: dark)");
