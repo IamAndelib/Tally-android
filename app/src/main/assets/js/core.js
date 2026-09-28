@@ -278,7 +278,7 @@ let FX = {};
    tick) … 5 (a strong pulse); "long" (a long-press) plays one level up. Kinds: "tap" any tap, "key" a keypad key,
    "tick" a drag passing a slot or a swipe, "long" a long-press, "confirm" a save. A plain vibration of the same
    length where the shell has no haptic() (a browser). */
-const PULSE_MS = [8, 14, 20, 30, 45]; // per strength 1–5, as MainActivity's fallback pulses
+const PULSE_MS = [14, 20, 28, 38, 52]; // per strength 1–5, rising, as MainActivity's pulses
 const buzz = kind => {
   if (S.settings.haptics === false) return; // Settings → Feel → Vibration on tap
   const level = S.settings.hapticLevel || 3; // Settings → Feel → Strength, 1 (light) … 5 (strong)

@@ -1,0 +1,1 @@
+- Vibration strength now always rises from Light to Strong on every phone (on some phones the lighter levels buzzed harder).

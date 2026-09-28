@@ -475,21 +475,51 @@ public class MainActivity extends Activity {
         return vibrator;
     }
 
-    /** Pulse lengths (ms) for strengths 1–5 where there are no predefined effects; the page's fallback uses the same. */
-    private static final int[] PULSE_MS = {8, 14, 20, 30, 45};
+    /**
+     * Pulse length (ms) and amplitude for strengths 1–5: both rise, so a stronger level is never felt as lighter, on
+     * any motor (without amplitude control the length alone orders them). The page's browser fallback uses the same
+     * lengths (PULSE_MS in js/core.js).
+     */
+    private static final int[] PULSE_MS = {14, 20, 28, 38, 52};
+    private static final int[] PULSE_AMP = {90, 130, 175, 215, 255};
+    /** Strengths 1–3 as one click primitive at a rising scale, where the vibrator really has it (see crisp()). */
+    private static final float[] CLICK_SCALE = {0.35f, 0.65f, 1f};
+    private Boolean crisp;
 
     /**
-     * The haptic for strength n (1–5), each stronger than the one before: 1–3 are the phone's own tick, click and
-     * heavy click (API 29+), 4–5 longer full-strength pulses, which even a basic vibration motor makes clearly felt.
+     * Whether the vibrator plays a real click primitive (API 30+, reported by the hardware). Not the predefined
+     * EFFECT_TICK / CLICK / HEAVY_CLICK: on phones whose hardware lacks those, Android plays the maker's fallback
+     * patterns instead, often buzzes of unrelated lengths, and "tick" could feel stronger than "heavy click".
+     */
+    private boolean crisp(Vibrator v) {
+        if (crisp == null) {
+            boolean ok = false;
+            if (Build.VERSION.SDK_INT >= 30) {
+                try {
+                    ok = v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK);
+                } catch (RuntimeException ignored) { }
+            }
+            crisp = ok;
+        }
+        return crisp;
+    }
+
+    /**
+     * The haptic for strength n (1–5), each stronger than the one before on every phone: 1–3 are the same click at a
+     * rising scale where the hardware has it (crisp and phone-tuned), otherwise a pulse; 4–5 are always longer
+     * pulses, which even a basic vibration motor makes clearly felt (and a full click, ~10 ms, is lighter than them).
      */
     @TargetApi(26)
-    private static VibrationEffect effect(Vibrator v, int n) {
-        if (Build.VERSION.SDK_INT >= 29 && n <= 3) {
-            return VibrationEffect.createPredefined(n == 1 ? VibrationEffect.EFFECT_TICK
-                    : n == 2 ? VibrationEffect.EFFECT_CLICK : VibrationEffect.EFFECT_HEAVY_CLICK);
-        }
-        int amp = !v.hasAmplitudeControl() ? VibrationEffect.DEFAULT_AMPLITUDE : n >= 3 ? 255 : n == 2 ? 170 : 100;
+    private VibrationEffect effect(Vibrator v, int n) {
+        if (n <= 3 && crisp(v)) return click(CLICK_SCALE[n - 1]);
+        int amp = v.hasAmplitudeControl() ? PULSE_AMP[n - 1] : VibrationEffect.DEFAULT_AMPLITUDE;
         return VibrationEffect.createOneShot(PULSE_MS[n - 1], amp);
+    }
+
+    @TargetApi(30)
+    private static VibrationEffect click(float scale) {
+        return VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, scale).compose();
     }
 
     /**
