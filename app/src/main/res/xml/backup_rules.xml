@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9–11: Android's own backup may include Tally's data only when it is end-to-end encrypted, so an
+     unencrypted copy (for example "adb backup") never carries the notebook. The auto backup's folder grant only
+     means something on this phone, so it is left out. -->
+<full-backup-content>
+    <include domain="root" path="." requireFlags="clientSideEncryption" />
+    <include domain="file" path="." requireFlags="clientSideEncryption" />
+    <include domain="database" path="." requireFlags="clientSideEncryption" />
+    <include domain="sharedpref" path="." requireFlags="clientSideEncryption" />
+    <exclude domain="sharedpref" path="tally_backup.xml" />
+</full-backup-content>

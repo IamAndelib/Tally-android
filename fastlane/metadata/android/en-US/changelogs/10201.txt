@@ -1,0 +1,5 @@
+- Daily auto backup: one file in a folder you pick, kept after an uninstall; restore it in one tap.
+- New daily balance check reminder.
+- Each reminder at your own time, on time, with a scroll-wheel time picker.
+- Settings shows what could hold reminders back, with a fix for each.
+- Security: the app only loads its own files, Android backups of Tally are encrypted-only, and the lock screen shows no amounts.

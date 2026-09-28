@@ -28,7 +28,8 @@ document.addEventListener("click", ev => {
     return;
   }
   if (el.tagName === "SELECT" || el.tagName === "INPUT") return;
-  if (!el.closest(".calc")) buzz("tap"); // every tap clicks (the keypad's buttons already did, on touch-down)
+  /* every tap clicks (the keypad's buttons already did, on touch-down; a time wheel ticks as its rows pass) */
+  if (!el.closest(".calc, .wheel")) buzz("tap");
   switch (act) {
     case "home":
       V.screen = "home";
@@ -104,6 +105,24 @@ document.addEventListener("click", ev => {
       break;
     case "rem-dues":
       toggleReminder("dues");
+      break;
+    case "rem-check":
+      toggleReminder("check");
+      break;
+    case "rem-fix":
+      fixReminders(v);
+      break;
+    case "bk-auto":
+      toggleAutoBackup();
+      break;
+    case "bk-folder":
+      pickBackupFolder();
+      break;
+    case "bk-now":
+      backupNow();
+      break;
+    case "restore":
+      restoreStart();
       break;
     case "haptics":
       toggleHaptics();
@@ -373,14 +392,13 @@ document.addEventListener("click", ev => {
       dpSet(v);
       break;
     case "pick-time":
-      timePicker();
+      pickTime(v);
       break;
-    case "tm-pick":
-      closePop();
-      S.settings.remind.time = v;
-      save();
-      syncReminders();
-      render();
+    case "tp-row":
+      wheelRow(v);
+      break;
+    case "tp-ok":
+      timeOk();
       break;
     case "pick-acccur":
       curPicker(F.cur, c => {
@@ -556,6 +574,9 @@ document.addEventListener("keydown", e => {
     e.preventDefault();
     const n = S.settings.hapticLevel || 3;
     setHapticLevel(e.key === "Home" ? 1 : e.key === "End" ? 5 : n + (/Right|Up/.test(e.key) ? 1 : -1));
+  } else if (e.target.classList && e.target.classList.contains("wcol") && /^Arrow(Up|Down)$/.test(e.key)) {
+    e.preventDefault();
+    wheelStep(e.target.id.slice(3), e.key === "ArrowUp" ? -1 : 1);
   } else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
     e.preventDefault();
     (e.target.id === "nt-name" ? addType : useHex)();

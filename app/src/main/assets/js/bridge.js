@@ -30,10 +30,24 @@ function syncWidget() {
     Android.setWidget(j);
   } catch (e) {}
 }
+/* "HH:MM" → {h, m} for the shell's alarms */
+const hmObj = t => ({ h: +t.slice(0, 2), m: +t.slice(3) });
+/* the balance check's notification text: up to four accounts with their balances */
+function checkText() {
+  const act = activeAccounts(),
+    b = balances();
+  return (
+    act
+      .slice(0, 4)
+      .map(a => a.name + " " + money(b[a.id], a.currency))
+      .join(" · ") + (act.length > 4 ? " · …" : "")
+  );
+}
+/* Sends the reminder settings to the shell (ReminderReceiver.java): the evening nudge, the balance check (skipped
+   once the balances were confirmed today) and the loan / lending due days, each at its own time */
 function syncReminders() {
   if (!(window.Android && Android.setReminders)) return;
-  const r = S.settings.remind || {},
-    tm = /^\d\d:\d\d$/.test(r.time) ? r.time : "21:00";
+  const r = S.settings.remind;
   const last = S.txns.reduce((m, t) => {
     const c = t.ts ? iso(new Date(t.ts)) : t.date,
       d = c > t.date ? c : t.date;
@@ -54,7 +68,16 @@ function syncReminders() {
           }));
   try {
     Android.setReminders(
-      JSON.stringify({ daily: { on: r.daily !== false, h: +tm.slice(0, 2), m: +tm.slice(3) }, lastEntry: last, dues })
+      JSON.stringify({
+        daily: Object.assign({ on: r.daily }, hmObj(r.time)),
+        check: Object.assign({ on: r.check && activeAccounts().length > 0 }, hmObj(r.checkTime), {
+          text: checkText(),
+          checked: S.settings.lastCheck || "",
+        }),
+        duesAt: hmObj(r.dueTime),
+        lastEntry: last,
+        dues,
+      })
     );
   } catch (e) {}
 }
@@ -76,7 +99,7 @@ function setHapticLevel(v, force) {
   save();
   buzz("tap");
 }
-/* Settings switch for the evening nudge ("daily") or due-day reminders ("dues") */
+/* Settings switch for the evening nudge ("daily"), the balance check ("check") or due-day reminders ("dues") */
 function toggleReminder(k) {
   const r = S.settings.remind;
   r[k] = r[k] === false;
@@ -84,6 +107,25 @@ function toggleReminder(k) {
   syncReminders();
   render();
   if (r[k]) askNotify();
+}
+/* a time button in Settings: the wheel picker for that reminder (or the daily backup), then save and re-arm */
+function pickTime(k) {
+  const r = S.settings.remind,
+    b = S.settings.backup,
+    c = {
+      nudge: ["Evening nudge at", r.time, v => (r.time = v)],
+      check: ["Balance check at", r.checkTime, v => (r.checkTime = v)],
+      due: ["Due-day reminders at", r.dueTime, v => (r.dueTime = v)],
+      backup: ["Back up every day at", b.time, v => (b.time = v)],
+    }[k];
+  if (!c) return;
+  timePicker(c[0], c[1], v => {
+    c[2](v);
+    save();
+    syncReminders();
+    syncBackup();
+    render();
+  });
 }
 function askNotify() {
   if (S.settings.notifAsked || !(window.Android && Android.requestNotifications)) return;
@@ -113,7 +155,105 @@ function applyNativeActions() {
     render();
   }
 }
-/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder (window.tallyOpen) */
+/* ---- daily auto backup (BackupReceiver.java): the shell keeps a copy of S and writes it to the picked folder ---- */
+const canBackup = () => !!(window.Android && Android.setBackupData && Android.pickBackupFolder);
+let mirrorT = 0;
+/* after every save while auto backup is on, hand the shell the data (debounced: a drag saves many times) */
+function mirrorSoon() {
+  if (!S.settings.backup || !S.settings.backup.on || !canBackup()) return;
+  clearTimeout(mirrorT);
+  mirrorT = setTimeout(mirrorNow, 800);
+}
+function mirrorNow() {
+  clearTimeout(mirrorT);
+  if (!S.settings.backup.on || !canBackup()) return;
+  try {
+    Android.setBackupData(JSON.stringify(S));
+  } catch (e) {}
+}
+/* the daily alarm: on/off and its time */
+function syncBackup() {
+  if (!canBackup()) return;
+  try {
+    Android.setBackup(JSON.stringify(Object.assign({ on: S.settings.backup.on }, hmObj(S.settings.backup.time))));
+  } catch (e) {}
+}
+/* {folder, last, error} from the shell, or null in a browser */
+function backupStatus() {
+  if (!canBackup()) return null;
+  try {
+    return JSON.parse(Android.backupStatus() || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+/* The Auto backup switch. Off keeps the folder; on reuses it while Tally can still write there. Only the first time,
+   or once that permission is gone, asks for a folder (the answer comes back in onFolderPicked); "Change" picks
+   another one any time. Switching on only schedules it: the first backup comes at the set time (save() hands the
+   data over, debounced), so the tap stays instant; Back up now is the one immediate write. */
+function toggleAutoBackup() {
+  if (S.settings.backup.on) {
+    S.settings.backup.on = false;
+    save();
+    syncBackup();
+    render();
+    return;
+  }
+  const bs = backupStatus();
+  if (!bs || !bs.folder || !bs.usable) return pickBackupFolder();
+  backupOn();
+}
+function backupOn() {
+  S.settings.backup.on = true;
+  save();
+  syncBackup();
+  if (V.screen === "settings") render();
+  snack("Auto backup on · daily at " + timeLabel(S.settings.backup.time));
+}
+function pickBackupFolder() {
+  try {
+    Android.pickBackupFolder();
+  } catch (e) {}
+}
+/* window.tallyFolder: null = cancelled (nothing changes), "" = folder saved, else what went wrong */
+function onFolderPicked(err) {
+  if (err == null) return;
+  if (err) snack(err);
+  else backupOn();
+}
+function backupNow() {
+  mirrorNow();
+  let err = "Backup isn't available here";
+  try {
+    err = Android.backupNow();
+  } catch (e) {}
+  if (V.screen === "settings") render();
+  snack(err || "Backed up");
+}
+/* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
+function reminderHealth() {
+  if (!(window.Android && Android.reminderHealth)) return null;
+  try {
+    return JSON.parse(Android.reminderHealth());
+  } catch (e) {
+    return null;
+  }
+}
+/* "notif" asks for the permission the first time, then opens Android's notification settings for Tally */
+function fixReminders(kind) {
+  if (kind === "notif" && !S.settings.notifAsked) return askNotify();
+  if (kind === "battery-ok") {
+    S.settings.batteryOk = true;
+    save();
+    render();
+    return;
+  }
+  try {
+    Android.openSetting(kind);
+  } catch (e) {}
+}
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
+   "backup" from a failed auto backup (window.tallyOpen) */
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
   if (k === "add") {
@@ -132,6 +272,21 @@ function openFromNative(s) {
     else if (id === "tr") trSheet();
     return;
   }
+  if (k === "check" || k === "backup") {
+    applyNativeActions();
+    closePop();
+    BACKTO = null;
+    closeSheet();
+    if (k === "check") {
+      V.screen = "home";
+      V.period = "day";
+      V.anchor = today();
+    } else V.screen = "settings";
+    render();
+    const el = $(k === "check" ? "#app .check" : "#bk");
+    if (el) el.scrollIntoView({ block: "center" });
+    return;
+  }
   if (k !== "loan" || !loan(id)) return;
   applyNativeActions();
   closePop();
@@ -144,6 +299,8 @@ function onAppResume() {
   syncWidget();
   catchUpToday();
   syncReminders();
+  H24 = null;
+  if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render(); // permissions may have changed
 }
 function saveOut(name, mime, text) {
   if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);

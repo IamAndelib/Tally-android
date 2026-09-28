@@ -2,6 +2,8 @@ package app.tally.expenses;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -14,17 +16,18 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.provider.Settings;
+import android.text.format.DateFormat;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.webkit.JavascriptInterface;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -35,18 +38,19 @@ import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
-    private static final int PICK_FILE = 1;
     private static final int SAVE_FILE = 2;
+    private static final int PICK_FOLDER = 4;
+    private static final int PICK_RESTORE = 5;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
     private FrameLayout root;
-    private ValueCallback<Uri[]> fileCallback;
     private String pendingSave;
     /** "loan:<id>[:pay]" from a tapped reminder, delivered to the page once it has loaded. */
     private String pendingOpen;
@@ -109,8 +113,12 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        // hardening: the page is only ever the app's own assets; files are read and written by the shell (Restore,
+        // backups), never by the WebView, which gets no file/content access, no location and no mixed content
         s.setAllowFileAccess(false);
-        s.setAllowContentAccess(true);
+        s.setAllowContentAccess(false);
+        s.setGeolocationEnabled(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -126,31 +134,21 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                if (HOST.equals(u.getHost())) return false;
-                try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (ActivityNotFoundException ignored) { }
-                return true;
-            }
-        });
-
-        web.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
-                if (fileCallback != null) fileCallback.onReceiveValue(null);
-                fileCallback = callback;
-                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-                i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("*/*");
-                try {
-                    startActivityForResult(Intent.createChooser(i, "Choose a file"), PICK_FILE);
-                } catch (ActivityNotFoundException e) {
-                    fileCallback = null;
-                    return false;
+                String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(java.util.Locale.ROOT);
+                // only the app's own https assets stay in the WebView (WebViewAssetLoader serves nothing over http)
+                if ("https".equals(scheme) && HOST.equals(u.getHost())) return false;
+                // web links (the About footer) open in the browser; anything else (intent:, content:, file:…) is dropped
+                if ("https".equals(scheme) || "http".equals(scheme)) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, u).addCategory(Intent.CATEGORY_BROWSABLE));
+                    } catch (ActivityNotFoundException ignored) { }
                 }
                 return true;
             }
         });
 
         web.addJavascriptInterface(new Bridge(), "Android");
+        ReminderReceiver.channels(this); // listed in Android's settings from the start, one per kind of reminder
 
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
@@ -273,15 +271,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_FILE) {
-            if (fileCallback == null) return;
-            Uri[] result = null;
-            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
-                result = new Uri[]{data.getData()};
-            }
-            fileCallback.onReceiveValue(result);
-            fileCallback = null;
-        } else if (requestCode == SAVE_FILE) {
+        if (requestCode == SAVE_FILE) {
             boolean ok = false;
             if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingSave != null) {
                 try (OutputStream os = getContentResolver().openOutputStream(data.getData())) {
@@ -290,7 +280,61 @@ public class MainActivity extends Activity {
             }
             pendingSave = null;
             web.evaluateJavascript("window.tallySaved&&window.tallySaved(" + ok + ")", null);
+        } else if (requestCode == PICK_RESTORE) {
+            restorePicked(resultCode == RESULT_OK && data != null ? data.getData() : null);
+        } else if (requestCode == PICK_FOLDER) {
+            Uri tree = resultCode == RESULT_OK && data != null ? data.getData() : null;
+            if (tree == null) {
+                folderPicked(null);
+                return;
+            }
+            try {
+                getContentResolver().takePersistableUriPermission(tree,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            } catch (SecurityException e) {
+                folderPicked(null);
+                return;
+            }
+            // remembered and marked not backed up yet: the first backup comes at the set time (Back up now: at once)
+            BackupReceiver.setFolder(this, tree);
+            folderPicked("");
         }
+    }
+
+    /**
+     * Hands a picked backup file's text to the page: window.tallyRestore(text, err). Both null = cancelled. Read here,
+     * with the real bytes, rather than through WebView's own file chooser, whose File refuses a document whose size
+     * the picker's index reports wrongly (what made an auto backup "can't be opened").
+     */
+    private void restorePicked(Uri doc) {
+        if (doc == null) {
+            restoreResult(null, null);
+            return;
+        }
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            String text = null, err = null;
+            try {
+                text = new String(BackupReceiver.readDoc(app.getContentResolver(), doc, BackupReceiver.MAX), StandardCharsets.UTF_8);
+            } catch (SecurityException | IOException e) {
+                err = "Couldn't read that file";
+            }
+            final String t = text, e2 = err;
+            runOnUiThread(() -> restoreResult(t, e2));
+        }).start();
+    }
+
+    private void restoreResult(String text, String err) {
+        if (web == null || isDestroyed()) return;
+        String a = text == null ? "null" : JSONObject.quote(text), b = err == null ? "null" : JSONObject.quote(err);
+        web.evaluateJavascript("window.tallyRestore&&window.tallyRestore(" + a + "," + b + ")", null);
+    }
+
+    /** Tells the page how picking a backup folder went: null = cancelled, "" = backed up, else the problem. */
+    private void folderPicked(String err) {
+        if (web == null || isDestroyed()) return;
+        String arg = err == null ? "null" : JSONObject.quote(err);
+        web.evaluateJavascript("window.tallyFolder&&window.tallyFolder(" + arg + ")", null);
     }
 
     @Override
@@ -388,6 +432,111 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String takeActions() {
             return ReminderReceiver.takeActions(MainActivity.this);
+        }
+
+        /** The daily backup's settings: {on, h, m}. */
+        @JavascriptInterface
+        public void setBackup(String json) {
+            BackupReceiver.setConfig(MainActivity.this, json);
+        }
+
+        /** The page's data, mirrored after every save while auto backup is on (see BackupReceiver). */
+        @JavascriptInterface
+        public void setBackupData(String json) {
+            BackupReceiver.setData(MainActivity.this, json);
+        }
+
+        /** {folder, last, error} for Settings. */
+        @JavascriptInterface
+        public String backupStatus() {
+            return BackupReceiver.status(MainActivity.this);
+        }
+
+        /** "Back up now": runs on the bridge's own thread (not the UI thread); "" when done, else the problem. */
+        @JavascriptInterface
+        public String backupNow() {
+            String err = BackupReceiver.run(getApplicationContext(), true);
+            return err == null ? "" : err;
+        }
+
+        /** Settings → Restore, from the auto backup: {text, when, folder} or {error}. On the bridge's own thread. */
+        @JavascriptInterface
+        public String readAutoBackup() {
+            return BackupReceiver.readAuto(getApplicationContext());
+        }
+
+        /** Settings → Restore, any file: Android's document picker; the text comes back through window.tallyRestore. */
+        @JavascriptInterface
+        public void pickRestoreFile() {
+            runOnUiThread(() -> {
+                // every file: a backup's type is reported differently by different apps; the page checks the content
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+                try {
+                    startActivityForResult(i, PICK_RESTORE);
+                } catch (ActivityNotFoundException e) {
+                    restoreResult(null, "No file picker on this phone");
+                }
+            });
+        }
+
+        /** Opens Android's folder picker for the daily backup; the answer comes back through window.tallyFolder. */
+        @JavascriptInterface
+        public void pickBackupFolder() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                try {
+                    startActivityForResult(i, PICK_FOLDER);
+                } catch (ActivityNotFoundException e) {
+                    folderPicked(null);
+                }
+            });
+        }
+
+        /**
+         * What could keep reminders from arriving on time: {notif} notifications allowed, {exact} exact alarms
+         * allowed (Android 12+), {battery} not restricted — only asked on makers known to stop background alarms of
+         * battery-optimised apps (dontkillmyapp.com); elsewhere Android's exact alarms already get through.
+         */
+        @JavascriptInterface
+        public String reminderHealth() {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            boolean notif = nm == null || nm.areNotificationsEnabled();
+            boolean exact = Build.VERSION.SDK_INT < 31 || am == null || am.canScheduleExactAlarms();
+            String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
+            boolean strict = maker.matches(".*(xiaomi|redmi|poco|oppo|realme|oneplus|vivo|iqoo|huawei|honor|samsung|meizu|asus|nokia|tecno|infinix|itel).*");
+            boolean battery = !strict || pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+            return "{\"notif\":" + notif + ",\"exact\":" + exact + ",\"battery\":" + battery + "}";
+        }
+
+        /** Opens the Android screen that fixes one reminderHealth item: "notif", "exact" or "battery". */
+        @JavascriptInterface
+        public void openSetting(final String kind) {
+            runOnUiThread(() -> {
+                Uri pkg = Uri.parse("package:" + getPackageName());
+                Intent i;
+                if ("notif".equals(kind) && Build.VERSION.SDK_INT >= 26) {
+                    i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                } else if ("exact".equals(kind) && Build.VERSION.SDK_INT >= 31) {
+                    i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg);
+                } else {
+                    i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg); // battery → Unrestricted lives here
+                }
+                try {
+                    startActivity(i);
+                } catch (ActivityNotFoundException e) {
+                    try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)); }
+                    catch (ActivityNotFoundException ignored) { }
+                }
+            });
+        }
+
+        /** The phone's 12 / 24-hour setting, for the time picker and time labels. */
+        @JavascriptInterface
+        public boolean is24h() {
+            return DateFormat.is24HourFormat(MainActivity.this);
         }
 
         /** Android 13+ asks the user before an app may post notifications. */
