@@ -1,0 +1,1 @@
+- The balance card on Home appears from your Balance check time, and not while that reminder is off.
