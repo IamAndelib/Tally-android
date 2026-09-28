@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-09-28
+
 ### Added
 
 - On first open a small "Permissions" dialog asks for notifications and unrestricted battery (which also lets reminders
@@ -170,6 +172,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.1
 [1.2.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.0
 [1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1

@@ -128,7 +128,7 @@ function pickTime(k) {
   });
 }
 /* a reminder was switched on (or a due date set): Android's notification prompt, which the shell shows only while
-   the permission is missing and Android still lets it ask. Android's own first-open prompts come from the shell. */
+   the permission is missing and Android still lets it ask. On first open, permsIntro() lists the permissions. */
 function askNotify() {
   try {
     if (window.Android && Android.requestNotifications) Android.requestNotifications();
