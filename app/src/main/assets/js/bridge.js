@@ -69,7 +69,7 @@ function syncReminders() {
   try {
     Android.setReminders(
       JSON.stringify({
-        daily: Object.assign({ on: r.daily }, hmObj(r.time)),
+        daily: Object.assign({ on: r.daily && activeAccounts().length > 0 }, hmObj(r.time)), // nothing to write in yet
         check: Object.assign({ on: r.check && activeAccounts().length > 0 }, hmObj(r.checkTime), {
           text: checkText(),
           checked: S.settings.lastCheck || "",
@@ -127,13 +127,63 @@ function pickTime(k) {
     render();
   });
 }
+/* a reminder was switched on (or a due date set): Android's notification prompt, which the shell shows only while
+   the permission is missing and Android still lets it ask. On first open, permsIntro() lists the permissions. */
 function askNotify() {
-  if (S.settings.notifAsked || !(window.Android && Android.requestNotifications)) return;
-  S.settings.notifAsked = true;
-  save();
   try {
-    Android.requestNotifications();
+    if (window.Android && Android.requestNotifications) Android.requestNotifications();
   } catch (e) {}
+}
+/* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind, name, why] */
+const PERM_ROWS = [
+  ["notif", "Notifications", "Reminders can't show without them"],
+  ["battery", "Unrestricted battery", "So reminders and the backup come on time"],
+  ["exact", "Alarms &amp; reminders", "So reminders come on time"],
+];
+/* the rows to offer: Android counts unrestricted battery as allowing alarms & reminders, so that row only shows on a
+   phone where it's still off although battery is already allowed */
+const permRows = h => PERM_ROWS.filter(([k]) => k !== "exact" || (h.battery !== false && h.exact === false));
+/* one permission: Allow (the shell opens Android's prompt, popup or switch screen), or a quiet "Allowed" */
+function permRow([k, t, why], ok) {
+  return (
+    '<div class="setrow"><span class="mid"><div>' +
+    t +
+    '</div><div class="s">' +
+    why +
+    "</div></span>" +
+    (ok
+      ? '<span class="pok">' + ic("check") + "Allowed</span>"
+      : '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">Allow</button>') +
+    "</div>"
+  );
+}
+/* first open on this install (the shell remembers): one dialog listing the permissions, each with its own Allow, and
+   Done. Nothing follows on its own; whatever stays denied waits in Settings → Reminders. Skipped when all's allowed. */
+function permsIntro() {
+  let first = false;
+  try {
+    first = !!(window.Android && Android.permsIntro && Android.permsIntro());
+  } catch (e) {}
+  const h = first && reminderHealth();
+  if (!h || permRows(h).every(([k]) => h[k] !== false)) return;
+  $("#pop").innerHTML =
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Permissions">' +
+    '<h3 class="dlg-t">Permissions</h3><p class="dlg-x">For reminders and the daily backup.</p><div id="pp-rows">' +
+    permRows(h)
+      .map(r => permRow(r, h[r[0]] !== false))
+      .join("") +
+    '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">Done</button></div></div></div>';
+}
+/* window.tallyPerms / resume: a permission may have changed; the open dialog's rows and Settings' card follow at once
+   (on Android, allowing unrestricted battery also allows alarms & reminders, so that row turns too) */
+function onPerms() {
+  const rows = $("#pp-rows"),
+    h = rows && reminderHealth();
+  if (h)
+    rows.innerHTML = permRows(h)
+      .map(r => permRow(r, h[r[0]] !== false))
+      .join("");
+  else if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render();
 }
 /* +1 day / +1 week tapped on a notification while the app was closed */
 function applyNativeActions() {
@@ -164,11 +214,16 @@ function mirrorSoon() {
   clearTimeout(mirrorT);
   mirrorT = setTimeout(mirrorNow, 800);
 }
+/* going to the background (window.tallyPause): hand over only data a save left waiting in the debounce */
+function flushMirror() {
+  if (mirrorT) mirrorNow();
+}
 function mirrorNow() {
   clearTimeout(mirrorT);
+  mirrorT = 0;
   if (!S.settings.backup.on || !canBackup()) return;
   try {
-    Android.setBackupData(JSON.stringify(S));
+    Android.setBackupData(savedJson || JSON.stringify(S)); // what save() just stored (stringified once)
   } catch (e) {}
 }
 /* the daily alarm: on/off and its time */
@@ -239,15 +294,9 @@ function reminderHealth() {
     return null;
   }
 }
-/* "notif" asks for the permission the first time, then opens Android's notification settings for Tally */
+/* an Allow button on the permissions card; "notif": the shell shows Android's prompt while it still can, else the
+   settings page; "exact": the Alarms & reminders switch; "battery": Android's battery popup */
 function fixReminders(kind) {
-  if (kind === "notif" && !S.settings.notifAsked) return askNotify();
-  if (kind === "battery-ok") {
-    S.settings.batteryOk = true;
-    save();
-    render();
-    return;
-  }
   try {
     Android.openSetting(kind);
   } catch (e) {}
@@ -300,7 +349,7 @@ function onAppResume() {
   catchUpToday();
   syncReminders();
   H24 = null;
-  if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render(); // permissions may have changed
+  onPerms(); // permissions may have changed in Android's settings
 }
 function saveOut(name, mime, text) {
   if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);

@@ -375,7 +375,7 @@ const ago = n => {
   await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
   await act("go", "settings");
   await settle();
-  const outOrder = async () => (await state()).cats.filter(c => c.kind === "out" && !c.hidden).map(c => c.id);
+  const outOrder = () => page.evaluate(() => S.cats.filter(c => c.kind === "out" && !c.hidden).map(c => c.id));
   const box = async id => (await page.$(`.ring.edit .tile[data-v="${id}"]`)).boundingBox();
   // keep the ring mid-screen, away from the edges where a drag scrolls the page
   const midRing = () => page.evaluate(() => document.querySelector(".ring.edit").scrollIntoView({ block: "center" }));

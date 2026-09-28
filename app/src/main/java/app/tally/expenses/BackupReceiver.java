@@ -80,6 +80,7 @@ public class BackupReceiver extends BroadcastReceiver {
     static synchronized void setData(Context ctx, String json) {
         if (json == null || json.length() > MAX) return; // never a real notebook: a backup couldn't be read back anyway
         File f = snapshot(ctx), tmp = new File(f.getPath() + ".tmp");
+        if (json.equals(read(f))) return; // unchanged (e.g. every app start): nothing new to back up, no write
         try (OutputStream os = new FileOutputStream(tmp)) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {

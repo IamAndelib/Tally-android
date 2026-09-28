@@ -21,7 +21,9 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Shows Tally's reminders. The page sends its reminder settings with Android.setReminders(json):
@@ -43,6 +45,9 @@ public class ReminderReceiver extends BroadcastReceiver {
     /** Channels: loan due days keep the original id (and whatever the user set for it). */
     static final String CH_DUES = "reminders", CH_NUDGE = "nudge", CH_CHECK = "check", CH_BACKUP = "backup";
     private static final int DAILY_ID = 1, CHECK_ID = 2;
+    /** The config (plus exact-alarm ability) this process last armed: an unchanged sync re-arms nothing. In memory
+     *  only, so the first sync after a force-stop or reboot (when Android has dropped the alarms) always re-arms. */
+    private static String armedFor;
 
     @Override
     public void onReceive(Context ctx, Intent in) {
@@ -50,14 +55,15 @@ public class ReminderReceiver extends BroadcastReceiver {
         SharedPreferences p = prefs(ctx);
         String t = today();
         if (A_DAILY.equals(a)) {
-            if (!t.equals(p.getString("lastEntry", "")) && !t.equals(p.getString("shown:nudge", ""))) {
+            if (reached(config(ctx).optJSONObject("daily"), 21) && !t.equals(p.getString("lastEntry", ""))
+                    && !t.equals(p.getString("shown:nudge", ""))) {
                 show(ctx, CH_NUDGE, DAILY_ID, "Nothing written in Tally today",
                         "Take a minute to note what you spent.", openApp(ctx, null, DAILY_ID), null);
                 p.edit().putString("shown:nudge", t).apply();
             }
         } else if (A_CHECK.equals(a)) {
             JSONObject ck = config(ctx).optJSONObject("check");
-            if (ck != null && ck.optBoolean("on") && !t.equals(ck.optString("checked"))
+            if (ck != null && ck.optBoolean("on") && reached(ck, 8) && !t.equals(ck.optString("checked"))
                     && !t.equals(p.getString("shown:check", ""))) {
                 show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
                         openApp(ctx, "check", CHECK_ID), null);
@@ -72,14 +78,35 @@ public class ReminderReceiver extends BroadcastReceiver {
         schedule(ctx);
     }
 
+    /**
+     * Whether today's h:m has come. An alarm delivered late (inexact, or the clock changed) after midnight must not
+     * say "Nothing written today" about a day that has just begun; it only re-arms.
+     */
+    private static boolean reached(JSONObject o, int defH) {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, o == null ? defH : o.optInt("h", defH))));
+        c.set(Calendar.MINUTE, Math.max(0, Math.min(59, o == null ? 0 : o.optInt("m", 0))));
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return System.currentTimeMillis() >= c.getTimeInMillis() - 60_000; // a minute's slack for clock drift
+    }
+
     // ---------- called from the page (MainActivity bridge) ----------
 
-    static void save(Context ctx, String json) {
+    /** The page's reminder settings (after every save and on resume): stored and armed, unless nothing changed. */
+    static synchronized void save(Context ctx, String json) {
+        String cfg;
         try {
-            JSONObject o = new JSONObject(json);
-            prefs(ctx).edit().putString("config", o.toString()).putString("lastEntry", o.optString("lastEntry", "")).apply();
-        } catch (JSONException ignored) { }
+            cfg = new JSONObject(json).toString();
+        } catch (JSONException e) {
+            return;
+        }
+        SharedPreferences p = prefs(ctx);
+        String key = cfg + canExact(ctx);
+        if (key.equals(armedFor) && cfg.equals(p.getString("config", null))) return;
+        p.edit().putString("config", cfg).putString("lastEntry", config(cfg).optString("lastEntry", "")).apply();
         schedule(ctx);
+        armedFor = key;
     }
 
     static synchronized String takeActions(Context ctx) {
@@ -96,13 +123,22 @@ public class ReminderReceiver extends BroadcastReceiver {
      * otherwise inexact, which Android may deliver minutes (or, for a rarely used app, hours) late.
      */
     static void arm(AlarmManager am, long when, PendingIntent pi) {
-        if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+        if (canExact(am)) {
             try {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
                 return;
             } catch (SecurityException ignored) { } // permission withdrawn in between: fall back
         }
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+    }
+
+    private static boolean canExact(AlarmManager am) {
+        return Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
+    }
+
+    private static boolean canExact(Context ctx) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        return am != null && canExact(am);
     }
 
     /** The next h:m from now (today if still ahead, else tomorrow); out-of-range values are clamped, never rolled over. */
@@ -134,6 +170,7 @@ public class ReminderReceiver extends BroadcastReceiver {
             for (int i = 0; i < armed.length(); i++) am.cancel(broadcast(ctx, A_DUE, armed.getString(i), code(armed.getString(i))));
         } catch (JSONException ignored) { }
         JSONArray nowArmed = new JSONArray();
+        Set<String> keep = new HashSet<>(Arrays.asList("shown:nudge", "shown:check"));
         JSONArray dues = cfg.optJSONArray("dues");
         String t = today();
         for (int i = 0; dues != null && i < dues.length(); i++) {
@@ -165,8 +202,14 @@ public class ReminderReceiver extends BroadcastReceiver {
             }
             arm(am, when, broadcast(ctx, A_DUE, id, code(id)));
             nowArmed.put(id);
+            keep.add("shown:" + id);
         }
-        p.edit().putString("armed", nowArmed.toString()).apply();
+        SharedPreferences.Editor e = p.edit().putString("armed", nowArmed.toString());
+        // "shown today" marks of loans no longer reminded about (cleared, deleted, due date removed) are dropped
+        for (String k : p.getAll().keySet()) {
+            if (k.startsWith("shown:") && !keep.contains(k)) e.remove(k);
+        }
+        e.apply();
     }
 
     /** A once-a-day notice (the nudge, the balance check): armed at its h:m while on, cancelled when off. */
@@ -214,11 +257,11 @@ public class ReminderReceiver extends BroadcastReceiver {
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26) channels(ctx);
         Notification.Builder b = builder(ctx, channel);
-        b.setSmallIcon(R.drawable.ic_launcher).setContentTitle(title).setContentText(text)
+        b.setSmallIcon(R.drawable.ic_notif).setContentTitle(title).setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setAutoCancel(true).setContentIntent(tap)
                 // on a lock screen that hides sensitive content: which kind of reminder, never names or amounts
-                .setPublicVersion(builder(ctx, channel).setSmallIcon(R.drawable.ic_launcher).setContentTitle("Tally")
+                .setPublicVersion(builder(ctx, channel).setSmallIcon(R.drawable.ic_notif).setContentTitle("Tally")
                         .setContentText(publicText(channel)).build());
         if (actions != null) for (Notification.Action a : actions) b.addAction(a);
         try { nm.notify(nid, b.build()); } catch (SecurityException ignored) { } // notifications not allowed
@@ -239,7 +282,7 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     private static Notification.Action action(Context ctx, String label, PendingIntent pi) {
-        return new Notification.Action.Builder(Icon.createWithResource(ctx, R.drawable.ic_launcher), label, pi).build();
+        return new Notification.Action.Builder(Icon.createWithResource(ctx, R.drawable.ic_notif), label, pi).build();
     }
 
     /** Synchronized with {@link #takeActions}: both rewrite the queued "actions" list. */
@@ -299,7 +342,11 @@ public class ReminderReceiver extends BroadcastReceiver {
     private static SharedPreferences prefs(Context ctx) { return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
 
     private static JSONObject config(Context ctx) {
-        try { return new JSONObject(prefs(ctx).getString("config", "{}")); }
+        return config(prefs(ctx).getString("config", "{}"));
+    }
+
+    private static JSONObject config(String json) {
+        try { return new JSONObject(json); }
         catch (JSONException e) { return new JSONObject(); }
     }
 

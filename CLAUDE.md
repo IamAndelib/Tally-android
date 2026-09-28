@@ -30,7 +30,14 @@ Built originally in a claude.ai chat; continue development from here.
     `BackupReceiver.put()` writes through `ParcelFileDescriptor.AutoCloseOutputStream` (one owner, one close — a
     double close trips fdsan); `setData` refuses > 20 MB; `nextAt` clamps hours/minutes.
   - JS bridge `window.Android`:
-    - `saveFile(name, mime, text)` saves CSV exports / JSON backups via ACTION_CREATE_DOCUMENT; result reported through `window.tallySaved(ok)`.
+    - `saveFile(name, mime, text)` saves CSV exports / JSON backups via ACTION_CREATE_DOCUMENT; the text waits in
+      `cacheDir/pending-save` (not memory) while the dialog is open; result reported through `window.tallySaved(ok)`.
+    - Every shell → page call that answers something (`tallySaved`, `tallyRestore`, `tallyFolder`, `tallyOpen` for the
+      `open` extra) goes through `callPage(js)`: run now if the page is up (`pageUp`, set in `Bridge.ready()`), else
+      queued and flushed by `ready()`. After Android reclaimed the process while a picker was open, the answer arrives
+      before the reloaded page has its hooks and was otherwise lost. `onRenderProcessGone` (WebView renderer crashed or
+      killed for memory) drops the WebView and `recreate()`s instead of letting the app die; every `web` use is
+      null-guarded for that window.
     - `getVersion()` returns `BuildConfig.VERSION_NAME` (`buildFeatures.buildConfig true` in `app/build.gradle`, needed for AGP 8+
       to generate `BuildConfig`), shown in Settings' About footer; called defensively (`window.Android&&Android.getVersion`,
       wrapped in try/catch) so the browser-preview case and older installed builds degrade to no version line, not "undefined".
@@ -43,18 +50,53 @@ Built originally in a claude.ai chat; continue development from here.
       12+ `canScheduleExactAlarms()`, permission `SCHEDULE_EXACT_ALARM`, user-granted on 14+ under "Alarms &
       reminders"; never `USE_EXACT_ALARM`, Play reserves it for clocks/calendars), else `setAndAllowWhileIdle`.
       `BootReceiver` re-arms reminders and the backup after boot, update, `TIME_SET`, `TIMEZONE_CHANGED` and
-      `SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED`. Channels (`channels()`, created at start): `nudge`, `check`,
+      `SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED`, plus the "fast boot" `QUICKBOOT_POWERON` broadcasts (HTC,
+      Xiaomi, older phones); `TallyWidget.onUpdate` (widget added, the launcher's update after a reboot) re-arms both
+      too. Receivers don't re-arm each other: that could replace a still-pending late nudge with tomorrow's.
+      `ReminderReceiver.save()` skips an unchanged sync (static `armedFor` = config + exact ability, in memory only,
+      so the first sync after a force-stop or reboot always re-arms; a change in exact ability re-arms as exact).
+      The nudge and check show only once today's h:m has come (`reached()`): a late delivery after midnight just
+      re-arms. The nudge is only on while there are active accounts (`syncReminders`). `schedule()` drops
+      `shown:<loanId>` marks of loans no longer reminded about. Notifications use the monochrome `ic_notif` (the
+      card, lines cut out): a full-colour small icon shows as a white disc. Channels (`channels()`, created at start): `nudge`, `check`,
       `reminders` (loan due days, the original id), `backup` (failures only). The nudge / check show at most once a
       day (`shown:nudge` / `shown:check`); the check is skipped when `checked` (= `settings.lastCheck`) is today and
       opens `open=check` (Home, today, the morning check card). Notification buttons
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs, re-reads
       `is24h`, re-renders Settings so the health card follows permission changes).
-    - `reminderHealth()` → `{notif, exact, battery}` (battery only checked on makers known to kill background alarms,
-      dontkillmyapp.com list; elsewhere `true`) and `openSetting("notif"|"exact"|"battery")`: Settings → Reminders shows
-      a "may arrive late" card (`healthCard()`) with one fix button each (`rem-fix` → `fixReminders()`; "notif" asks
-      for the permission the first time, then opens the app's notification settings; "Battery is fine" sets
-      `settings.batteryOk`), only while a reminder is on and something fails.
+    - `reminderHealth()` → `{notif, exact, battery}`: `notif` = `POST_NOTIFICATIONS` granted (API 33+) **and**
+      `areNotificationsEnabled()`; `exact` = `canScheduleExactAlarms()` (12+); `battery` = `isIgnoringBatteryOptimizations`
+      (every phone). `openSetting("notif"|"exact"|"battery")`: "notif" shows Android's prompt while it still can
+      (`canPromptNotif()`: never asked, tracked in the shell's `tally_perms` prefs, or
+      `shouldShowRequestPermissionRationale`), else the notification settings page (also when a button-asked prompt is
+      refused for good); "exact" → `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`; "battery" → Android's
+      `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` popup (permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`,
+      `@SuppressLint("BatteryLife")` on purpose — note for a Play listing). Settings → Reminders shows a "Permissions"
+      card (`healthCard()`, `.rhealth`) with one row per denied item of `permRows(h)`, each with an "Allow" button
+      (`rem-fix` → `fixReminders()` → `openSetting`), only while a reminder or the daily backup is on; a row goes as soon as it's allowed
+      (`onPerms()` on `tallyPerms` and on resume re-renders Settings).
+    - **Two permissions, not three:** `permRows(h)` offers Notifications and Unrestricted battery. Android counts an
+      app with unrestricted battery (power allowlist) as allowed exact alarms (Samsung even flips the "Alarms &
+      reminders" switch), so battery covers both; the `exact` row of `PERM_ROWS` shows only as a fallback, on a phone
+      where alarms are still off although battery is allowed.
+    - **First-open Permissions dialog** (`permsIntro()` in `js/bridge.js`, from `js/main.js` unless the unreadable-data
+      dialog shows): only when `Android.permsIntro()` says it's the first time on this install (shell prefs
+      `tally_perms`/`intro`, marked on the first call, so never from the page's data) and something is denied. A
+      Material dialog in `#pop`: "Permissions", the `permRows(h)` (drawn by `permRow()`, shared with the Settings card),
+      each with its own tonal Allow (`rem-fix`) or a quiet "✓ Allowed", and Done (`pd-close`). Nothing follows on its
+      own: each Allow opens exactly one Android prompt or popup. `onPerms()` (`tallyPerms`, resume) patches `#pp-rows`
+      in place while it's open. Whatever stays denied waits in the Settings card. The page asks nothing else at start;
+      `askNotify()` (a reminder switched on, a loan due date) calls `Android.requestNotifications()`, which prompts
+      only while `canPromptNotif()` and not granted, else just answers `tallyPerms`. The page keeps no permission flags
+      (`migrate()` drops the old `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`). (An automatic native chain of
+      prompts was tried and dropped: Android's screens and popups piled up on each other.)
+    - Battery: `MainActivity.onPause` runs `window.tallyPause` (`flushMirror()`: hands over only data waiting in the
+      mirror debounce; `mirrorNow()` sends `savedJson`, the text `save()` just stored, so the notebook is stringified
+      once per save) and then `web.onPause(); web.pauseTimers()` (unless resumed meanwhile); `onResume` resumes them
+      first. `BackupReceiver.setData` skips identical data (no write, not marked dirty). The widget has
+      `updatePeriodMillis="0"` (no periodic wake-ups): the page pushes numbers on change and a non-wakeup RTC alarm
+      after midnight resets "Spent today"; `onUpdate` (widget added, reboot) re-arms it.
     - Auto backup (`BackupReceiver.java`): while `settings.backup.on`, `save()` → `mirrorSoon()` (800 ms debounce)
       → `Android.setBackupData(JSON.stringify(S))`, written atomically to app-private `files/snapshot.json` and marked
       dirty, so the daily alarm (`setBackup({on,h,m})`) needs no WebView. `pickBackupFolder()` →
@@ -80,10 +122,14 @@ Built originally in a claude.ai chat; continue development from here.
       dialog "Restore Tally backup.json?" with counts + "saved …" and alt "Choose another file"; otherwise (or no
       file) `Android.pickRestoreFile()` → `ACTION_OPEN_DOCUMENT` (`*/*`) → the shell reads the bytes
       (`readDoc`, ≤ 20 MB) → `window.tallyRestore(text, err)` (`onRestorePicked`). Both end in `restoreText(t,
-      auto)` (check + confirm + `migrate`); restoring keeps this phone's `backup`, `batteryOk`, `notifAsked`. The
+      auto)` (check + confirm + `migrate`); restoring keeps this phone's `backup`. The
       `<input type="file">` (`restoreFile`) remains only without the bridge (browser). "Your data": with auto backup
       on, Back up now replaces Save backup (hidden) and the intro says there's a daily copy.
     - `is24h()` = `DateFormat.is24HourFormat` (the phone's 12/24-hour switch): the time wheel and `timeLabel()`.
+  - Icons: `drawable/ic_logo.xml` is the round logo (splash on 7–11, `docs/logo.svg`); `drawable/ic_launcher.xml`
+    (an `<inset>` of it) is the launcher icon below Android 8; `drawable-anydpi-v26/ic_launcher.xml` is the adaptive
+    icon (`@color/brand` + `ic_launcher_fg`, the card at 0.8 inside the safe zone, + `ic_launcher_mono` for themed
+    icons). Never use `ic_launcher` as a notification icon (adaptive icons crash there on 8.0): `ic_notif`.
   - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
     logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
     (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, which only
@@ -106,7 +152,7 @@ Built originally in a claude.ai chat; continue development from here.
     NEW_TASK|CLEAR_TOP|SINGLE_TOP, because Android only resumes a running app from its last screen (no splash) for
     launcher-style intents; the `open` extra still reaches `onNewIntent`.
     The page is the source of truth: `syncWidget()` (from `commit()`, start, resume) sends formatted numbers through
-    `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
+    `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (non-wakeup midnight alarm; no periodic updates).
 - The app is a web page in `app/src/main/assets` (vanilla JS, no framework, no build step):
   - `index.html` is only the shell: CSP meta, `css/colors.css` (Material 3 baseline roles), an empty `<style id="dyn">`
     (wallpaper palette, `js/theme.js`), `css/app.css`, then the scripts in order: `js/icons.js`, `core`, `state`, `theme`,
@@ -123,7 +169,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, batteryOk, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
@@ -301,7 +347,7 @@ Built originally in a claude.ai chat; continue development from here.
     `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
     it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, `notifAsked`, haptics, strength,
+    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, haptics, strength,
     donut middle) and is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
     small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,
@@ -354,8 +400,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.1) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10201) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.2) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10202) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the
@@ -384,7 +430,7 @@ Built originally in a claude.ai chat; continue development from here.
   install as "Tally Dev" next to the release (their data is separate from the release's).
 - Docs: README (features, requirements, install/verify, privacy, build, layout, releasing), CONTRIBUTING (architecture,
   conventions, design principles), CHANGELOG (Keep a Changelog), SECURITY, THIRD_PARTY_NOTICES + `LICENSES/`,
-  `docs/` (logo.svg from `ic_launcher.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
+  `docs/` (logo.svg from `ic_logo.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
 
 ## Notes
 - License: MIT (© 2026 IamAndelib). Material Symbols are Apache-2.0, Onest is SIL OFL 1.1.

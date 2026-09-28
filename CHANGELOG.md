@@ -5,6 +5,37 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-09-28
+
+### Added
+
+- On first open a small "Permissions" dialog asks for notifications and unrestricted battery (which also lets reminders
+  come on time), each with its own "Allow", and Done. Anything left off waits in Settings.
+
+### Changed
+
+- Settings → Reminders shows a small "Permissions" card listing only what's denied, each with an "Allow" button; a row
+  disappears once allowed. "Battery is fine" is gone. It also shows while only the daily backup is on.
+- The launcher icon fills your launcher's own shape (an adaptive icon, and a themed one on Android 13+) instead of
+  sitting small on a light backplate.
+- Reminders aren't re-armed when nothing about them changed, and each save turns the notebook into text only once.
+- Lighter on battery: the home-screen widget no longer wakes the phone every 30 minutes, the app stops all work while
+  in the background, and an unchanged notebook never triggers a backup write.
+
+### Fixed
+
+- The Reminders card in Settings could offer "Allow notifications" although they were allowed; it now checks Android's
+  permission itself and updates the moment a permission changes.
+- A phone that had never shown Android's notification prompt for Tally (for example after restoring data) now gets it.
+- Reminder notifications showed a plain white dot in the status bar; they now show Tally's card.
+- An evening nudge delivered late, after midnight, no longer says "Nothing written today" about a day that has just
+  begun; and there's no nudge before any account exists.
+- On phones that clear memory aggressively, a CSV or backup export, a restore or a new backup folder chosen in Android's
+  picker is no longer lost when Tally was closed in the background meanwhile.
+- If Android's web engine crashes or is stopped for memory, Tally restarts its page instead of closing.
+- Reminders and the backup are re-armed after a "fast boot" (some HTC, Xiaomi and older phones) and whenever the widget
+  refreshes after a restart.
+
 ## [1.2.1] — 2026-09-28
 
 ### Added
@@ -141,6 +172,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.1
 [1.2.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.0
 [1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1

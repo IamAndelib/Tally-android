@@ -743,25 +743,23 @@ function settingsView() {
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
   return h;
 }
-/* Settings → Reminders: what may keep reminders from arriving on time, with one fix each (only when a reminder is on) */
+/* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder or the
+   daily backup is on). A row goes as soon as its permission is allowed (tallyPerms / resume re-render). */
 function healthCard() {
   const r = S.settings.remind,
-    hh = (r.daily || r.check || r.dues) && reminderHealth();
+    hh = (r.daily || r.check || r.dues || S.settings.backup.on) && reminderHealth();
   if (!hh) return "";
-  const fixes = [];
-  if (!hh.notif) fixes.push(["notif", "Allow notifications"]);
-  if (!hh.exact) fixes.push(["exact", "Allow on-time alarms"]);
-  const batt = !hh.battery && !S.settings.batteryOk;
-  if (batt) fixes.push(["battery", "Don't restrict battery"]);
-  if (!fixes.length) return "";
+  const rows = permRows(hh).filter(([k]) => hh[k] === false);
+  if (!rows.length) return "";
   return (
-    '<section class="rhealth"><b>' +
-    (hh.notif ? "Reminders may arrive late" : "Reminders can't show") +
-    "</b>" +
-    fixes
-      .map(([k, t]) => '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">' + t + "</button>")
-      .join("") +
-    (batt ? '<button class="btn text" data-act="rem-fix" data-v="battery-ok">Battery is fine</button>' : "") +
+    '<section class="rhealth list"><div class="rh-head">' +
+    (ICONS.warning
+      ? '<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="' +
+        ICONS.warning[0] +
+        '"/></svg>'
+      : "") +
+    "<b>Permissions</b></div>" +
+    rows.map(p => permRow(p, false)).join("") +
     "</section>"
   );
 }

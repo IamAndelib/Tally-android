@@ -66,7 +66,8 @@ function migrate(o) {
     checkTime: hm(r.checkTime, "08:00"),
   };
   s.settings.backup = { on: bk.on === true, time: hm(bk.time, "23:00") };
-  s.settings.batteryOk = s.settings.batteryOk === true;
+  /* the first-open prompts now live in the shell (per install), and the battery row simply goes once allowed */
+  ["batteryOk", "notifAsked", "exactAsked", "batteryAsked"].forEach(k => delete s.settings[k]);
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(+s.settings.hapticLevel) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
@@ -232,6 +233,8 @@ function migrate(o) {
 let S = blank();
 /* raw text of saved data that couldn't be read at start-up (kept aside under LS+":unreadable" and offered as a file) */
 let unreadable = null;
+/* the text save() last stored, handed as is to the backup mirror (no second JSON.stringify of the whole notebook) */
+let savedJson = "";
 /* Loads the saved notebook. Called once from the start-up code at the end, after every constant migrate() uses exists. */
 function loadState() {
   let raw = null;
@@ -253,8 +256,9 @@ function loadState() {
   }
 }
 function save() {
+  savedJson = JSON.stringify(S);
   try {
-    localStorage.setItem(LS, JSON.stringify(S));
+    localStorage.setItem(LS, savedJson);
   } catch (e) {
     snack("Couldn't save on this phone");
   }

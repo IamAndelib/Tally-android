@@ -1,0 +1,5 @@
+- On first open, one small dialog asks for notifications and unrestricted battery; anything left off waits in Settings.
+- Reminders show Tally's icon, and the app icon fills your launcher's shape.
+- Sturdier reminders: no late nudge after midnight, re-armed after a fast boot.
+- Exports, restores and backup folders survive low memory; the app recovers if its web engine crashes.
+- Lighter on battery.

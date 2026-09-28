@@ -66,14 +66,10 @@ function restoreText(t, auto) {
         snack("That backup couldn't be read");
         return;
       }
-      /* this phone's own set-up stays: its auto backup (the folder lives in the shell) and what Android has allowed */
-      const keep = {
-        backup: S.settings.backup,
-        batteryOk: S.settings.batteryOk,
-        notifAsked: S.settings.notifAsked,
-      };
+      /* this phone's own set-up stays: its auto backup (the folder lives in the shell) */
+      const backup = S.settings.backup;
       S = n;
-      Object.assign(S.settings, keep);
+      S.settings.backup = backup;
       commit();
       syncBackup();
       applyTheme();
@@ -127,12 +123,10 @@ function wipeAll() {
         cur: S.settings.cur,
         theme: S.settings.theme,
         remind: S.settings.remind,
-        notifAsked: S.settings.notifAsked,
         haptics: S.settings.haptics,
         hapticLevel: S.settings.hapticLevel,
         donut: S.settings.donut,
         backup: S.settings.backup,
-        batteryOk: S.settings.batteryOk,
       };
       S = blank();
       Object.assign(S.settings, keep);
