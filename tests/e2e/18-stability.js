@@ -750,6 +750,8 @@ const ago = n => {
   await settle();
   await act("wipe");
   await settle();
+  await act("ask-alt"); // "No backup yet" → No
+  await settle();
   await act("ask-ok");
   await settle();
   S = await state();

@@ -158,14 +158,15 @@ function permRow([k, t, why], ok) {
   );
 }
 /* first open on this install (the shell remembers): one dialog listing the permissions, each with its own Allow, and
-   Done. Nothing follows on its own; whatever stays denied waits in Settings → Reminders. Skipped when all's allowed. */
+   Done. Nothing follows on its own; whatever stays denied waits in Settings → Reminders. Skipped when all's allowed.
+   True when it showed. */
 function permsIntro() {
   let first = false;
   try {
     first = !!(window.Android && Android.permsIntro && Android.permsIntro());
   } catch (e) {}
   const h = first && reminderHealth();
-  if (!h || permRows(h).every(([k]) => h[k] !== false)) return;
+  if (!h || permRows(h).every(([k]) => h[k] !== false)) return false;
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Permissions">' +
     '<h3 class="dlg-t">Permissions</h3><p class="dlg-x">For reminders and the daily backup.</p><div id="pp-rows">' +
@@ -173,6 +174,7 @@ function permsIntro() {
       .map(r => permRow(r, h[r[0]] !== false))
       .join("") +
     '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">Done</button></div></div></div>';
+  return true;
 }
 /* window.tallyPerms / resume: a permission may have changed; the open dialog's rows and Settings' card follow at once
    (on Android, allowing unrestricted battery also allows alarms & reminders, so that row turns too) */
@@ -350,6 +352,7 @@ function onAppResume() {
   syncReminders();
   H24 = null;
   onPerms(); // permissions may have changed in Android's settings
+  backupNudge();
 }
 function saveOut(name, mime, text) {
   if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);
@@ -392,5 +395,29 @@ function goBack() {
 }
 /* result of Android.saveFile (window.tallySaved) */
 function onFileSaved(ok) {
+  if (SAVING_BACKUP && ok) {
+    S.settings.savedBackup = Date.now(); // Delete all data then knows a backup exists
+    save();
+  }
+  SAVING_BACKUP = false;
   snack(ok ? "Saved" : "Not saved");
+  const then = AFTER_SAVE;
+  AFTER_SAVE = null;
+  if (then) then();
+}
+/* Auto backup is off but there's something worth keeping (3+ entries): now and then (at start or on return, at most
+   once a week, never over another dialog or sheet) suggest turning it on. "Turn on" is the Settings switch. */
+function backupNudge() {
+  const s = S.settings;
+  if (!canBackup() || s.backup.on || S.txns.length < 3 || $("#pop").innerHTML || $("#sheet").innerHTML) return;
+  if (s.backupAsk && s.backupAsk > addDays(today(), -7)) return;
+  s.backupAsk = today();
+  save();
+  askDialog(
+    "Keep your data safe?",
+    "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
+    "Turn on",
+    toggleAutoBackup,
+    { cancel: "Not now" }
+  );
 }

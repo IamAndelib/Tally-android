@@ -5,6 +5,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Once you have a few entries and the daily backup is still off, Tally suggests turning it on (at most once a week).
+
+### Changed
+
+- Delete all data first offers to save a backup when there isn't one yet (OK / No), then asks once more to be sure
+  (Yes / No).
+
 ## [1.2.3] — 2026-09-28
 
 ### Fixed

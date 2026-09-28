@@ -112,6 +112,13 @@ const ok = (c, m) => {
 
   await act("wipe");
   await settle();
+  ok(
+    (await page.textContent("#pop")).includes("No backup yet") && (await page.isVisible('#pop [data-act="ask-alt"]')),
+    "no backup: Delete all data first offers one (OK / No)"
+  );
+  await page.click('#pop [data-act="ask-alt"]'); // No
+  await settle();
+  ok((await page.textContent("#pop")).includes("Delete all data?"), "No: then the final Yes / No");
   await page.click('#pop [data-act="ask-ok"]');
   await settle();
   ok(await page.isDisabled('[data-act="wipe"]'), "Delete all data is disabled again right after wiping");

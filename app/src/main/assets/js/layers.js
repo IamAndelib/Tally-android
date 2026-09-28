@@ -76,10 +76,11 @@ function calGrid(m, o) {
 }
 let ASK = null,
   ASK_ALT = null;
+/* o.no: the cancel button also does something (a two-step question: "No" moves on); Back / tapping outside only close */
 function askDialog(title, text, okText, onOk, o) {
   o = o || {};
   ASK = onOk;
-  ASK_ALT = o.alt ? o.alt[1] : null;
+  ASK_ALT = o.alt ? o.alt[1] : o.no || null;
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-label="' +
     esc(title) +
@@ -95,7 +96,9 @@ function askDialog(title, text, okText, onOk, o) {
         '</button><button class="btn text" data-act="pd-close">' +
         esc(o.cancel || "Cancel") +
         "</button></div></div></div>"
-      : '<div class="dlg-act"><button class="btn text" data-act="pd-close">' +
+      : '<div class="dlg-act"><button class="btn text" data-act="' +
+        (o.no ? "ask-alt" : "pd-close") +
+        '">' +
         esc(o.cancel || "Cancel") +
         "</button>" +
         '<button class="btn text' +

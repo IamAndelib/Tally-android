@@ -68,6 +68,9 @@ function migrate(o) {
   s.settings.backup = { on: bk.on === true, time: hm(bk.time, "23:00") };
   /* the first-open prompts now live in the shell (per install), and the battery row simply goes once allowed */
   ["batteryOk", "notifAsked", "exactAsked", "batteryAsked"].forEach(k => delete s.settings[k]);
+  /* when a backup was last saved here (ms) and when the auto-backup suggestion last showed (YYYY-MM-DD) */
+  if (!(Number.isFinite(s.settings.savedBackup) && s.settings.savedBackup > 0)) delete s.settings.savedBackup;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s.settings.backupAsk || "")) delete s.settings.backupAsk;
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(+s.settings.hapticLevel) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";

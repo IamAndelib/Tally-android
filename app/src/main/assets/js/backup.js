@@ -111,13 +111,39 @@ function onRestorePicked(text, err) {
   if (err) snack(err);
   else if (text != null) restoreText(text);
 }
-/* keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto backup (which never
-   overwrites its file with an empty notebook) */
+/* whether a backup of this notebook exists: the daily auto backup has written its file, or a backup was saved here */
+function hasBackup() {
+  const bs = backupStatus();
+  return !!((bs && bs.last > 0) || S.settings.savedBackup > 0);
+}
+/* Settings → Save backup: the whole notebook as a JSON file; `then` runs once Android's save dialog has answered */
+let AFTER_SAVE = null,
+  SAVING_BACKUP = false;
+function saveBackup(then) {
+  if (!(window.Android && Android.saveFile)) {
+    saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+    if (then) then();
+    return;
+  }
+  SAVING_BACKUP = true;
+  AFTER_SAVE = then || null;
+  saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+}
+/* Delete all data: without any backup, first offers one (OK saves a file, No skips it); then always a final Yes / No */
 function wipeAll() {
+  if (hasBackup()) return wipeConfirm();
+  askDialog("No backup yet", "Save a backup of your data before deleting it?", "OK", () => saveBackup(wipeConfirm), {
+    cancel: "No",
+    no: wipeConfirm,
+  });
+}
+/* the final Yes / No; keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto
+   backup (which never overwrites its file with an empty notebook) */
+function wipeConfirm() {
   askDialog(
     "Delete all data?",
     "Every account and entry on this phone. This can't be undone.",
-    "Delete all",
+    "Yes",
     () => {
       const keep = {
         cur: S.settings.cur,
@@ -133,6 +159,6 @@ function wipeAll() {
       commit();
       snack("All data deleted");
     },
-    { danger: true }
+    { danger: true, cancel: "No" }
   );
 }

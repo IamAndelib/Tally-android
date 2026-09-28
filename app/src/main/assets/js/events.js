@@ -544,7 +544,7 @@ document.addEventListener("click", ev => {
       exportCsv();
       break;
     case "backup":
-      saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+      saveBackup();
       break;
     case "wipe":
       wipeAll();
