@@ -315,10 +315,10 @@ const stub = () => {
   });
   ok((await page.textContent(".rhealth")).includes("can't show"), "notifications blocked: says they can't show");
   await act("rem-fix", "notif");
-  ok((await calls("askNotif")).length === 1, "first time: asks for the permission");
-  await page.evaluate(() => render());
-  await act("rem-fix", "notif");
-  ok((await calls("openSetting")).pop()[1] === "notif", "after that: opens the notification settings");
+  ok(
+    (await calls("openSetting")).pop()[1] === "notif",
+    "Allow notifications goes to the shell (Android's prompt while it can, else the settings page)"
+  );
   await page.evaluate(() => {
     ["daily", "check", "dues"].forEach(k => (S.settings.remind[k] = false));
     render();
@@ -579,6 +579,81 @@ const stub = () => {
     (await calls("pickRestore")).length === 1 && (await calls("readAuto")).length === 0,
     "auto backup off: Restore opens the picker"
   );
+
+  // ---- 8. first open: Android's notification prompt, then on-time alarms, then battery, each once
+  page = await newPage({ health: { notif: true, exact: false, battery: true, idle: false } });
+  await page.goto(appUrl);
+  await settle();
+  ok(
+    (await calls("askNotif")).length === 1 && !(await page.evaluate(() => $("#pop").innerHTML)),
+    "first open: Android's notification prompt, before any account exists"
+  );
+  await page.evaluate(() => window.tallyPerms()); // the shell: the prompt was answered
+  await settle();
+  ok((await page.textContent("#pop")).includes("Reminders on time?"), "then: the on-time alarms dialog");
+  await page.screenshot({ path: OUT + "/exact-dialog.png" });
+  await act("ask-ok");
+  ok(JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["exact"]', "Open settings: Alarms & reminders");
+  await page.evaluate(() => window.tallyPerms()); // back from Android's settings
+  await settle();
+  ok(
+    JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["exact","battery"]',
+    "then: Android's run-in-background popup"
+  );
+  await page.evaluate(() => window.tallyPerms());
+  await page.reload();
+  await settle();
+  S = await state();
+  ok(
+    (await calls("askNotif")).length === 0 &&
+      (await calls("openSetting")).length === 0 &&
+      !(await page.evaluate(() => $("#pop").innerHTML)) &&
+      S.settings.notifAsked &&
+      S.settings.exactAsked &&
+      S.settings.batteryAsked,
+    "each step is asked only once"
+  );
+  // an existing user (asked for notifications long ago): only the new steps, and battery only when restricted
+  page = await newPage({ health: { notif: true, exact: false, battery: true, idle: true } });
+  await page.goto(appUrl);
+  await seed(Object.assign(base(), { settings: { cur: "CAD", notifAsked: true } }));
+  ok(
+    (await calls("askNotif")).length === 0 && (await page.textContent("#pop")).includes("Reminders on time?"),
+    "existing user: no notification prompt again, the on-time dialog once"
+  );
+  await act("pd-close");
+  await page.evaluate(() => window.tallyPerms());
+  await settle();
+  ok((await calls("openSetting")).length === 0, "Not now: nothing opens; battery already unrestricted is skipped");
+  // the card follows a permission answer at once, without leaving Settings
+  await page.evaluate(() => {
+    window.__cfg.health = { notif: false, exact: true, battery: true, idle: true };
+    V.screen = "settings";
+    render();
+  });
+  ok(!!(await page.$('[data-act="rem-fix"][data-v="notif"]')), "card offers Allow notifications");
+  await page.evaluate(() => {
+    window.__cfg.health.notif = true;
+    window.tallyPerms();
+  });
+  await settle();
+  ok(
+    !(await page.$(".rhealth")) && (await page.evaluate(() => V.screen)) === "settings",
+    "allowed: the card disappears at once"
+  );
+  // going to the background hands over data a save left waiting, and only then
+  await page.evaluate(() => {
+    S.settings.backup.on = true;
+    save();
+    window.__calls = [];
+    S.accounts[0].name = "Paused bank";
+    save();
+    window.tallyPause();
+  });
+  ok((await calls("data")).length === 1, "tallyPause hands over the waiting data at once");
+  await page.evaluate(() => window.tallyPause());
+  await settle(1000);
+  ok((await calls("data")).length === 1, "and nothing more when nothing is waiting");
 
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

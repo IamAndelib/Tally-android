@@ -135,6 +135,38 @@ function askNotify() {
     Android.requestNotifications();
   } catch (e) {}
 }
+/* The first-open permission steps, each asked once, in order: Android's notification prompt, then on Android 12+ a
+   short dialog that opens the "Alarms & reminders" switch (Android has no popup for it), then Android's "run in the
+   background" popup. A step already allowed is skipped. Runs at start and whenever the shell reports a permission
+   answer (window.tallyPerms) or the app comes back; never over another dialog or sheet. */
+function permFlow() {
+  if (!window.Android || $("#pop").innerHTML || $("#sheet").innerHTML) return;
+  if (!S.settings.notifAsked) return askNotify(); // the shell answers with tallyPerms → back here
+  const h = reminderHealth();
+  if (!h) return;
+  if (!h.exact && !S.settings.exactAsked) {
+    S.settings.exactAsked = true;
+    save();
+    askDialog(
+      "Reminders on time?",
+      "Android needs one switch so reminders and the daily backup come at the time you set.",
+      "Open settings",
+      () => fixReminders("exact"),
+      { cancel: "Not now" }
+    );
+    return;
+  }
+  if (h.idle === false && !S.settings.batteryAsked) {
+    S.settings.batteryAsked = true;
+    save();
+    fixReminders("battery");
+  }
+}
+/* window.tallyPerms: a permission answer came back; show it at once (Settings' card) and take the next step */
+function onPerms() {
+  if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render();
+  permFlow();
+}
 /* +1 day / +1 week tapped on a notification while the app was closed */
 function applyNativeActions() {
   if (!(window.Android && Android.takeActions)) return;
@@ -164,8 +196,13 @@ function mirrorSoon() {
   clearTimeout(mirrorT);
   mirrorT = setTimeout(mirrorNow, 800);
 }
+/* going to the background (window.tallyPause): hand over only data a save left waiting in the debounce */
+function flushMirror() {
+  if (mirrorT) mirrorNow();
+}
 function mirrorNow() {
   clearTimeout(mirrorT);
+  mirrorT = 0;
   if (!S.settings.backup.on || !canBackup()) return;
   try {
     Android.setBackupData(JSON.stringify(S));
@@ -239,9 +276,8 @@ function reminderHealth() {
     return null;
   }
 }
-/* "notif" asks for the permission the first time, then opens Android's notification settings for Tally */
+/* one fix per item of the card; "notif": the shell shows Android's prompt while it still can, else the settings page */
 function fixReminders(kind) {
-  if (kind === "notif" && !S.settings.notifAsked) return askNotify();
   if (kind === "battery-ok") {
     S.settings.batteryOk = true;
     save();
@@ -300,7 +336,7 @@ function onAppResume() {
   catchUpToday();
   syncReminders();
   H24 = null;
-  if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render(); // permissions may have changed
+  onPerms(); // permissions may have changed in Android's settings
 }
 function saveOut(name, mime, text) {
   if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);

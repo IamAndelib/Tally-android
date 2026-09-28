@@ -20,7 +20,7 @@ if (unreadable)
     () => saveOut("tally-unreadable-" + today() + ".json", "application/json", unreadable),
     { cancel: "Not now" }
   );
-else if (activeAccounts().length) askNotify();
+else permFlow();
 /* follow the phone's light/dark switch */
 {
   const mq = matchMedia("(prefers-color-scheme: dark)");
@@ -35,6 +35,8 @@ Object.assign(window, {
   tallySaved: onFileSaved,
   tallyFolder: onFolderPicked,
   tallyRestore: onRestorePicked,
+  tallyPerms: onPerms,
+  tallyPause: flushMirror,
 });
 /* the page is drawn: the shell ends its launch screen (the logo). Called right away, not from requestAnimationFrame,
    which a still-hidden WebView may never run. */

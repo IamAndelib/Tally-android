@@ -50,11 +50,27 @@ Built originally in a claude.ai chat; continue development from here.
       queue `{type:"extend",id,days}` for the page; "Record payment" opens the app with extra `open=loan:<id>:pay`
       → `window.tallyOpen(...)`. `onResume` calls `window.tallyResume()` (applies queued actions, re-syncs, re-reads
       `is24h`, re-renders Settings so the health card follows permission changes).
-    - `reminderHealth()` → `{notif, exact, battery}` (battery only checked on makers known to kill background alarms,
-      dontkillmyapp.com list; elsewhere `true`) and `openSetting("notif"|"exact"|"battery")`: Settings → Reminders shows
-      a "may arrive late" card (`healthCard()`) with one fix button each (`rem-fix` → `fixReminders()`; "notif" asks
-      for the permission the first time, then opens the app's notification settings; "Battery is fine" sets
-      `settings.batteryOk`), only while a reminder is on and something fails.
+    - `reminderHealth()` → `{notif, exact, battery, idle}`: `notif` = `POST_NOTIFICATIONS` granted (API 33+) **and**
+      `areNotificationsEnabled()`; `idle` = `isIgnoringBatteryOptimizations` (every phone); `battery` = `idle`, but
+      only checked on makers known to kill background alarms (dontkillmyapp.com list; elsewhere `true`).
+      `openSetting("notif"|"exact"|"battery")`: "notif" shows Android's prompt while it still can (never asked, tracked
+      in the shell's `tally_perms` prefs, or `shouldShowRequestPermissionRationale`), else the notification settings
+      page (also when a button-asked prompt is refused for good); "exact" → `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`;
+      "battery" → Android's `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` popup (permission
+      `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `@SuppressLint("BatteryLife")` on purpose — note for a Play listing).
+      Settings → Reminders shows a "may arrive late" card (`healthCard()`) with one fix button each (`rem-fix` →
+      `fixReminders()`; "Battery is fine" sets `settings.batteryOk`), only while a reminder is on and something fails.
+    - **First-open permission flow** (`permFlow()` in `js/bridge.js`, run at start, on `tallyPerms` and on resume,
+      never over a dialog/sheet), each step once: `askNotify()` → Android's prompt (`notifAsked`; the shell answers
+      with `window.tallyPerms` from `onRequestPermissionsResult`, or at once when there's nothing to ask) → on-time
+      alarms dialog "Reminders on time?" → `openSetting("exact")` (`exactAsked`, only if `!exact`) → battery popup
+      (`batteryAsked`, only if `idle === false`). `onPerms()` (`tallyPerms`) re-renders Settings so the card follows
+      at once. Wipe and restore keep `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`.
+    - Battery: `MainActivity.onPause` runs `window.tallyPause` (`flushMirror()`: hands over only data waiting in the
+      mirror debounce) and then `web.onPause(); web.pauseTimers()` (unless resumed meanwhile); `onResume` resumes them
+      first. `BackupReceiver.setData` skips identical data (no write, not marked dirty). The widget has
+      `updatePeriodMillis="0"` (no periodic wake-ups): the page pushes numbers on change and a non-wakeup RTC alarm
+      after midnight resets "Spent today"; `onUpdate` (widget added, reboot) re-arms it.
     - Auto backup (`BackupReceiver.java`): while `settings.backup.on`, `save()` → `mirrorSoon()` (800 ms debounce)
       → `Android.setBackupData(JSON.stringify(S))`, written atomically to app-private `files/snapshot.json` and marked
       dirty, so the daily alarm (`setBackup({on,h,m})`) needs no WebView. `pickBackupFolder()` →
@@ -106,7 +122,7 @@ Built originally in a claude.ai chat; continue development from here.
     NEW_TASK|CLEAR_TOP|SINGLE_TOP, because Android only resumes a running app from its last screen (no splash) for
     launcher-style intents; the `open` extra still reaches `onNewIntent`.
     The page is the source of truth: `syncWidget()` (from `commit()`, start, resume) sends formatted numbers through
-    `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (midnight alarm + 30-min updates).
+    `Android.setWidget(json)`; the widget zeroes "Spent today" when the stored date isn't today (non-wakeup midnight alarm; no periodic updates).
 - The app is a web page in `app/src/main/assets` (vanilla JS, no framework, no build step):
   - `index.html` is only the shell: CSP meta, `css/colors.css` (Material 3 baseline roles), an empty `<style id="dyn">`
     (wallpaper palette, `js/theme.js`), `css/app.css`, then the scripts in order: `js/icons.js`, `core`, `state`, `theme`,
@@ -123,7 +139,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, batteryOk, notifAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, batteryOk, notifAsked, exactAsked, batteryAsked, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a

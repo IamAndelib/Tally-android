@@ -5,6 +5,21 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- On first open Tally asks for what reminders need, each once: Android's notification prompt, the "Alarms & reminders"
+  switch (so they come on time), and Android's "run in the background" popup (so the phone doesn't put Tally to sleep).
+
+### Fixed
+
+- The Reminders card in Settings could offer "Allow notifications" although they were allowed; it now checks Android's
+  permission itself and updates the moment a permission changes.
+
+### Changed
+
+- Lighter on battery: the home-screen widget no longer wakes the phone every 30 minutes, the app stops all work while
+  in the background, and an unchanged notebook never triggers a backup write.
+
 ## [1.2.1] — 2026-09-28
 
 ### Added

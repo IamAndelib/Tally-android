@@ -129,6 +129,7 @@ content.
 | --- | --- |
 | Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on) |
 | Alarms & reminders | so reminders and the daily backup happen at the exact time you chose |
+| Run in background (battery) | asked once, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |
 | Vibrate | a short tick when saving |
 | Internet | declared because the app's screen is a WebView; Tally itself makes no network requests |

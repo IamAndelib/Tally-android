@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- reminders and the daily backup at the exact time chosen (Android 14+ asks the user: "Alarms & reminders") -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Android's own "Let Tally always run in the background?" popup, so phones that put apps to sleep don't hold back
+         reminders and the daily backup; Tally only wakes at the times chosen, so this costs next to nothing -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application

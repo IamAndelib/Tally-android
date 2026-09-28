@@ -1,5 +1,6 @@
 package app.tally.expenses;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -47,6 +48,11 @@ public class MainActivity extends Activity {
     private static final int SAVE_FILE = 2;
     private static final int PICK_FOLDER = 4;
     private static final int PICK_RESTORE = 5;
+    private static final int NOTIF_REQ = 3;
+    /** Set while the activity is in the background (the WebView pauses once the page has saved what it must). */
+    private boolean paused;
+    /** The notification prompt came from Settings' "Allow notifications" button (not the first-open flow). */
+    private boolean notifFromButton;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
@@ -170,8 +176,70 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        paused = false;
+        web.resumeTimers();
+        web.onResume();
         pushTheme();
         web.evaluateJavascript("window.tallyResume&&window.tallyResume()", null);
+    }
+
+    /**
+     * In the background the page does nothing, so its timers and rendering stop (battery). First the page hands over
+     * any data still waiting for the backup (tallyPause → mirrorNow), then the WebView pauses, unless the app came
+     * back in the meantime.
+     */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        paused = true;
+        web.evaluateJavascript("window.tallyPause&&window.tallyPause()", v -> {
+            if (paused && !isDestroyed()) {
+                web.onPause();
+                web.pauseTimers();
+            }
+        });
+    }
+
+    /** The answer to Android's notification prompt: the page re-checks and moves on to the next permission. */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != NOTIF_REQ) return;
+        boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        // asked from Settings' button and Android didn't show its prompt (denied for good): open the settings page
+        if (!granted && notifFromButton && Build.VERSION.SDK_INT >= 33
+                && !shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS")) {
+            openNotifSettings();
+        }
+        notifFromButton = false;
+        perms();
+    }
+
+    private void perms() {
+        if (web != null && !isDestroyed()) web.evaluateJavascript("window.tallyPerms&&window.tallyPerms()", null);
+    }
+
+    /** Android 13+: shows the system prompt; true if it was asked (the answer then arrives in onRequestPermissionsResult). */
+    private boolean askNotifPermission() {
+        if (Build.VERSION.SDK_INT < 33
+                || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED) {
+            return false;
+        }
+        getSharedPreferences("tally_perms", MODE_PRIVATE).edit().putBoolean("notifAsked", true).apply();
+        requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIF_REQ);
+        return true;
+    }
+
+    private void openNotifSettings() {
+        Uri pkg = Uri.parse("package:" + getPackageName());
+        Intent i = Build.VERSION.SDK_INT >= 26
+                ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName())
+                : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg);
+        try { startActivity(i); }
+        catch (ActivityNotFoundException e) {
+            try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)); }
+            catch (ActivityNotFoundException ignored) { }
+        }
     }
 
     @Override
@@ -503,26 +571,42 @@ public class MainActivity extends Activity {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            boolean notif = nm == null || nm.areNotificationsEnabled();
+            // Android 13+: the runtime permission is the real grant; areNotificationsEnabled() also covers "all off"
+            boolean notif = (nm == null || nm.areNotificationsEnabled()) && (Build.VERSION.SDK_INT < 33
+                    || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED);
             boolean exact = Build.VERSION.SDK_INT < 31 || am == null || am.canScheduleExactAlarms();
             String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
             boolean strict = maker.matches(".*(xiaomi|redmi|poco|oppo|realme|oneplus|vivo|iqoo|huawei|honor|samsung|meizu|asus|nokia|tecno|infinix|itel).*");
-            boolean battery = !strict || pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
-            return "{\"notif\":" + notif + ",\"exact\":" + exact + ",\"battery\":" + battery + "}";
+            boolean idle = pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+            boolean battery = !strict || idle;
+            return "{\"notif\":" + notif + ",\"exact\":" + exact + ",\"battery\":" + battery + ",\"idle\":" + idle + "}";
         }
 
-        /** Opens the Android screen that fixes one reminderHealth item: "notif", "exact" or "battery". */
+        /**
+         * Fixes one reminderHealth item. "notif": Android's own prompt while it can still show it (never asked here, or
+         * asked once and refused), else Tally's notification settings. "exact": Android's "Alarms & reminders" switch.
+         * "battery": Android's "Let Tally always run in the background?" popup, else App info (Battery → Unrestricted).
+         */
+        @SuppressLint("BatteryLife") // on purpose: the owner wants reminders and the backup never held back
         @JavascriptInterface
         public void openSetting(final String kind) {
             runOnUiThread(() -> {
                 Uri pkg = Uri.parse("package:" + getPackageName());
+                if ("notif".equals(kind)) {
+                    boolean prompt = Build.VERSION.SDK_INT >= 33
+                            && (!getSharedPreferences("tally_perms", MODE_PRIVATE).getBoolean("notifAsked", false)
+                                || shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS"));
+                    notifFromButton = prompt;
+                    if (!(prompt && askNotifPermission())) openNotifSettings();
+                    return;
+                }
                 Intent i;
-                if ("notif".equals(kind) && Build.VERSION.SDK_INT >= 26) {
-                    i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-                } else if ("exact".equals(kind) && Build.VERSION.SDK_INT >= 31) {
+                if ("exact".equals(kind) && Build.VERSION.SDK_INT >= 31) {
                     i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg);
+                } else if ("battery".equals(kind)) {
+                    i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg);
                 } else {
-                    i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg); // battery → Unrestricted lives here
+                    i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg);
                 }
                 try {
                     startActivity(i);
@@ -539,14 +623,15 @@ public class MainActivity extends Activity {
             return DateFormat.is24HourFormat(MainActivity.this);
         }
 
-        /** Android 13+ asks the user before an app may post notifications. */
+        /**
+         * First open: Android 13+'s notification prompt. The page always hears back (window.tallyPerms), on the answer,
+         * or at once when there is nothing to ask (older Android, already allowed), and moves on to the next step.
+         */
         @JavascriptInterface
         public void requestNotifications() {
-            if (Build.VERSION.SDK_INT < 33) return;
             runOnUiThread(() -> {
-                if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 3);
-                }
+                notifFromButton = false;
+                if (!askNotifPermission()) perms();
             });
         }
 

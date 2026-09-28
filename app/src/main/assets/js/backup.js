@@ -70,6 +70,8 @@ function restoreText(t, auto) {
       const keep = {
         backup: S.settings.backup,
         batteryOk: S.settings.batteryOk,
+        exactAsked: S.settings.exactAsked,
+        batteryAsked: S.settings.batteryAsked,
         notifAsked: S.settings.notifAsked,
       };
       S = n;
@@ -133,6 +135,8 @@ function wipeAll() {
         donut: S.settings.donut,
         backup: S.settings.backup,
         batteryOk: S.settings.batteryOk,
+        exactAsked: S.settings.exactAsked,
+        batteryAsked: S.settings.batteryAsked,
       };
       S = blank();
       Object.assign(S.settings, keep);
