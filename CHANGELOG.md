@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] — 2026-09-28
+
 ### Fixed
 
 - Vibration strength could feel reversed on some phones (the lighter levels buzzing harder than the stronger ones); it
@@ -177,6 +179,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.3
 [1.2.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.1
 [1.2.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.0

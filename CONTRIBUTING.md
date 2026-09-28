@@ -17,14 +17,16 @@ Tally is a native Android shell around a web page.
 
 - **`MainActivity.java`** hosts a WebView that loads `assets/index.html` from
   `https://appassets.androidplatform.net/assets/` (`WebViewAssetLoader`) and exposes a small bridge, `window.Android`:
-  `saveFile`, `getColors` (Material You palette), `setBars`, `setReminders` / `takeActions` / `requestNotifications`,
-  `setWidget`, `getVersion`, `is24h`, `reminderHealth` / `openSetting`, and the auto backup's `setBackup` /
-  `setBackupData` / `pickBackupFolder` / `backupStatus` / `backupNow`. In the other direction it calls the page's
-  hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyTheme`, `tallySaved` and `tallyFolder`, which
-  `js/main.js` installs once the app is ready.
+  `ready` (ends the launch screen), `haptic`, `saveFile`, `getColors` (Material You palette), `setBars`,
+  `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `is24h`, `reminderHealth` /
+  `openSetting` / `permsIntro` (permissions), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` /
+  `backupStatus` / `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls
+  the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`,
+  `tallyFolder`, `tallyRestore` and `tallyPerms`, which `js/main.js` installs last; answers that arrive before the
+  page is up wait in a queue (`callPage`).
 - **`ReminderReceiver` / `BootReceiver`** schedule and show notifications from the reminder settings the page sends;
   **`BackupReceiver`** writes the daily backup file from the copy of the data the page mirrors to it;
-  **`TallyWidget` / `QuickAddActivity`** are the home-screen widget. The page is always the source of truth: it sends
+  **`TallyWidget` / `QuickAddActivity` / `OpenActivity`** are the home-screen widget. The page is always the source of truth: it sends
   ready-formatted numbers to the widget and a list of due dates to the reminders.
 - **The page** is plain HTML/CSS/JS. `index.html` loads `css/colors.css`, then an empty `<style id="dyn">` that
   `js/theme.js` fills with the wallpaper palette, then `css/app.css`, then the scripts in order. The scripts are
