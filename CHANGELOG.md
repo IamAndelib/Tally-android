@@ -7,8 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- On first open a small "Permissions" dialog lists notifications, alarms & reminders and unrestricted battery, each
-  with its own "Allow" (Android's own prompt or screen, one at a time), and Done. Anything left off waits in Settings.
+- On first open a small "Permissions" dialog asks for notifications and unrestricted battery (which also lets reminders
+  come on time), each with its own "Allow", and Done. Anything left off waits in Settings.
 
 ### Changed
 

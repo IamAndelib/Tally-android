@@ -749,7 +749,7 @@ function healthCard() {
   const r = S.settings.remind,
     hh = (r.daily || r.check || r.dues) && reminderHealth();
   if (!hh) return "";
-  const rows = PERM_ROWS.filter(([k]) => hh[k] === false);
+  const rows = permRows(hh).filter(([k]) => hh[k] === false);
   if (!rows.length) return "";
   return (
     '<section class="rhealth list"><div class="rh-head">' +

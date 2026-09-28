@@ -294,12 +294,12 @@ const stub = () => {
     window.__cfg.health = { notif: true, exact: false, battery: false };
     render();
   });
+  const cardKinds = () => page.$$eval('.rhealth [data-act="rem-fix"]', b => b.map(x => x.dataset.v));
   ok(
     (await page.textContent(".rhealth")).includes("Permissions") &&
-      JSON.stringify(await page.$$eval('.rhealth [data-act="rem-fix"]', b => b.map(x => x.dataset.v))) ===
-        '["exact","battery"]' &&
-      (await page.isVisible('[data-act="rem-fix"][data-v="exact"]')),
-    "card lists just the denied ones: on-time alarms and battery"
+      JSON.stringify(await cardKinds()) === '["battery"]' &&
+      (await page.isVisible('[data-act="rem-fix"][data-v="battery"]')),
+    "card lists just the denied ones; unrestricted battery covers alarms & reminders"
   );
   ok(
     !(await page.textContent(".rhealth")).includes("Battery is fine") &&
@@ -308,10 +308,18 @@ const stub = () => {
   );
   await page.evaluate(() => document.querySelector(".rhealth").scrollIntoView({ block: "center" }));
   await page.screenshot({ path: OUT + "/health.png" });
-  await act("rem-fix", "exact");
   await act("rem-fix", "battery");
+  await page.evaluate(() => {
+    window.__cfg.health = { notif: true, exact: false, battery: true };
+    render();
+  });
   ok(
-    JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["exact","battery"]',
+    JSON.stringify(await cardKinds()) === '["exact"]',
+    "a phone where alarms stay off with battery allowed: then the Alarms & reminders row"
+  );
+  await act("rem-fix", "exact");
+  ok(
+    JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["battery","exact"]',
     "Allow opens Android's own screen or popup"
   );
   await page.evaluate(() => {
@@ -608,7 +616,7 @@ const stub = () => {
   );
 
   // ---- 8. first open: one Permissions dialog, each permission with its own Allow, then Done
-  page = await newPage({ intro: true, health: { notif: false, exact: true, battery: false } });
+  page = await newPage({ intro: true, health: { notif: false, exact: false, battery: false } });
   await page.goto(appUrl);
   await settle();
   const ppRows = () =>
@@ -616,10 +624,9 @@ const stub = () => {
       rs.map(r => r.querySelector("div").textContent + ":" + (r.querySelector("button") ? "Allow" : "Allowed"))
     );
   ok(
-    JSON.stringify(await ppRows()) ===
-      '["Notifications:Allow","Alarms & reminders:Allowed","Unrestricted battery:Allow"]' &&
+    JSON.stringify(await ppRows()) === '["Notifications:Allow","Unrestricted battery:Allow"]' &&
       (await page.isVisible('#pop [data-act="pd-close"]')),
-    "first open: the three permissions, Allow only on the denied ones, and Done"
+    "first open: notifications and unrestricted battery (which covers alarms & reminders), each with Allow, and Done"
   );
   ok(
     (await calls("askNotif")).length === 0 && (await calls("openSetting")).length === 0,
@@ -629,13 +636,12 @@ const stub = () => {
   await act("rem-fix", "battery");
   ok(JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["battery"]', "Allow opens just that one");
   await page.evaluate(() => {
-    window.__cfg.health.battery = true;
+    Object.assign(window.__cfg.health, { battery: true, exact: true }); // Android: allowlisted → exact alarms allowed
     window.tallyPerms();
   });
   await settle();
   ok(
-    JSON.stringify(await ppRows()) ===
-      '["Notifications:Allow","Alarms & reminders:Allowed","Unrestricted battery:Allowed"]' &&
+    JSON.stringify(await ppRows()) === '["Notifications:Allow","Unrestricted battery:Allowed"]' &&
       (await calls("openSetting")).length === 1,
     "allowed: its row turns to Allowed at once, the dialog stays, nothing else opens"
   );
@@ -646,7 +652,7 @@ const stub = () => {
   ok(!(await page.evaluate(() => $("#pop").innerHTML)), "only once per install");
   // Settings: what's still denied waits there
   await page.evaluate(() => {
-    window.__cfg.health.battery = true; // the stub forgets on reload; the phone wouldn't
+    Object.assign(window.__cfg.health, { battery: true, exact: true }); // the stub forgets on reload; the phone wouldn't
     V.screen = "settings";
     render();
   });

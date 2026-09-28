@@ -137,9 +137,12 @@ function askNotify() {
 /* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind, name, why] */
 const PERM_ROWS = [
   ["notif", "Notifications", "Reminders can't show without them"],
+  ["battery", "Unrestricted battery", "So reminders and the backup come on time"],
   ["exact", "Alarms &amp; reminders", "So reminders come on time"],
-  ["battery", "Unrestricted battery", "So the phone doesn't pause Tally"],
 ];
+/* the rows to offer: Android counts unrestricted battery as allowing alarms & reminders, so that row only shows on a
+   phone where it's still off although battery is already allowed */
+const permRows = h => PERM_ROWS.filter(([k]) => k !== "exact" || (h.battery !== false && h.exact === false));
 /* one permission: Allow (the shell opens Android's prompt, popup or switch screen), or a quiet "Allowed" */
 function permRow([k, t, why], ok) {
   return (
@@ -162,11 +165,13 @@ function permsIntro() {
     first = !!(window.Android && Android.permsIntro && Android.permsIntro());
   } catch (e) {}
   const h = first && reminderHealth();
-  if (!h || PERM_ROWS.every(([k]) => h[k] !== false)) return;
+  if (!h || permRows(h).every(([k]) => h[k] !== false)) return;
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Permissions">' +
     '<h3 class="dlg-t">Permissions</h3><p class="dlg-x">For reminders and the daily backup.</p><div id="pp-rows">' +
-    PERM_ROWS.map(r => permRow(r, h[r[0]] !== false)).join("") +
+    permRows(h)
+      .map(r => permRow(r, h[r[0]] !== false))
+      .join("") +
     '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">Done</button></div></div></div>';
 }
 /* window.tallyPerms / resume: a permission may have changed; the open dialog's rows and Settings' card follow at once
@@ -174,7 +179,10 @@ function permsIntro() {
 function onPerms() {
   const rows = $("#pp-rows"),
     h = rows && reminderHealth();
-  if (h) rows.innerHTML = PERM_ROWS.map(r => permRow(r, h[r[0]] !== false)).join("");
+  if (h)
+    rows.innerHTML = permRows(h)
+      .map(r => permRow(r, h[r[0]] !== false))
+      .join("");
   else if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render();
 }
 /* +1 day / +1 week tapped on a notification while the app was closed */

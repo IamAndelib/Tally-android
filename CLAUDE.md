@@ -58,22 +58,24 @@ Built originally in a claude.ai chat; continue development from here.
       refused for good); "exact" → `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`; "battery" → Android's
       `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` popup (permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`,
       `@SuppressLint("BatteryLife")` on purpose — note for a Play listing). Settings → Reminders shows a "Permissions"
-      card (`healthCard()`, `.rhealth`) with one row per denied item (Notifications / Alarms & reminders /
-      Unrestricted battery), each with an "Allow" button (`rem-fix` → `fixReminders()` → `openSetting`), only while a reminder is
-      on; a row goes as soon as it's allowed (`onPerms()` on `tallyPerms` and on resume re-renders Settings).
+      card (`healthCard()`, `.rhealth`) with one row per denied item of `permRows(h)`, each with an "Allow" button
+      (`rem-fix` → `fixReminders()` → `openSetting`), only while a reminder is on; a row goes as soon as it's allowed
+      (`onPerms()` on `tallyPerms` and on resume re-renders Settings).
+    - **Two permissions, not three:** `permRows(h)` offers Notifications and Unrestricted battery. Android counts an
+      app with unrestricted battery (power allowlist) as allowed exact alarms (Samsung even flips the "Alarms &
+      reminders" switch), so battery covers both; the `exact` row of `PERM_ROWS` shows only as a fallback, on a phone
+      where alarms are still off although battery is allowed.
     - **First-open Permissions dialog** (`permsIntro()` in `js/bridge.js`, from `js/main.js` unless the unreadable-data
       dialog shows): only when `Android.permsIntro()` says it's the first time on this install (shell prefs
       `tally_perms`/`intro`, marked on the first call, so never from the page's data) and something is denied. A
-      Material dialog in `#pop`: "Permissions", the three `PERM_ROWS` (Notifications / Alarms & reminders / Unrestricted
-      battery, shared with the Settings card through `permRow()`), each with its own tonal Allow (`rem-fix`) or a quiet
-      "✓ Allowed", and Done (`pd-close`). Nothing follows on its own: each Allow opens exactly one Android prompt, popup
-      or screen. `onPerms()` (`tallyPerms`, resume) patches `#pp-rows` in place while it's open. Android counts an app
-      with unrestricted battery (power allowlist) as allowed exact alarms, so allowing battery also turns the Alarms row.
-      Whatever stays denied waits in the Settings card. The page asks nothing else at start; `askNotify()` (a reminder
-      switched on, a loan due date) calls `Android.requestNotifications()`, which prompts only while `canPromptNotif()`
-      and not granted, else just answers `tallyPerms`. The page keeps no permission flags (`migrate()` drops the old
-      `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`). (An automatic native chain of prompts was tried and
-      dropped: Android's screens and popups piled up on each other.)
+      Material dialog in `#pop`: "Permissions", the `permRows(h)` (drawn by `permRow()`, shared with the Settings card),
+      each with its own tonal Allow (`rem-fix`) or a quiet "✓ Allowed", and Done (`pd-close`). Nothing follows on its
+      own: each Allow opens exactly one Android prompt or popup. `onPerms()` (`tallyPerms`, resume) patches `#pp-rows`
+      in place while it's open. Whatever stays denied waits in the Settings card. The page asks nothing else at start;
+      `askNotify()` (a reminder switched on, a loan due date) calls `Android.requestNotifications()`, which prompts
+      only while `canPromptNotif()` and not granted, else just answers `tallyPerms`. The page keeps no permission flags
+      (`migrate()` drops the old `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`). (An automatic native chain of
+      prompts was tried and dropped: Android's screens and popups piled up on each other.)
     - Battery: `MainActivity.onPause` runs `window.tallyPause` (`flushMirror()`: hands over only data waiting in the
       mirror debounce) and then `web.onPause(); web.pauseTimers()` (unless resumed meanwhile); `onResume` resumes them
       first. `BackupReceiver.setData` skips identical data (no write, not marked dirty). The widget has
