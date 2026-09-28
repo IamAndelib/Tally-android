@@ -350,12 +350,13 @@ Built originally in a claude.ai chat; continue development from here.
     `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
     it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-    "Delete all data" (`wipeAll()`): without any backup (`hasBackup()`: the auto backup has written, `backupStatus().last`,
-    or a backup was saved here, `settings.savedBackup` ms, set by `onFileSaved` after `saveBackup()`), first "No backup
-    yet · Save a backup of your data before deleting it?" OK / No (`askDialog`'s `no` option: the cancel button runs
-    `ASK_ALT`; Back / outside just close): OK → `saveBackup(wipeConfirm)` (Android's save dialog, then the next step via
-    `AFTER_SAVE`), No → `wipeConfirm()`; with a backup, straight to `wipeConfirm()`, "Delete all data?" Yes / No. It
-    keeps the preferences (currency, theme, reminders, haptics, strength,
+    "Delete all data" (`wipeAll()`) always offers a backup first (a failsafe: an existing one may miss the latest
+    entries), OK / No (`askDialog`'s `no` option: the cancel button runs `ASK_ALT`; Back / outside just close). Wording:
+    "No backup yet" when `hasBackup()` is false (the auto backup never wrote, `backupStatus().last`, and none was saved
+    here, `settings.savedBackup` ms, set by `onFileSaved` after `saveBackup()`), else "Back up first? Your last backup
+    may not have your latest entries". OK → with auto backup on and its folder usable `backupNow()`, else
+    `saveBackup(wipeConfirm)` (Android's save dialog, then the next step via `AFTER_SAVE`); No → straight on. Then
+    `wipeConfirm()`: "Delete all data?" Yes / No. It keeps the preferences (currency, theme, reminders, haptics, strength,
     donut middle) and is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
     small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,

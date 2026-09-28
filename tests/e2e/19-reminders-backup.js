@@ -567,11 +567,18 @@ const stub = () => {
   );
   // Delete all data, then restore from the auto backup file
   await page.evaluate(() => (window.__cfg.status = { folder: "Documents/Tally", usable: true, last: Date.now() }));
+  await page.evaluate(() => (window.__calls = []));
   await act("wipe");
   await settle();
   ok(
-    (await page.textContent("#pop")).includes("Delete all data?"),
-    "an auto backup exists: straight to the final Yes / No"
+    (await page.textContent("#pop")).includes("may not have your latest entries"),
+    "a backup exists: still offered first, since it may miss the latest entries"
+  );
+  await act("ask-ok"); // OK: auto backup is on, so it backs up into its folder now
+  await settle();
+  ok(
+    (await calls("now")).length === 1 && (await page.textContent("#pop")).includes("Delete all data?"),
+    "OK with auto backup on: Back up now, then the final Yes / No"
   );
   await act("ask-ok");
   await settle();
@@ -770,7 +777,13 @@ const stub = () => {
   ok((await state()).accounts.length === 2, "No: nothing deleted");
   await act("wipe");
   await settle();
-  ok((await page.textContent("#pop")).includes("Delete all data?"), "a backup was saved here: straight to Yes / No");
+  ok(
+    (await page.textContent("#pop")).includes("Back up first?"),
+    "a backup was saved here: the backup offer still comes first"
+  );
+  await act("ask-alt"); // No
+  await settle();
+  ok((await page.textContent("#pop")).includes("Delete all data?"), "No: then the final Yes / No");
   await act("pd-close");
 
   // old page-side flags from an earlier version are dropped

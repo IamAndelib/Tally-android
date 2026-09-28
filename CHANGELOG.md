@@ -11,8 +11,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Delete all data first offers to save a backup when there isn't one yet (OK / No), then asks once more to be sure
-  (Yes / No).
+- Delete all data first offers to back up (OK / No), even when a backup exists, since it may not have your latest
+  entries; then it asks once more to be sure (Yes / No).
 
 ## [1.2.3] — 2026-09-28
 

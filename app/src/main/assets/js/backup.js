@@ -129,13 +129,25 @@ function saveBackup(then) {
   AFTER_SAVE = then || null;
   saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
 }
-/* Delete all data: without any backup, first offers one (OK saves a file, No skips it); then always a final Yes / No */
+/* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (OK / No).
+   OK backs up now into the auto backup's folder when that's set up, else saves a file; then the final Yes / No. */
 function wipeAll() {
-  if (hasBackup()) return wipeConfirm();
-  askDialog("No backup yet", "Save a backup of your data before deleting it?", "OK", () => saveBackup(wipeConfirm), {
-    cancel: "No",
-    no: wipeConfirm,
-  });
+  const had = hasBackup(),
+    bs = backupStatus(),
+    auto = S.settings.backup.on && bs && bs.usable;
+  askDialog(
+    had ? "Back up first?" : "No backup yet",
+    had
+      ? "Your last backup may not have your latest entries. Save them before deleting everything?"
+      : "Save a backup of your data before deleting it?",
+    "OK",
+    () => {
+      if (!auto) return saveBackup(wipeConfirm);
+      backupNow();
+      wipeConfirm();
+    },
+    { cancel: "No", no: wipeConfirm }
+  );
 }
 /* the final Yes / No; keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto
    backup (which never overwrites its file with an empty notebook) */
