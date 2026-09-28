@@ -83,7 +83,7 @@ function homeView() {
     topIcons() +
     "</header>";
 
-  if (S.settings.lastCheck !== today()) h += checkCard(b, cur);
+  if (checkDue()) h += checkCard(b, cur);
   else
     h +=
       '<div class="strip">' +
@@ -154,6 +154,14 @@ function homeView() {
     emblem(LOAN_EMB.lend) +
     "Lend</button></div>";
   return h;
+}
+/* the Home balance card: from the Balance check time on, while that reminder is on, until confirmed today */
+function checkDue() {
+  const r = S.settings.remind;
+  if (!r.check || S.settings.lastCheck === today()) return false;
+  const d = new Date(),
+    [h, m] = r.checkTime.split(":").map(Number);
+  return d.getHours() * 60 + d.getMinutes() >= h * 60 + m;
 }
 function checkCard(b, cur) {
   const hr = new Date().getHours();

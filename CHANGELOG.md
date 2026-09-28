@@ -5,6 +5,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The balance card on Home ("Do these still match?") appears from your Balance check time, and not at all while that
+  reminder is off (it used to show from the first open of the day).
+
 ## [1.2.4] — 2026-09-28
 
 ### Added

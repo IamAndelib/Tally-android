@@ -296,7 +296,9 @@ Built originally in a claude.ai chat; continue development from here.
     (after any save/delete, same scroll) instead of dropping to Home.
   - Home: period (`V.period` day/range/month, default Today; ‹ › and swipe on the ring; tapping the label opens the
     Day | Range | Month dialog (its **Today** always means day = today, from any tab): calendar, calendar where you drag or tap start→end (`V.rs`/`V.re`), month grid),
-    account balance strip, once-a-day morning check card (`settings.lastCheck`), category ring (tapping the donut opens `summarySheet()` in the donut's currency: Days = 7 vertical bars, Weeks = 8 horizontal
+    account balance strip, or instead the daily balance card (`checkDue()`: only while the Balance check reminder is
+    on, from its time `remind.checkTime`, until confirmed today, `settings.lastCheck`; `onAppResume` re-renders Home
+    when that changes), category ring (tapping the donut opens `summarySheet()` in the donut's currency: Days = 7 vertical bars, Weeks = 8 horizontal
     bar rows ("3–9 Aug"; no cramped x-axis), Months = a category donut of one month (‹ › one month) with a legend list of every
     category and %; tap a bar/row for its total, comparison with the one before (daily average for an unfinished week/month),
     top categories and "Open … on Home"; swipe the chart to move the window; state `SM`, patched by `smRender()`), balance bar (opens the

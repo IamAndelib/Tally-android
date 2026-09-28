@@ -156,8 +156,39 @@ const stub = () => {
     "balance check at 08:00 with the balances " + JSON.stringify(rem.check)
   );
   ok(rem.duesAt.h === 9 && rem.duesAt.m === 0 && rem.dues.length === 1 && rem.dues[0].id === "L1", "due days at 09:00");
+  // the Home balance card follows the Balance check setting: from its time on, never while it's off
+  const card = () => page.evaluate(() => !!$("#app .check"));
+  await page.evaluate(() => {
+    S.settings.remind.checkTime = "00:00"; // due at any hour the tests run
+    render();
+  });
+  ok(await card(), "check time reached (00:00): the balance card is on Home");
+  await page.evaluate(() => {
+    S.settings.remind.checkTime = "23:59";
+    render();
+  });
+  ok(
+    !(await card()) || new Date().getHours() * 60 + new Date().getMinutes() >= 23 * 60 + 59,
+    "before the check time: no card, the account strip instead"
+  );
+  await page.evaluate(() => {
+    S.settings.remind.checkTime = "00:00";
+    S.settings.remind.check = false;
+    render();
+  });
+  ok(!(await card()), "Balance check off: no card");
+  await page.evaluate(() => {
+    S.settings.remind.check = true;
+    window.tallyResume(); // coming back to the app: Home follows without another tap
+  });
+  await settle();
+  ok(await card(), "on return, once due, the card appears");
   await act("check-ok");
   await settle();
+  await page.evaluate(() => {
+    S.settings.remind.checkTime = "08:00"; // back to the default for the time picker checks below
+    save();
+  });
   rem = await page.evaluate(() => window.__rem);
   ok(rem.check.checked === today(), "confirming the balances tells the shell (no check notification today)");
   await seed({ v: 6, settings: { cur: "CAD" }, accounts: [], txns: [], loans: [], assets: [] });
