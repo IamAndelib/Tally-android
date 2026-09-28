@@ -32,7 +32,9 @@ const stub = () => {
       return null;
     },
     setBars() {},
-    saveFile() {},
+    saveFile(name, mime) {
+      rec("save", /json/.test(mime) ? "json" : mime);
+    },
     haptic(kind) {
       window.__haptics.push(kind);
     },
@@ -455,6 +457,12 @@ const stub = () => {
   });
   await act("wipe");
   await settle();
+  ok(
+    (await page.textContent("#pop")).includes("No backup yet"),
+    "the auto backup never wrote: a backup is offered first"
+  );
+  await act("ask-alt"); // No
+  await settle();
   await act("ask-ok");
   await settle();
   S = await state();
@@ -558,8 +566,42 @@ const stub = () => {
     "the intro says there's a daily copy"
   );
   // Delete all data, then restore from the auto backup file
+  await page.evaluate(() => (window.__cfg.status = { folder: "Documents/Tally", usable: true, last: Date.now() }));
+  // Back up now fails (e.g. the folder is gone): a file is offered instead before the final question
+  await page.evaluate(() => {
+    window.__cfg.nowErr = "The backup folder can't be found.";
+    window.__calls = [];
+  });
   await act("wipe");
   await settle();
+  await act("ask-ok");
+  await settle();
+  ok(
+    (await calls("now")).length === 1 &&
+      (await calls("save")).length === 1 &&
+      !(await page.evaluate(() => $("#pop").innerHTML)),
+    "a failed Back up now falls back to saving a file (Android's save dialog)"
+  );
+  await page.evaluate(() => window.tallySaved(true));
+  await settle();
+  ok((await page.textContent("#pop")).includes("Delete all data?"), "saved: then the final Yes / No");
+  await act("pd-close");
+  await page.evaluate(() => {
+    window.__cfg.nowErr = "";
+    window.__calls = [];
+  });
+  await act("wipe");
+  await settle();
+  ok(
+    (await page.textContent("#pop")).includes("may not have your latest entries"),
+    "a backup exists: still offered first, since it may miss the latest entries"
+  );
+  await act("ask-ok"); // OK: auto backup is on, so it backs up into its folder now
+  await settle();
+  ok(
+    (await calls("now")).length === 1 && (await page.textContent("#pop")).includes("Delete all data?"),
+    "OK with auto backup on: Back up now, then the final Yes / No"
+  );
   await act("ask-ok");
   await settle();
   await act("restore");
@@ -694,6 +736,78 @@ const stub = () => {
   page = await newPage({ health: { notif: false, exact: false, battery: false } });
   await page.goto(appUrl);
   await settle();
+  // ---- 9. no backup yet: Delete all data offers one first; auto backup is suggested once a week
+  page = await newPage();
+  await page.goto(appUrl);
+  const three = Object.assign(base(), {
+    txns: [
+      draw,
+      ...[1, 2].map(i => ({
+        id: "e" + i,
+        ts: i,
+        date: today(),
+        type: "expense",
+        amount: 5,
+        account: "c",
+        cat: "food",
+      })),
+    ],
+  });
+  await seed(three);
+  ok(
+    (await page.textContent("#pop")).includes("Keep your data safe?") &&
+      (await page.evaluate(() => S.settings.backupAsk)) === today(),
+    "3 entries and auto backup off: the daily backup is suggested"
+  );
+  await act("ask-ok"); // Turn on
+  ok((await calls("pick")).length === 1, "Turn on opens the folder picker");
+  await page.reload();
+  await settle();
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "not again the same week");
+  await page.evaluate(() => {
+    S.settings.backupAsk = addDays(today(), -8);
+    save();
+    window.tallyResume();
+  });
+  ok((await page.textContent("#pop")).includes("Keep your data safe?"), "a week later: again (on return, too)");
+  await act("pd-close");
+  await seed(Object.assign(three, { settings: { cur: "CAD", backup: { on: true, time: "23:00" } } }));
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "auto backup on: never suggested");
+  await seed(base());
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "fewer than 3 entries: not yet");
+  // Delete all data with no backup: OK saves one first, then the final Yes / No
+  await act("go", "settings");
+  await settle();
+  await act("wipe");
+  await settle();
+  ok(
+    (await page.textContent("#pop")).includes("Save a backup of your data before deleting it?"),
+    "no backup: the first question"
+  );
+  await act("ask-ok"); // OK
+  await settle();
+  ok((await calls("save")).length === 1 && (await calls("save"))[0][1] === "json", "OK saves a backup file");
+  await page.evaluate(() => window.tallySaved(true));
+  await settle();
+  ok(
+    (await page.textContent("#pop")).includes("Delete all data?") &&
+      (await page.evaluate(() => S.settings.savedBackup > 0)),
+    "saved: remembered, then the final Yes / No"
+  );
+  await act("pd-close"); // No
+  await settle();
+  ok((await state()).accounts.length === 2, "No: nothing deleted");
+  await act("wipe");
+  await settle();
+  ok(
+    (await page.textContent("#pop")).includes("Back up first?"),
+    "a backup was saved here: the backup offer still comes first"
+  );
+  await act("ask-alt"); // No
+  await settle();
+  ok((await page.textContent("#pop")).includes("Delete all data?"), "No: then the final Yes / No");
+  await act("pd-close");
+
   // old page-side flags from an earlier version are dropped
   await seed(
     Object.assign(base(), {

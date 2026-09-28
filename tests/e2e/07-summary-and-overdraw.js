@@ -290,8 +290,9 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="close"]');
   await tap('[data-act="go"][data-v="settings"]');
   await tap('[data-act="wipe"]');
-  await tap('#pop [data-act="pd-close"]');
-  ok((await state()).accounts.length === 3, "wipe: Cancel keeps data");
+  await tap('#pop [data-act="ask-alt"]'); // "No backup yet" → No (don't save one)
+  await tap('#pop [data-act="pd-close"]'); // "Delete all data?" → No
+  ok((await state()).accounts.length === 3, "wipe: No keeps data");
   const backup = JSON.stringify(
     Object.assign({}, seed, { accounts: seed.accounts.slice(0, 2), txns: seed.txns.filter(t => t.account !== "c") })
   );

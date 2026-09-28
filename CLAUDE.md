@@ -117,6 +117,9 @@ Built originally in a claude.ai chat; continue development from here.
       folder is remembered while auto backup is off: switching it back on (`toggleAutoBackup`) reuses it when
       `usable`; only the first time (or without access) does it open the folder picker —
       "Change" picks another. The file is exactly the manual backup format.
+    - Auto-backup suggestion (`backupNudge()`, from start when no Permissions dialog showed, and on resume): while
+      auto backup is off and there are 3+ entries, at most once a week (`settings.backupAsk`, YYYY-MM-DD), never over
+      a dialog or sheet: "Keep your data safe?" Turn on (`toggleAutoBackup`) / Not now. Android only (`canBackup()`).
     - Restore on Android never goes through WebView's file input: `restoreStart()` (`data-act="restore"`) → with
       auto backup on, `Android.readAutoBackup()` (`BackupReceiver.readAuto`, reads the file from the folder) → one
       dialog "Restore Tally backup.json?" with counts + "saved …" and alt "Choose another file"; otherwise (or no
@@ -169,7 +172,7 @@ Built originally in a claude.ai chat; continue development from here.
     img-src 'self'` — no inline scripts, no `on…=` attributes, no network. Onest is bundled in `fonts/` (OFL,
     latin + latin-ext + cyrillic, variable weight); never go back to Google Fonts.
   - The click dispatcher (`js/events.js`) maps `data-act` to named functions; keep logic out of it.
-  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
+  - State `S = {v:6, settings:{cur, theme, haptics, hapticLevel, donut, lastAcc, lastAccIn, lastCheck, remind:{daily,time,dues,dueTime,check,checkTime}, backup:{on,time}, savedBackup, backupAsk, dragTip, customCols, hiddenCols, hiddenTypes}, accounts, types, cats, txns, loans, assets}`
     in localStorage key `tally:v1`. `loadState()` runs from `js/main.js` (after every constant — `migrate()` needs
     `PALETTE`, which once caused a start-up ReferenceError that showed the welcome screen over real data). If the saved
     text can't be read, it is copied to `tally:v1:unreadable` (not duplicated on later starts) and a dialog offers it as a
@@ -347,7 +350,13 @@ Built originally in a claude.ai chat; continue development from here.
     `ringSettling` blocks a new drag) before `commit()` redraws. Edge auto-scroll only runs for the ring while part of
     it is off-screen that way. `setCatOrder(kind, ids)` writes an order (shared with the money-in grid).
     Money-in categories use a plain grid. Built-in or used categories are hidden, not deleted.
-    "Delete all data" (`wipeAll()`) keeps the preferences (currency, theme, reminders, haptics, strength,
+    "Delete all data" (`wipeAll()`) always offers a backup first (a failsafe: an existing one may miss the latest
+    entries), OK / No (`askDialog`'s `no` option: the cancel button runs `ASK_ALT`; Back / outside just close). Wording:
+    "No backup yet" when `hasBackup()` is false (the auto backup never wrote, `backupStatus().last`, and none was saved
+    here, `settings.savedBackup` ms, set by `onFileSaved` after `saveBackup()`), else "Back up first? Your last backup
+    may not have your latest entries". OK → with auto backup on and its folder usable `backupNow()` (it returns the
+    problem; a failed one falls back to a file), else `saveBackup(wipeConfirm)` (Android's save dialog, then the next step via `AFTER_SAVE`); No → straight on. Then
+    `wipeConfirm()`: "Delete all data?" Yes / No. It keeps the preferences (currency, theme, reminders, haptics, strength,
     donut middle) and is disabled (`button:disabled`, no special-casing needed in the click dispatcher) whenever
     accounts/txns/loans/assets are all already empty — fresh install or right after wiping. Settings ends with a
     small "About" footer: app name, `Android.getVersion()`'s version, and two plain `<a href>` links (GitHub profile,
@@ -404,8 +413,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.3) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10203) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.4) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10204) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the

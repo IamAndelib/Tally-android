@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.4] — 2026-09-28
+
+### Added
+
+- Once you have a few entries and the daily backup is still off, Tally suggests turning it on (at most once a week).
+
+### Changed
+
+- Delete all data first offers to back up (OK / No), even when a backup exists, since it may not have your latest
+  entries; then it asks once more to be sure (Yes / No). If backing up into the daily backup's folder fails, it offers
+  to save a backup file instead.
+
 ## [1.2.3] — 2026-09-28
 
 ### Fixed
@@ -179,6 +191,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.4
 [1.2.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.3
 [1.2.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.1

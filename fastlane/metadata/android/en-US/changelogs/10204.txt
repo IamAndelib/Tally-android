@@ -1,0 +1,2 @@
+- Once you have a few entries, Tally suggests turning on the daily backup (at most once a week).
+- Delete all data first offers to back up your latest entries, then asks once more to be sure.

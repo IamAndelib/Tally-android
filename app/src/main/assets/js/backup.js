@@ -111,13 +111,48 @@ function onRestorePicked(text, err) {
   if (err) snack(err);
   else if (text != null) restoreText(text);
 }
-/* keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto backup (which never
-   overwrites its file with an empty notebook) */
+/* whether a backup of this notebook exists: the daily auto backup has written its file, or a backup was saved here */
+function hasBackup() {
+  const bs = backupStatus();
+  return !!((bs && bs.last > 0) || S.settings.savedBackup > 0);
+}
+/* Settings → Save backup: the whole notebook as a JSON file; `then` runs once Android's save dialog has answered */
+let AFTER_SAVE = null,
+  SAVING_BACKUP = false;
+function saveBackup(then) {
+  const bridged = !!(window.Android && Android.saveFile); // else there's no save dialog to wait for
+  SAVING_BACKUP = bridged;
+  AFTER_SAVE = bridged ? then || null : null;
+  saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+  if (!bridged && then) then();
+}
+/* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (OK / No).
+   OK backs up now into the auto backup's folder when that's set up, else (or if that fails) saves a file; then the
+   final Yes / No. */
 function wipeAll() {
+  const had = hasBackup(),
+    bs = backupStatus(),
+    auto = S.settings.backup.on && bs && bs.usable;
+  askDialog(
+    had ? "Back up first?" : "No backup yet",
+    had
+      ? "Your last backup may not have your latest entries. Save them before deleting everything?"
+      : "Save a backup of your data before deleting it?",
+    "OK",
+    () => {
+      if (!auto || backupNow()) return saveBackup(wipeConfirm); // a failed Back up now: a file instead
+      wipeConfirm();
+    },
+    { cancel: "No", no: wipeConfirm }
+  );
+}
+/* the final Yes / No; keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto
+   backup (which never overwrites its file with an empty notebook) */
+function wipeConfirm() {
   askDialog(
     "Delete all data?",
     "Every account and entry on this phone. This can't be undone.",
-    "Delete all",
+    "Yes",
     () => {
       const keep = {
         cur: S.settings.cur,
@@ -133,6 +168,6 @@ function wipeAll() {
       commit();
       snack("All data deleted");
     },
-    { danger: true }
+    { danger: true, cancel: "No" }
   );
 }
