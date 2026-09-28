@@ -60,8 +60,11 @@ Built originally in a claude.ai chat; continue development from here.
       indexed size was stale, and WebView's `File` then refused to read it on Restore ("Couldn't read that file",
       though its JSON was fine). `put()` opens `"rw"`, writes, `truncate(len)`, syncs (a bare `"w"` doesn't truncate
       on some Android versions), falls back to `"wt"`, and verifies byte-for-byte. Failures → `backup` channel
-      notification → `open=backup` (Settings, `#bk`). `backupStatus()` → `{folder, last, error}`; `backupNow()`
-      runs on the bridge thread. The file is exactly the manual backup format.
+      notification → `open=backup` (Settings, `#bk`). `backupStatus()` → `{folder, usable, last, error}` (`usable`:
+      the persisted write permission on the folder is still held); `backupNow()` runs on the bridge thread. The
+      folder is remembered while auto backup is off: switching it back on (`toggleAutoBackup`) reuses it when
+      `usable` and backs up at once; only the first time (or without access) does it open the folder picker —
+      "Change" picks another. The file is exactly the manual backup format.
     - Restore on Android never goes through WebView's file input: `restoreStart()` (`data-act="restore"`) → with
       auto backup on, `Android.readAutoBackup()` (`BackupReceiver.readAuto`, reads the file from the folder) → one
       dialog "Restore Tally backup.json?" with counts + "saved …" and alt "Choose another file"; otherwise (or no

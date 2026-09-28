@@ -187,7 +187,9 @@ function backupStatus() {
     return {};
   }
 }
-/* the Auto backup switch: on asks for a folder first (the answer comes back in onFolderPicked) */
+/* The Auto backup switch. Off keeps the folder; on reuses it (and backs up at once, so the file catches up) while
+   Tally can still write there. Only the first time, or once that permission is gone, asks for a folder (the answer
+   comes back in onFolderPicked); "Change" picks another one any time. */
 function toggleAutoBackup() {
   if (S.settings.backup.on) {
     S.settings.backup.on = false;
@@ -196,7 +198,12 @@ function toggleAutoBackup() {
     render();
     return;
   }
-  pickBackupFolder();
+  const bs = backupStatus();
+  if (!bs || !bs.folder || !bs.usable) return pickBackupFolder();
+  S.settings.backup.on = true;
+  save();
+  syncBackup();
+  backupNow();
 }
 function pickBackupFolder() {
   /* the first backup is written as soon as the folder is picked, so the shell needs the data now */

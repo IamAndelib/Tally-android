@@ -420,6 +420,36 @@ const stub = () => {
   });
   await settle(1200);
   ok((await calls("data")).length === 0, "off: nothing is mirrored");
+  // back on: the remembered folder is reused (no new pick) and the file catches up at once
+  await page.evaluate(() => {
+    window.__cfg.status = { folder: "Documents/Tally", usable: true, last: Date.now(), error: "" };
+    window.__cfg.nowErr = "";
+    window.__calls = [];
+  });
+  await act("bk-auto");
+  await settle();
+  bk = await page.evaluate(() => window.__backup);
+  ok(
+    (await calls("pick")).length === 0 &&
+      (await calls("now")).length === 1 &&
+      (await calls("data")).length === 1 &&
+      bk.on &&
+      (await state()).settings.backup.on,
+    "switched back on: same folder, no picker, backed up right away"
+  );
+  ok((await page.textContent("#bk")).includes("Documents/Tally"), "and it shows that folder");
+  // the folder's permission is gone (e.g. revoked): then it asks again
+  await act("bk-auto");
+  await page.evaluate(() => {
+    window.__cfg.status = { folder: "Documents/Tally", usable: false, last: 0, error: "" };
+    window.__calls = [];
+  });
+  await act("bk-auto");
+  await settle();
+  ok(
+    (await calls("pick")).length === 1 && !(await state()).settings.backup.on,
+    "no access to the old folder any more: asks for one"
+  );
   await page.evaluate(() => {
     delete window.Android.pickBackupFolder;
     render();

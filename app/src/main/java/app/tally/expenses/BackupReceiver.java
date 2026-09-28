@@ -7,6 +7,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.UriPermission;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
@@ -98,12 +99,20 @@ public class BackupReceiver extends BroadcastReceiver {
         schedule(ctx);
     }
 
-    /** {folder, last (ms, 0 = never), error} for Settings. */
+    /**
+     * {folder, usable, last (ms, 0 = never), error} for Settings. The folder is remembered while auto backup is off;
+     * usable = Tally still holds its write permission, so switching auto backup back on needs no new pick.
+     */
     static String status(Context ctx) {
         SharedPreferences p = prefs(ctx);
+        String tree = p.getString("tree", null);
+        boolean usable = false;
+        for (UriPermission u : ctx.getContentResolver().getPersistedUriPermissions()) {
+            if (tree != null && u.isWritePermission() && tree.equals(u.getUri().toString())) usable = true;
+        }
         try {
-            return new JSONObject().put("folder", p.getString("label", "")).put("last", p.getLong("last", 0))
-                    .put("error", p.getString("error", "")).toString();
+            return new JSONObject().put("folder", p.getString("label", "")).put("usable", usable)
+                    .put("last", p.getLong("last", 0)).put("error", p.getString("error", "")).toString();
         } catch (JSONException e) {
             return "{}";
         }
