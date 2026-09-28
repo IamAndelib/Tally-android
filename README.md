@@ -120,7 +120,10 @@ Test builds from now on install as a separate app, *Tally Dev*.
 
 Your data is stored only inside the app on your phone. Tally has no servers and sends nothing anywhere; the page even
 carries a Content-Security-Policy that blocks any network request. Uninstalling the app deletes its data, so keep a
-backup (**Settings → Backup**). If Android's own device backup is on, Android may include Tally's data in it.
+backup (**Settings → Your data**). Backup files are plain JSON, readable by anything that can open their folder. If
+Android's own device backup is on, Android may include Tally's data in it, but only end-to-end encrypted; unencrypted
+copies (such as `adb backup`) leave it out. Notifications never show amounts on a lock screen that hides sensitive
+content.
 
 | Permission | Why |
 | --- | --- |

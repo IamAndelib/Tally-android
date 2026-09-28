@@ -20,7 +20,15 @@ Built originally in a claude.ai chat; continue development from here.
 ## Architecture
 - Native shell: `app/src/main/java/app/tally/expenses/MainActivity.java` — a WebView loading
   `app/src/main/assets/index.html` via WebViewAssetLoader (https://appassets.androidplatform.net/assets/index.html).
-  - `onShowFileChooser` opens the system file picker (backup restore).
+  - Hardened WebView: only `https://appassets.androidplatform.net/…` stays in it (`shouldOverrideUrlLoading` checks scheme
+    and host; other http/https links open the browser with `CATEGORY_BROWSABLE`, every other scheme is dropped);
+    `setAllowFileAccess(false)`, `setAllowContentAccess(false)`, no geolocation, `MIXED_CONTENT_NEVER_ALLOW`. The
+    WebView never reads files itself: there is no `onShowFileChooser` any more (Restore is native). Android's own
+    backup is encrypted-only (`res/xml/backup_rules.xml` `requireFlags="clientSideEncryption"` for API 28–30,
+    `data_extraction_rules.xml` `disableIfNoEncryptionCapabilities` for 31+), excluding `tally_backup.xml` (the
+    folder grant is per phone). Notifications carry a public version without names/amounts (`publicText()`).
+    `BackupReceiver.put()` writes through `ParcelFileDescriptor.AutoCloseOutputStream` (one owner, one close — a
+    double close trips fdsan); `setData` refuses > 20 MB; `nextAt` clamps hours/minutes.
   - JS bridge `window.Android`:
     - `saveFile(name, mime, text)` saves CSV exports / JSON backups via ACTION_CREATE_DOCUMENT; result reported through `window.tallySaved(ok)`.
     - `getVersion()` returns `BuildConfig.VERSION_NAME` (`buildFeatures.buildConfig true` in `app/build.gradle`, needed for AGP 8+
@@ -346,8 +354,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.0) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10200) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.3.0) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10300) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the

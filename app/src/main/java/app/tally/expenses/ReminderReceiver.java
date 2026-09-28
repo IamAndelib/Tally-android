@@ -105,11 +105,11 @@ public class ReminderReceiver extends BroadcastReceiver {
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
     }
 
-    /** The next h:m from now (today if still ahead, else tomorrow). */
+    /** The next h:m from now (today if still ahead, else tomorrow); out-of-range values are clamped, never rolled over. */
     static long nextAt(int h, int m) {
         Calendar c = Calendar.getInstance();
-        c.set(Calendar.HOUR_OF_DAY, h);
-        c.set(Calendar.MINUTE, m);
+        c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, h)));
+        c.set(Calendar.MINUTE, Math.max(0, Math.min(59, m)));
         c.set(Calendar.SECOND, 0);
         c.set(Calendar.MILLISECOND, 0);
         if (c.getTimeInMillis() <= System.currentTimeMillis() + 1000) c.add(Calendar.DAY_OF_MONTH, 1);
@@ -126,7 +126,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         armDaily(ctx, am, cfg.optJSONObject("check"), A_CHECK, CHECK_ID, 8, false);
 
         JSONObject at = cfg.optJSONObject("duesAt");
-        int dh = at == null ? 9 : at.optInt("h", 9), dm = at == null ? 0 : at.optInt("m", 0);
+        int dh = Math.max(0, Math.min(23, at == null ? 9 : at.optInt("h", 9)));
+        int dm = Math.max(0, Math.min(59, at == null ? 0 : at.optInt("m", 0)));
         SharedPreferences p = prefs(ctx);
         try {
             JSONArray armed = new JSONArray(p.getString("armed", "[]"));
@@ -211,18 +212,30 @@ public class ReminderReceiver extends BroadcastReceiver {
     static void show(Context ctx, String channel, int nid, String title, String text, PendingIntent tap, Notification.Action[] actions) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
-        Notification.Builder b;
-        if (Build.VERSION.SDK_INT >= 26) {
-            channels(ctx);
-            b = new Notification.Builder(ctx, channel);
-        } else {
-            b = new Notification.Builder(ctx);
-        }
+        if (Build.VERSION.SDK_INT >= 26) channels(ctx);
+        Notification.Builder b = builder(ctx, channel);
         b.setSmallIcon(R.drawable.ic_launcher).setContentTitle(title).setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
-                .setAutoCancel(true).setContentIntent(tap);
+                .setAutoCancel(true).setContentIntent(tap)
+                // on a lock screen that hides sensitive content: which kind of reminder, never names or amounts
+                .setPublicVersion(builder(ctx, channel).setSmallIcon(R.drawable.ic_launcher).setContentTitle("Tally")
+                        .setContentText(publicText(channel)).build());
         if (actions != null) for (Notification.Action a : actions) b.addAction(a);
         try { nm.notify(nid, b.build()); } catch (SecurityException ignored) { } // notifications not allowed
+    }
+
+    @SuppressWarnings("deprecation")
+    private static Notification.Builder builder(Context ctx, String channel) {
+        return Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(ctx, channel) : new Notification.Builder(ctx);
+    }
+
+    private static String publicText(String channel) {
+        switch (channel) {
+            case CH_CHECK: return "Balance check";
+            case CH_DUES: return "A loan or lending is due";
+            case CH_BACKUP: return "Backup problem";
+            default: return "Nothing written today";
+        }
     }
 
     private static Notification.Action action(Context ctx, String label, PendingIntent pi) {

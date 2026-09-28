@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: cloud backup only where it is end-to-end encrypted; a direct phone-to-phone transfer is fine. The auto
+     backup's folder grant only means something on this phone, so it is left out of both. -->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <exclude domain="sharedpref" path="tally_backup.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="tally_backup.xml" />
+    </device-transfer>
+</data-extraction-rules>

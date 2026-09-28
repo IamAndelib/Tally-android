@@ -51,8 +51,11 @@ public class BackupReceiver extends BroadcastReceiver {
             try {
                 String err = run(app, false);
                 if (err != null) {
+                    // a lost folder needs a new pick; otherwise (e.g. kept in the temp file) Settings says what happened
+                    boolean folder = err.contains("folder");
                     ReminderReceiver.show(app, ReminderReceiver.CH_BACKUP, NOTE_ID, "Tally couldn't back up",
-                            err + " Tap to choose the folder again.", ReminderReceiver.openApp(app, "backup", NOTE_ID), null);
+                            err + (folder ? " Tap to choose the folder again." : " Tap to open Settings."),
+                            ReminderReceiver.openApp(app, "backup", NOTE_ID), null);
                 }
                 schedule(app);
             } finally {
@@ -75,6 +78,7 @@ public class BackupReceiver extends BroadcastReceiver {
 
     /** The page's latest data (JSON.stringify(S)): written atomically, and marked as not backed up yet. */
     static synchronized void setData(Context ctx, String json) {
+        if (json == null || json.length() > MAX) return; // never a real notebook: a backup couldn't be read back anyway
         File f = snapshot(ctx), tmp = new File(f.getPath() + ".tmp");
         try (OutputStream os = new FileOutputStream(tmp)) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
@@ -185,9 +189,11 @@ public class BackupReceiver extends BroadcastReceiver {
      */
     private static boolean put(ContentResolver cr, Uri doc, byte[] bytes) {
         boolean wrote = false;
-        try (ParcelFileDescriptor pfd = cr.openFileDescriptor(doc, "rw")) {
+        try {
+            ParcelFileDescriptor pfd = cr.openFileDescriptor(doc, "rw");
             if (pfd != null) {
-                try (FileOutputStream os = new FileOutputStream(pfd.getFileDescriptor())) {
+                // the stream owns the descriptor and closes it once (a second close would trip Android's fd checks)
+                try (FileOutputStream os = new ParcelFileDescriptor.AutoCloseOutputStream(pfd)) {
                     os.write(bytes);
                     os.getChannel().truncate(bytes.length);
                     os.getFD().sync();

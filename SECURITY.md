@@ -12,6 +12,19 @@ reproduce. Don't include a backup file with real financial data.
 You can expect a reply within a week. Fixes ship as a new release, and the reporter is credited unless they'd rather
 not be.
 
+## What the app does to protect your data
+
+- **No network:** the page's Content-Security-Policy blocks every request; nothing is ever sent anywhere.
+- **The web view is locked down:** it only loads the app's own files (https, from the app itself); web links open in
+  your browser, any other kind of link is ignored; it has no file, content or location access. Files (Restore,
+  backups, exports) are read and written by the app's native side, only where you picked.
+- **Backups:** the auto backup writes one file, only into the folder you chose, and checks it after writing. Backup
+  files are plain JSON, so keep them somewhere private. Android's own backup may include Tally's data only when it is
+  end-to-end encrypted.
+- **Restored files are checked:** everything read from a backup is validated before use (ids, currencies, colours,
+  numbers), so a crafted file can't inject code or break the app.
+- **Notifications** show no names or amounts on a lock screen that hides sensitive content.
+
 ## Supported versions
 
 Only the latest release gets fixes.

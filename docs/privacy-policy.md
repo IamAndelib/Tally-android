@@ -11,9 +11,11 @@ Tally is a personal expense tracker made by IamAndelib. This policy explains wha
   tracking, and it makes no network requests.
 - **Backups and exports** are files you choose to create. They are saved wherever you pick (for example your Downloads
   folder or a cloud drive) and are under your control. If you turn on **auto backup**, Tally writes one file,
-  "Tally backup.json", into the folder you picked, once a day, and nowhere else.
+  "Tally backup.json", into the folder you picked, once a day, and nowhere else. Backup files are plain (unencrypted)
+  JSON: anyone or any app that can open that folder can read them, so pick a folder you trust.
 - **Android backup:** if you have turned on your phone's own backup (Google backup), Android may include Tally's data
-  in it. That backup is handled by Google under your Google account settings, not by Tally.
+  in it, but only when that backup is end-to-end encrypted; an unencrypted copy (such as "adb backup") never
+  includes it. That backup is handled by Google under your Google account settings, not by Tally.
 - **Uninstalling** Tally deletes its data from your phone.
 
 **Permissions**

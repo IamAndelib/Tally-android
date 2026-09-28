@@ -5,26 +5,33 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-09-28
+
 ### Added
 
-- **Daily auto backup:** pick a folder once and Tally keeps one file there, "Tally backup.json", rewritten every day at
-  your time when something changed. It stays after an uninstall, and Settings → Restore reads it.
+- **Daily auto backup:** pick a folder once and Tally keeps one file there, "Tally backup.json", updated every day at
+  your time when something changed. It stays after an uninstall. Switching it off and on keeps the folder; "Change"
+  picks another; "Back up now" backs up at once.
+- **Restore from backup** offers the auto backup file first (with its date and counts), or any other file.
 - **Balance check reminder:** a daily notification with your balances; tapping it opens the morning check.
 - Settings shows what could keep reminders from arriving (notifications, on-time alarms, battery) with a fix for each.
-- **Restore from backup** offers the auto backup file first (with its date and counts), or any other file.
 
 ### Changed
 
 - The time picker is a scroll wheel like your phone's clock (hours : minutes, AM/PM on a 12-hour phone), with any
   minute of the day; times follow the phone's 12 / 24-hour setting.
 - Loan and lending due-day reminders come at a time you pick (09:00 until you change it).
-- With auto backup on, "Back up now" replaces "Save backup". Restoring a backup keeps this phone's auto backup on.
-- Turning auto backup off and on again keeps the folder; "Change" picks a different one. Switching it on is instant:
-  the first backup comes at the set time, and "Back up now" still backs up at once.
-- Restore reads backup files through Android itself, so a file that WebView couldn't open ("Couldn't read that
-  file") now restores. The auto backup rewrites the same file in place and checks it after every write.
 - Reminders arrive at the exact time where Android allows it, follow the local time after a time-zone change, and
   each kind has its own notification channel.
+- With auto backup on, "Back up now" replaces "Save backup".
+
+### Security
+
+- The app's web view only loads Tally's own files and has no file, content or location access; web links open in
+  the browser and any other kind of link is ignored. Files are read and written only by the app itself, where you
+  picked.
+- Android's own backup includes Tally's data only when it is end-to-end encrypted (no more plain `adb backup` copies).
+- Notifications show no names or amounts on a lock screen that hides sensitive content.
 
 ## [1.2.0] — 2026-09-27
 
@@ -134,6 +141,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.3.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.0
 [1.2.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.0
 [1.1.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.1
 [1.1.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.1.0
