@@ -278,6 +278,7 @@ function onFolderPicked(err) {
   if (err) snack(err);
   else backupOn();
 }
+/* "Back up now": writes the latest save into the auto backup's folder at once; returns the problem, "" when done */
 function backupNow() {
   mirrorNow();
   let err = "Backup isn't available here";
@@ -286,6 +287,7 @@ function backupNow() {
   } catch (e) {}
   if (V.screen === "settings") render();
   snack(err || "Backed up");
+  return err || "";
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
 function reminderHealth() {

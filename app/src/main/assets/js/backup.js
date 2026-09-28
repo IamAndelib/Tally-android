@@ -120,17 +120,15 @@ function hasBackup() {
 let AFTER_SAVE = null,
   SAVING_BACKUP = false;
 function saveBackup(then) {
-  if (!(window.Android && Android.saveFile)) {
-    saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
-    if (then) then();
-    return;
-  }
-  SAVING_BACKUP = true;
-  AFTER_SAVE = then || null;
+  const bridged = !!(window.Android && Android.saveFile); // else there's no save dialog to wait for
+  SAVING_BACKUP = bridged;
+  AFTER_SAVE = bridged ? then || null : null;
   saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+  if (!bridged && then) then();
 }
 /* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (OK / No).
-   OK backs up now into the auto backup's folder when that's set up, else saves a file; then the final Yes / No. */
+   OK backs up now into the auto backup's folder when that's set up, else (or if that fails) saves a file; then the
+   final Yes / No. */
 function wipeAll() {
   const had = hasBackup(),
     bs = backupStatus(),
@@ -142,8 +140,7 @@ function wipeAll() {
       : "Save a backup of your data before deleting it?",
     "OK",
     () => {
-      if (!auto) return saveBackup(wipeConfirm);
-      backupNow();
+      if (!auto || backupNow()) return saveBackup(wipeConfirm); // a failed Back up now: a file instead
       wipeConfirm();
     },
     { cancel: "No", no: wipeConfirm }

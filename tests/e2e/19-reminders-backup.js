@@ -567,7 +567,29 @@ const stub = () => {
   );
   // Delete all data, then restore from the auto backup file
   await page.evaluate(() => (window.__cfg.status = { folder: "Documents/Tally", usable: true, last: Date.now() }));
-  await page.evaluate(() => (window.__calls = []));
+  // Back up now fails (e.g. the folder is gone): a file is offered instead before the final question
+  await page.evaluate(() => {
+    window.__cfg.nowErr = "The backup folder can't be found.";
+    window.__calls = [];
+  });
+  await act("wipe");
+  await settle();
+  await act("ask-ok");
+  await settle();
+  ok(
+    (await calls("now")).length === 1 &&
+      (await calls("save")).length === 1 &&
+      !(await page.evaluate(() => $("#pop").innerHTML)),
+    "a failed Back up now falls back to saving a file (Android's save dialog)"
+  );
+  await page.evaluate(() => window.tallySaved(true));
+  await settle();
+  ok((await page.textContent("#pop")).includes("Delete all data?"), "saved: then the final Yes / No");
+  await act("pd-close");
+  await page.evaluate(() => {
+    window.__cfg.nowErr = "";
+    window.__calls = [];
+  });
   await act("wipe");
   await settle();
   ok(
