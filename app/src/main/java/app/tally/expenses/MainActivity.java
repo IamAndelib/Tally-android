@@ -40,6 +40,7 @@ import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -48,6 +49,7 @@ public class MainActivity extends Activity {
     private static final int PICK_FILE = 1;
     private static final int SAVE_FILE = 2;
     private static final int PICK_FOLDER = 4;
+    private static final int PICK_RESTORE = 5;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
@@ -297,6 +299,8 @@ public class MainActivity extends Activity {
             }
             pendingSave = null;
             web.evaluateJavascript("window.tallySaved&&window.tallySaved(" + ok + ")", null);
+        } else if (requestCode == PICK_RESTORE) {
+            restorePicked(resultCode == RESULT_OK && data != null ? data.getData() : null);
         } else if (requestCode == PICK_FOLDER) {
             Uri tree = resultCode == RESULT_OK && data != null ? data.getData() : null;
             if (tree == null) {
@@ -317,6 +321,35 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> folderPicked(err == null ? "" : err));
             }).start();
         }
+    }
+
+    /**
+     * Hands a picked backup file's text to the page: window.tallyRestore(text, err). Both null = cancelled. Read here,
+     * with the real bytes, rather than through WebView's own file chooser, whose File refuses a document whose size
+     * the picker's index reports wrongly (what made an auto backup "can't be opened").
+     */
+    private void restorePicked(Uri doc) {
+        if (doc == null) {
+            restoreResult(null, null);
+            return;
+        }
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            String text = null, err = null;
+            try {
+                text = new String(BackupReceiver.readDoc(app.getContentResolver(), doc, BackupReceiver.MAX), StandardCharsets.UTF_8);
+            } catch (SecurityException | IOException e) {
+                err = "Couldn't read that file";
+            }
+            final String t = text, e2 = err;
+            runOnUiThread(() -> restoreResult(t, e2));
+        }).start();
+    }
+
+    private void restoreResult(String text, String err) {
+        if (web == null || isDestroyed()) return;
+        String a = text == null ? "null" : JSONObject.quote(text), b = err == null ? "null" : JSONObject.quote(err);
+        web.evaluateJavascript("window.tallyRestore&&window.tallyRestore(" + a + "," + b + ")", null);
     }
 
     /** Tells the page how picking a backup folder went: null = cancelled, "" = backed up, else the problem. */
@@ -446,6 +479,26 @@ public class MainActivity extends Activity {
         public String backupNow() {
             String err = BackupReceiver.run(getApplicationContext(), true);
             return err == null ? "" : err;
+        }
+
+        /** Settings → Restore, from the auto backup: {text, when, folder} or {error}. On the bridge's own thread. */
+        @JavascriptInterface
+        public String readAutoBackup() {
+            return BackupReceiver.readAuto(getApplicationContext());
+        }
+
+        /** Settings → Restore, any file: Android's document picker; the text comes back through window.tallyRestore. */
+        @JavascriptInterface
+        public void pickRestoreFile() {
+            runOnUiThread(() -> {
+                // every file: a backup's type is reported differently by different apps; the page checks the content
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+                try {
+                    startActivityForResult(i, PICK_RESTORE);
+                } catch (ActivityNotFoundException e) {
+                    restoreResult(null, "No file picker on this phone");
+                }
+            });
         }
 
         /** Opens Android's folder picker for the daily backup; the answer comes back through window.tallyFolder. */

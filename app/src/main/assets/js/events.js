@@ -121,6 +121,9 @@ document.addEventListener("click", ev => {
     case "bk-now":
       backupNow();
       break;
+    case "restore":
+      restoreStart();
+      break;
     case "haptics":
       toggleHaptics();
       break;

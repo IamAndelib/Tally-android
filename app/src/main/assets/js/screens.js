@@ -708,11 +708,20 @@ function settingsView() {
         .join("") +
       "</div>";
   const noData = !S.accounts.length && !S.txns.length && !S.loans.length && !S.assets.length;
+  /* with auto backup on, Back up now replaces Save backup */
+  const autoOn = canBackup() && S.settings.backup.on;
   h +=
-    '<div class="sec">Your data</div><p class="muted small" style="margin:0 4px 12px">Everything stays on this phone. Uninstalling deletes it, so save a backup now and then.</p>' +
+    '<div class="sec">Your data</div><p class="muted small" style="margin:0 4px 12px">' +
+    (autoOn
+      ? "Everything stays on this phone, with a daily copy in your backup folder."
+      : "Everything stays on this phone. Uninstalling deletes it, so keep a backup.") +
+    "</p>" +
     autoBackupHtml() +
-    '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>' +
-    '<label class="btn tonal" style="position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label><div class="gap"></div>' +
+    (autoOn ? "" : '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>') +
+    (canRestore()
+      ? '<button class="btn tonal" data-act="restore">Restore from backup</button>'
+      : '<label class="btn tonal" style="position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label>') +
+    '<div class="gap"></div>' +
     '<button class="btn tonal" data-act="export">Export entries (CSV)</button><div class="gap"></div>' +
     '<button class="btn danger" data-act="wipe"' +
     (noData ? " disabled" : "") +

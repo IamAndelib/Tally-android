@@ -9,12 +9,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -22,19 +24,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * The daily automatic backup: one file, "Tally backup.json", in a folder the user picked once (kept after Tally is
  * uninstalled), rewritten at the chosen time whenever the data changed since. The page mirrors its data to
  * files/snapshot.json (Android.setBackupData) after every save while auto backup is on, so the alarm needs no WebView.
- * The file is exactly the manual backup, so Settings → Restore reads it. An empty state (after "Delete all data", or a
- * start that couldn't read the saved data) never overwrites it.
+ * The file is exactly the manual backup, so Settings → Restore reads it (natively: readAuto, MainActivity's picker).
+ * An empty state (after "Delete all data", or a start that couldn't read the saved data) never overwrites it.
  */
 public class BackupReceiver extends BroadcastReceiver {
     static final String A_BACKUP = "app.tally.expenses.BACKUP";
     static final String NAME = "Tally backup.json", TEMP = "Tally backup (new).json";
     private static final String PREFS = "tally_backup";
     private static final int REQ = 3, NOTE_ID = 3;
+    /** The largest backup read back (Restore, checks): far above any real one (a few hundred KB after years). */
+    static final int MAX = 20 * 1024 * 1024;
 
     @Override
     public void onReceive(Context ctx, Intent in) {
@@ -129,7 +134,7 @@ public class BackupReceiver extends BroadcastReceiver {
         if (tree == null) return "No folder is chosen.";
         String data = read(snapshot(ctx));
         if (data == null || (!force && !p.getBoolean("dirty", false))) return null;
-        if (empty(data)) return force ? "There's nothing to back up yet." : null;
+        if (!worthKeeping(data)) return force ? "There's nothing to back up yet." : null;
         String err = write(ctx, Uri.parse(tree), data.getBytes(StandardCharsets.UTF_8));
         SharedPreferences.Editor e = p.edit();
         if (err == null) e.putBoolean("dirty", false).putLong("last", System.currentTimeMillis()).remove("error");
@@ -139,33 +144,24 @@ public class BackupReceiver extends BroadcastReceiver {
     }
 
     /**
-     * Writes {@code bytes} as NAME in the folder: into a new TEMP file first, then swapped in by rename, so a failure
-     * part-way never leaves a half-written backup. Where the folder's provider can't rename, NAME is rewritten in place.
+     * Writes {@code bytes} as NAME in the folder. NAME stays one and the same document, rewritten in place: replacing
+     * it (delete + rename) left the picker's index with a stale size, and then WebView refused to read it for Restore.
+     * The data goes to TEMP first and is read back; only then is NAME rewritten and read back, and TEMP deleted. If
+     * NAME can't be written, TEMP stays as a full copy.
      */
     private static String write(Context ctx, Uri tree, byte[] bytes) {
         ContentResolver cr = ctx.getContentResolver();
         try {
             Uri dir = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
-            Uri old = find(cr, tree, NAME), stale = find(cr, tree, TEMP);
-            if (stale != null) DocumentsContract.deleteDocument(cr, stale);
-            Uri tmp = DocumentsContract.createDocument(cr, dir, "application/json", TEMP);
+            Uri tmp = find(cr, tree, TEMP);
+            if (tmp == null) tmp = DocumentsContract.createDocument(cr, dir, "application/json", TEMP);
             if (tmp == null) return "The folder can't be written to.";
-            if (!put(cr, tmp, bytes, "w")) {
-                DocumentsContract.deleteDocument(cr, tmp);
-                return "The backup couldn't be written.";
-            }
-            if (canRename(cr, tmp)) {
-                if (old != null) DocumentsContract.deleteDocument(cr, old);
-                try {
-                    DocumentsContract.renameDocument(cr, tmp, NAME);
-                } catch (Exception e) { // the data is safe in TEMP; the next run tries again
-                    return "The backup was saved as \"" + TEMP + "\".";
-                }
-                return null;
-            }
+            if (!put(cr, tmp, bytes)) return "The backup couldn't be written.";
+            Uri main = find(cr, tree, NAME);
+            if (main == null) main = DocumentsContract.createDocument(cr, dir, "application/json", NAME);
+            if (main == null || !put(cr, main, bytes)) return "The backup was saved as \"" + TEMP + "\".";
             DocumentsContract.deleteDocument(cr, tmp);
-            if (old == null) old = DocumentsContract.createDocument(cr, dir, "application/json", NAME);
-            return old != null && put(cr, old, bytes, "wt") ? null : "The backup couldn't be written.";
+            return null;
         } catch (SecurityException e) {
             return "Tally can't open the backup folder any more.";
         } catch (Exception e) { // FileNotFoundException, IllegalArgumentException: the folder or card is gone
@@ -173,13 +169,76 @@ public class BackupReceiver extends BroadcastReceiver {
         }
     }
 
-    private static boolean put(ContentResolver cr, Uri doc, byte[] bytes, String mode) {
-        try (OutputStream os = cr.openOutputStream(doc, mode)) {
-            if (os == null) return false;
-            os.write(bytes);
-            return true;
+    /**
+     * Replaces a document's content with {@code bytes} and reads it back: true only if it now holds exactly those
+     * bytes. "rw" + truncate first, since a bare "w" doesn't truncate on some Android versions (a shorter backup
+     * would keep the old tail and stop being valid JSON); "wt" where "rw" isn't offered.
+     */
+    private static boolean put(ContentResolver cr, Uri doc, byte[] bytes) {
+        boolean wrote = false;
+        try (ParcelFileDescriptor pfd = cr.openFileDescriptor(doc, "rw")) {
+            if (pfd != null) {
+                try (FileOutputStream os = new FileOutputStream(pfd.getFileDescriptor())) {
+                    os.write(bytes);
+                    os.getChannel().truncate(bytes.length);
+                    os.getFD().sync();
+                    wrote = true;
+                }
+            }
+        } catch (Exception ignored) { } // not a seekable file (a cloud or pipe provider): try "wt"
+        if (!wrote) {
+            try (OutputStream os = cr.openOutputStream(doc, "wt")) {
+                if (os == null) return false;
+                os.write(bytes);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        try {
+            return Arrays.equals(readDoc(cr, doc, bytes.length + 1), bytes);
         } catch (IOException e) {
             return false;
+        }
+    }
+
+    /** A document's bytes, reading at most {@code max} (a longer one throws). Used for Restore too. */
+    static byte[] readDoc(ContentResolver cr, Uri doc, int max) throws IOException {
+        try (InputStream in = cr.openInputStream(doc)) {
+            if (in == null) throw new IOException("no stream");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            int r;
+            while ((r = in.read(buf)) > 0) {
+                out.write(buf, 0, r);
+                if (out.size() > max) throw new IOException("too big");
+            }
+            return out.toByteArray();
+        }
+    }
+
+    /**
+     * The auto backup file's text for Settings → Restore, read straight from the picked folder:
+     * {text, when (ms, the last backup), folder} or {error}.
+     */
+    static String readAuto(Context ctx) {
+        SharedPreferences p = prefs(ctx);
+        String tree = p.getString("tree", null);
+        JSONObject o = new JSONObject();
+        try {
+            try {
+                if (tree == null) return o.put("error", "No folder is chosen.").toString();
+                Uri doc = find(ctx.getContentResolver(), Uri.parse(tree), NAME);
+                if (doc == null) return o.put("error", "There's no \"" + NAME + "\" in the backup folder.").toString();
+                byte[] b = readDoc(ctx.getContentResolver(), doc, MAX);
+                return o.put("text", new String(b, StandardCharsets.UTF_8)).put("when", p.getLong("last", 0))
+                        .put("folder", p.getString("label", "")).toString();
+            } catch (SecurityException e) {
+                return o.put("error", "Tally can't open the backup folder any more.").toString();
+            } catch (Exception e) {
+                return o.put("error", "The backup file can't be read.").toString();
+            }
+        } catch (JSONException e) {
+            return "{}";
         }
     }
 
@@ -193,12 +252,6 @@ public class BackupReceiver extends BroadcastReceiver {
             }
         }
         return null;
-    }
-
-    private static boolean canRename(ContentResolver cr, Uri doc) {
-        try (Cursor c = cr.query(doc, new String[]{DocumentsContract.Document.COLUMN_FLAGS}, null, null, null)) {
-            return c != null && c.moveToFirst() && (c.getInt(0) & DocumentsContract.Document.FLAG_SUPPORTS_RENAME) != 0;
-        }
     }
 
     /** "Documents/Tally" for phone storage, "SD card/Backups" for a card, else the folder's own name. */
@@ -220,17 +273,21 @@ public class BackupReceiver extends BroadcastReceiver {
         return "Chosen folder";
     }
 
-    /** No accounts, entries, loans or other assets: nothing worth keeping. */
-    private static boolean empty(String data) {
+    /**
+     * Whether the page's data is worth writing: a Tally backup (it parses, with accounts and entries lists) holding at
+     * least one account, entry, loan or other asset. Anything else never replaces a good backup.
+     */
+    private static boolean worthKeeping(String data) {
         try {
             JSONObject o = new JSONObject(data);
+            if (o.optJSONArray("accounts") == null || o.optJSONArray("txns") == null) return false;
             for (String k : new String[]{"accounts", "txns", "loans", "assets"}) {
                 JSONArray a = o.optJSONArray(k);
-                if (a != null && a.length() > 0) return false;
+                if (a != null && a.length() > 0) return true;
             }
-            return true;
+            return false;
         } catch (JSONException e) {
-            return true; // unreadable: never let it replace a good backup
+            return false;
         }
     }
 

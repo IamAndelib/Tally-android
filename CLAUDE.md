@@ -51,12 +51,25 @@ Built originally in a claude.ai chat; continue development from here.
       → `Android.setBackupData(JSON.stringify(S))`, written atomically to app-private `files/snapshot.json` and marked
       dirty, so the daily alarm (`setBackup({on,h,m})`) needs no WebView. `pickBackupFolder()` →
       `ACTION_OPEN_DOCUMENT_TREE` + persistable permission (the old one released) → first backup at once →
-      `window.tallyFolder(err)` (`onFolderPicked`: null = cancelled, stays off; "" = done). Each run writes
-      "Tally backup.json" via a temp "Tally backup (new).json" + delete + rename (in place with `"wt"` where the
-      provider can't rename), only when dirty (or forced: Back up now / new folder), **never with an empty state**
-      (after Delete all data or an unreadable start). Failures → `backup` channel notification → `open=backup`
-      (Settings, `#bk`). `backupStatus()` → `{folder, last, error}`; `backupNow()` runs on the bridge thread. The
-      file is exactly the manual backup, so Restore reads it.
+      `window.tallyFolder(err)` (`onFolderPicked`: null = cancelled, stays off; "" = done). Each run, only when
+      dirty (or forced: Back up now / new folder) and **never with an empty or non-backup state** (`worthKeeping`:
+      parses, has `accounts`/`txns`, holds something — after Delete all data or an unreadable start it's skipped),
+      writes the data to "Tally backup (new).json", reads it back, then rewrites **the same** "Tally backup.json"
+      document **in place** (created only the first time) and reads that back, then deletes the temp; if the main
+      write fails the temp stays as a full copy. Never delete + rename: that gave the file a new identity whose
+      indexed size was stale, and WebView's `File` then refused to read it on Restore ("Couldn't read that file",
+      though its JSON was fine). `put()` opens `"rw"`, writes, `truncate(len)`, syncs (a bare `"w"` doesn't truncate
+      on some Android versions), falls back to `"wt"`, and verifies byte-for-byte. Failures → `backup` channel
+      notification → `open=backup` (Settings, `#bk`). `backupStatus()` → `{folder, last, error}`; `backupNow()`
+      runs on the bridge thread. The file is exactly the manual backup format.
+    - Restore on Android never goes through WebView's file input: `restoreStart()` (`data-act="restore"`) → with
+      auto backup on, `Android.readAutoBackup()` (`BackupReceiver.readAuto`, reads the file from the folder) → one
+      dialog "Restore Tally backup.json?" with counts + "saved …" and alt "Choose another file"; otherwise (or no
+      file) `Android.pickRestoreFile()` → `ACTION_OPEN_DOCUMENT` (`*/*`) → the shell reads the bytes
+      (`readDoc`, ≤ 20 MB) → `window.tallyRestore(text, err)` (`onRestorePicked`). Both end in `restoreText(t,
+      auto)` (check + confirm + `migrate`); restoring keeps this phone's `backup`, `batteryOk`, `notifAsked`. The
+      `<input type="file">` (`restoreFile`) remains only without the bridge (browser). "Your data": with auto backup
+      on, Back up now replaces Save backup (hidden) and the intro says there's a daily copy.
     - `is24h()` = `DateFormat.is24HourFormat` (the phone's 12/24-hour switch): the time wheel and `timeLabel()`.
   - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
     logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`

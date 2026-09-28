@@ -61,6 +61,13 @@ const stub = () => {
     pickBackupFolder() {
       rec("pick");
     },
+    readAutoBackup() {
+      rec("readAuto");
+      return JSON.stringify(window.__cfg.auto || { error: "No folder is chosen." });
+    },
+    pickRestoreFile() {
+      rec("pickRestore");
+    },
   };
 };
 
@@ -444,6 +451,93 @@ const stub = () => {
   await settle(300);
   await act("tp-ok");
   ok((await state()).settings.remind.checkTime === "00:45", "12:45 AM saves as 00:45");
+
+  // ---- 7. Restore reads the file through the shell; with auto backup on, its file comes first
+  page = await newPage();
+  await page.goto(appUrl);
+  const full = base();
+  full.accounts[0].name = "Restored bank";
+  await seed(Object.assign(base(), { settings: { cur: "CAD", backup: { on: true, time: "23:00" } } }));
+  await page.evaluate(
+    t => (window.__cfg.auto = { text: t, when: Date.now(), folder: "Documents/Tally" }),
+    JSON.stringify(full)
+  );
+  await act("go", "settings");
+  await settle();
+  ok(
+    !(await page.$('[data-act="backup"]')) && (await page.$('[data-act="bk-now"]')),
+    "auto backup on: Back up now, no separate Save backup"
+  );
+  ok(
+    (await page.textContent("#app")).includes("with a daily copy in your backup folder"),
+    "the intro says there's a daily copy"
+  );
+  // Delete all data, then restore from the auto backup file
+  await act("wipe");
+  await settle();
+  await act("ask-ok");
+  await settle();
+  await act("restore");
+  await settle();
+  const dlg = await page.textContent("#pop");
+  ok(
+    dlg.includes("Restore Tally backup.json?") &&
+      dlg.includes("2 accounts and 1 entries") &&
+      dlg.includes("saved Today") &&
+      dlg.includes("Choose another file"),
+    "Restore offers the auto backup with its counts and date: " + dlg
+  );
+  await act("ask-ok");
+  await settle();
+  S = await state();
+  ok(
+    S.accounts.length === 2 && S.accounts[0].name === "Restored bank" && S.loans.length === 1,
+    "after Delete all data the auto backup brings everything back"
+  );
+  ok(S.settings.backup.on === true, "restoring keeps this phone's auto backup on (the file's own settings had it off)");
+  await act("restore");
+  await settle();
+  await act("ask-alt");
+  ok((await calls("pickRestore")).length === 1, "Choose another file opens the file picker");
+  // the picked file's text comes back from the shell
+  const other = base();
+  other.accounts = [bank];
+  await page.evaluate(t => window.tallyRestore(t, null), JSON.stringify(other));
+  await settle();
+  ok((await page.textContent("#pop")).includes("Restore this backup?"), "a picked file asks first");
+  await act("ask-ok");
+  await settle();
+  ok((await state()).accounts.length === 1, "and restores it");
+  await page.evaluate(() => window.tallyRestore(null, null));
+  await settle();
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "cancelled picker: nothing happens");
+  await page.evaluate(() => window.tallyRestore(null, "Couldn't read that file"));
+  ok((await page.textContent("#snack")).includes("Couldn't read that file"), "an unreadable file says so");
+  await page.evaluate(() => window.tallyRestore('{"hello":1}', null));
+  ok((await page.textContent("#snack")).includes("isn't a Tally backup"), "a file that isn't a backup says so");
+  // auto backup file missing: straight to the picker
+  await page.evaluate(() => {
+    window.__cfg.auto = { error: "There's no file" };
+    window.__calls = [];
+  });
+  await act("restore");
+  await settle();
+  ok(
+    (await calls("pickRestore")).length === 1 && !(await page.evaluate(() => $("#pop").innerHTML)),
+    "no auto backup file: the picker opens directly"
+  );
+  // auto backup off: Save backup is back, and Restore goes straight to the picker
+  await page.evaluate(() => {
+    S.settings.backup.on = false;
+    window.__calls = [];
+    render();
+  });
+  ok(await page.$('[data-act="backup"]'), "auto backup off: Save backup shows");
+  await act("restore");
+  ok(
+    (await calls("pickRestore")).length === 1 && (await calls("readAuto")).length === 0,
+    "auto backup off: Restore opens the picker"
+  );
 
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

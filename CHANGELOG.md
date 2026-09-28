@@ -11,12 +11,16 @@ and versions follow [Semantic Versioning](https://semver.org/).
   your time when something changed. It stays after an uninstall, and Settings → Restore reads it.
 - **Balance check reminder:** a daily notification with your balances; tapping it opens the morning check.
 - Settings shows what could keep reminders from arriving (notifications, on-time alarms, battery) with a fix for each.
+- **Restore from backup** offers the auto backup file first (with its date and counts), or any other file.
 
 ### Changed
 
 - The time picker is a scroll wheel like your phone's clock (hours : minutes, AM/PM on a 12-hour phone), with any
   minute of the day; times follow the phone's 12 / 24-hour setting.
 - Loan and lending due-day reminders come at a time you pick (09:00 until you change it).
+- With auto backup on, "Back up now" replaces "Save backup". Restoring a backup keeps this phone's auto backup on.
+- Restore reads backup files through Android itself, so a file that WebView couldn't open ("Couldn't read that
+  file") now restores. The auto backup rewrites the same file in place and checks it after every write.
 - Reminders arrive at the exact time where Android allows it, follow the local time after a time-zone change, and
   each kind has its own notification channel.
 
