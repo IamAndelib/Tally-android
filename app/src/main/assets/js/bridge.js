@@ -331,6 +331,7 @@ function openFromNative(s) {
     BACKTO = null;
     closeSheet();
     if (k === "check") {
+      checkAsked = today(); // the notification was tapped: the card shows even before the check time
       V.screen = "home";
       V.period = "day";
       V.anchor = today();

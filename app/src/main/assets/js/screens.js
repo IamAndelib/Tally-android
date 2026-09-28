@@ -155,10 +155,14 @@ function homeView() {
     "Lend</button></div>";
   return h;
 }
-/* the Home balance card: from the Balance check time on, while that reminder is on, until confirmed today */
+/* the Home balance card: from the Balance check time on, while that reminder is on, until confirmed today; opened from
+   its notification (checkAsked = that day), it shows whatever the time */
+let checkAsked = "";
 function checkDue() {
   const r = S.settings.remind;
-  if (!r.check || S.settings.lastCheck === today()) return false;
+  if (S.settings.lastCheck === today()) return false;
+  if (checkAsked === today()) return true;
+  if (!r.check) return false;
   const d = new Date(),
     [h, m] = r.checkTime.split(":").map(Number);
   return d.getHours() * 60 + d.getMinutes() >= h * 60 + m;
