@@ -66,7 +66,7 @@ const ok = (c, m) => {
   }
   await act("acc-form");
   await addAccount("RBC", "bank", null, 500);
-  await act("check-ok");
+  if (await page.$('[data-act="check-ok"]')) await act("check-ok"); // the balance card, once its time has come
   await page.click(".acc.add");
   await addAccount("Wallet", "cash", null, 40);
   await page.click(".acc.add");

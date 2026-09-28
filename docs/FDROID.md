@@ -43,7 +43,7 @@ Restore.)
    contents of `docs/fdroid/app.tally.expenses.yml`.
 3. Commit it to a new branch, then **Create merge request** into `fdroid/fdroiddata` `master`. Title:
    "New app: Tally". Tick the checklist in the template.
-4. F-Droid's CI builds the app from the `v1.2.4` tag. Reviewers may ask small questions (for example about the
+4. F-Droid's CI builds the app from the `v1.2.5` tag. Reviewers may ask small questions (for example about the
    committed debug key or the Gradle wrapper — both are standard and not used by the release build) or tweak the
    recipe; reply in the merge request.
 5. After it's merged, Tally appears in the F-Droid app within a few days, on the next index build.

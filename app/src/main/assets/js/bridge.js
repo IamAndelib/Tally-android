@@ -331,6 +331,7 @@ function openFromNative(s) {
     BACKTO = null;
     closeSheet();
     if (k === "check") {
+      checkAsked = today(); // the notification was tapped: the card shows even before the check time
       V.screen = "home";
       V.period = "day";
       V.anchor = today();
@@ -354,6 +355,9 @@ function onAppResume() {
   syncReminders();
   H24 = null;
   onPerms(); // permissions may have changed in Android's settings
+  /* the balance card appears once its time has come (or goes once confirmed) without another tap */
+  if (V.screen === "home" && !$("#sheet").innerHTML && !$("#pop").innerHTML && checkDue() !== !!$("#app .check"))
+    render();
   backupNudge();
 }
 function saveOut(name, mime, text) {
