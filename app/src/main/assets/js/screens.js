@@ -749,11 +749,7 @@ function healthCard() {
   const r = S.settings.remind,
     hh = (r.daily || r.check || r.dues) && reminderHealth();
   if (!hh) return "";
-  const rows = [
-    ["notif", "Notifications", "Reminders can't show without them"],
-    ["exact", "On-time alarms", "So reminders come at the time you set"],
-    ["battery", "Unrestricted battery", "So the phone doesn't pause Tally"],
-  ].filter(([k]) => hh[k] === false);
+  const rows = PERM_ROWS.filter(([k]) => hh[k] === false);
   if (!rows.length) return "";
   return (
     '<section class="rhealth list"><div class="rh-head">' +
@@ -763,18 +759,7 @@ function healthCard() {
         '"/></svg>'
       : "") +
     "<b>Permissions</b></div>" +
-    rows
-      .map(
-        ([k, t, sub]) =>
-          '<div class="setrow"><span class="mid"><div>' +
-          t +
-          '</div><div class="s">' +
-          sub +
-          '</div></span><button class="btn tonal" data-act="rem-fix" data-v="' +
-          k +
-          '">Allow</button></div>'
-      )
-      .join("") +
+    rows.map(p => permRow(p, false)).join("") +
     "</section>"
   );
 }

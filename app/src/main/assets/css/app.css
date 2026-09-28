@@ -1780,12 +1780,34 @@ body.hasnav .snack {
   flex: none;
   color: var(--spent);
 }
-.rhealth .setrow + .setrow {
+.rhealth .setrow + .setrow,
+#pp-rows .setrow + .setrow {
   border-top: 0;
 }
-.rhealth .btn {
+.rhealth .btn,
+#pp-rows .btn {
   height: 40px;
   padding: 0 18px;
+}
+/* the first-open Permissions dialog: the same rows, flush with the dialog's text; "Allowed" replaces a row's button */
+#pp-rows .setrow {
+  padding: 10px 4px;
+}
+.pok {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  height: 40px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+.pok .ic {
+  width: 18px;
+  height: 18px;
+}
+.dlg-act.end {
+  justify-content: flex-end;
 }
 /* Settings → Feel: vibration strength, a Material 3 discrete slider; faded and off while vibration is switched off.
    --f = (level − 1) / 4. The 4px handle's centre is 2px + f·(100% − 4px), so it touches both ends; the tracks keep a

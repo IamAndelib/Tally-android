@@ -7,9 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- On first open Android's own prompts come one after another, each once: notifications, the "Alarms & reminders"
-  switch (so reminders come on time) and unrestricted battery (so the phone doesn't pause Tally). Saying no to one
-  doesn't skip the rest.
+- On first open a small "Permissions" dialog lists notifications, alarms & reminders and unrestricted battery, each
+  with its own "Allow" (Android's own prompt or screen, one at a time), and Done. Anything left off waits in Settings.
 
 ### Changed
 

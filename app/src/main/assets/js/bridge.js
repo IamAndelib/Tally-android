@@ -134,9 +134,48 @@ function askNotify() {
     if (window.Android && Android.requestNotifications) Android.requestNotifications();
   } catch (e) {}
 }
-/* window.tallyPerms / resume: a permission may have changed; Settings' permissions card follows at once */
+/* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind, name, why] */
+const PERM_ROWS = [
+  ["notif", "Notifications", "Reminders can't show without them"],
+  ["exact", "Alarms &amp; reminders", "So reminders come on time"],
+  ["battery", "Unrestricted battery", "So the phone doesn't pause Tally"],
+];
+/* one permission: Allow (the shell opens Android's prompt, popup or switch screen), or a quiet "Allowed" */
+function permRow([k, t, why], ok) {
+  return (
+    '<div class="setrow"><span class="mid"><div>' +
+    t +
+    '</div><div class="s">' +
+    why +
+    "</div></span>" +
+    (ok
+      ? '<span class="pok">' + ic("check") + "Allowed</span>"
+      : '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">Allow</button>') +
+    "</div>"
+  );
+}
+/* first open on this install (the shell remembers): one dialog listing the permissions, each with its own Allow, and
+   Done. Nothing follows on its own; whatever stays denied waits in Settings → Reminders. Skipped when all's allowed. */
+function permsIntro() {
+  let first = false;
+  try {
+    first = !!(window.Android && Android.permsIntro && Android.permsIntro());
+  } catch (e) {}
+  const h = first && reminderHealth();
+  if (!h || PERM_ROWS.every(([k]) => h[k] !== false)) return;
+  $("#pop").innerHTML =
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Permissions">' +
+    '<h3 class="dlg-t">Permissions</h3><p class="dlg-x">For reminders and the daily backup.</p><div id="pp-rows">' +
+    PERM_ROWS.map(r => permRow(r, h[r[0]] !== false)).join("") +
+    '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">Done</button></div></div></div>';
+}
+/* window.tallyPerms / resume: a permission may have changed; the open dialog's rows and Settings' card follow at once
+   (on Android, allowing unrestricted battery also allows alarms & reminders, so that row turns too) */
 function onPerms() {
-  if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render();
+  const rows = $("#pp-rows"),
+    h = rows && reminderHealth();
+  if (h) rows.innerHTML = PERM_ROWS.map(r => permRow(r, h[r[0]] !== false)).join("");
+  else if (V.screen === "settings" && !$("#sheet").innerHTML && !$("#pop").innerHTML) render();
 }
 /* +1 day / +1 week tapped on a notification while the app was closed */
 function applyNativeActions() {

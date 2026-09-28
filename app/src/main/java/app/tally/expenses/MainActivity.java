@@ -54,10 +54,6 @@ public class MainActivity extends Activity {
     private boolean paused;
     /** The notification prompt came from a Settings "Allow" button: refused for good, it opens the settings page. */
     private boolean notifFromButton;
-    /** The first-open chain (permStep) has opened a system screen; coming back moves on to its next step. */
-    private boolean chaining;
-    /** The first-open chain runs once per launch, when the page is first drawn. */
-    private boolean chainStarted;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
@@ -186,7 +182,6 @@ public class MainActivity extends Activity {
         web.onResume();
         pushTheme();
         web.evaluateJavascript("window.tallyResume&&window.tallyResume()", null);
-        if (chaining) permStep();
     }
 
     /**
@@ -206,7 +201,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** The answer to Android's notification prompt: the page re-checks, and the first-open chain moves on. */
+    /** The answer to Android's notification prompt: the page re-checks (Settings' card, the first-open dialog). */
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
@@ -220,49 +215,6 @@ public class MainActivity extends Activity {
             openNotifSettings();
         }
         perms();
-        if (!fromButton) permStep();
-    }
-
-    /**
-     * First open: Android's own prompts, one after another: notifications (13+), the "Alarms & reminders" switch
-     * (12+; Android has no popup for it, its switch screen is the native way), then "Stop optimising battery usage?".
-     * Each step comes once per install (the shell's tally_perms prefs, never the page's data) and is skipped when
-     * already allowed. Whatever is denied later shows as a row with Allow in Settings → Reminders.
-     */
-    @SuppressLint("BatteryLife") // on purpose: the owner wants reminders and the backup never held back
-    private void permStep() {
-        chaining = false;
-        if (isFinishing() || isDestroyed()) return;
-        SharedPreferences p = getSharedPreferences("tally_perms", MODE_PRIVATE);
-        Uri pkg = Uri.parse("package:" + getPackageName());
-        if (!p.getBoolean("notif", false)) {
-            p.edit().putBoolean("notif", true).apply();
-            if (askNotifPermission()) return; // the answer calls permStep again
-        }
-        if (!p.getBoolean("exact", false)) {
-            p.edit().putBoolean("exact", true).apply();
-            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-            if (Build.VERSION.SDK_INT >= 31 && am != null && !am.canScheduleExactAlarms()
-                    && chainTo(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg))) return;
-        }
-        if (!p.getBoolean("battery", false)) {
-            p.edit().putBoolean("battery", true).apply();
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())
-                    && chainTo(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg))) return;
-        }
-        perms();
-    }
-
-    /** Opens one system screen of the first-open chain; onResume continues it. False if the phone has no such screen. */
-    private boolean chainTo(Intent i) {
-        try {
-            startActivity(i);
-            chaining = true;
-            return true;
-        } catch (ActivityNotFoundException e) {
-            return false;
-        }
     }
 
     private void perms() {
@@ -532,15 +484,19 @@ public class MainActivity extends Activity {
             } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
         }
 
-        /** The page has rendered: end the launch screen, then (once per launch) the first-open permission prompts. */
+        /** The page has rendered: end the launch screen. */
         @JavascriptInterface
         public void ready() {
-            runOnUiThread(() -> {
-                showPage();
-                if (chainStarted) return;
-                chainStarted = true;
-                handler.postDelayed(MainActivity.this::permStep, 300); // over the drawn app, not the launch screen
-            });
+            runOnUiThread(MainActivity.this::showPage);
+        }
+
+        /** True only the first time on this install: the page then shows its Permissions dialog (once, never again). */
+        @JavascriptInterface
+        public boolean permsIntro() {
+            SharedPreferences p = getSharedPreferences("tally_perms", MODE_PRIVATE);
+            if (p.getBoolean("intro", false)) return false;
+            p.edit().putBoolean("intro", true).apply();
+            return true;
         }
 
         @JavascriptInterface

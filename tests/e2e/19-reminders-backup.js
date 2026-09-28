@@ -68,6 +68,12 @@ const stub = () => {
     pickRestoreFile() {
       rec("pickRestore");
     },
+    /* the shell's "first time on this install" (tally_perms/intro), only when a test asks for it */
+    permsIntro() {
+      if (!window.__cfg.intro || localStorage.getItem("__intro")) return false;
+      localStorage.setItem("__intro", "1");
+      return true;
+    },
   };
 };
 
@@ -601,16 +607,74 @@ const stub = () => {
     "auto backup off: Restore opens the picker"
   );
 
-  // ---- 8. first open: Android's own prompts come from the shell, so the page itself asks nothing
+  // ---- 8. first open: one Permissions dialog, each permission with its own Allow, then Done
+  page = await newPage({ intro: true, health: { notif: false, exact: true, battery: false } });
+  await page.goto(appUrl);
+  await settle();
+  const ppRows = () =>
+    page.$$eval("#pp-rows .setrow", rs =>
+      rs.map(r => r.querySelector("div").textContent + ":" + (r.querySelector("button") ? "Allow" : "Allowed"))
+    );
+  ok(
+    JSON.stringify(await ppRows()) ===
+      '["Notifications:Allow","Alarms & reminders:Allowed","Unrestricted battery:Allow"]' &&
+      (await page.isVisible('#pop [data-act="pd-close"]')),
+    "first open: the three permissions, Allow only on the denied ones, and Done"
+  );
+  ok(
+    (await calls("askNotif")).length === 0 && (await calls("openSetting")).length === 0,
+    "nothing is asked until a row's Allow is tapped"
+  );
+  await page.screenshot({ path: OUT + "/perms-dialog.png" });
+  await act("rem-fix", "battery");
+  ok(JSON.stringify((await calls("openSetting")).map(c => c[1])) === '["battery"]', "Allow opens just that one");
+  await page.evaluate(() => {
+    window.__cfg.health.battery = true;
+    window.tallyPerms();
+  });
+  await settle();
+  ok(
+    JSON.stringify(await ppRows()) ===
+      '["Notifications:Allow","Alarms & reminders:Allowed","Unrestricted battery:Allowed"]' &&
+      (await calls("openSetting")).length === 1,
+    "allowed: its row turns to Allowed at once, the dialog stays, nothing else opens"
+  );
+  await act("pd-close");
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "Done closes it");
+  await page.reload();
+  await settle();
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "only once per install");
+  // Settings: what's still denied waits there
+  await page.evaluate(() => {
+    window.__cfg.health.battery = true; // the stub forgets on reload; the phone wouldn't
+    V.screen = "settings";
+    render();
+  });
+  ok(
+    JSON.stringify(await page.$$eval('.rhealth [data-act="rem-fix"]', b => b.map(x => x.dataset.v))) === '["notif"]',
+    "the one left denied is in Settings → Reminders"
+  );
+  // everything already allowed: no dialog at all
+  page = await newPage({ intro: true });
+  await page.goto(appUrl);
+  await settle();
+  ok(!(await page.evaluate(() => $("#pop").innerHTML)), "all allowed: no dialog");
+  // unreadable saved data: that dialog comes first
+  page = await newPage({ intro: true, health: { notif: false, exact: false, battery: false } });
+  await page.goto(appUrl);
+  await page.evaluate(() => {
+    localStorage.removeItem("__intro");
+    localStorage.setItem("tally:v1", "{broken");
+  });
+  await page.reload();
+  await settle();
+  ok(
+    !(await page.$("#pp-rows")) && (await page.textContent("#pop")).includes("Couldn't open your saved data"),
+    "unreadable data: its dialog, not the permissions one"
+  );
   page = await newPage({ health: { notif: false, exact: false, battery: false } });
   await page.goto(appUrl);
   await settle();
-  ok(
-    (await calls("askNotif")).length === 0 &&
-      (await calls("openSetting")).length === 0 &&
-      !(await page.evaluate(() => $("#pop").innerHTML)),
-    "start: no page dialog, no request from the page"
-  );
   // old page-side flags from an earlier version are dropped
   await seed(
     Object.assign(base(), {
