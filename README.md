@@ -59,7 +59,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - **Reminders**, each at the time you pick: an evening nudge if nothing was written that day, a daily balance check,
   and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons.
-  Settings says what (notifications, on-time alarms, battery) could hold them back, with a button to fix each.
+  On first open Tally asks for the two things they need (notifications and unrestricted battery), each with its own
+  Allow; whatever you leave off stays in Settings with a button.
 - **Home-screen widget** with today's balance, today's spending and a quick-add button.
 - **Material You:** follows your wallpaper colours on Android 12+, light and dark themes, and an emblem and colour for
   every category, account and asset. Choose what the middle of the donut shows.
@@ -82,7 +83,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 | **Storage** | about 2 MB for the app, plus your data |
 | **Internet** | not needed |
 | **Material You colours** | Android 12 or newer (older versions use Tally's own colours) |
-| **Notifications** | optional; on Android 13+ Tally asks once, when reminders are first needed |
+| **Notifications** | optional; Tally asks on first open (Android 13+), and you can allow it later in Settings |
 
 Tally is a phone app; it runs on tablets and foldables too, laid out for a single column.
 
@@ -128,8 +129,8 @@ content.
 | Permission | Why |
 | --- | --- |
 | Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on) |
-| Alarms & reminders | so reminders and the daily backup happen at the exact time you chose |
-| Run in background (battery) | asked once, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
+| Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
+| Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |
 | Vibrate | a short tick when saving |
 | Internet | declared because the app's screen is a WebView; Tally itself makes no network requests |

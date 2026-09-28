@@ -233,6 +233,8 @@ function migrate(o) {
 let S = blank();
 /* raw text of saved data that couldn't be read at start-up (kept aside under LS+":unreadable" and offered as a file) */
 let unreadable = null;
+/* the text save() last stored, handed as is to the backup mirror (no second JSON.stringify of the whole notebook) */
+let savedJson = "";
 /* Loads the saved notebook. Called once from the start-up code at the end, after every constant migrate() uses exists. */
 function loadState() {
   let raw = null;
@@ -254,8 +256,9 @@ function loadState() {
   }
 }
 function save() {
+  savedJson = JSON.stringify(S);
   try {
-    localStorage.setItem(LS, JSON.stringify(S));
+    localStorage.setItem(LS, savedJson);
   } catch (e) {
     snack("Couldn't save on this phone");
   }

@@ -40,10 +40,16 @@ public class TallyWidget extends AppWidgetProvider {
         scheduleMidnight(ctx);
     }
 
+    /**
+     * Widget added, or the home screen's update after a reboot. Also re-arms the reminders and the backup: on phones
+     * that hold back BOOT_COMPLETED (e.g. without "Autostart"), this can be the first chance to after a restart.
+     */
     @Override
     public void onUpdate(Context ctx, AppWidgetManager m, int[] ids) {
         for (int id : ids) m.updateAppWidget(id, build(ctx));
         scheduleMidnight(ctx);
+        ReminderReceiver.schedule(ctx);
+        BackupReceiver.schedule(ctx);
     }
 
     @Override

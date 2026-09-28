@@ -353,6 +353,15 @@ const stub = () => {
     render();
   });
   ok(!(await page.$(".rhealth")), "no card while every reminder is off");
+  await page.evaluate(() => {
+    S.settings.backup.on = true;
+    render();
+  });
+  ok(!!(await page.$('.rhealth [data-v="battery"]')), "the daily backup alone still shows the card");
+  await page.evaluate(() => {
+    S.settings.backup.on = false;
+    render();
+  });
   await page.evaluate(() => (window.__calls = []));
   await act("rem-daily");
   ok(
@@ -629,6 +638,10 @@ const stub = () => {
     "first open: notifications and unrestricted battery (which covers alarms & reminders), each with Allow, and Done"
   );
   ok(
+    (await page.evaluate(() => window.__rem.daily.on)) === false,
+    "no evening nudge before there's an account to write in"
+  );
+  ok(
     (await calls("askNotif")).length === 0 && (await calls("openSetting")).length === 0,
     "nothing is asked until a row's Allow is tapped"
   );
@@ -703,6 +716,10 @@ const stub = () => {
     window.tallyPause();
   });
   ok((await calls("data")).length === 1, "tallyPause hands over the waiting data at once");
+  ok(
+    (await calls("data"))[0][1] === (await page.evaluate(() => localStorage.getItem("tally:v1"))),
+    "the backup gets exactly the text that was saved"
+  );
   await page.evaluate(() => window.tallyPause());
   await settle(1000);
   ok((await calls("data")).length === 1, "and nothing more when nothing is waiting");

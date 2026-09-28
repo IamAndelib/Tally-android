@@ -30,7 +30,14 @@ Built originally in a claude.ai chat; continue development from here.
     `BackupReceiver.put()` writes through `ParcelFileDescriptor.AutoCloseOutputStream` (one owner, one close — a
     double close trips fdsan); `setData` refuses > 20 MB; `nextAt` clamps hours/minutes.
   - JS bridge `window.Android`:
-    - `saveFile(name, mime, text)` saves CSV exports / JSON backups via ACTION_CREATE_DOCUMENT; result reported through `window.tallySaved(ok)`.
+    - `saveFile(name, mime, text)` saves CSV exports / JSON backups via ACTION_CREATE_DOCUMENT; the text waits in
+      `cacheDir/pending-save` (not memory) while the dialog is open; result reported through `window.tallySaved(ok)`.
+    - Every shell → page call that answers something (`tallySaved`, `tallyRestore`, `tallyFolder`, `tallyOpen` for the
+      `open` extra) goes through `callPage(js)`: run now if the page is up (`pageUp`, set in `Bridge.ready()`), else
+      queued and flushed by `ready()`. After Android reclaimed the process while a picker was open, the answer arrives
+      before the reloaded page has its hooks and was otherwise lost. `onRenderProcessGone` (WebView renderer crashed or
+      killed for memory) drops the WebView and `recreate()`s instead of letting the app die; every `web` use is
+      null-guarded for that window.
     - `getVersion()` returns `BuildConfig.VERSION_NAME` (`buildFeatures.buildConfig true` in `app/build.gradle`, needed for AGP 8+
       to generate `BuildConfig`), shown in Settings' About footer; called defensively (`window.Android&&Android.getVersion`,
       wrapped in try/catch) so the browser-preview case and older installed builds degrade to no version line, not "undefined".
@@ -43,7 +50,15 @@ Built originally in a claude.ai chat; continue development from here.
       12+ `canScheduleExactAlarms()`, permission `SCHEDULE_EXACT_ALARM`, user-granted on 14+ under "Alarms &
       reminders"; never `USE_EXACT_ALARM`, Play reserves it for clocks/calendars), else `setAndAllowWhileIdle`.
       `BootReceiver` re-arms reminders and the backup after boot, update, `TIME_SET`, `TIMEZONE_CHANGED` and
-      `SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED`. Channels (`channels()`, created at start): `nudge`, `check`,
+      `SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED`, plus the "fast boot" `QUICKBOOT_POWERON` broadcasts (HTC,
+      Xiaomi, older phones); `TallyWidget.onUpdate` (widget added, the launcher's update after a reboot) re-arms both
+      too. Receivers don't re-arm each other: that could replace a still-pending late nudge with tomorrow's.
+      `ReminderReceiver.save()` skips an unchanged sync (static `armedFor` = config + exact ability, in memory only,
+      so the first sync after a force-stop or reboot always re-arms; a change in exact ability re-arms as exact).
+      The nudge and check show only once today's h:m has come (`reached()`): a late delivery after midnight just
+      re-arms. The nudge is only on while there are active accounts (`syncReminders`). `schedule()` drops
+      `shown:<loanId>` marks of loans no longer reminded about. Notifications use the monochrome `ic_notif` (the
+      card, lines cut out): a full-colour small icon shows as a white disc. Channels (`channels()`, created at start): `nudge`, `check`,
       `reminders` (loan due days, the original id), `backup` (failures only). The nudge / check show at most once a
       day (`shown:nudge` / `shown:check`); the check is skipped when `checked` (= `settings.lastCheck`) is today and
       opens `open=check` (Home, today, the morning check card). Notification buttons
@@ -59,7 +74,7 @@ Built originally in a claude.ai chat; continue development from here.
       `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` popup (permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`,
       `@SuppressLint("BatteryLife")` on purpose — note for a Play listing). Settings → Reminders shows a "Permissions"
       card (`healthCard()`, `.rhealth`) with one row per denied item of `permRows(h)`, each with an "Allow" button
-      (`rem-fix` → `fixReminders()` → `openSetting`), only while a reminder is on; a row goes as soon as it's allowed
+      (`rem-fix` → `fixReminders()` → `openSetting`), only while a reminder or the daily backup is on; a row goes as soon as it's allowed
       (`onPerms()` on `tallyPerms` and on resume re-renders Settings).
     - **Two permissions, not three:** `permRows(h)` offers Notifications and Unrestricted battery. Android counts an
       app with unrestricted battery (power allowlist) as allowed exact alarms (Samsung even flips the "Alarms &
@@ -77,7 +92,8 @@ Built originally in a claude.ai chat; continue development from here.
       (`migrate()` drops the old `notifAsked`/`exactAsked`/`batteryAsked`/`batteryOk`). (An automatic native chain of
       prompts was tried and dropped: Android's screens and popups piled up on each other.)
     - Battery: `MainActivity.onPause` runs `window.tallyPause` (`flushMirror()`: hands over only data waiting in the
-      mirror debounce) and then `web.onPause(); web.pauseTimers()` (unless resumed meanwhile); `onResume` resumes them
+      mirror debounce; `mirrorNow()` sends `savedJson`, the text `save()` just stored, so the notebook is stringified
+      once per save) and then `web.onPause(); web.pauseTimers()` (unless resumed meanwhile); `onResume` resumes them
       first. `BackupReceiver.setData` skips identical data (no write, not marked dirty). The widget has
       `updatePeriodMillis="0"` (no periodic wake-ups): the page pushes numbers on change and a non-wakeup RTC alarm
       after midnight resets "Spent today"; `onUpdate` (widget added, reboot) re-arms it.
@@ -110,6 +126,10 @@ Built originally in a claude.ai chat; continue development from here.
       `<input type="file">` (`restoreFile`) remains only without the bridge (browser). "Your data": with auto backup
       on, Back up now replaces Save backup (hidden) and the intro says there's a daily copy.
     - `is24h()` = `DateFormat.is24HourFormat` (the phone's 12/24-hour switch): the time wheel and `timeLabel()`.
+  - Icons: `drawable/ic_logo.xml` is the round logo (splash on 7–11, `docs/logo.svg`); `drawable/ic_launcher.xml`
+    (an `<inset>` of it) is the launcher icon below Android 8; `drawable-anydpi-v26/ic_launcher.xml` is the adaptive
+    icon (`@color/brand` + `ic_launcher_fg`, the card at 0.8 inside the safe zone, + `ic_launcher_mono` for themed
+    icons). Never use `ic_launcher` as a notification icon (adaptive icons crash there on 8.0): `ic_notif`.
   - Launch screen: `AppTheme` (`values*/styles.xml`, `AppTheme.Base` light/night) starts on `@color/surface` with the
     logo — `drawable/splash.xml` as window background (Android 7–11), the system splash with `drawable/splash_icon.xml`
     (12+, held by an `OnPreDrawListener`; `values-v33` adds `windowSplashScreenBehavior=icon_preferred`, which only
@@ -410,7 +430,7 @@ Built originally in a claude.ai chat; continue development from here.
   install as "Tally Dev" next to the release (their data is separate from the release's).
 - Docs: README (features, requirements, install/verify, privacy, build, layout, releasing), CONTRIBUTING (architecture,
   conventions, design principles), CHANGELOG (Keep a Changelog), SECURITY, THIRD_PARTY_NOTICES + `LICENSES/`,
-  `docs/` (logo.svg from `ic_launcher.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
+  `docs/` (logo.svg from `ic_logo.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
 
 ## Notes
 - License: MIT (© 2026 IamAndelib). Material Symbols are Apache-2.0, Onest is SIL OFL 1.1.

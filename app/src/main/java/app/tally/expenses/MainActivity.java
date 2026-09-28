@@ -30,6 +30,7 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -40,9 +41,14 @@ import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
@@ -58,9 +64,9 @@ public class MainActivity extends Activity {
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
     private FrameLayout root;
-    private String pendingSave;
-    /** "loan:<id>[:pay]" from a tapped reminder, delivered to the page once it has loaded. */
-    private String pendingOpen;
+    /** True once the page has installed its window.tally* hooks (Android.ready); calls made before wait in queued. */
+    private boolean pageUp;
+    private final ArrayList<String> queued = new ArrayList<>();
     /** False while the launch screen (the logo) is up: until the page calls Android.ready(), or 3 s at most. */
     private boolean ready;
     /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
@@ -133,9 +139,21 @@ public class MainActivity extends Activity {
                 return loader.shouldInterceptRequest(request.getUrl());
             }
 
+            /**
+             * The WebView's renderer crashed or was killed for memory (low-RAM phones, WebView updates). Unhandled, it
+             * takes the whole app down; instead the page starts afresh (everything is saved as it happens).
+             */
             @Override
-            public void onPageFinished(WebView view, String url) {
-                deliverOpen();
+            @TargetApi(26)
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view != web) return true;
+                root.removeView(web);
+                web.destroy();
+                web = null;
+                pageUp = false;
+                queued.clear();
+                recreate();
+                return true;
             }
 
             @Override
@@ -160,7 +178,7 @@ public class MainActivity extends Activity {
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
         if (savedInstanceState == null && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
-            pendingOpen = getIntent().getStringExtra("open");
+            open(getIntent().getStringExtra("open"));
         }
         // after the process was killed the WebView can come back empty: load the page whenever restoring fails
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
@@ -178,6 +196,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         paused = false;
+        if (web == null) return; // renderer gone: being recreated
         web.resumeTimers();
         web.onResume();
         pushTheme();
@@ -193,8 +212,9 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         paused = true;
+        if (web == null) return;
         web.evaluateJavascript("window.tallyPause&&window.tallyPause()", v -> {
-            if (paused && !isDestroyed()) {
+            if (paused && !isDestroyed() && web != null) {
                 web.onPause();
                 web.pauseTimers();
             }
@@ -255,23 +275,29 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        pendingOpen = intent.getStringExtra("open");
-        deliverOpen();
+        open(intent.getStringExtra("open"));
+    }
+
+    /** "loan:<id>[:pay]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
+    private void open(String what) {
+        if (what != null) callPage("window.tallyOpen&&window.tallyOpen(" + JSONObject.quote(what) + ")");
+    }
+
+    /**
+     * Runs a window.tally* call in the page, or keeps it until the page is up. After Android reclaimed Tally's memory
+     * while a picker was open, the answer arrives while the page is still loading and would otherwise be lost.
+     */
+    private void callPage(String js) {
+        if (pageUp && web != null && !isDestroyed()) web.evaluateJavascript(js, null);
+        else queued.add(js);
     }
 
     /** Ends the launch screen: called by the page (Android.ready) once it has rendered, or by the 3 s fallback. */
     private void showPage() {
-        if (ready || isDestroyed()) return;
+        if (ready || isDestroyed() || web == null) return;
         ready = true;
         if (pageColor != null) root.setBackgroundColor(pageColor);
         web.setVisibility(View.VISIBLE);
-    }
-
-    private void deliverOpen() {
-        if (pendingOpen == null || web == null) return;
-        String open = JSONObject.quote(pendingOpen);
-        pendingOpen = null;
-        web.evaluateJavascript("window.tallyOpen&&window.tallyOpen(" + open + ")", null);
     }
 
     /** Re-sends the phone's light/dark mode and wallpaper palette to the page. */
@@ -342,7 +368,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
-        web.saveState(out);
+        if (web != null) web.saveState(out);
+    }
+
+    /** An export waiting for Android's save dialog: on disk, so it survives Tally's process being reclaimed meanwhile. */
+    private File pendingSave() {
+        return new File(getCacheDir(), "pending-save");
     }
 
     @Override
@@ -350,13 +381,19 @@ public class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SAVE_FILE) {
             boolean ok = false;
-            if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingSave != null) {
-                try (OutputStream os = getContentResolver().openOutputStream(data.getData())) {
-                    if (os != null) { os.write(pendingSave.getBytes(StandardCharsets.UTF_8)); ok = true; }
+            File f = pendingSave();
+            if (resultCode == RESULT_OK && data != null && data.getData() != null && f.exists()) {
+                try (InputStream in = new FileInputStream(f);
+                     OutputStream os = getContentResolver().openOutputStream(data.getData())) {
+                    if (os != null) {
+                        byte[] buf = new byte[16384];
+                        for (int r; (r = in.read(buf)) > 0; ) os.write(buf, 0, r);
+                        ok = true;
+                    }
                 } catch (Exception ignored) { }
             }
-            pendingSave = null;
-            web.evaluateJavascript("window.tallySaved&&window.tallySaved(" + ok + ")", null);
+            f.delete();
+            callPage("window.tallySaved&&window.tallySaved(" + ok + ")");
         } else if (requestCode == PICK_RESTORE) {
             restorePicked(resultCode == RESULT_OK && data != null ? data.getData() : null);
         } else if (requestCode == PICK_FOLDER) {
@@ -402,21 +439,25 @@ public class MainActivity extends Activity {
     }
 
     private void restoreResult(String text, String err) {
-        if (web == null || isDestroyed()) return;
+        if (isDestroyed()) return;
         String a = text == null ? "null" : JSONObject.quote(text), b = err == null ? "null" : JSONObject.quote(err);
-        web.evaluateJavascript("window.tallyRestore&&window.tallyRestore(" + a + "," + b + ")", null);
+        callPage("window.tallyRestore&&window.tallyRestore(" + a + "," + b + ")");
     }
 
     /** Tells the page how picking a backup folder went: null = cancelled, "" = backed up, else the problem. */
     private void folderPicked(String err) {
-        if (web == null || isDestroyed()) return;
+        if (isDestroyed()) return;
         String arg = err == null ? "null" : JSONObject.quote(err);
-        web.evaluateJavascript("window.tallyFolder&&window.tallyFolder(" + arg + ")", null);
+        callPage("window.tallyFolder&&window.tallyFolder(" + arg + ")");
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        if (web == null) {
+            super.onBackPressed();
+            return;
+        }
         web.evaluateJavascript("window.tallyBack?window.tallyBack():false", value -> {
             if (!"true".equals(value)) MainActivity.super.onBackPressed();
         });
@@ -484,10 +525,16 @@ public class MainActivity extends Activity {
             } catch (RuntimeException ignored) { } // a vibrator that refuses must never break the page
         }
 
-        /** The page has rendered: end the launch screen. */
+        /** The page has rendered and installed its hooks: end the launch screen and hand over anything waiting. */
         @JavascriptInterface
         public void ready() {
-            runOnUiThread(MainActivity.this::showPage);
+            runOnUiThread(() -> {
+                showPage();
+                pageUp = true;
+                ArrayList<String> q = new ArrayList<>(queued);
+                queued.clear();
+                for (String js : q) callPage(js);
+            });
         }
 
         /** True only the first time on this install: the page then shows its Permissions dialog (once, never again). */
@@ -661,7 +708,7 @@ public class MainActivity extends Activity {
                 Window w = getWindow();
                 w.setStatusBarColor(c);
                 w.setNavigationBarColor(c);
-                web.setBackgroundColor(c);
+                if (web != null) web.setBackgroundColor(c);
                 // root shows behind the (transparent) system bars on Android 15+; it is coloured only once the page
                 // shows, so until then the logo in the window background stays visible
                 pageColor = c;
@@ -676,8 +723,19 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void saveFile(final String name, final String mime, final String content) {
+            // written here, on the bridge's own thread: the text waits on disk while Android's save dialog is open
+            boolean parked;
+            try (OutputStream os = new FileOutputStream(pendingSave())) {
+                os.write(content.getBytes(StandardCharsets.UTF_8));
+                parked = true;
+            } catch (IOException | RuntimeException e) {
+                parked = false;
+            }
+            if (!parked) {
+                runOnUiThread(() -> callPage("window.tallySaved&&window.tallySaved(false)"));
+                return;
+            }
             runOnUiThread(() -> {
-                pendingSave = content;
                 Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
                 i.setType(mime);
@@ -685,8 +743,8 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(i, SAVE_FILE);
                 } catch (ActivityNotFoundException e) {
-                    pendingSave = null;
-                    web.evaluateJavascript("window.tallySaved&&window.tallySaved(false)", null);
+                    pendingSave().delete();
+                    callPage("window.tallySaved&&window.tallySaved(false)");
                 }
             });
         }

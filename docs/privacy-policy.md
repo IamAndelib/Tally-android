@@ -23,8 +23,8 @@ Tally is a personal expense tracker made by IamAndelib. This policy explains wha
 | Permission | Used for |
 | --- | --- |
 | Notifications | the evening reminder, the balance check and loan due-date reminders, if you keep them on |
-| Alarms & reminders | running reminders and the daily backup at the exact time you chose |
-| Run in background (battery) | keeping reminders and the daily backup on time on phones that put apps to sleep |
+| Alarms & reminders | running reminders and the daily backup at the exact time you chose (comes with unrestricted battery) |
+| Run in background (battery) | keeping reminders and the daily backup on time on phones that put apps to sleep; asked on first open |
 | Run at startup | re-arming those reminders and the daily backup after the phone restarts |
 | Vibrate | a short vibration when you save |
 | Internet | required by the app's built-in web view; Tally itself does not connect to the internet |

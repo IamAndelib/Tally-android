@@ -743,11 +743,11 @@ function settingsView() {
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
   return h;
 }
-/* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder is on).
-   A row goes as soon as its permission is allowed (tallyPerms / resume re-render). */
+/* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder or the
+   daily backup is on). A row goes as soon as its permission is allowed (tallyPerms / resume re-render). */
 function healthCard() {
   const r = S.settings.remind,
-    hh = (r.daily || r.check || r.dues) && reminderHealth();
+    hh = (r.daily || r.check || r.dues || S.settings.backup.on) && reminderHealth();
   if (!hh) return "";
   const rows = permRows(hh).filter(([k]) => hh[k] === false);
   if (!rows.length) return "";

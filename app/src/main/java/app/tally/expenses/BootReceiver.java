@@ -15,7 +15,10 @@ public class BootReceiver extends BroadcastReceiver {
         String a = in.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(a) || Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)
                 || Intent.ACTION_TIME_CHANGED.equals(a) || Intent.ACTION_TIMEZONE_CHANGED.equals(a)
-                || "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED".equals(a)) {
+                || "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED".equals(a)
+                // "fast boot" on some HTC, Xiaomi and older phones sends these instead of BOOT_COMPLETED
+                || "android.intent.action.QUICKBOOT_POWERON".equals(a)
+                || "com.htc.intent.action.QUICKBOOT_POWERON".equals(a)) {
             ReminderReceiver.schedule(ctx);
             BackupReceiver.schedule(ctx);
         }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ themed icons: the card alone, its two lines cut out (only the shape counts, the system tints it) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:scaleX="0.8" android:scaleY="0.8" android:pivotX="54" android:pivotY="54">
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd"
+            android:pathData="M26,34h48a6,6 0,0 1,6 6v24a6,6 0,0 1,-6 6h-48a6,6 0,0 1,-6 -6v-24a6,6 0,0 1,6 -6z M30,56h22v5h-22z M30,46h12v5h-12z"/>
+    </group>
+</vector>

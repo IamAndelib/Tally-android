@@ -1,5 +1,7 @@
 <resources>
     <color name="surface">#FBF8FF</color>
+    <!-- the adaptive launcher icon's background (the logo's blue) -->
+    <color name="brand">#2F45C9</color>
     <!-- home-screen widget (Android 12+ uses the phone's Material You colours, see values-v31) -->
     <color name="w_bg">#EFEDF4</color>
     <color name="w_on">#1B1B21</color>

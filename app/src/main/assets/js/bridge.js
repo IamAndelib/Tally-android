@@ -69,7 +69,7 @@ function syncReminders() {
   try {
     Android.setReminders(
       JSON.stringify({
-        daily: Object.assign({ on: r.daily }, hmObj(r.time)),
+        daily: Object.assign({ on: r.daily && activeAccounts().length > 0 }, hmObj(r.time)), // nothing to write in yet
         check: Object.assign({ on: r.check && activeAccounts().length > 0 }, hmObj(r.checkTime), {
           text: checkText(),
           checked: S.settings.lastCheck || "",
@@ -223,7 +223,7 @@ function mirrorNow() {
   mirrorT = 0;
   if (!S.settings.backup.on || !canBackup()) return;
   try {
-    Android.setBackupData(JSON.stringify(S));
+    Android.setBackupData(savedJson || JSON.stringify(S)); // what save() just stored (stringified once)
   } catch (e) {}
 }
 /* the daily alarm: on/off and its time */

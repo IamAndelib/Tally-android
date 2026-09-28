@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8+: an adaptive icon, so every launcher's own shape (circle, squircle, …) is filled with the brand colour
+     instead of the round logo sitting shrunk on a light backplate. Android 13+ tints the monochrome layer for themed
+     icons. Never use it as a notification icon (ic_notif.xml is that). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/brand" />
+    <foreground android:drawable="@drawable/ic_launcher_fg" />
+    <monochrome android:drawable="@drawable/ic_launcher_mono" />
+</adaptive-icon>
