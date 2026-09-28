@@ -5,6 +5,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Vibration strength could feel reversed on some phones (the lighter levels buzzing harder than the stronger ones); it
+  now always rises from Light to Strong.
+
 ## [1.2.2] — 2026-09-28
 
 ### Added

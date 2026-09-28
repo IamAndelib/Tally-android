@@ -369,9 +369,13 @@ Built originally in a claude.ai chat; continue development from here.
     dragged category passes (ring and grid) and each swipe (Home period, summary chart, History account); "long"
     long-press pick-up; "confirm" saves/drops. `settings.haptics` (Settings → Feel → "Vibration on tap",
     `toggleHaptics()`) turns all of it off; `navigator.vibrate` only as a fallback without the bridge.
-    Strength: `settings.hapticLevel` 1–5 (default 3) goes to `Android.haptic(kind, level)`: 1 EFFECT_TICK (the phone's
-    lightest), 2 EFFECT_CLICK, 3 EFFECT_HEAVY_CLICK, 4–5 full-amplitude one-shots of 30 / 45 ms (`PULSE_MS`, also the
-    pre-API-29 and browser fallback lengths); "long" plays one level up. Every haptic is played as **media** vibration
+    Strength: `settings.hapticLevel` 1–5 (default 3) goes to `Android.haptic(kind, level)`, always rising on every
+    phone: where the hardware has a real click primitive (API 30+, `areAllPrimitivesSupported(PRIMITIVE_CLICK)`,
+    cached in `crisp`), 1–3 are that click at scale 0.35 / 0.65 / 1; otherwise, and 4–5 everywhere, one pulse whose
+    length and amplitude both rise (`PULSE_MS` 14/20/28/38/52 ms, `PULSE_AMP` 90…255, `DEFAULT_AMPLITUDE` without
+    amplitude control; `PULSE_MS` is also the browser fallback in `js/core.js`). Never the predefined EFFECT_TICK /
+    CLICK / HEAVY_CLICK: on phones whose hardware lacks them Android plays the maker's fallback buzzes, and the
+    lightest level felt strongest (seen on an Android 14 phone). "long" plays one level up. Every haptic is played as **media** vibration
     (`VibrationAttributes.USAGE_MEDIA`, `AudioAttributes.USAGE_MEDIA` before API 33): without attributes Android 12+
     files short effects under touch feedback, which the phone's own touch-vibration setting scales down or silences.
     The slider is a Material 3 discrete slider built in HTML (`sliderHtml()` / `sliderShow()` in `js/screens.js`,
