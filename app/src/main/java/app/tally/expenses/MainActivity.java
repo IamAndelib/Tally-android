@@ -314,12 +314,9 @@ public class MainActivity extends Activity {
                 folderPicked(null);
                 return;
             }
+            // remembered and marked not backed up yet: the first backup comes at the set time (Back up now: at once)
             BackupReceiver.setFolder(this, tree);
-            // the first backup right away, off the UI thread; the page then shows the folder and the result
-            new Thread(() -> {
-                String err = BackupReceiver.run(getApplicationContext(), true);
-                runOnUiThread(() -> folderPicked(err == null ? "" : err));
-            }).start();
+            folderPicked("");
         }
     }
 

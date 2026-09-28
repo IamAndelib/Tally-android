@@ -187,9 +187,10 @@ function backupStatus() {
     return {};
   }
 }
-/* The Auto backup switch. Off keeps the folder; on reuses it (and backs up at once, so the file catches up) while
-   Tally can still write there. Only the first time, or once that permission is gone, asks for a folder (the answer
-   comes back in onFolderPicked); "Change" picks another one any time. */
+/* The Auto backup switch. Off keeps the folder; on reuses it while Tally can still write there. Only the first time,
+   or once that permission is gone, asks for a folder (the answer comes back in onFolderPicked); "Change" picks
+   another one any time. Switching on only schedules it: the first backup comes at the set time (save() hands the
+   data over, debounced), so the tap stays instant; Back up now is the one immediate write. */
 function toggleAutoBackup() {
   if (S.settings.backup.on) {
     S.settings.backup.on = false;
@@ -200,27 +201,25 @@ function toggleAutoBackup() {
   }
   const bs = backupStatus();
   if (!bs || !bs.folder || !bs.usable) return pickBackupFolder();
+  backupOn();
+}
+function backupOn() {
   S.settings.backup.on = true;
   save();
   syncBackup();
-  backupNow();
+  if (V.screen === "settings") render();
+  snack("Auto backup on · daily at " + timeLabel(S.settings.backup.time));
 }
 function pickBackupFolder() {
-  /* the first backup is written as soon as the folder is picked, so the shell needs the data now */
   try {
-    Android.setBackupData(JSON.stringify(S));
     Android.pickBackupFolder();
   } catch (e) {}
 }
-/* window.tallyFolder: null = cancelled (nothing changes), "" = folder saved and backed up, else what went wrong */
+/* window.tallyFolder: null = cancelled (nothing changes), "" = folder saved, else what went wrong */
 function onFolderPicked(err) {
   if (err == null) return;
-  S.settings.backup.on = true;
-  save();
-  syncBackup();
-  mirrorNow();
-  if (V.screen === "settings") render();
-  snack(err ? err : "Backed up");
+  if (err) snack(err);
+  else backupOn();
 }
 function backupNow() {
   mirrorNow();

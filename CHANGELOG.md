@@ -19,7 +19,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
   minute of the day; times follow the phone's 12 / 24-hour setting.
 - Loan and lending due-day reminders come at a time you pick (09:00 until you change it).
 - With auto backup on, "Back up now" replaces "Save backup". Restoring a backup keeps this phone's auto backup on.
-- Turning auto backup off and on again keeps the folder (and backs up at once); "Change" picks a different one.
+- Turning auto backup off and on again keeps the folder; "Change" picks a different one. Switching it on is instant:
+  the first backup comes at the set time, and "Back up now" still backs up at once.
 - Restore reads backup files through Android itself, so a file that WebView couldn't open ("Couldn't read that
   file") now restores. The auto backup rewrites the same file in place and checks it after every write.
 - Reminders arrive at the exact time where Android allows it, follow the local time after a time-zone change, and

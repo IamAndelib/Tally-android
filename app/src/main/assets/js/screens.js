@@ -782,7 +782,7 @@ function autoBackupHtml() {
         ? esc(bs.error)
         : bs.last
           ? "Last backup: " + esc(backupWhen(bs.last))
-          : "Not backed up yet";
+          : "First backup at " + esc(timeLabel(b.time));
   return (
     '<div class="list" id="bk"><div class="setrow"><span class="mid"><div>Auto backup</div><div class="s' +
     (b.on && bs.error ? " err" : "") +

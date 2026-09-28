@@ -50,8 +50,10 @@ Built originally in a claude.ai chat; continue development from here.
     - Auto backup (`BackupReceiver.java`): while `settings.backup.on`, `save()` → `mirrorSoon()` (800 ms debounce)
       → `Android.setBackupData(JSON.stringify(S))`, written atomically to app-private `files/snapshot.json` and marked
       dirty, so the daily alarm (`setBackup({on,h,m})`) needs no WebView. `pickBackupFolder()` →
-      `ACTION_OPEN_DOCUMENT_TREE` + persistable permission (the old one released) → first backup at once →
-      `window.tallyFolder(err)` (`onFolderPicked`: null = cancelled, stays off; "" = done). Each run, only when
+      `ACTION_OPEN_DOCUMENT_TREE` + persistable permission (the old one released) → `window.tallyFolder(err)`
+      (`onFolderPicked`: null = cancelled, stays off; "" = saved → `backupOn()`). Switching on (first pick or the
+      remembered folder) only schedules: the first backup comes at the set time ("First backup at …"), so the tap
+      stays instant; **Back up now is the only immediate write**. Each run, only when
       dirty (or forced: Back up now / new folder) and **never with an empty or non-backup state** (`worthKeeping`:
       parses, has `accounts`/`txns`, holds something — after Delete all data or an unreadable start it's skipped),
       writes the data to "Tally backup (new).json", reads it back, then rewrites **the same** "Tally backup.json"
@@ -63,7 +65,7 @@ Built originally in a claude.ai chat; continue development from here.
       notification → `open=backup` (Settings, `#bk`). `backupStatus()` → `{folder, usable, last, error}` (`usable`:
       the persisted write permission on the folder is still held); `backupNow()` runs on the bridge thread. The
       folder is remembered while auto backup is off: switching it back on (`toggleAutoBackup`) reuses it when
-      `usable` and backs up at once; only the first time (or without access) does it open the folder picker —
+      `usable`; only the first time (or without access) does it open the folder picker —
       "Change" picks another. The file is exactly the manual backup format.
     - Restore on Android never goes through WebView's file input: `restoreStart()` (`data-act="restore"`) → with
       auto backup on, `Android.readAutoBackup()` (`BackupReceiver.readAuto`, reads the file from the folder) → one

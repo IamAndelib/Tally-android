@@ -336,20 +336,31 @@ const stub = () => {
   await act("bk-auto");
   await settle();
   ok(
-    (await calls("pick")).length === 1 && (await calls("data")).length === 1 && !(await state()).settings.backup.on,
-    "turning it on hands over the data and asks for a folder first"
+    (await calls("pick")).length === 1 && !(await state()).settings.backup.on,
+    "turning it on the first time asks for a folder"
   );
   await page.evaluate(() => window.tallyFolder(null));
   ok(!(await state()).settings.backup.on, "cancelled: stays off");
   await page.evaluate(() => {
-    window.__cfg.status = { folder: "Documents/Tally", last: Date.now(), error: "" };
+    window.__cfg.status = { folder: "Documents/Tally", usable: true, last: 0, error: "" };
+    window.__calls = [];
     window.tallyFolder("");
   });
   await settle();
   S = await state();
   let bk = await page.evaluate(() => window.__backup);
   ok(S.settings.backup.on && bk.on && bk.h === 23 && bk.m === 0, "folder picked: on, daily at 23:00");
-  ok((await page.textContent("#snack")).includes("Backed up"), "and backed up right away");
+  ok(
+    (await calls("now")).length === 0 && (await page.textContent("#snack")).includes("Auto backup on · daily at 23:00"),
+    "no backup right away: it's scheduled"
+  );
+  ok((await page.textContent("#bk")).includes("First backup at 23:00"), "Settings says when the first backup comes");
+  await settle(1000);
+  ok((await calls("data")).length === 1, "the data is handed to the shell once, after the tap");
+  await page.evaluate(() => {
+    window.__cfg.status.last = Date.now();
+    render();
+  });
   const bkText = await page.textContent("#bk");
   ok(
     bkText.includes("Documents/Tally") && bkText.includes("Last backup: Today") && bkText.includes("Tally backup.json"),
@@ -420,22 +431,22 @@ const stub = () => {
   });
   await settle(1200);
   ok((await calls("data")).length === 0, "off: nothing is mirrored");
-  // back on: the remembered folder is reused (no new pick) and the file catches up at once
+  // back on: the remembered folder is reused (no new pick), and it's only scheduled
   await page.evaluate(() => {
     window.__cfg.status = { folder: "Documents/Tally", usable: true, last: Date.now(), error: "" };
     window.__cfg.nowErr = "";
     window.__calls = [];
   });
   await act("bk-auto");
-  await settle();
+  await settle(1000);
   bk = await page.evaluate(() => window.__backup);
   ok(
     (await calls("pick")).length === 0 &&
-      (await calls("now")).length === 1 &&
+      (await calls("now")).length === 0 &&
       (await calls("data")).length === 1 &&
       bk.on &&
       (await state()).settings.backup.on,
-    "switched back on: same folder, no picker, backed up right away"
+    "switched back on: same folder, no picker, no immediate backup, data handed over"
   );
   ok((await page.textContent("#bk")).includes("Documents/Tally"), "and it shows that folder");
   // the folder's permission is gone (e.g. revoked): then it asks again
