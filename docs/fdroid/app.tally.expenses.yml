@@ -19,9 +19,9 @@ Repo: https://github.com/IamAndelib/Tally-android.git
 Binaries: https://github.com/IamAndelib/Tally-android/releases/download/v%v/Tally-v%v.apk
 
 Builds:
-  - versionName: 1.2.6
-    versionCode: 10206
-    commit: fba4ad4fa32742fc9ddbe47015323946e44f350e
+  - versionName: 1.2.7
+    versionCode: 10207
+    commit: b545cf70f1b3c061ce60ad7d8fef9ee00cbeda0b
     subdir: app
     gradle:
       - yes
@@ -31,5 +31,5 @@ AllowedAPKSigningKeys: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
 UpdateCheckData: gradle.properties|VersionCode=(\d+)|.|tallyVersion=([\d.]+)
-CurrentVersion: 1.2.6
-CurrentVersionCode: 10206
+CurrentVersion: 1.2.7
+CurrentVersionCode: 10207
