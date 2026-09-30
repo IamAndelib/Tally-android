@@ -3,7 +3,7 @@
 # Binaries + AllowedAPKSigningKeys: F-Droid rebuilds Tally, checks it matches the signed GitHub release APK, and ships
 # that APK (reproducible build); CI's "F-Droid reproducible build" job runs the same check on every push.
 Categories:
-  - Money
+  - Finance Manager
 License: MIT
 AuthorName: IamAndelib
 AuthorWebSite: https://github.com/IamAndelib

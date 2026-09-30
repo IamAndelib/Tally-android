@@ -25,7 +25,9 @@ recipe="$repo/docs/fdroid/app.tally.expenses.yml"
 
 # 1. the recipe we will submit: fdroid lint, and rewritemeta must leave it as it is
 lint=$(mktemp -d)
-mkdir "$lint/metadata"
+mkdir "$lint/metadata" "$lint/config"
+# fdroiddata's own lists (categories, …) are what lint checks against
+curl -sSfL --retry 3 -o "$lint/config/categories.yml" https://gitlab.com/fdroid/fdroiddata/-/raw/master/config/categories.yml
 grep -v '^#' "$recipe" > "$lint/metadata/app.tally.expenses.yml" # the file as submitted: without our header comment
 cp "$lint/metadata/app.tally.expenses.yml" "$lint/submitted.yml"
 (cd "$lint" && fdroid readmeta && fdroid lint app.tally.expenses)
@@ -58,7 +60,9 @@ fi
 # 3. a recipe for exactly this commit and version, with that reference
 build="$home_vagrant/work"
 rm -rf "$build"
-mkdir -p "$build/metadata" "$build/tmp" "$build/unsigned" "$build/logs" "$home_vagrant/.android" "$home_vagrant/.gradle"
+mkdir -p "$build/metadata" "$build/config" "$build/tmp" "$build/unsigned" "$build/logs" "$home_vagrant/.android" \
+  "$home_vagrant/.gradle"
+cp "$lint/config/categories.yml" "$build/config/"
 python3 - "$recipe" "$build/metadata/app.tally.expenses.yml" "$(git rev-parse HEAD)" "$version" "$code" \
   "$binaries" "$signer" << 'EOF'
 import re, sys
