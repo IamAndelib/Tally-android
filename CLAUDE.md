@@ -196,16 +196,21 @@ Built originally in a claude.ai chat; continue development from here.
     - `adjust` — balance fix; signed `amount`; changes the balance but never counts as spent/received.
     - `loan` — `{dir:'in'|'out', loan:id, principal?, due?}`: money moving for a loan/lending; changes the balance, never
       spent/received. A `principal:true` entry is a draw (money lent/borrowed) and may carry its own optional `due`
-      (`YYYY-MM-DD`); a non-principal entry is a payment against the shared pool.
+      (`YYYY-MM-DD`); a non-principal entry is a payment against the whole tab (`loanInfo` shares it out over the draws).
   - Loan: `{id, kind:'borrow'|'lend', person, account, date, note, status:'open'|'writeoff'}` — a **person tab**, not a
     single amount. `amount`/`due` are never stored on the Loan itself, only derived; `account` is the most recently
     drawn-on account (updated whenever a new draw merges in) and `date` is the first draw's date (kept fixed).
     `loanInfo(l)` derives everything: `draws` (principal txns, oldest→newest), `pays` (payment txns), `total`/`paid`/`left`,
-    `cur` (currency of the newest draw's account), `nextDue` (earliest non-empty due among draws), `st`/`open`
-    (Active, Partly paid, Overdue, Cleared, Written off/Forgiven). **Trade-off:** payments reduce the shared pool, not a
-    specific draw — which draw is due when is tracked, but which draw has been paid off is not. `extendLoan(l,days)`
-    (only reachable via the closed-app notification's +1 day/+1 week, native side unchanged) now bumps the due date of
-    the draw nearest its due (or the newest draw), from the later of that draw's due and today.
+    `cur` (currency of the newest draw's account), `rem` (id → what is still out of each draw: payments are handed to
+    the draw **due soonest first**, draws without a due date last, oldest first; nothing is stored), `nextDue` (earliest
+    due among draws still out, so a paid-off draw never keeps a tab overdue), `dueDraw` (that draw), `dueAmt` (what is
+    out of draws due by `nextDue` or today, whichever is later), `st`/`open` (Active, Partly paid, Overdue, Cleared,
+    Written off/Forgiven). Owner's example: 300 overdue, then 1000 more due in 5 days → the reminder, the row ("৳300
+    due …"), the due card (`dueHead()`, shared with `dpSet`) and the payment pre-fill ask for 300, the reminder adds
+    "৳1,300 in all" (`total`, only when larger than `amount`); once the 1000 is due too, it asks for all 1,300, dated
+    from the oldest missed day. Expanded draw rows show "৳X left" / "paid off". `extendLoan(l,days)` (only reachable
+    via the closed-app notification's +1 day/+1 week) moves every draw still out and due by today (else `dueDraw`),
+    from the later of its due and today.
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow); the hero line reads
     "You lent from X · date" for a single draw, or "N lendings/loans since date" once merged.
     **Suggested people + merging:** typing a name in the Loan/Lend form suggests (as chips, `personCandidates()`) people

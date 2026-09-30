@@ -6,8 +6,9 @@
 
 const loan = id => S.loans.find(l => l.id === id);
 /* paid so far, what is left and the status; everything is derived from the loan's entries */
-/* a loan/lending is one or more "draws" (principal entries), each with its own amount, date and optional due date;
-   payments reduce the shared pool (not attributed to a specific draw — see CLAUDE.md) */
+/* a loan/lending is one or more "draws" (principal entries), each with its own amount, date and optional due date.
+   Payments go to the draw due soonest first (draws without a due date last, oldest first): rem[id] is what is still
+   out of each draw, nextDue the earliest due date still unpaid, dueAmt what is due by then (or by today) */
 function loanInfo(l) {
   const draws = S.txns
     .filter(t => t.type === "loan" && t.loan === l.id && t.principal)
@@ -19,11 +20,19 @@ function loanInfo(l) {
   const newest = draws[draws.length - 1],
     a = acc(newest ? newest.account : l.account),
     cur = a ? a.currency : S.settings.cur;
-  const nextDue =
-    draws
-      .map(t => t.due)
-      .filter(Boolean)
-      .sort()[0] || "";
+  const order = draws.slice().sort((x, y) => (x.due ? (y.due ? x.due.localeCompare(y.due) : -1) : y.due ? 1 : 0)),
+    rem = {};
+  let pool = paid;
+  order.forEach(t => {
+    const r = r2(Math.max(0, t.amount - pool));
+    pool = r2(Math.max(0, pool - t.amount));
+    rem[t.id] = r;
+  });
+  const owing = order.filter(t => rem[t.id] > 0),
+    dueDraw = owing.find(t => t.due) || null,
+    nextDue = dueDraw ? dueDraw.due : "",
+    by = nextDue > today() ? nextDue : today(),
+    dueAmt = r2(owing.filter(t => t.due && t.due <= by).reduce((s, t) => s + rem[t.id], 0));
   const st =
     left <= 0
       ? "cleared"
@@ -34,7 +43,29 @@ function loanInfo(l) {
           : paid > 0
             ? "partly"
             : "active";
-  return { draws, pays, total, paid, left, cur, nextDue, st, open: st !== "cleared" && st !== "writeoff" };
+  return {
+    draws,
+    pays,
+    total,
+    paid,
+    left,
+    cur,
+    rem,
+    nextDue,
+    dueDraw,
+    dueAmt,
+    st,
+    open: st !== "cleared" && st !== "writeoff",
+  };
+}
+/* "Payback day · 29 Sep", with the amount when only part of the tab is due then */
+function dueHead(l, i) {
+  if (!i.nextDue) return "No due date yet";
+  return (
+    (l.kind === "lend" ? "Payback day · " : "Return by · ") +
+    dayLabel(i.nextDue) +
+    (i.dueAmt < i.left ? " · " + money(i.dueAmt, i.cur) : "")
+  );
 }
 function stLabel(l, st) {
   return {
@@ -74,7 +105,9 @@ function loanRow(l, drag) {
     src +
     (i.open
       ? i.nextDue
-        ? (lend ? "Payback " : "Return by ") + dayLabel(i.nextDue)
+        ? i.dueAmt < i.left
+          ? money(i.dueAmt, i.cur) + " due " + dayLabel(i.nextDue)
+          : (lend ? "Payback " : "Return by ") + dayLabel(i.nextDue)
         : "No due date"
       : (lend ? "Lent " : "Borrowed ") + dayLabel(l.date));
   return (
@@ -233,13 +266,13 @@ function loanOpen(id, focusPay) {
     esc(stLabel(l, i.st)) +
     "</span></div></div>";
   h += '<div class="bar" aria-label="' + pct + '% paid"><span style="width:' + pct + '%"></span></div>';
-  let dueDraw = null;
   if (i.open) {
-    dueDraw = i.draws.find(t => t.due === i.nextDue) || i.draws[i.draws.length - 1] || null;
+    // the draw whose due date the card changes: the one due next, else the newest still (or ever) out
+    const dueDraw = i.dueDraw || i.draws.filter(t => i.rem[t.id] > 0).pop() || i.draws[i.draws.length - 1] || null;
     F.dueDraw = dueDraw ? dueDraw.id : null;
     h +=
       '<div class="card"><h3 id="loan-due">' +
-      esc(i.nextDue ? (lend ? "Payback day · " : "Return by · ") + dayLabel(i.nextDue) : "No due date yet") +
+      esc(dueHead(l, i)) +
       "</h3>" +
       (dueDraw
         ? '<div style="margin-top:10px">' +
@@ -257,7 +290,7 @@ function loanOpen(id, focusPay) {
       '<div class="card"><h3>' +
       (lend ? "Got money back?" : "Paid some back?") +
       '</h3><p class="muted small" style="margin:0">Part of it is fine too.</p>' +
-      amtField("f-amt", i.cur, String(i.left)) +
+      amtField("f-amt", i.cur, String(i.nextDue && i.nextDue <= today() ? i.dueAmt : i.left)) +
       '<div class="lbl">' +
       (lend ? "Into" : "From") +
       "</div>" +
@@ -282,7 +315,8 @@ function loanOpen(id, focusPay) {
               (a ? a.name : "?") +
               " on " +
               dayLabel(t.date) +
-              (t.due ? " · due " + dayLabel(t.due) : "")
+              (t.due ? " · due " + dayLabel(t.due) : "") +
+              (i.open ? (i.rem[t.id] > 0 ? " · " + money(i.rem[t.id], i.cur) + " left" : " · paid off") : "")
             : dayLabel(t.date) +
               " · " +
               (lend ? "into " : "from ") +
@@ -711,10 +745,13 @@ function reopenLoan(id) {
   );
   buzz("confirm");
 }
-/* the snooze: move the due date on from whichever is later, the old due date or today */
+/* the snooze (a due reminder's +1 day / +1 week): every unpaid draw due by today, else the next one, moves on from
+   whichever is later, its due date or today */
 function extendLoan(l, days) {
-  const i = loanInfo(l);
-  const t = i.draws.find(d => d.due === i.nextDue) || i.draws[i.draws.length - 1];
-  if (!t) return;
-  t.due = addDays(t.due && t.due > today() ? t.due : today(), days);
+  const i = loanInfo(l),
+    due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= today()), // what the reminder was about
+    list = due.length ? due : [i.dueDraw || i.draws[i.draws.length - 1]];
+  list.forEach(t => {
+    if (t) t.due = addDays(t.due && t.due > today() ? t.due : today(), days);
+  });
 }

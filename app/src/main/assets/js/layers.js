@@ -195,10 +195,7 @@ function dpSet(v) {
     if (!t) return;
     t.due = v;
     commit();
-    const i = loanInfo(l);
-    $("#loan-due").textContent = i.nextDue
-      ? (l.kind === "lend" ? "Payback day · " : "Return by · ") + dayLabel(i.nextDue)
-      : "No due date yet";
+    $("#loan-due").textContent = dueHead(l, loanInfo(l));
   }
 }
 /* the phone's 12 / 24-hour setting (Android.is24h), else the locale's; re-read on resume (H24 = null) */

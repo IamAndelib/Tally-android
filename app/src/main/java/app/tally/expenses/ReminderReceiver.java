@@ -28,11 +28,12 @@ import java.util.Set;
 /**
  * Shows Tally's reminders. The page sends its reminder settings with Android.setReminders(json):
  *   {daily:{on,h,m}, lastEntry:"yyyy-MM-dd", check:{on,h,m,text,checked}, duesAt:{h,m},
- *    dues:[{id,date,kind:"borrow"|"lend",who,amount}]}
+ *    dues:[{id,date,kind:"borrow"|"lend",who,amount,total?}]}
  * - daily: at h:m, "Nothing written today" if lastEntry is not today; re-armed for the next day.
  * - check: at h:m, "Do your balances still match?" with the balances in text, unless checked (the day the balances
  *   were last confirmed) is today. Tapping it opens the morning check on Home.
  * - dues: on the due date at duesAt (and each day while overdue), with "Record payment", "+1 day", "+1 week".
+ *   amount is what is due by date; total (only when larger) is the whole tab, shown after the date.
  *   The +N buttons move the stored date and queue {type:"extend",id,days} for the page (Android.takeActions()).
  * Every alarm is exact when the phone allows it (see {@link #arm}); each daily notice shows at most once a day.
  */
@@ -224,12 +225,14 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     private static void showDue(Context ctx, JSONObject d) {
         String id = d.optString("id"), date = d.optString("date"), who = d.optString("who"), amount = d.optString("amount");
+        String total = d.optString("total");
         boolean lend = "lend".equals(d.optString("kind"));
         boolean dueToday = date.equals(today());
         String title = lend ? who + " owes you " + amount : "You owe " + who + " " + amount;
-        String text = lend
+        String text = (lend
                 ? (dueToday ? "Payback day is today" : "Payback was due " + pretty(date))
-                : (dueToday ? "Due today" : "Was due " + pretty(date));
+                : (dueToday ? "Due today" : "Was due " + pretty(date)))
+                + (total.isEmpty() ? "" : " · " + total + " in all");
         int base = code(id);
         Notification.Action[] actions = {
                 action(ctx, "Record payment", openApp(ctx, "loan:" + id + ":pay", base + 1)),

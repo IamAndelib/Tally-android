@@ -5,6 +5,19 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Loan and lending reminders ask for what is due, not the whole tab. If someone owes 300 that is overdue and has
+  since borrowed 1000 more, due later, the reminder says 300 and adds "1,300 in all". The loan's row, its due card and
+  the suggested payment say 300 too. Payments go to the borrowing due soonest, and each borrowing shows what is left
+  of it.
+- "+1 day" / "+1 week" on a reminder moves every borrowing that is due by today.
+
+### Fixed
+
+- Once a borrowing with a due date was paid off, its date no longer keeps the whole loan or lending "Overdue". The
+  next reminder moves on to the next borrowing's day.
+
 ## [1.2.5] — 2026-09-28
 
 ### Changed
