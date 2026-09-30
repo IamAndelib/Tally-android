@@ -34,7 +34,8 @@ cp "$lint/metadata/app.tally.expenses.yml" "$lint/submitted.yml"
 (cd "$lint" && fdroid readmeta && fdroid lint app.tally.expenses)
 (cd "$lint" && fdroid rewritemeta app.tally.expenses)
 if ! diff -u "$lint/submitted.yml" "$lint/metadata/app.tally.expenses.yml"; then
-  echo "::warning::fdroid rewritemeta would reformat the recipe (diff above)"
+  echo "::error::fdroid rewritemeta would reformat the recipe (diff above); F-Droid's merge-request pipeline fails on that"
+  exit 1
 fi
 
 # 2. the reference APK: the published release when this commit is its tag, else the build job's throwaway-signed APK

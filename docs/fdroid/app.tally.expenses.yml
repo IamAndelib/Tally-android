@@ -30,7 +30,6 @@ AllowedAPKSigningKeys: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-UpdateCheckData:
-  gradle.properties|tallyVersionCode=(\d+)|gradle.properties|tallyVersion=([0-9.]+)
+UpdateCheckData: gradle.properties|VersionCode=(\d+)|.|tallyVersion=([\d.]+)
 CurrentVersion: 1.2.6
 CurrentVersionCode: 10206
