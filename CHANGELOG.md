@@ -5,6 +5,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Tally no longer asks for the Internet permission: it never used the network, and now it can't.
+- The test-build signing key moved out of the repository into a CI secret, and the APK no longer carries Google's
+  encrypted dependency-metadata block (both asked for by F-Droid).
+
 ## [1.2.6] — 2026-09-30
 
 ### Changed

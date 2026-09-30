@@ -4,6 +4,7 @@ Categories:
   - Money
 License: MIT
 AuthorName: IamAndelib
+AuthorWebSite: https://github.com/IamAndelib
 WebSite: https://github.com/IamAndelib/Tally-android
 SourceCode: https://github.com/IamAndelib/Tally-android
 IssueTracker: https://github.com/IamAndelib/Tally-android/issues
@@ -17,13 +18,13 @@ Repo: https://github.com/IamAndelib/Tally-android.git
 Builds:
   - versionName: 1.2.6
     versionCode: 10206
-    commit: v1.2.6
+    commit: fba4ad4fa32742fc9ddbe47015323946e44f350e
     subdir: app
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-UpdateCheckData: gradle.properties|tallyVersionCode=(\d+)|gradle.properties|tallyVersion=(.+)
+UpdateCheckData: gradle.properties|tallyVersionCode=(\d+)|gradle.properties|tallyVersion=([0-9.]+)
 CurrentVersion: 1.2.6
 CurrentVersionCode: 10206

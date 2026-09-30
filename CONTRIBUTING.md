@@ -105,7 +105,8 @@ suites starting with 15). Screenshots go to `tests/e2e/output/`. Add or extend a
 3. For UI changes, include before/after screenshots at phone width (360–430 px), light and dark.
 4. User-facing changes get a line under *Unreleased* in `CHANGELOG.md`.
 
-Never replace `app/debug.keystore` (installed test builds would stop accepting updates) and never commit a release key.
+Never commit a signing key. CI signs test builds with the key in the `DEBUG_KEYSTORE_BASE64` secret; never replace it
+(installed test builds would stop accepting updates).
 
 ## Reporting bugs
 

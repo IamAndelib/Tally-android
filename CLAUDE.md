@@ -432,12 +432,17 @@ Built originally in a claude.ai chat; continue development from here.
     release job refuses to publish without it) is shared by F-Droid, IzzyOnDroid and the Play kit (`docs/play/listing.md`).
     Guides: `docs/PLAY_STORE.md`, `docs/FDROID.md`; F-Droid recipe draft `docs/fdroid/app.tally.expenses.yml`.
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
-    signed with the committed `app/debug.keystore` (android/androiddebugkey/android) so every CI build updates the last.
-    Never replace the keystore: installed copies would stop accepting updates.
+    signed by CI with the key in the `DEBUG_KEYSTORE_BASE64` secret (decoded to the git-ignored `app/debug.keystore`,
+    android/androiddebugkey/android, cert SHA-256 `D8:09:0C:3C:…:5B:FE:D2`) so every CI build updates the last; the
+    builds-branch publish runs only when that secret exists. Never replace it: installed copies would stop accepting
+    updates. Without the file (local checkouts, F-Droid) `app/build.gradle` leaves AGP's default debug key in place.
+    No key is in the repository (F-Droid's scanner flags binaries). `dependenciesInfo { includeInApk/Bundle = false }`
+    keeps Google's encrypted dependency-metadata block out of the APK/AAB (F-Droid / IzzyOnDroid ask for that). The
+    manifest has no `INTERNET` permission: WebViewAssetLoader answers every page request locally.
   - Release builds: `app.tally.expenses`, not minified, signed only when `TALLY_KEYSTORE` / `TALLY_KEYSTORE_PASSWORD`
     (alias `TALLY_KEY_ALIAS`, default `tally`) are set. The private key (PKCS12, alias `tally`, cert SHA-256
     `9D:B8:C8:9C:…:8D:2F:AC:88`, in README/SECURITY) is only in the repository secrets `RELEASE_KEYSTORE_BASE64` and
-    `RELEASE_KEYSTORE_PASSWORD`. Never commit a key (`.gitignore` blocks `*.jks`, `*.keystore`, `*.p12` except the debug key).
+    `RELEASE_KEYSTORE_PASSWORD`. Never commit a key (`.gitignore` blocks `*.jks`, `*.keystore`, `*.p12`).
   - CI `.github/workflows/build-apk.yml`: job `check` (`npm ci`, Playwright Chromium, `npm run lint`, `npm test`);
     job `build` (`assembleDebug assembleRelease`, debug APK as artifact and force-pushed to the `builds` branch as
     `Tally-<branch>.apk`, branches only); job `release` on pushes to `main` or a `v*` tag (needs `check`): if

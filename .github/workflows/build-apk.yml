@@ -57,9 +57,26 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
+      # Test builds are signed with the one debug key kept in the DEBUG_KEYSTORE_BASE64 secret, so each build updates
+      # the "Tally Dev" already installed. Without the secret (a fork) the build still runs with a throwaway key, and
+      # nothing is published to the builds branch.
+      - name: Debug signing key
+        id: debugkey
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 -d > app/debug.keystore
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No DEBUG_KEYSTORE_BASE64 secret: this test build is signed with a throwaway key and not published"
+          fi
       # the release variant is built too (unsigned here), so a problem with it shows up before a version is tagged
       - name: Build
         run: gradle assembleDebug assembleRelease --no-daemon
+      - name: Remove the debug key
+        if: always()
+        run: rm -f app/debug.keystore
       - uses: actions/upload-artifact@v4
         with:
           name: Tally-apk
@@ -67,7 +84,7 @@ jobs:
       # Keeps the latest debug APK of every branch on the `builds` branch (a single commit, replaced each time),
       # so it can be downloaded without unzipping an artifact: builds/Tally-<branch>.apk
       - name: Publish APK to the builds branch
-        if: github.ref_type == 'branch'
+        if: github.ref_type == 'branch' && steps.debugkey.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           SRC_BRANCH: ${{ github.ref_name }}
