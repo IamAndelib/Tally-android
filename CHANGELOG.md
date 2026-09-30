@@ -17,6 +17,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - Once a borrowing with a due date was paid off, its date no longer keeps the whole loan or lending "Overdue". The
   next reminder moves on to the next borrowing's day.
+- Reminders still on screen keep up with the app. The balance check shows the new balances after you write something
+  down, without a new sound, and goes away after "All match". A due reminder shows the new amount, or goes away once
+  that loan or lending is paid. The evening nudge goes away once something is written that day.
 
 ## [1.2.5] — 2026-09-28
 

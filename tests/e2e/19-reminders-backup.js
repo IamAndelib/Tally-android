@@ -183,6 +183,24 @@ const stub = () => {
   });
   await settle();
   ok(await card(), "on return, once due, the card appears");
+  // a spending while the card is up (not confirmed yet): the card and the check text the shell re-writes follow at once
+  const text0 = (await page.evaluate(() => window.__rem)).check.text;
+  await act("add-out");
+  await settle();
+  await page.click('#sheet [data-act="f-cat"] >> nth=0');
+  await page.fill("#f-amt", "20");
+  await page.click('#sheet [data-act="tx-save"]');
+  await settle();
+  const text1 = (await page.evaluate(() => window.__rem)).check.text;
+  ok(text1 !== text0, "the check text sent to the shell follows the spending: " + text0 + " → " + text1);
+  ok(
+    await page.evaluate(() => {
+      const c = $("#app .check"),
+        b = balances();
+      return !!c && activeAccounts().every(a => c.textContent.includes(money(b[a.id], a.currency)));
+    }),
+    "the balance card shows the balances after the spending"
+  );
   await act("check-ok");
   await settle();
   await page.evaluate(() => {

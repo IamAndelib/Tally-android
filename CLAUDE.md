@@ -55,6 +55,10 @@ Built originally in a claude.ai chat; continue development from here.
       too. Receivers don't re-arm each other: that could replace a still-pending late nudge with tomorrow's.
       `ReminderReceiver.save()` skips an unchanged sync (static `armedFor` = config + exact ability, in memory only,
       so the first sync after a force-stop or reboot always re-arms; a change in exact ability re-arms as exact).
+      A changed sync also runs `refreshShown()`: notices still on screen (`getActiveNotifications()`) follow the page —
+      the check re-written with the new balances, a due notice with the new amount (quietly: `setOnlyAlertOnce`, no
+      `shown:` mark), and removed once they no longer apply (something written today, "All match", check off, a loan
+      paid off or not due any more). A dismissed notice never comes back; the backup notice (id 3) is left alone.
       The nudge and check show only once today's h:m has come (`reached()`): a late delivery after midnight just
       re-arms. The nudge is only on while there are active accounts (`syncReminders`). `schedule()` drops
       `shown:<loanId>` marks of loans no longer reminded about. Notifications use the monochrome `ic_notif` (the

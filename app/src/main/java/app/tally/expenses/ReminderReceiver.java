@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
+import android.service.notification.StatusBarNotification;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -108,6 +109,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         p.edit().putString("config", cfg).putString("lastEntry", config(cfg).optString("lastEntry", "")).apply();
         schedule(ctx);
         armedFor = key;
+        refreshShown(ctx, config(cfg));
     }
 
     static synchronized String takeActions(Context ctx) {
@@ -224,6 +226,11 @@ public class ReminderReceiver extends BroadcastReceiver {
     // ---------- notifications ----------
 
     private static void showDue(Context ctx, JSONObject d) {
+        showDue(ctx, d, false);
+    }
+
+    /** quiet: re-writes one already on screen (new amount, total or date), without a sound or a "shown" mark. */
+    private static void showDue(Context ctx, JSONObject d, boolean quiet) {
         String id = d.optString("id"), date = d.optString("date"), who = d.optString("who"), amount = d.optString("amount");
         String total = d.optString("total");
         boolean lend = "lend".equals(d.optString("kind"));
@@ -239,8 +246,45 @@ public class ReminderReceiver extends BroadcastReceiver {
                 action(ctx, "+1 day", extendIntent(ctx, id, 1, base + 2)),
                 action(ctx, "+1 week", extendIntent(ctx, id, 7, base + 3)),
         };
-        show(ctx, CH_DUES, base, title, text, openApp(ctx, "loan:" + id, base), actions);
-        prefs(ctx).edit().putString("shown:" + id, today()).apply();
+        show(ctx, CH_DUES, base, title, text, openApp(ctx, "loan:" + id, base), actions, quiet);
+        if (!quiet) prefs(ctx).edit().putString("shown:" + id, today()).apply();
+    }
+
+    /**
+     * Notices still on screen follow the page's latest sync: re-written quietly while they still apply (a spending
+     * changes the balances in the check, a payment the amount due), removed once they don't (something written today,
+     * "All match", the check switched off, a loan paid off or no longer due). One the user dismissed never comes back,
+     * and the "shown today" marks stay as they are.
+     */
+    private static void refreshShown(Context ctx, JSONObject cfg) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        Set<Integer> up = new HashSet<>();
+        try {
+            for (StatusBarNotification s : nm.getActiveNotifications()) up.add(s.getId());
+        } catch (RuntimeException e) {
+            return; // some ROMs refuse this; the notices then just stay as they were
+        }
+        String t = today();
+        if (up.contains(DAILY_ID) && t.equals(cfg.optString("lastEntry"))) nm.cancel(DAILY_ID);
+        if (up.contains(CHECK_ID)) {
+            JSONObject ck = cfg.optJSONObject("check");
+            if (ck == null || !ck.optBoolean("on") || t.equals(ck.optString("checked"))) nm.cancel(CHECK_ID);
+            else show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
+                    openApp(ctx, "check", CHECK_ID), null, true);
+        }
+        Set<Integer> due = new HashSet<>();
+        JSONArray dues = cfg.optJSONArray("dues");
+        for (int i = 0; dues != null && i < dues.length(); i++) {
+            JSONObject d = dues.optJSONObject(i);
+            String id = d == null ? "" : d.optString("id");
+            if (id.isEmpty() || d.optString("date").compareTo(t) > 0) continue; // not due (any more)
+            due.add(code(id));
+            if (up.contains(code(id))) showDue(ctx, d, true);
+        }
+        for (int id : up) {
+            if (id >= 1000 && !due.contains(id)) nm.cancel(id); // loan notices (code() ≥ 1000) no longer due
+        }
     }
 
     /** Creates (or renames) Tally's channels, so each kind can be silenced on its own in Android's settings. */
@@ -256,13 +300,19 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     static void show(Context ctx, String channel, int nid, String title, String text, PendingIntent tap, Notification.Action[] actions) {
+        show(ctx, channel, nid, title, text, tap, actions, false);
+    }
+
+    /** quiet: replaces the notice with this id in place, without sound or vibration (setOnlyAlertOnce). */
+    static void show(Context ctx, String channel, int nid, String title, String text, PendingIntent tap,
+                     Notification.Action[] actions, boolean quiet) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26) channels(ctx);
         Notification.Builder b = builder(ctx, channel);
         b.setSmallIcon(R.drawable.ic_notif).setContentTitle(title).setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
-                .setAutoCancel(true).setContentIntent(tap)
+                .setAutoCancel(true).setContentIntent(tap).setOnlyAlertOnce(quiet)
                 // on a lock screen that hides sensitive content: which kind of reminder, never names or amounts
                 .setPublicVersion(builder(ctx, channel).setSmallIcon(R.drawable.ic_notif).setContentTitle("Tally")
                         .setContentText(publicText(channel)).build());
