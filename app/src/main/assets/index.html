@@ -4,9 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Everything is local: no network requests, and only the app's own scripts may run. -->
+    <!-- Exception: Vercel Analytics is allowed for privacy-friendly traffic insights. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self' https://va.vercel-scripts.com; connect-src https://va.vercel-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
     />
     <title>Tally</title>
     <link rel="stylesheet" href="css/colors.css" />
@@ -40,5 +41,7 @@
     <script src="js/gestures.js"></script>
     <script src="js/events.js"></script>
     <script src="js/main.js"></script>
+    <!-- Vercel Web Analytics -->
+    <script defer src="/_vercel/insights/script.js"></script>
   </body>
 </html>
