@@ -84,7 +84,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 | **Android** | 7.0 (API 24) or newer |
 | **Android System WebView** | version 87 or newer — kept up to date through Google Play on almost every phone |
 | **Storage** | about 2 MB for the app, plus your data |
-| **Internet** | not needed |
+| **Internet** | not needed (Tally doesn't even ask for the permission) |
 | **Material You colours** | Android 12 or newer (older versions use Tally's own colours) |
 | **Notifications** | optional; Tally asks on first open (Android 13+), and you can allow it later in Settings |
 
@@ -136,11 +136,11 @@ content.
 | Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |
 | Vibrate | a short tick when saving |
-| Internet | declared because the app's screen is a WebView; Tally itself makes no network requests |
 
 ## Build from source
 
-You need **JDK 17** and the **Android SDK** with platform 34 and build-tools 34.0.0 (Android Studio includes both).
+You need **JDK 17 or newer** (releases are built with 21) and the **Android SDK** with platform 35 and build-tools
+35.0.0 (Android Studio includes both).
 
 ```sh
 git clone https://github.com/IamAndelib/Tally-android.git
@@ -148,8 +148,9 @@ cd Tally-android
 ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk ("Tally Dev")
 ```
 
-Or open the folder in Android Studio and run it. Debug builds are signed with the committed `app/debug.keystore` and
-install as *Tally Dev* (`app.tally.expenses.dev`), next to the release.
+Or open the folder in Android Studio and run it. Debug builds install as *Tally Dev* (`app.tally.expenses.dev`), next
+to the release, signed with your own machine's debug key (CI signs its test builds with a key kept in a repository
+secret; no key is in the repository).
 
 A release build (`./gradlew assembleRelease`) is signed only when `TALLY_KEYSTORE` and `TALLY_KEYSTORE_PASSWORD`
 point at a keystore; otherwise it comes out unsigned.
@@ -215,7 +216,8 @@ Pushing a tag `vX.Y.Z` that matches the version does the same.
 
 ## Stores
 
-Guides for publishing: [Google Play](docs/PLAY_STORE.md) and [F-Droid / IzzyOnDroid](docs/FDROID.md). Store texts and
+Guides for publishing: [Google Play](docs/PLAY_STORE.md) and [F-Droid](docs/FDROID.md) (reproducible: F-Droid ships the same
+signed APK as the GitHub release, and CI checks that on every push). Store texts and
 screenshots live in `fastlane/metadata/android/en-US/`.
 
 ## License

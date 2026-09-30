@@ -9,7 +9,8 @@ please read *Design principles* before proposing a new feature.
   `cd app/src/main/assets && python3 -m http.server 8000`. No build step.
 - **Tests and checks:** `cd tests && npm ci && npx playwright install chromium`, then `npm test` and `npm run lint`
   (`npm run format` applies Prettier). If you already have Chromium, point `CHROMIUM_PATH` at it instead of installing.
-- **Android app:** JDK 17 + Android SDK 34, then `./gradlew assembleDebug`, or open the project in Android Studio.
+- **Android app:** JDK 17+ (CI and releases use 21) + Android SDK 35, then `./gradlew assembleDebug`, or open the project
+  in Android Studio.
 
 ## How the app is put together
 
@@ -105,7 +106,8 @@ suites starting with 15). Screenshots go to `tests/e2e/output/`. Add or extend a
 3. For UI changes, include before/after screenshots at phone width (360–430 px), light and dark.
 4. User-facing changes get a line under *Unreleased* in `CHANGELOG.md`.
 
-Never replace `app/debug.keystore` (installed test builds would stop accepting updates) and never commit a release key.
+Never commit a signing key. CI signs test builds with the key in the `DEBUG_KEYSTORE_BASE64` secret; never replace it
+(installed test builds would stop accepting updates).
 
 ## Reporting bugs
 

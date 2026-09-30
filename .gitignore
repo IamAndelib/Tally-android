@@ -5,8 +5,7 @@ local.properties
 *.iml
 out/
 
-# signing keys never belong in the repository (the committed debug key is the one exception)
+# signing keys never belong in the repository (CI decodes both from secrets)
 *.jks
 *.keystore
 *.p12
-!app/debug.keystore
