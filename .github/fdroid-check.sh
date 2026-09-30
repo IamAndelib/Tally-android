@@ -83,6 +83,7 @@ chown -R vagrant "$build" "$home_vagrant/.android" "$home_vagrant/.gradle"
 
 # 4. F-Droid's build: fails if its APK differs from the reference in anything but the signature
 cd "$build"
+$fdroid fetchsrclibs "app.tally.expenses:$code" --verbose # on the server, the source is fetched first
 (unset CI; $fdroid build --verbose --test --on-server --no-tarball "app.tally.expenses:$code")
 ls -l tmp/ tmp/binaries/
 test -e "tmp/binaries/app.tally.expenses_$code.binary.apk" || { echo "::error::F-Droid's build was not verified against the reference APK"; exit 1; }
