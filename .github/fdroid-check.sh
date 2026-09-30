@@ -46,10 +46,10 @@ if [ "$tagged" = "$(git rev-parse HEAD)" ]; then
   binaries="https://github.com/$GH_REPO/releases/download/v%v/Tally-v%v.apk"
   echo "Comparing with the published release v$version"
 else
+  # fdroid only downloads Binaries over https, so the local reference is compared after the build below, with
+  # the same fdroidserver function (common.verify_apks) that `fdroid build` uses for Binaries
   cp /tmp/check/app-release.apk "$ref/Tally-v$version.apk"
-  binaries="http://127.0.0.1:8765/Tally-v%v.apk"
-  (cd "$ref" && python3 -m http.server 8765 > /dev/null 2>&1 &)
-  sleep 1
+  binaries=""
   echo "Comparing with this commit's throwaway-signed release build"
 fi
 signer=$("$ANDROID_HOME/build-tools/31.0.0/apksigner" verify --print-certs "${ref}/Tally-v$version.apk" 2> /dev/null \
@@ -74,8 +74,11 @@ t = re.sub(r"(?m)^(\s*versionCode: ).*$", r"\g<1>" + code, t)
 t = re.sub(r"(?m)^(\s*commit: ).*$", r"\g<1>" + commit, t)
 t = re.sub(r"(?m)^CurrentVersion: .*$", "CurrentVersion: " + name, t)
 t = re.sub(r"(?m)^CurrentVersionCode: .*$", "CurrentVersionCode: " + code, t)
-t = re.sub(r"(?m)^Binaries: .*$", "Binaries: " + binaries, t)
-t = re.sub(r"(?m)^AllowedAPKSigningKeys: .*$", "AllowedAPKSigningKeys: " + signer, t)
+if binaries:
+    t = re.sub(r"(?m)^Binaries: .*$", "Binaries: " + binaries, t)
+    t = re.sub(r"(?m)^AllowedAPKSigningKeys: .*$", "AllowedAPKSigningKeys: " + signer, t)
+else:
+    t = re.sub(r"(?m)^(Binaries|AllowedAPKSigningKeys): .*\n", "", t)
 open(dst, "w").write(t)
 EOF
 cat "$build/metadata/app.tally.expenses.yml"
@@ -85,6 +88,39 @@ chown -R vagrant "$build" "$home_vagrant/.android" "$home_vagrant/.gradle"
 cd "$build"
 $fdroid fetchsrclibs "app.tally.expenses:$code" --verbose # on the server, the source is fetched first
 (unset CI; $fdroid build --verbose --test --on-server --no-tarball "app.tally.expenses:$code")
-ls -l tmp/ tmp/binaries/
-test -e "tmp/binaries/app.tally.expenses_$code.binary.apk" || { echo "::error::F-Droid's build was not verified against the reference APK"; exit 1; }
+ls -l tmp/
+built="$build/tmp/app.tally.expenses_$code.apk"
+if [ -n "$binaries" ]; then
+  test -e "tmp/binaries/app.tally.expenses_$code.binary.apk" \
+    || { echo "::error::F-Droid's build was not verified against the reference APK"; exit 1; }
+else
+  chmod -R a+rX "$ref"
+  if ! sudo --preserve-env --user vagrant env PYTHONPATH="$fdroidserver" HOME="$home_vagrant" \
+    python3 - "$ref/Tally-v$version.apk" "$built" << 'PY'
+import sys, tempfile
+from fdroidserver import common
+common.config = common.read_config()
+with tempfile.TemporaryDirectory() as tmp:
+    problem = common.verify_apks(sys.argv[1], sys.argv[2], tmp)
+print(problem or "F-Droid's build matches the signed APK")
+sys.exit(1 if problem else 0)
+PY
+  then
+    echo "::error::F-Droid's build differs from our signed release build. Entries that differ:"
+    python3 - "$ref/Tally-v$version.apk" "$built" << 'PY'
+import sys, zipfile
+a, b = (zipfile.ZipFile(p) for p in sys.argv[1:])
+ia = {i.filename: i for i in a.infolist()}
+ib = {i.filename: i for i in b.infolist()}
+for name in sorted(set(ia) | set(ib)):
+    x, y = ia.get(name), ib.get(name)
+    if not x or not y or (x.CRC, x.file_size, x.compress_type) != (y.CRC, y.file_size, y.compress_type):
+        print(" ", name, "signed:", x and (x.CRC, x.file_size, x.compress_type),
+              "fdroid:", y and (y.CRC, y.file_size, y.compress_type))
+names = lambda z: [i.filename for i in z.infolist() if not i.filename.startswith("META-INF/")]
+print("same entry order:", names(a) == names(b))
+PY
+    exit 1
+  fi
+fi
 echo "Reproducible: F-Droid's build of $(git -C "$repo" rev-parse --short HEAD) matches the signed APK"
