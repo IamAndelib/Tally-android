@@ -64,7 +64,8 @@ function syncReminders() {
             date: i.nextDue,
             kind: l.kind,
             who: loanWho(l),
-            amount: money(i.left, i.cur),
+            amount: money(i.dueAmt, i.cur),
+            total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
           }));
   try {
     Android.setReminders(

@@ -55,6 +55,10 @@ Built originally in a claude.ai chat; continue development from here.
       too. Receivers don't re-arm each other: that could replace a still-pending late nudge with tomorrow's.
       `ReminderReceiver.save()` skips an unchanged sync (static `armedFor` = config + exact ability, in memory only,
       so the first sync after a force-stop or reboot always re-arms; a change in exact ability re-arms as exact).
+      A changed sync also runs `refreshShown()`: notices still on screen (`getActiveNotifications()`) follow the page —
+      the check re-written with the new balances, a due notice with the new amount (quietly: `setOnlyAlertOnce`, no
+      `shown:` mark), and removed once they no longer apply (something written today, "All match", check off, a loan
+      paid off or not due any more). A dismissed notice never comes back; the backup notice (id 3) is left alone.
       The nudge and check show only once today's h:m has come (`reached()`): a late delivery after midnight just
       re-arms. The nudge is only on while there are active accounts (`syncReminders`). `schedule()` drops
       `shown:<loanId>` marks of loans no longer reminded about. Notifications use the monochrome `ic_notif` (the
@@ -196,16 +200,21 @@ Built originally in a claude.ai chat; continue development from here.
     - `adjust` — balance fix; signed `amount`; changes the balance but never counts as spent/received.
     - `loan` — `{dir:'in'|'out', loan:id, principal?, due?}`: money moving for a loan/lending; changes the balance, never
       spent/received. A `principal:true` entry is a draw (money lent/borrowed) and may carry its own optional `due`
-      (`YYYY-MM-DD`); a non-principal entry is a payment against the shared pool.
+      (`YYYY-MM-DD`); a non-principal entry is a payment against the whole tab (`loanInfo` shares it out over the draws).
   - Loan: `{id, kind:'borrow'|'lend', person, account, date, note, status:'open'|'writeoff'}` — a **person tab**, not a
     single amount. `amount`/`due` are never stored on the Loan itself, only derived; `account` is the most recently
     drawn-on account (updated whenever a new draw merges in) and `date` is the first draw's date (kept fixed).
     `loanInfo(l)` derives everything: `draws` (principal txns, oldest→newest), `pays` (payment txns), `total`/`paid`/`left`,
-    `cur` (currency of the newest draw's account), `nextDue` (earliest non-empty due among draws), `st`/`open`
-    (Active, Partly paid, Overdue, Cleared, Written off/Forgiven). **Trade-off:** payments reduce the shared pool, not a
-    specific draw — which draw is due when is tracked, but which draw has been paid off is not. `extendLoan(l,days)`
-    (only reachable via the closed-app notification's +1 day/+1 week, native side unchanged) now bumps the due date of
-    the draw nearest its due (or the newest draw), from the later of that draw's due and today.
+    `cur` (currency of the newest draw's account), `rem` (id → what is still out of each draw: payments are handed to
+    the draw **due soonest first**, draws without a due date last, oldest first; nothing is stored), `nextDue` (earliest
+    due among draws still out, so a paid-off draw never keeps a tab overdue), `dueDraw` (that draw), `dueAmt` (what is
+    out of draws due by `nextDue` or today, whichever is later), `st`/`open` (Active, Partly paid, Overdue, Cleared,
+    Written off/Forgiven). Owner's example: 300 overdue, then 1000 more due in 5 days → the reminder, the row ("৳300
+    due …"), the due card (`dueHead()`, shared with `dpSet`) and the payment pre-fill ask for 300, the reminder adds
+    "৳1,300 in all" (`total`, only when larger than `amount`); once the 1000 is due too, it asks for all 1,300, dated
+    from the oldest missed day. Expanded draw rows show "৳X left" / "paid off". `extendLoan(l,days)` (only reachable
+    via the closed-app notification's +1 day/+1 week) moves every draw still out and due by today (else `dueDraw`),
+    from the later of its due and today.
     Loan rows and the loan detail show the account the money came from (lend) or went into (borrow); the hero line reads
     "You lent from X · date" for a single draw, or "N lendings/loans since date" once merged.
     **Suggested people + merging:** typing a name in the Loan/Lend form suggests (as chips, `personCandidates()`) people
@@ -415,8 +424,8 @@ Built originally in a claude.ai chat; continue development from here.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.5) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10205) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.6) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10206) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the

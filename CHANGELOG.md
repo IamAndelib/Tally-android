@@ -5,6 +5,24 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.6] — 2026-09-30
+
+### Changed
+
+- Loan and lending reminders ask for what is due, not the whole tab. If someone owes 300 that is overdue and has
+  since borrowed 1000 more, due later, the reminder says 300 and adds "1,300 in all". The loan's row, its due card and
+  the suggested payment say 300 too. Payments go to the borrowing due soonest, and each borrowing shows what is left
+  of it.
+- "+1 day" / "+1 week" on a reminder moves every borrowing that is due by today.
+
+### Fixed
+
+- Once a borrowing with a due date was paid off, its date no longer keeps the whole loan or lending "Overdue". The
+  next reminder moves on to the next borrowing's day.
+- Reminders still on screen keep up with the app. The balance check shows the new balances after you write something
+  down, without a new sound, and goes away after "All match". A due reminder shows the new amount, or goes away once
+  that loan or lending is paid. The evening nudge goes away once something is written that day.
+
 ## [1.2.5] — 2026-09-28
 
 ### Changed
@@ -198,6 +216,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.6]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.6
 [1.2.5]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.5
 [1.2.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.4
 [1.2.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.3

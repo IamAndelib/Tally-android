@@ -1,0 +1,3 @@
+- Loan and lending reminders ask for what is due now, with the total beside it.
+- A paid-off borrowing no longer keeps the whole loan overdue.
+- Reminders still showing update themselves, or go away once they no longer apply.
