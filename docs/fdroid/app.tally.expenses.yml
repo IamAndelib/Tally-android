@@ -1,5 +1,7 @@
 # Draft F-Droid metadata for Tally. It goes into https://gitlab.com/fdroid/fdroiddata as metadata/app.tally.expenses.yml
 # (see docs/FDROID.md). Descriptions, screenshots and changelogs come from fastlane/metadata/ in the app's repository.
+# Binaries + AllowedAPKSigningKeys: F-Droid rebuilds Tally, checks it matches the signed GitHub release APK, and ships
+# that APK (reproducible build); CI's "F-Droid reproducible build" job runs the same check on every push.
 Categories:
   - Money
 License: MIT
@@ -14,6 +16,7 @@ AutoName: Tally
 
 RepoType: git
 Repo: https://github.com/IamAndelib/Tally-android.git
+Binaries: https://github.com/IamAndelib/Tally-android/releases/download/v%v/Tally-v%v.apk
 
 Builds:
   - versionName: 1.2.6
@@ -22,6 +25,8 @@ Builds:
     subdir: app
     gradle:
       - yes
+
+AllowedAPKSigningKeys: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18d2fac88
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
