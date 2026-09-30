@@ -24,10 +24,11 @@ code=$(sed -n 's/^tallyVersionCode=//p' gradle.properties)
 recipe="$repo/docs/fdroid/app.tally.expenses.yml"
 
 # 1. the recipe we will submit: fdroid lint, and rewritemeta must leave it as it is
-lint=$(mktemp -d)
-mkdir "$lint/metadata" "$lint/config"
-# fdroiddata's own lists (categories, …) are what lint checks against
-curl -sSfL --retry 3 -o "$lint/config/categories.yml" https://gitlab.com/fdroid/fdroiddata/-/raw/master/config/categories.yml
+# inside a real fdroiddata checkout (only its config: categories, icons, …), which is what lint checks against
+lint=$(mktemp -d)/fdroiddata
+git clone -q --depth 1 --filter=blob:none --sparse https://gitlab.com/fdroid/fdroiddata.git "$lint"
+git -C "$lint" sparse-checkout set --no-cone /config.yml /config/
+mkdir -p "$lint/metadata"
 grep -v '^#' "$recipe" > "$lint/metadata/app.tally.expenses.yml" # the file as submitted: without our header comment
 cp "$lint/metadata/app.tally.expenses.yml" "$lint/submitted.yml"
 (cd "$lint" && fdroid readmeta && fdroid lint app.tally.expenses)
@@ -62,7 +63,7 @@ build="$home_vagrant/work"
 rm -rf "$build"
 mkdir -p "$build/metadata" "$build/config" "$build/tmp" "$build/unsigned" "$build/logs" "$home_vagrant/.android" \
   "$home_vagrant/.gradle"
-cp "$lint/config/categories.yml" "$build/config/"
+cp -R "$lint/config/." "$build/config/"
 python3 - "$recipe" "$build/metadata/app.tally.expenses.yml" "$(git rev-parse HEAD)" "$version" "$code" \
   "$binaries" "$signer" << 'EOF'
 import re, sys
