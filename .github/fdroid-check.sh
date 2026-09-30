@@ -95,8 +95,8 @@ if [ -n "$binaries" ]; then
     || { echo "::error::F-Droid's build was not verified against the reference APK"; exit 1; }
 else
   chmod -R a+rX "$ref"
-  if ! sudo --preserve-env --user vagrant env PYTHONPATH="$fdroidserver" HOME="$home_vagrant" \
-    python3 - "$ref/Tally-v$version.apk" "$built" << 'PY'
+  # (as root: `fdroid build --on-server` uninstalls sudo when it's done)
+  if ! PYTHONPATH="$fdroidserver" python3 - "$ref/Tally-v$version.apk" "$built" << 'PY'
 import sys, tempfile
 from fdroidserver import common
 common.config = common.read_config()
