@@ -417,15 +417,15 @@ Built originally in a claude.ai chat; continue development from here.
     `commit()` also calls `syncReminders()`.
   - Theme: Material 3 role tokens (`--primary`, `--surface-container`, ...) on `:root` (`css/colors.css`) with a baseline scheme from the indigo seed
     `#2F45C9`; `applyTheme()` overrides them in `<style id="dyn">` from the phone's dynamic palette. Spent/received colours are fixed semantic tokens.
-- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17, compileSdk/targetSdk 35 with
+- Build: `./gradlew assembleDebug` (wrapper committed; AGP 8.5.2, Gradle 8.7, JDK 17+ (CI: 21), compileSdk/targetSdk 35 with
   `android.suppressUnsupportedCompileSdk=35`, minSdk 24). Android 15 forces edge-to-edge: `MainActivity` wraps the
   WebView in a `FrameLayout` (`root`) padded by the system-bar/cutout/IME insets (API 30+), and `setBars` also colours
   `root`, which shows behind the transparent bars.
 - Google Play: release job also runs `bundleRelease` and attaches `Tally-vX.Y.Z.aab` (release key = Play upload key).
   User guide `docs/PLAY_STORE.md`; listing text `docs/play/listing.md`, graphics in fastlane `images/`;
   `docs/privacy-policy.md` (must be hosted publicly).
-  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.6) is the release `versionName`; debug builds get
-    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10206) so F-Droid's
+  - Version: `tallyVersion` in `gradle.properties` (semver, now 1.2.7) is the release `versionName`; debug builds get
+    `-dev.<run>`. Release `versionCode` = `tallyVersionCode` (major*10000+minor*100+patch, now 10207) so F-Droid's
     rebuilds match; debug variants override it with `GITHUB_RUN_NUMBER` (`androidComponents.onVariants` in
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the
@@ -445,7 +445,14 @@ Built originally in a claude.ai chat; continue development from here.
     `RELEASE_KEYSTORE_PASSWORD`. Never commit a key (`.gitignore` blocks `*.jks`, `*.keystore`, `*.p12`).
   - CI `.github/workflows/build-apk.yml`: job `check` (`npm ci`, Playwright Chromium, `npm run lint`, `npm test`);
     job `build` (`assembleDebug assembleRelease`, debug APK as artifact and force-pushed to the `builds` branch as
-    `Tally-<branch>.apk`, branches only); job `release` on pushes to `main` or a `v*` tag (needs `check`): if
+    `Tally-<branch>.apk`, branches only; the release is signed with a throwaway key made for the run — RSA 4096,
+    SHA-384, like the real one — and uploaded as `release-check`); job `fdroid` ("F-Droid reproducible build",
+    `.github/fdroid-check.sh`) runs in F-Droid's `fdroidserver:buildserver-trixie` image like fdroiddata's own CI:
+    `fdroid lint` + `rewritemeta` (must not change a byte) on `docs/fdroid/app.tally.expenses.yml` inside a sparse
+    fdroiddata checkout, then `fdroid fetchsrclibs` + `fdroid build --on-server --test` of this commit with JDK 21, and
+    `common.verify_apks` against `release-check` (or, when the commit is the release tag, `Binaries` = the published
+    `Tally-vX.Y.Z.apk`). Green = F-Droid will ship our own signed APK (reproducible build; recipe `Binaries` +
+    `AllowedAPKSigningKeys`). All Java jobs use JDK 21, F-Droid's default: javac output must match. Job `release` on pushes to `main` or a `v*` tag (needs `check`): if
     `v<tallyVersion>` has no GitHub Release yet (a tag must equal it), CHANGELOG must have that section; builds + signs
     from the secrets, verifies cert/versionName/non-debuggable with apksigner/aapt, and `gh release create` publishes
     `Tally-vX.Y.Z.apk` + `.sha256` with the CHANGELOG section as notes, creating the tag at that commit.

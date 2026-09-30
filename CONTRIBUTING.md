@@ -9,7 +9,8 @@ please read *Design principles* before proposing a new feature.
   `cd app/src/main/assets && python3 -m http.server 8000`. No build step.
 - **Tests and checks:** `cd tests && npm ci && npx playwright install chromium`, then `npm test` and `npm run lint`
   (`npm run format` applies Prettier). If you already have Chromium, point `CHROMIUM_PATH` at it instead of installing.
-- **Android app:** JDK 17 + Android SDK 34, then `./gradlew assembleDebug`, or open the project in Android Studio.
+- **Android app:** JDK 17+ (CI and releases use 21) + Android SDK 35, then `./gradlew assembleDebug`, or open the project
+  in Android Studio.
 
 ## How the app is put together
 

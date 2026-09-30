@@ -5,11 +5,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.7] — 2026-09-30
+
 ### Changed
 
 - Tally no longer asks for the Internet permission: it never used the network, and now it can't.
 - The test-build signing key moved out of the repository into a CI secret, and the APK no longer carries Google's
   encrypted dependency-metadata block (both asked for by F-Droid).
+- Reproducible builds: F-Droid's own build of a release is byte-for-byte the signed GitHub APK, so F-Droid can ship
+  Tally with the same signature. CI checks this on every push, in F-Droid's build environment.
 
 ## [1.2.6] — 2026-09-30
 
@@ -222,6 +226,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.7]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.7
 [1.2.6]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.6
 [1.2.5]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.5
 [1.2.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.4

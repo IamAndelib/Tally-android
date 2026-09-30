@@ -139,7 +139,8 @@ content.
 
 ## Build from source
 
-You need **JDK 17** and the **Android SDK** with platform 35 and build-tools 35.0.0 (Android Studio includes both).
+You need **JDK 17 or newer** (releases are built with 21) and the **Android SDK** with platform 35 and build-tools
+35.0.0 (Android Studio includes both).
 
 ```sh
 git clone https://github.com/IamAndelib/Tally-android.git
@@ -215,7 +216,8 @@ Pushing a tag `vX.Y.Z` that matches the version does the same.
 
 ## Stores
 
-Guides for publishing: [Google Play](docs/PLAY_STORE.md) and [F-Droid / IzzyOnDroid](docs/FDROID.md). Store texts and
+Guides for publishing: [Google Play](docs/PLAY_STORE.md) and [F-Droid](docs/FDROID.md) (reproducible: F-Droid ships the same
+signed APK as the GitHub release, and CI checks that on every push). Store texts and
 screenshots live in `fastlane/metadata/android/en-US/`.
 
 ## License

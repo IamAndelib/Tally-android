@@ -1,0 +1,2 @@
+- Tally no longer asks for the Internet permission: it never used the network.
+- Ready for F-Droid: reproducible builds, so F-Droid can ship the same signed app as GitHub.
