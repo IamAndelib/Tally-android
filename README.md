@@ -44,7 +44,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Loans and net worth**
 
 - **Loans and lendings** per person: money you borrowed or lent, in several draws with their own due dates, partial
-  payments, "paid more than owed", write-off / forgive, and reopen.
+  payments (counted against the draw due soonest, so each draw shows what's left of it), "paid more than owed",
+  write-off / forgive, and reopen.
 - **Assets and Liabilities** tabs with net worth per currency, other assets (a laptop, gold, …), cleared loans and
   archived accounts. Drag a row between sections to archive it, mark it cleared or reopen it.
 
@@ -58,7 +59,9 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Around the phone**
 
 - **Reminders**, each at the time you pick: an evening nudge if nothing was written that day, a daily balance check,
-  and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons.
+  and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons. A due
+  reminder asks for what is due, with the whole tab beside it. Reminders still showing update themselves when you
+  write something down, and go away once they no longer apply.
   On first open Tally asks for the two things they need (notifications and unrestricted battery), each with its own
   Allow; whatever you leave off stays in Settings with a button.
 - **Home-screen widget** with today's balance, today's spending and a quick-add button.

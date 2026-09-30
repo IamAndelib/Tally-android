@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.6] — 2026-09-30
+
 ### Changed
 
 - Loan and lending reminders ask for what is due, not the whole tab. If someone owes 300 that is overdue and has
@@ -214,6 +216,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.2.6]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.6
 [1.2.5]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.5
 [1.2.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.4
 [1.2.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.3
