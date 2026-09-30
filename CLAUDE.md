@@ -430,7 +430,10 @@ Built originally in a claude.ai chat; continue development from here.
     `app/build.gradle`; per workflow file — keep `build-apk.yml`'s name).
   - Stores: `fastlane/metadata/android/en-US/` (title, descriptions, `images/`, `changelogs/<versionCode>.txt` — the
     release job refuses to publish without it) is shared by F-Droid, IzzyOnDroid and the Play kit (`docs/play/listing.md`).
-    Guides: `docs/PLAY_STORE.md`, `docs/FDROID.md`; F-Droid recipe draft `docs/fdroid/app.tally.expenses.yml`.
+    Guides: `docs/PLAY_STORE.md`, `docs/FDROID.md`; F-Droid recipe `docs/fdroid/app.tally.expenses.yml` (category
+    "Finance Manager", `Binaries` + `AllowedAPKSigningKeys` = reproducible, signed with the release key). Submitted
+    2026-09-30 as fdroid/fdroiddata!50680 from the owner's fork `IamAndelib/fdroiddata`, branch `app.tally.expenses`
+    (IzzyOnDroid deliberately not used). After it's merged, F-Droid's checkupdates adds each new `vX.Y.Z` tag itself.
   - Debug builds: `applicationIdSuffix '.dev'` → `app.tally.expenses.dev`, labelled "Tally Dev" (`app/src/debug/res`),
     signed by CI with the key in the `DEBUG_KEYSTORE_BASE64` secret (decoded to the git-ignored `app/debug.keystore`,
     android/androiddebugkey/android, cert SHA-256 `D8:09:0C:3C:…:5B:FE:D2`) so every CI build updates the last; the

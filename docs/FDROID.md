@@ -22,21 +22,31 @@ Everything F-Droid reads is in this repository:
 - [`docs/fdroid/app.tally.expenses.yml`](fdroid/app.tally.expenses.yml): the build recipe to submit. Its `commit:` is
   the full commit hash of the newest release tag.
 
+**Status:** submitted on 2026-09-30 as merge request
+[fdroid/fdroiddata!50680](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50680) ("New app: Tally"), waiting for
+review.
+
 ## Submitting (once)
 You add Tally's recipe to F-Droid's data repository, `fdroiddata` on GitLab, with a merge request. Their CI checks and
 builds it, then a volunteer reviews it. This follows F-Droid's
 [Quick Start Guide](https://f-droid.org/docs/Submitting_to_F-Droid_Quick_Start_Guide/):
 
 1. **GitLab account.** Create one at <https://gitlab.com>, and turn on two-factor login (Preferences → Account).
-2. **Fork.** Open <https://gitlab.com/fdroid/fdroiddata> and click **Fork**, into your own namespace.
-3. **Add the recipe.** In your fork, create the branch `app.tally.expenses`. Add the file
-   `metadata/app.tally.expenses.yml` with the contents of the recipe here, without its `#` comment lines at the top.
-   Commit it with the message `New App: app.tally.expenses`.
-4. **Pipeline.** Pushing starts your fork's pipeline. It runs `fdroid lint`, `fdroid rewritemeta`, and the full
-   `fdroid build`, including the reproducibility check. Wait for it to go green.
-5. **Merge request.** Open a merge request from that branch into `fdroid/fdroiddata` → **`master`**, titled
-   "New App: Tally". Fill in the template, and say plainly that Tally was built with AI assistance and that you
-   review, test and maintain it. The repository shows this anyway (CLAUDE.md, co-author lines).
+2. **Fork.** Open <https://gitlab.com/fdroid/fdroiddata> (its display name is "Data") and click **Fork**, into your own
+   namespace, **public**, with **only the default branch `master`** (the repository is huge).
+3. **Add the recipe.** In your fork's `metadata` folder: **+ → Upload file**. Upload the recipe here, without its `#`
+   comment lines at the top, as `app.tally.expenses.yml`. Uploading keeps it byte-exact, which pasting may not.
+   Commit message `New App: app.tally.expenses`, to a **new branch** `app.tally.expenses`, without "create a merge
+   request".
+4. **Merge request.** Open a merge request from that branch into `fdroid/fdroiddata` → **`master`**, titled
+   "New app: Tally", with "Allow commits from members who can merge" ticked. Fill in the "App inclusion" template's
+   checklist, and say plainly that Tally was built with AI assistance and that you review, test and maintain it. The
+   repository shows this anyway (CLAUDE.md, co-author lines).
+5. **Pipeline.** F-Droid's checks (`fdroid lint`, `rewritemeta`, `fdroid build` + the reproducibility check) run on
+   the merge request, not on a branch push. On a new GitLab account the pipeline may fail at once with **0 jobs**,
+   because GitLab wants identity verification (phone or card) for its shared runners. Don't give either; F-Droid's
+   checklist says to leave a comment asking them to trigger the CI instead. Tick the two "Pipeline" boxes only once
+   it has passed.
 6. **Review.** Answer questions in the merge request. Once it's merged, Tally appears in F-Droid after the next build
    cycle, usually within a few days.
 
