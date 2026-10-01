@@ -156,6 +156,8 @@ function wipeConfirm() {
     () => {
       const keep = {
         cur: S.settings.cur,
+        week: S.settings.week,
+        clock: S.settings.clock,
         theme: S.settings.theme,
         remind: S.settings.remind,
         haptics: S.settings.haptics,

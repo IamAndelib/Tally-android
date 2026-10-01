@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Settings → Region: choose the first day of the week (Monday, Sunday or Saturday) for calendars and weekly
+  summaries, and 24- or 12-hour time. New notebooks start on Monday and 24-hour (the international standard);
+  existing notebooks keep what they showed.
+
+### Changed
+
+- A new notebook starts by choosing its currency instead of a preset one; it becomes the main currency, which can be
+  changed in Settings → Region.
+- Neutral examples: the account name hint no longer names a bank, and popular currencies are listed by world use.
+
 ## [1.2.7] — 2026-09-30
 
 ### Changed

@@ -853,6 +853,9 @@ body.hist #app {
   color: var(--on-surface-variant);
   margin: 16px 0 8px;
 }
+.lbl.set {
+  margin: 12px 4px 8px;
+}
 .field {
   display: block;
   margin: 12px 0 0;
@@ -1279,6 +1282,10 @@ textarea {
 .welcome p {
   color: var(--on-surface-variant);
   margin: 0 0 24px;
+}
+.welcome .fieldbtn {
+  max-width: 320px;
+  margin: 0 auto 16px;
 }
 .month {
   display: flex;

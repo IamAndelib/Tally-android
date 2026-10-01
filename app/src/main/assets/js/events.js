@@ -409,11 +409,15 @@ document.addEventListener("click", ev => {
       });
       break;
     case "pick-maincur":
-      curPicker(S.settings.cur, c => {
-        S.settings.cur = c;
-        V.cur = null;
-        commit();
-      });
+      pickMainCur();
+      break;
+    case "week":
+      S.settings.week = +v;
+      commit();
+      break;
+    case "clock":
+      S.settings.clock = v === "12" ? "12" : "24";
+      commit();
       break;
     case "cur-pick": {
       const f = CURPICK;

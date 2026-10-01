@@ -13,7 +13,8 @@ const compact = n => {
   if (a < 1e6) return Math.round(n / 1e3) + "k";
   return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
 };
-const weekStart = d => addDays(d, -((parseISO(d).getDay() + 6) % 7));
+/* weeks start on the day chosen in Settings → Region */
+const weekStart = d => addDays(d, -((parseISO(d).getDay() - S.settings.week + 7) % 7));
 function summarySheet() {
   const [, e] = range(),
     t = today();

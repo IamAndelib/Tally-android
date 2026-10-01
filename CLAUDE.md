@@ -84,6 +84,9 @@ never count as spending or income; loans and lendings move money but are never s
   `loadState()` there needs every constant (`migrate()` uses `PALETTE`).
 - Saved data is never silently dropped: unreadable text is kept and offered as a file. `migrate()` upgrades and
   sanitises every saved state and backup without changing balances. Accounts with entries are archived, never deleted.
+- `S.settings.cur` is `""` until a new notebook chooses its currency: new accounts and assets go through `accForm()` /
+  `assetForm()`, which ask for it first. Week start (`settings.week`) and time format (`settings.clock`) are read
+  from settings only, never from the phone (only `migrate()` reads the phone's clock, for older saves).
 - Loan amounts, due amounts and status are always derived by `loanInfo()` (payments go to the draw due soonest);
   nothing about them is stored on the loan.
 - Amount fields: read them with `evalAmt()`, never `parseFloat` (thousands separators, calculator expressions). The

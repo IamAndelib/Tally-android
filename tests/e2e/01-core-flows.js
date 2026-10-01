@@ -64,8 +64,16 @@ const ok = (c, m) => {
     await page.fill("#f-open", String(open));
     await sact("acc-save");
   }
+  // a new notebook starts by choosing its currency on the welcome card
+  ok((await page.textContent(".welcome .fieldbtn")).includes("Choose your currency"), "welcome asks for a currency");
+  await act("pick-maincur");
+  await page.fill("#cur-q", "canad");
+  await settle();
+  await page.click('#curlist [data-v="CAD"]');
+  ok((await state()).settings.cur === "CAD", "chosen currency becomes the main one");
+  ok((await page.textContent(".welcome .fieldbtn")).includes("CAD"), "welcome shows the chosen currency");
   await act("acc-form");
-  await addAccount("RBC", "bank", null, 500);
+  await addAccount("Bank", "bank", null, 500);
   if (await page.$('[data-act="check-ok"]')) await act("check-ok"); // the balance card, once its time has come
   await page.click(".acc.add");
   await addAccount("Wallet", "cash", null, 40);
@@ -105,7 +113,7 @@ const ok = (c, m) => {
   ok(await sameSheet(), "sheet not rebuilt while cycling categories/accounts");
   ok((await page.inputValue("#f-amt")) === "10+2.5", "typed amount kept");
   await sact("tx-save");
-  ok((await bal()).RBC === 487.5, "RBC 487.50 after groceries");
+  ok((await bal()).Bank === 487.5, "Bank 487.50 after groceries");
   // save requires category
   await act("add-out");
   await page.fill("#f-amt", "5");
@@ -138,7 +146,7 @@ const ok = (c, m) => {
   ok((await page.textContent("#tr-prev")).includes("62.00"), "preview includes fee");
   await sact("tr-save");
   let b = await bal();
-  ok(b.RBC === 525.5 && b.Wallet === 100, "after transfer+fee " + JSON.stringify(b));
+  ok(b.Bank === 525.5 && b.Wallet === 100, "after transfer+fee " + JSON.stringify(b));
   ok((await page.textContent("#snack")).includes("Transferred"), "snackbar says Transferred");
   await act("tr-new");
   await sact("tr-to", S.accounts[2].id);
@@ -148,7 +156,7 @@ const ok = (c, m) => {
   await page.fill("#f-toamt", "850");
   await sact("tr-save");
   b = await bal();
-  ok(b.bKash === 2850 && b.RBC === 515.5, "bKash 2850 " + JSON.stringify(b));
+  ok(b.bKash === 2850 && b.Bank === 515.5, "bKash 2850 " + JSON.stringify(b));
   // eating out entry so donut has 2+ categories
   await act("add-cat", "food");
   await page.fill("#f-amt", "8");

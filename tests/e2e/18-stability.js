@@ -278,8 +278,8 @@ const ago = n => {
     "the entry keeps its category"
   );
   ok(
-    a0.currency === "CAD" && S.settings.cur === "CAD" && S.assets[0].currency === "CAD",
-    "bad currencies fall back to CAD"
+    a0.currency === "USD" && S.settings.cur === "USD" && S.assets[0].currency === "USD",
+    "bad currencies fall back to USD"
   );
   ok(
     a0.type === "bank" && a0.c === "" && S.cats.find(c => c.name === "Weird").c === "#9AA3B2",

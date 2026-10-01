@@ -57,7 +57,11 @@ function homeView() {
       '<header class="appbar"><h1>Tally</h1>' +
       topIcons() +
       "</header>" +
-      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="btn" data-act="acc-form">' +
+      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="Currency"><span>' +
+      esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose your currency") +
+      "</span>" +
+      ic("down") +
+      '</button><button class="btn" data-act="acc-form">' +
       ic("add") +
       "Add first account</button></div>"
     );
@@ -661,12 +665,34 @@ function settingsView() {
     '"><span class="mid"><div>Strength</div>' +
     sliderHtml(S.settings.hapticLevel || 3, S.settings.haptics === false) +
     '<div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
+  const seg = (act, cur, opts) =>
+    '<div class="seg">' +
+    opts
+      .map(
+        ([k, l]) =>
+          '<button data-act="' + act + '" data-v="' + k + '" aria-pressed="' + (cur === k) + '">' + esc(l) + "</button>"
+      )
+      .join("") +
+    "</div>";
   h +=
-    '<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>' +
-    esc(curLabel(S.settings.cur)) +
+    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="Main currency"><span>' +
+    esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose") +
     "</span>" +
     ic("down") +
-    "</button>";
+    '</button><div class="lbl set">First day of week</div>' +
+    seg(
+      "week",
+      String(S.settings.week),
+      [1, 0, 6].map(d => [
+        String(d),
+        parseISO(addDays("2024-01-07", d)).toLocaleDateString(undefined, { weekday: "long" }),
+      ])
+    ) +
+    '<div class="lbl set">Time format</div>' +
+    seg("clock", S.settings.clock, [
+      ["24", "24-hour"],
+      ["12", "12-hour"],
+    ]);
   const r = S.settings.remind,
     remRow = (k, act, title, sub, on, time) =>
       '<div class="setrow"><span class="mid"><div>' +

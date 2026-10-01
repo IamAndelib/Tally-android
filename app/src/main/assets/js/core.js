@@ -172,7 +172,8 @@ function money(n, cur, short) {
       const sym = (f.formatToParts(0).find(p => p.type === "currency") || {}).value;
       if (sym && !canDraw(sym)) f = new Intl.NumberFormat(undefined, Object.assign(o, { currencyDisplay: "code" }));
     } catch (e) {
-      return cur + " " + r2(n).toLocaleString();
+      /* no currency chosen yet (a new notebook), or one this phone doesn't know */
+      return (cur ? cur + " " : "") + r2(n).toLocaleString();
     }
     NF.set(k, f);
   }

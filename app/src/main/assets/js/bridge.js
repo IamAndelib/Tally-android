@@ -354,7 +354,6 @@ function onAppResume() {
   syncWidget();
   catchUpToday();
   syncReminders();
-  H24 = null;
   onPerms(); // permissions may have changed in Android's settings
   /* the balance card appears once its time has come (or goes once confirmed) without another tap */
   if (V.screen === "home" && !$("#sheet").innerHTML && !$("#pop").innerHTML && checkDue() !== !!$("#app .check"))

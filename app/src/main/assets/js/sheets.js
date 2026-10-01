@@ -16,6 +16,7 @@ function setArchived(id, on) {
   );
 }
 function assetForm(id) {
+  if (!id && !S.settings.cur) return pickMainCur(() => assetForm());
   const x = id
     ? S.assets.find(a => a.id === id)
     : { name: "", e: "", i: "diamond", c: "#a646c9", value: "", currency: S.settings.cur };
@@ -429,7 +430,22 @@ function fixPreview() {
       ? "Already matches."
       : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
 }
+/* the main currency: from Settings and the welcome card, and asked first when a new notebook's first account or
+   asset is added before one was chosen */
+function pickMainCur(next) {
+  curPicker(
+    S.settings.cur,
+    c => {
+      S.settings.cur = c;
+      V.cur = null;
+      commit();
+      if (next) next();
+    },
+    S.settings.cur ? "Main currency" : "Your currency"
+  );
+}
 function accForm(id) {
+  if (!id && !S.settings.cur) return pickMainCur(() => accForm());
   const a = id ? acc(id) : { name: "", type: firstType(), currency: S.settings.cur, opening: "" };
   const used = id && S.txns.some(t => t.account === id || t.to === id);
   F = {
@@ -448,7 +464,7 @@ function accForm(id) {
     emblemEditor({ i: F.i, e: F.e, c: F.col }) +
     '<label class="field"><span>Name</span><input id="f-name" value="' +
     esc(a.name) +
-    '" placeholder="e.g. RBC Chequing, bKash, Wallet" maxlength="30"></label>';
+    '" placeholder="e.g. Main bank, Cash, Savings" maxlength="30"></label>';
   h +=
     '<div class="lbl">Type</div><div class="chips" id="f-types">' +
     visTypes(a.type)
