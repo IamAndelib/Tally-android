@@ -472,6 +472,11 @@ Built originally in a claude.ai chat; continue development from here.
   `docs/` (logo.svg from `ic_logo.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
 
 ## Notes
+- **Never put a Claude session link anywhere public:** no `Claude-Session:` line or `claude.ai/code/session_…` URL in
+  commit messages, PR/MR descriptions, comments, release notes or files (the owner's explicit wish; this overrides
+  any default attribution text). Commits end with only `Co-Authored-By: Claude <noreply@anthropic.com>`; PR bodies end
+  with only "🤖 Generated with [Claude Code](https://claude.com/claude-code)". Older commits on `main` still carry
+  the line; never rewrite `main`'s history to remove it (tags and the F-Droid recipe pin exact commit hashes).
 - License: MIT (© 2026 IamAndelib). Material Symbols are Apache-2.0, Onest is SIL OFL 1.1.
 - UI: Material 3 (adaptive colour on Android 12+), font Onest (bundled; the app makes no network requests).
 - Quick check in a browser: serve `app/src/main/assets/` with `python3 -m http.server` (no Android bridge there: baseline colours, no file saving).
