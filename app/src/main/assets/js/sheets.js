@@ -173,9 +173,9 @@ function txSheet(id, type, catId) {
     "</div>" +
     accChips("f-acc", F.account, null, accChoices(F.account));
   h +=
-    '<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
+    '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : "") +
-    '" aria-label="Note"><div style="flex:0 0 150px">' +
+    '" aria-label="Note"><div class="nd-date">' +
     dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
     "</div></div>";
   h +=
@@ -264,9 +264,9 @@ function trSheet(id, from) {
     "Add a fee (ATM, cash-out)</button>";
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
-    '<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
+    '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : "") +
-    '" aria-label="Note"><div style="flex:0 0 150px">' +
+    '" aria-label="Note"><div class="nd-date">' +
     dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
     "</div></div>";
   h +=

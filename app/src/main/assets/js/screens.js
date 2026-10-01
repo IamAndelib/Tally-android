@@ -460,14 +460,14 @@ function rbLines(t) {
   if (t.type === "transfer") {
     const to = acc(t.to);
     return (
-      '<span class="rb">↓ ' +
-      esc((a ? a.name : "?") + " " + money(r.a, a ? a.currency : "")) +
-      "</span>" +
-      (to && r.t != null ? '<span class="rb">↑ ' + esc(to.name + " " + money(r.t, to.currency)) + "</span>" : "")
+      rbLine("↓ " + (a ? a.name : "?"), money(r.a, a ? a.currency : "")) +
+      (to && r.t != null ? rbLine("↑ " + to.name, money(r.t, to.currency)) : "")
     );
   }
-  return a ? '<span class="rb">' + esc(a.name + " " + money(r.a, a.currency)) + "</span>" : "";
+  return a ? rbLine(a.name, money(r.a, a.currency)) : "";
 }
+/* on a narrow screen the account name gives way (ellipsis), never the balance */
+const rbLine = (name, bal) => '<span class="rb"><span class="rbn">' + esc(name) + "</span> " + esc(bal) + "</span>";
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";

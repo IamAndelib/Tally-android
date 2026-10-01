@@ -16,6 +16,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - A new notebook starts by choosing its currency instead of a preset one; it becomes the main currency, which can be
   changed in Settings → Region.
 - Neutral examples: the account name hint no longer names a bank, and popular currencies are listed by world use.
+- Screens of every size: Tally is checked on small and large phones, foldables and tablets, with normal and large
+  text. Text follows the phone's font size up to 130%, so layouts stay usable at the largest settings; long names
+  shorten with "…" instead of pushing amounts off screen; buttons grow to fit larger text; the calculator keypad
+  matches the sheet's width on tablets; dialogs scroll on short screens. Phones stay upright; tablets and unfolded
+  foldables can turn.
 
 ## [1.2.7] — 2026-09-30
 

@@ -51,7 +51,7 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif;
-  font-size: 16px;
+  font-size: 1rem; /* every size in rem follows the phone's text size (applyTextScale) */
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   padding-top: env(safe-area-inset-top, 0px);
@@ -584,12 +584,19 @@ body.hist #app {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  height: 48px;
+  min-height: 48px; /* grows to two lines rather than cutting a label off (large text, narrow screens) */
   border-radius: 24px;
-  padding: 0 20px;
+  padding: 6px 20px;
+  line-height: 1.2;
+  text-align: center;
   font-weight: 600;
   background: var(--primary);
   color: var(--on-primary);
+}
+/* buttons side by side keep their label on one line a little longer */
+.row > .btn {
+  padding-left: 12px;
+  padding-right: 12px;
 }
 .btn.tonal {
   background: var(--secondary-container);
@@ -615,6 +622,17 @@ body.hist #app {
 .row > * {
   flex: 1;
   min-width: 0;
+}
+/* note and date side by side, the date below the note on a narrow screen */
+.row.notedate {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.row.notedate > input {
+  flex: 2 1 170px;
+}
+.row.notedate > .nd-date {
+  flex: 1 1 130px;
 }
 .gap {
   height: 8px;
@@ -907,7 +925,7 @@ select option {
   border: 0;
   height: 64px;
   padding: 0;
-  font-size: 2.4rem;
+  font-size: min(2.4rem, 12vw); /* a long amount still fits a narrow phone */
   font-weight: 700;
   letter-spacing: -0.02em;
   caret-color: var(--primary);
@@ -951,7 +969,7 @@ select option {
   position: absolute;
   inset: 0;
   line-height: 64px;
-  font-size: 2.4rem;
+  font-size: min(2.4rem, 12vw);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--on-surface);
@@ -993,6 +1011,8 @@ select option {
   left: 0;
   right: 0;
   bottom: 0;
+  max-width: 560px; /* as wide as the sheet it belongs to, centred on a tablet */
+  margin: 0 auto;
   z-index: 25;
   background: var(--surface-low);
   display: grid;
@@ -1171,6 +1191,8 @@ textarea {
   font-weight: 600;
   white-space: nowrap;
   text-align: right;
+  min-width: 0;
+  max-width: 55%; /* the title keeps at least the rest; the balance line below gives way first */
 }
 .tx.on {
   background: var(--secondary-container);
@@ -1195,14 +1217,17 @@ textarea {
   color: var(--on-surface-variant);
 }
 .tx .a .rb {
-  display: block;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.3em;
   font-weight: 500;
   font-size: 0.72rem;
   color: var(--on-surface-variant);
-  max-width: 170px;
+}
+.tx .a .rbn {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-left: auto;
 }
 .tx .s .st {
   margin-right: 2px;
@@ -2127,7 +2152,18 @@ body.lock {
   padding: 16px;
   width: 100%;
   max-width: 360px;
+  max-height: 100%; /* a short window (split screen, landscape tablet): the dialog scrolls inside */
+  overflow-y: auto;
   animation: fade 0.18s ease-out;
+}
+/* the smallest phones: a little more room, so a calendar's seven columns keep their 40px day circles */
+@media (max-width: 359px) {
+  .pop.scrim {
+    padding: 8px;
+  }
+  .dialog {
+    padding: 12px;
+  }
 }
 @keyframes fade {
   from {

@@ -64,6 +64,10 @@ never count as spending or income; loans and lendings move money but are never s
 - Haptics play on the `Vibrator` as media vibration (a click primitive where the hardware has one, else a pulse);
   never `performHapticFeedback` or the predefined `EFFECT_*`, which some phones replace with stronger fallbacks.
 - Android's own backup is encrypted-only (`backup_rules.xml`, `data_extraction_rules.xml`).
+- Phones (smallest width < 600dp) stay in portrait; tablets and unfolded foldables rotate freely.
+- The WebView's text zoom is off (`setTextZoom(100)`): the page follows the phone's text size itself
+  (`Android.fontScale()` → `applyTextScale()` sets the root font size, capped at `TEXT_MAX`). So every font size in
+  CSS is in `rem`, and a box holding text grows with it (`min-height`, not `height`).
 
 **Reminders, widget and backup**
 - Every alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact. Never `USE_EXACT_ALARM` (Play

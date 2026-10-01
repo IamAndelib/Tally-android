@@ -9,6 +9,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.AudioAttributes;
@@ -90,6 +91,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // phones stay upright: the layouts are made for a portrait phone, and a phone held sideways leaves the ring a
+        // sliver between the bars. Tablets and unfolded foldables (smallest width 600dp+) turn freely; folding or
+        // unfolding changes the smallest width, which restarts the activity and decides again
+        if (getResources().getConfiguration().smallestScreenWidthDp < 600)
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
         web = new WebView(this);
         root = new FrameLayout(this);
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -132,6 +138,9 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(false);
         s.setGeolocationEnabled(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        // the page follows the phone's text size itself (fontScale(), capped so layouts hold), not the WebView's
+        // text zoom, which would scale text past what the layout was made for
+        s.setTextZoom(100);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -704,6 +713,12 @@ public class MainActivity extends Activity {
                     catch (ActivityNotFoundException ignored) { }
                 }
             });
+        }
+
+        /** The phone's text size (Settings → Display → Font size), 1 = default. A change restarts the activity. */
+        @JavascriptInterface
+        public float fontScale() {
+            return MainActivity.this.getResources().getConfiguration().fontScale;
         }
 
         /** The phone's 12 / 24-hour setting, for the time picker and time labels. */
