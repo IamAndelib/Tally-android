@@ -678,7 +678,7 @@ public class MainActivity extends Activity {
          * settings. "exact": Android's "Alarms & reminders" switch. "battery": Android's "Stop optimising battery
          * usage?" popup. Anything else, or a phone without that screen: App info.
          */
-        @SuppressLint("BatteryLife") // on purpose: the owner wants reminders and the backup never held back
+        @SuppressLint("BatteryLife") // on purpose: reminders and the backup must never be held back
         @JavascriptInterface
         public void openSetting(final String kind) {
             runOnUiThread(() -> {

@@ -83,7 +83,7 @@ const ok = (c, m) => {
     }, id);
   const m = n => page.evaluate(n => money(n, "BDT"), n);
 
-  // ---- 1. the owner's example: 300 due yesterday, then 1000 more today, due in 5 days
+  // ---- 1. 300 due yesterday, then 1000 more today, due in 5 days
   await seed([lend("L", "Rahim", d.m2)], [draw("a1", "L", 300, d.m2, d.m1), draw("b2", "L", 1000, d.t, d.p5)]);
   await page.reload();
   await settle();

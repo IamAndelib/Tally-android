@@ -83,7 +83,7 @@ All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
 
 ## Design principles
 
-Tally is used by people who want to write things down quickly and move on (its first user has ADHD):
+Tally is for people who want to write things down quickly and move on:
 
 - **One tap per expense.** Don't add steps to the common path.
 - **Small and quiet.** Short labels, no clutter, no walls of text. No budgets or statement import (both left out on
