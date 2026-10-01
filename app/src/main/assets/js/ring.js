@@ -61,8 +61,8 @@ function ringHTML(cats, o) {
        name is left out rather than cut (the button's label still names it) */
     /* room under the icon: within the tile, and within the distance to its neighbour (closer than a tile in a full
        ring), so nothing reaches the next icon */
-    gap = L.slots.length > 1 ? Math.hypot(L.slots[1].x - L.slots[0].x, L.slots[1].y - L.slots[0].y) : u,
-    room = Math.min(u, gap - 2) - 4 - f * rows,
+    pitch = L.slots.length > 1 ? Math.hypot(L.slots[1].x - L.slots[0].x, L.slots[1].y - L.slots[0].y) : u,
+    room = Math.min(u, pitch - 2) - 4 - f * rows,
     d0 = Math.round(u * (u < 70 ? 0.5 : 0.56)),
     dfit = Math.round(Math.max(u * 0.42, Math.min(d0, room))),
     names = room >= dfit - 1,
