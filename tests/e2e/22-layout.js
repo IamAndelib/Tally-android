@@ -301,6 +301,9 @@ function inspect() {
     const r = ring.getBoundingClientRect();
     if (r.top < -1 || r.bottom > vh + 1)
       out.push("ring not wholly in view sideways " + Math.round(r.top) + ".." + Math.round(r.bottom));
+    // and centred in the height: the room above and below it about equal
+    if (Math.abs(r.top - (vh - r.bottom)) > 8)
+      out.push("ring off centre sideways: " + Math.round(r.top) + " above, " + Math.round(vh - r.bottom) + " below");
   }
   // 6. a sheet or dialog fits the screen (its content scrolls inside)
   const box = layer.querySelector(".p, .dlg, [role=dialog]");

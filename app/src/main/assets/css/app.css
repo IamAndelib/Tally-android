@@ -2392,9 +2392,21 @@ body.land .panes {
 body.land .panes.one {
   grid-template-columns: minmax(0, 640px);
 }
+/* the ring's pane is the window's height and centres it, so the spare room is shared above and below */
 body.land .panes.home > .pane:first-child {
   position: sticky;
   top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* that full-height pane would make the page scroll by main's bottom padding: the right pane carries it instead */
+body.land.hasnav main {
+  padding-bottom: 0;
+}
+body.land .panes.home > .pane:last-child {
+  padding-bottom: 24px;
 }
 body.land .sheet {
   padding: 0;

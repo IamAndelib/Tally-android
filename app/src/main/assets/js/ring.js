@@ -296,7 +296,14 @@ function ringHTML(cats, o) {
     '"' +
     (home ? ' id="ring"' : "") +
     ' style="' +
-    (home && RINGW ? "width:" + W.toFixed(1) + "px;margin:4px auto 0;" : "") + // centred in its pane
+    // centred in its pane (sideways phone: vertically too, the pane being the window's height)
+    (home && RINGW
+      ? "width:" +
+        W.toFixed(1) +
+        "px;margin:" +
+        (document.body.classList.contains("land") ? "0 auto" : "4px auto 0") +
+        ";"
+      : "") +
     "height:" +
     H.toFixed(1) +
     'px">' +
