@@ -472,6 +472,11 @@ Built originally in a claude.ai chat; continue development from here.
   `docs/` (logo.svg from `ic_logo.xml`, README screenshots from sample data, `social-preview.png` 1280×640).
 
 ## Notes
+- **Ask first, in plain words:** before anything that shows up publicly or that the owner didn't ask for (links, names,
+  extra lines in commits or PRs, new services, analytics, anything posted online), ask the owner in simple everyday
+  language, no jargon, and wait for a yes. Explain things in layman's terms in general.
+- **No analytics or tracking, ever** (a "Vercel Web Analytics" PR was closed unmerged for this): Tally makes no network
+  requests and has no INTERNET permission, which the README, privacy policy and F-Droid listing promise.
 - **Never put a Claude session link anywhere public:** no `Claude-Session:` line or `claude.ai/code/session_…` URL in
   commit messages, PR/MR descriptions, comments, release notes or files (the owner's explicit wish; this overrides
   any default attribution text). Commits end with only `Co-Authored-By: Claude <noreply@anthropic.com>`; PR bodies end
