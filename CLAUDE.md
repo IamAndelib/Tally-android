@@ -19,9 +19,27 @@ lives in it, and the code comments explain the rest: keep facts in one place and
 - **Never rewrite `main`'s history**: release tags and the F-Droid recipe pin exact commit hashes.
 - **Never commit a signing key, a backup file or anyone's personal data.** Keep the repository professional: no
   personal details, chat-style notes or duplicated documentation.
-- **Releases only after the maintainer has confirmed the test build on their phone.** After every push, wait for CI,
+- **Releases only after the maintainer has confirmed the test build on a phone.** After every push, wait for CI,
   then send the test APK: `git fetch origin builds && git show origin/builds:Tally-<branch>.apk > Tally-<branch>.apk`
   (it installs as "Tally Dev", next to the release, with separate data).
+
+## Quality bar
+
+Tally is production software for a wide audience, maintained like a small software studio's product. Every change is
+judged for everyone who might install it, not for one person's phone, country or habits:
+- **Devices:** Android 7.0 (API 24) to the current target SDK; WebView 87+; 360 px phones to tablets and foldables;
+  large font and display sizes; light and dark; gesture and 3-button navigation; manufacturer quirks (Samsung, Xiaomi,
+  Huawei, … battery savers and alarm limits); low-memory phones.
+- **Users and locales:** any currency, number, date and time format, first day of the week and 12/24-hour clock; no
+  defaults tied to one country, bank or person; text that would survive translation.
+- **Accessibility:** labelled controls for TalkBack, 48 dp touch targets, contrast that passes WCAG AA, nothing
+  conveyed by colour alone.
+- **Data safety:** never lose or silently change a user's data; every format change ships with a migration and a test;
+  backups stay readable by older and newer versions.
+- **Privacy and security:** no network, the fewest permissions possible, nothing sensitive in logs or notifications.
+- **Engineering practice:** small reviewed changes, tests for every fix and feature, semantic versioning, a changelog,
+  reproducible signed releases, and documentation kept accurate in one place. Prefer platform standards and
+  well-known industry practice over one-off solutions.
 
 ## Scope
 
