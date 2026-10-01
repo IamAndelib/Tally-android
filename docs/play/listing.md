@@ -15,8 +15,8 @@ Your spending categories sit around a donut of today's spending. Tap a category,
 calculator handles quick sums like 12 + 4.50.
 
 EVERY ACCOUNT, EVERY CURRENCY
-Bank accounts, mobile wallets like bKash, cash, credit cards and savings, each in its own currency (CAD, BDT, USD, EUR,
-INR and more).
+Bank accounts, mobile wallets, cash, credit cards and savings, each in its own currency: any of the world's
+currencies.
 
 TRANSFERS THAT NEVER COUNT AS SPENDING
 Move money between your own accounts, even between currencies, and add an ATM or cash-out fee when there is one.

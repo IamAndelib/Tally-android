@@ -83,7 +83,7 @@ All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
 
 ## Design principles
 
-Tally is used by people who want to write things down quickly and move on (its first user has ADHD):
+Tally is for people who want to write things down quickly and move on:
 
 - **One tap per expense.** Don't add steps to the common path.
 - **Small and quiet.** Short labels, no clutter, no walls of text. No budgets or statement import (both left out on
@@ -97,7 +97,9 @@ Tally is used by people who want to write things down quickly and move on (its f
 
 `tests/e2e/NN-name.js` are plain Node scripts that drive the page in headless Chromium with a stubbed `window.Android`
 and print `PASS` / `FAIL` lines; `npm test` runs them all against a throwaway local server (`npm test -- 15` runs only
-suites starting with 15). Screenshots go to `tests/e2e/output/`. Add or extend a suite for every fix and feature.
+suites starting with 15). They run on a fixed date, 2026-06-17, so results don't depend on the day
+(`TALLY_TODAY=2026-10-01 npm test` runs them on another, e.g. the first of a month). Screenshots go to
+`tests/e2e/output/`. Add or extend a suite for every fix and feature.
 
 ## Pull requests
 

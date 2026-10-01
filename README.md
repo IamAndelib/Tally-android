@@ -32,8 +32,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - **One tap per expense.** Up to 24 spending categories sit around a donut of the day's spending. Tap a category, type
   the amount, save. New entries default to the day you're looking at.
-- **Every account, every currency.** Bank, mobile wallet (bKash and the like), cash, credit card, savings — or your own
-  account types. Each account keeps its own currency (CAD, BDT, USD, … any ISO currency).
+- **Every account, every currency.** Bank, mobile wallet, cash, credit card, savings — or your own account types. Each
+  account keeps its own currency, any of the world's currencies.
 - **Morning check.** Once a day Tally lists your balances and asks if they still match.
 - **Transfers** between your own accounts never count as spending. Moving money between currencies asks for the amount
   that arrived; an ATM or cash-out fee can be added and is saved as a linked expense.
