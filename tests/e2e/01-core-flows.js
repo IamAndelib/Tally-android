@@ -474,12 +474,14 @@ const ok = (c, m) => {
         dn = ring.querySelector(".dwrap").getBoundingClientRect();
       const box = r => [r.left, r.top, r.right, r.bottom];
       const tiles = [...ring.querySelectorAll(".cat")];
-      const labels = tiles.map(b => {
-        const n = b.querySelector(".cn"),
-          rg = document.createRange();
+      /* a full ring may leave names out (they show whole or not at all) */
+      const names = tiles.map(b => b.querySelector(".cn")).filter(Boolean);
+      const labels = names.map(n => {
+        const rg = document.createRange();
         rg.selectNodeContents(n);
         return box(rg.getBoundingClientRect());
       });
+      const cut = names.filter(n => n.scrollHeight > n.offsetHeight + 1).length;
       return {
         rr: box(rr),
         dn: box(dn),
@@ -489,6 +491,7 @@ const ok = (c, m) => {
         t: tiles.map(b => box(b.getBoundingClientRect())),
         ci: tiles.map(b => box(b.querySelector(".ci").getBoundingClientRect())),
         labels,
+        cut,
         over: document.documentElement.scrollWidth > innerWidth,
       };
     });
@@ -517,8 +520,8 @@ const ok = (c, m) => {
     });
     const even = n < 3 || Math.max(...gaps) / Math.min(...gaps) < 1.12;
     ok(
-      g.t.length === n && inside && !iconHits && !labelHits && !onDonut && even && !g.over,
-      `n=${n}: tiles=${g.t.length} inside=${inside} iconHits=${iconHits} labelHits=${labelHits} onDonut=${onDonut} spacing=${(Math.max(...gaps) / Math.min(...gaps)).toFixed(2)} icon=${dia(g.ci[0]).toFixed(0)}px`
+      g.t.length === n && inside && !iconHits && !labelHits && !g.cut && !onDonut && even && !g.over,
+      `n=${n}: tiles=${g.t.length} inside=${inside} iconHits=${iconHits} labelHits=${labelHits} cut=${g.cut} names=${g.labels.length} onDonut=${onDonut} spacing=${(Math.max(...gaps) / Math.min(...gaps)).toFixed(2)} icon=${dia(g.ci[0]).toFixed(0)}px`
     );
     if ([5, 9, 12, 16, 24].includes(n)) await page.screenshot({ path: OUT + `/home-n${n}.png` });
   }

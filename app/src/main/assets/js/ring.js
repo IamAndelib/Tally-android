@@ -50,17 +50,24 @@ function ringHTML(cats, o) {
     W = Math.max(240, RINGW || $("#app").clientWidth - 24),
     L = ringLayout(Math.max(cats.length, 1), W);
   const { u, D, cx, cy, H } = L,
-    d = Math.round(u * (u < 70 ? 0.5 : 0.56)),
-    /* label size: from the tile size, following the phone's text size like the rest, but no bigger than the room
-       under the icon (on Home two lines, the name and its %, at line-height 1.3); never under 10px, 9px in a full
-       ring on a phone */
+    rows = home ? 1.3 + 1.1 : 1.3, // line heights under the icon: the name, and on Home its % (see .rt .cn / .cp)
+    /* label size: from the tile size and following the phone's text size like the rest; 10px at least, 9px in a full
+       ring (more than 16 categories) */
     f = Math.max(
-      u < 46 ? 9 : 10,
-      Math.min(
-        Math.min(12, u * 0.13) * ((parseFloat(document.documentElement.style.fontSize) || 16) / 16),
-        (u - d - 4) / (home ? 2.6 : 1.3)
-      )
-    );
+      cats.length > 16 ? 9 : 10,
+      Math.min(12, u * 0.13) * ((parseFloat(document.documentElement.style.fontSize) || 16) / 16)
+    ),
+    /* the icon gives up a little room (down to 42% of the tile) so the lines fit under it; if they still don't, the
+       name is left out rather than cut (the button's label still names it) */
+    /* room under the icon: within the tile, and within the distance to its neighbour (closer than a tile in a full
+       ring), so nothing reaches the next icon */
+    gap = L.slots.length > 1 ? Math.hypot(L.slots[1].x - L.slots[0].x, L.slots[1].y - L.slots[0].y) : u,
+    room = Math.min(u, gap - 2) - 4 - f * rows,
+    d0 = Math.round(u * (u < 70 ? 0.5 : 0.56)),
+    dfit = Math.round(Math.max(u * 0.42, Math.min(d0, room))),
+    names = room >= dfit - 1,
+    /* no name: only the % on Home, which still has to fit */
+    d = names ? dfit : Math.round(Math.max(u * 0.42, Math.min(d0, room + (home ? 1.3 * f : f * rows))));
   const pos = cats.map((c, i) => {
     const s = L.slots[i];
     return {
@@ -97,9 +104,7 @@ function ringHTML(cats, o) {
       (home ? ' aria-label="Add ' + esc(p.c.name) + '"' : "") +
       ">" +
       emblem(p.c, "ci") +
-      '<span class="cn">' +
-      esc(p.c.name) +
-      "</span>" +
+      (names ? '<span class="cn">' + esc(p.c.name) + "</span>" : "") +
       (home
         ? '<span class="cp" style="color:' +
           p.c.c +

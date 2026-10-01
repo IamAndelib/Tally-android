@@ -5,16 +5,21 @@
 
 let FLIP = null;
 /* Window size classes (Material 3), the same widths as the @media rules in css/app.css: below 600px (phones) the
-   bottom bar and one column; from 600px a side rail; from 840px Home, Assets and Liabilities in two panes */
+   bottom bar and one column; from 600px a side rail; from 840px Home, Assets and Liabilities in two panes. A phone
+   held sideways gets the rail and two panes too, with the ring alone on the left (body.land) */
 const RAIL_AT = 600,
   PANES_AT = 840;
-const twoPane = () => innerWidth >= PANES_AT && document.body.classList.contains("hasnav");
+/* a phone held sideways: a short, wide window on a landscape screen. The screen's shape decides, not the window's,
+   so the keyboard of an upright phone (which shortens the window) never switches the layout */
+const phoneLand = () => innerWidth > innerHeight && innerHeight < 500 && screen.width > screen.height;
+const twoPane = () => document.body.classList.contains("hasnav") && (innerWidth >= PANES_AT || phoneLand());
 /* two panes side by side on a wide screen (one centred column if the right one is empty), else one after the other */
-const panes = (left, right) =>
+const panes = (left, right, cls) =>
   !twoPane()
     ? left + right
     : '<div class="panes' +
       (right ? "" : " one") +
+      (cls ? " " + cls : "") +
       '"><div class="pane">' +
       left +
       "</div>" +
@@ -28,15 +33,21 @@ function render() {
   if (V.screen !== "history") V.sel = null;
   if (V.screen === "accounts") V.screen = "assets";
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
+  const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
+  document.body.classList.toggle("land", land);
+  document.body.classList.toggle("rail", innerWidth >= RAIL_AT || land);
   document.body.classList.toggle("wide", twoPane());
   RINGW = 0;
   if (twoPane() && V.screen === "home") {
-    app.innerHTML = '<div class="panes"><div class="pane"></div><div class="pane"></div></div>';
-    /* and short enough that the buttons below it stay on screen (screen height, not the window's: the keyboard of a
-       sheet that was just saved must not shrink it) */
-    const h = (screen && screen.availHeight) || innerHeight;
-    RINGW = Math.max(300, Math.min(app.querySelector(".pane").clientWidth, h - 400));
+    app.innerHTML =
+      '<div class="panes' + (land ? " home" : "") + '"><div class="pane"></div><div class="pane"></div></div>';
+    const pw = app.querySelector(".pane").clientWidth;
+    /* sideways phone: the ring alone fills the height under the app bar. Tablet: short enough that the buttons below
+       it stay on screen (screen height, not the window's: the keyboard of a sheet just saved must not shrink it) */
+    RINGW = land
+      ? Math.max(240, Math.min(pw, innerHeight - 12))
+      : Math.max(300, Math.min(pw, ((screen && screen.availHeight) || innerHeight) - 400));
   }
   if (V.screen === "history") app.innerHTML = historyView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
@@ -172,7 +183,7 @@ function homeView() {
   });
   spent = r2(spent);
   got = r2(got);
-  h += ringHTML(outCats(), { mode: "home", by, spent, got, cur });
+  const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
   const total = r2(act.filter(a => a.currency === cur).reduce((s, a) => s + b[a.id], 0));
   const n = periodTxns().length;
@@ -205,7 +216,10 @@ function homeView() {
     'Loan</button><button class="fbtn lend" data-act="loan-new" data-v="lend">' +
     emblem(LOAN_EMB.lend) +
     "Lend</button></div>";
-  return wide ? top + panes(h, side) : top + h;
+  /* one column: ring, then the buttons; tablet: ring and buttons | the rest; sideways phone: the ring, the full height
+     of the screen | the app bar, buttons and the rest, the ring staying in view while the right side scrolls */
+  if (!wide) return top + ring + h;
+  return document.body.classList.contains("land") ? panes(ring, top + h + side, "home") : top + panes(ring + h, side);
 }
 /* the Home balance card: from the Balance check time on, while that reminder is on, until confirmed today; opened from
    its notification (checkAsked = that day), it shows whatever the time */

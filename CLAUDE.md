@@ -64,7 +64,8 @@ never count as spending or income; loans and lendings move money but are never s
 - Haptics play on the `Vibrator` as media vibration (a click primitive where the hardware has one, else a pulse);
   never `performHapticFeedback` or the predefined `EFFECT_*`, which some phones replace with stronger fallbacks.
 - Android's own backup is encrypted-only (`backup_rules.xml`, `data_extraction_rules.xml`).
-- Phones (smallest width < 600dp) stay in portrait; tablets and unfolded foldables rotate freely.
+- Every device rotates freely (no orientation lock: WCAG 1.3.4); rotation doesn't restart the activity
+  (`configChanges`), the page re-renders on the resize.
 - The WebView's text zoom is off (`setTextZoom(100)`): the page follows the phone's text size itself
   (`Android.fontScale()` → `applyTextScale()` sets the root font size, capped at `TEXT_MAX`). So every font size in
   CSS is in `rem`, and a box holding text grows with it (`min-height`, not `height`).
@@ -97,8 +98,12 @@ never count as spending or income; loans and lendings move money but are never s
   calculator's minus is `−` (U+2212). `.caretmirror` must stay non-flex (`caretRangeFromPoint` hit-testing).
 - Screen sizes follow Material 3 window size classes: below 600px the bottom bar and one column; from `RAIL_AT`
   (600px) a side rail; from `PANES_AT` (840px) Home, Assets and Liabilities in two panes (`panes()`), and sheets as
-  centred dialogs. The JS constants and the `@media` widths in `css/app.css` must match. The Home ring's width comes
-  from its pane (`RINGW`, also capped by the screen height). `tests/e2e/22-layout.js` checks every screen, sheet and
+  centred dialogs. The JS constants and the `@media` widths in `css/app.css` must match. A phone held sideways
+  (`phoneLand()`: a short, wide window on a landscape *screen*, so an upright phone's keyboard never counts) gets
+  `body.rail` + `body.land`: the ring alone on the left at full height, the app bar, buttons and lists on the right,
+  sheets at full height and the calculator keypad beside the form. The Home ring's width comes from its pane
+  (`RINGW`, capped by the screen or window height). Ring names are whole or left out (`ringHTML` sizes icon, name and %
+  to the room before the next tile). `tests/e2e/22-layout.js` checks every screen, sheet and
   dialog on phones, foldables and tablets at normal and large text; extend it when adding a screen.
 - `button{overflow:hidden}` is global, so flex children that must not shrink need `flex-shrink:0` / `flex:none`.
 - `PALETTE`'s first 12 colours are checked for colour-blind safety as ring neighbours on light and dark surfaces;

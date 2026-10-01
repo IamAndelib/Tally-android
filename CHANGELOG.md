@@ -19,13 +19,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Screens of every size: Tally is checked on small and large phones, foldables and tablets, with normal and large
   text. Text follows the phone's font size up to 130%, so layouts stay usable at the largest settings; long names
   shorten with "…" instead of pushing amounts off screen; buttons grow to fit larger text; the calculator keypad
-  matches the sheet's width on tablets; dialogs scroll on short screens. Phones stay upright; tablets and unfolded
-  foldables can turn.
+  matches the sheet's width on tablets; dialogs scroll on short screens.
+- Phones can be turned sideways: the ring fills the left of the screen and stays in view while the buttons, balances
+  and entries scroll on the right, forms use the full height, and the calculator keypad sits beside the form instead
+  of covering it.
 - Tablets and unfolded foldables use their room: a side rail replaces the bottom bar, and on wide screens Home shows
   your accounts and the day's entries beside the ring, Assets and Liabilities show their lists side by side, and forms
   open as centred dialogs.
-- Category names around the ring are easier to read: never smaller than 10px (9px in a full ring of 24 on a phone),
-  and they follow the phone's text size.
+- Category names around the ring are easier to read: never smaller than 10px (9px in a full ring), they follow the
+  phone's text size, and a name is shown whole or not at all, never cut off.
 
 ## [1.2.7] — 2026-09-30
 

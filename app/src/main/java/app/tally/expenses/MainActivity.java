@@ -9,7 +9,6 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.AudioAttributes;
@@ -91,11 +90,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // phones stay upright: the layouts are made for a portrait phone, and a phone held sideways leaves the ring a
-        // sliver between the bars. Tablets and unfolded foldables (smallest width 600dp+) turn freely; folding or
-        // unfolding changes the smallest width, which restarts the activity and decides again
-        if (getResources().getConfiguration().smallestScreenWidthDp < 600)
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
         web = new WebView(this);
         root = new FrameLayout(this);
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));

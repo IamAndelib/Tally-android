@@ -22,7 +22,9 @@ const DEVICES = [
   { id: "pixel", w: 393, h: 852 },
   { id: "large-phone", w: 412, h: 915 },
   { id: "max-phone", w: 430, h: 932 },
+  { id: "small-landscape", w: 640, h: 360 }, // phones held sideways
   { id: "phone-landscape", w: 800, h: 360 },
+  { id: "large-landscape", w: 932, h: 430 },
   { id: "foldable", w: 673, h: 841 },
   { id: "foldable-landscape", w: 841, h: 673 },
   { id: "tablet-portrait", w: 800, h: 1280 },
@@ -33,7 +35,10 @@ const FULL = !!process.env.LAYOUT_FULL,
   ONLY = (process.env.LAYOUT_ONLY || "").split(",").filter(Boolean); // e.g. LAYOUT_ONLY=small-16x9,pixel
 const matrix = DEVICES.filter(d => !ONLY.length || ONLY.includes(d.id)).flatMap(d =>
   SCALES.filter(
-    s => FULL || s === 1 || ["small-16x9", "phone-20x9", "phone-landscape", "tablet-portrait"].includes(d.id)
+    s =>
+      FULL ||
+      s === 1 ||
+      ["small-16x9", "phone-20x9", "phone-landscape", "large-landscape", "tablet-portrait"].includes(d.id)
   ).map(s => ({ ...d, s }))
 );
 
@@ -279,6 +284,24 @@ function inspect() {
             eb.className.split(" ")[0]
         );
     }
+  // 8. the amount being typed is never under the calculator keypad
+  const pad = [...document.querySelectorAll(".calc")].find(vis),
+    amt = document.querySelector(".amtwrap.calcing");
+  if (pad && amt) {
+    const a = amt.getBoundingClientRect(),
+      k = pad.getBoundingClientRect();
+    const under =
+      Math.min(a.right, k.right) - Math.max(a.left, k.left) > 2 &&
+      Math.min(a.bottom, k.bottom) - Math.max(a.top, k.top) > 2;
+    if (under || a.top < 0 || a.bottom > vh + 1) out.push("amount hidden by the keypad");
+  }
+  // 9. a phone held sideways: the Home ring is wholly in view
+  const ring = document.getElementById("ring");
+  if (document.body.classList.contains("land") && ring && layer.id === "app" && scrollY === 0) {
+    const r = ring.getBoundingClientRect();
+    if (r.top < -1 || r.bottom > vh + 1)
+      out.push("ring not wholly in view sideways " + Math.round(r.top) + ".." + Math.round(r.bottom));
+  }
   // 6. a sheet or dialog fits the screen (its content scrolls inside)
   const box = layer.querySelector(".p, .dlg, [role=dialog]");
   if (box && box !== layer) {
@@ -295,6 +318,7 @@ function inspect() {
   for (const dev of matrix) {
     const ctx = await browser.newContext({
       viewport: { width: dev.w, height: dev.h },
+      screen: { width: dev.w, height: dev.h }, // the screen's shape tells a phone held sideways (phoneLand)
       deviceScaleFactor: 1,
       isMobile: true,
       reducedMotion: "reduce", // sheets and dialogs appear at once, so each state is measured settled
@@ -539,6 +563,28 @@ function inspect() {
     );
     if (errors.length) summary[tag + " errors"] = errors;
     console.log(tag + ": " + states.length + " states");
+    await ctx.close();
+  }
+  /* an upright phone with its keyboard open (a short window on a tall screen) keeps the upright layout */
+  {
+    const ctx = await browser.newContext({
+      viewport: { width: 360, height: 330 },
+      screen: { width: 360, height: 800 },
+      isMobile: true,
+    });
+    const page = await ctx.newPage();
+    await page.goto(appUrl);
+    const t = await page.evaluate(() => today());
+    await page.evaluate(
+      st => localStorage.setItem("tally:v1", JSON.stringify(st)),
+      Object.assign(sampleState(t, 12), { extraCats: undefined })
+    );
+    await page.reload();
+    const cls = await page.evaluate(() => [
+      document.body.classList.contains("land"),
+      document.body.classList.contains("rail"),
+    ]);
+    ok(!cls[0] && !cls[1], "an upright phone with the keyboard open stays upright: " + JSON.stringify(cls));
     await ctx.close();
   }
   const keys = Object.keys(summary);
