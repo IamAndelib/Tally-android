@@ -432,7 +432,10 @@ body.hist #app {
 .rt .cn,
 .rt .cp {
   font-size: var(--f);
-  line-height: 1.25;
+  line-height: 1.3; /* tall enough for descenders (g, y) inside the clipped name */
+}
+.rt .cn {
+  max-width: 92%; /* a little air between neighbouring names in a full ring */
 }
 .dcenter {
   position: absolute;
@@ -2303,4 +2306,74 @@ body.lock {
 }
 .dlg-act .btn {
   width: auto;
+}
+
+/* Larger screens, by Material 3 window size class (the widths are RAIL_AT and PANES_AT in js/screens.js).
+   Medium, 600px+ (unfolded foldables, tablets upright): a navigation rail on the left instead of the bottom bar, and
+   a wider column. */
+@media (min-width: 600px) {
+  main {
+    max-width: 640px;
+  }
+  body.hasnav {
+    padding-left: 80px;
+  }
+  body.hasnav main {
+    padding-bottom: 24px;
+  }
+  body.hasnav .snack {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .nav {
+    top: 0;
+    right: auto;
+    width: 80px;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  .nav .in {
+    height: 100%;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }
+  .nav button {
+    height: 64px;
+  }
+}
+/* Expanded, 840px+ (tablets sideways, large foldables): Home, Assets and Liabilities in two panes, and sheets as
+   centred dialogs, which settle on the calculator keypad while it is open */
+@media (min-width: 840px) {
+  body.wide main {
+    max-width: 1080px;
+  }
+  .panes {
+    display: grid;
+    grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .panes.one {
+    grid-template-columns: minmax(0, 640px);
+    justify-content: center;
+  }
+  .sheet {
+    align-items: center;
+    padding: 24px;
+  }
+  .sheet .p {
+    border-radius: 28px;
+    max-height: 100%;
+  }
+  .sheet .handle {
+    display: none;
+  }
+  .sheet.calcing {
+    align-items: flex-end;
+    padding-bottom: 0;
+  }
+  .sheet.calcing .p {
+    border-radius: 28px 28px 0 0;
+  }
 }

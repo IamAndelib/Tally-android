@@ -95,6 +95,11 @@ never count as spending or income; loans and lendings move money but are never s
   nothing about them is stored on the loan.
 - Amount fields: read them with `evalAmt()`, never `parseFloat` (thousands separators, calculator expressions). The
   calculator's minus is `−` (U+2212). `.caretmirror` must stay non-flex (`caretRangeFromPoint` hit-testing).
+- Screen sizes follow Material 3 window size classes: below 600px the bottom bar and one column; from `RAIL_AT`
+  (600px) a side rail; from `PANES_AT` (840px) Home, Assets and Liabilities in two panes (`panes()`), and sheets as
+  centred dialogs. The JS constants and the `@media` widths in `css/app.css` must match. The Home ring's width comes
+  from its pane (`RINGW`, also capped by the screen height). `tests/e2e/22-layout.js` checks every screen, sheet and
+  dialog on phones, foldables and tablets at normal and large text; extend it when adding a screen.
 - `button{overflow:hidden}` is global, so flex children that must not shrink need `flex-shrink:0` / `flex:none`.
 - `PALETTE`'s first 12 colours are checked for colour-blind safety as ring neighbours on light and dark surfaces;
   re-check if you reorder them.

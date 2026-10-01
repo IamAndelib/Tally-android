@@ -21,6 +21,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
   shorten with "…" instead of pushing amounts off screen; buttons grow to fit larger text; the calculator keypad
   matches the sheet's width on tablets; dialogs scroll on short screens. Phones stay upright; tablets and unfolded
   foldables can turn.
+- Tablets and unfolded foldables use their room: a side rail replaces the bottom bar, and on wide screens Home shows
+  your accounts and the day's entries beside the ring, Assets and Liabilities show their lists side by side, and forms
+  open as centred dialogs.
+- Category names around the ring are easier to read: never smaller than 10px (9px in a full ring of 24 on a phone),
+  and they follow the phone's text size.
 
 ## [1.2.7] — 2026-09-30
 

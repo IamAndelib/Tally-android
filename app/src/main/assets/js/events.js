@@ -616,13 +616,15 @@ document.addEventListener("keydown", e => {
     document.body.classList.toggle("lock", on);
   }).observe($(id), { childList: true })
 );
-/* the ring is laid out in px from the screen width: redo it when the width changes (not when the keyboard opens) */
+/* the ring is laid out in px from the screen width: redo it when the width changes (not when the keyboard opens), and
+   any screen when the width crosses a size class (rail, two panes) */
 let lastW = innerWidth;
+const sizeClass = w => (w >= PANES_AT ? 2 : w >= RAIL_AT ? 1 : 0);
 addEventListener("resize", () => {
-  if (innerWidth !== lastW) {
-    lastW = innerWidth;
-    if ((V.screen === "home" || V.screen === "settings") && !LP) render();
-  }
+  if (innerWidth === lastW) return;
+  const crossed = sizeClass(innerWidth) !== sizeClass(lastW);
+  lastW = innerWidth;
+  if (!LP && (crossed || V.screen === "home" || V.screen === "settings")) render();
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") catchUpToday();

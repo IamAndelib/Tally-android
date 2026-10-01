@@ -47,11 +47,20 @@ function cycleDonut() {
 }
 function ringHTML(cats, o) {
   const home = o.mode === "home",
-    W = Math.max(240, $("#app").clientWidth - 24),
+    W = Math.max(240, RINGW || $("#app").clientWidth - 24),
     L = ringLayout(Math.max(cats.length, 1), W);
   const { u, D, cx, cy, H } = L,
     d = Math.round(u * (u < 70 ? 0.5 : 0.56)),
-    f = Math.max(8, Math.min(11.5, u * 0.125));
+    /* label size: from the tile size, following the phone's text size like the rest, but no bigger than the room
+       under the icon (on Home two lines, the name and its %, at line-height 1.3); never under 10px, 9px in a full
+       ring on a phone */
+    f = Math.max(
+      u < 46 ? 9 : 10,
+      Math.min(
+        Math.min(12, u * 0.13) * ((parseFloat(document.documentElement.style.fontSize) || 16) / 16),
+        (u - d - 4) / (home ? 2.6 : 1.3)
+      )
+    );
   const pos = cats.map((c, i) => {
     const s = L.slots[i];
     return {
@@ -281,7 +290,9 @@ function ringHTML(cats, o) {
     (home ? "" : " edit") +
     '"' +
     (home ? ' id="ring"' : "") +
-    ' style="height:' +
+    ' style="' +
+    (home && RINGW ? "width:" + W.toFixed(1) + "px;margin:4px auto 0;" : "") + // centred in its pane
+    "height:" +
     H.toFixed(1) +
     'px">' +
     '<svg class="leaders" width="' +

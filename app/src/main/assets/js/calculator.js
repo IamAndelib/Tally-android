@@ -177,6 +177,8 @@ function calcOpen(id, btn) {
       wrap = inp.closest(".amtwrap");
     if (box) box.classList.add("calcing");
     if (wrap) wrap.classList.add("calcing");
+    const sh = inp.closest(".sheet");
+    if (sh) sh.classList.add("calcing"); // a centred sheet (tablet) settles on the keypad
   }
   const mirror = $("#cm-" + id);
   if (mirror) mirror.hidden = false;
@@ -215,6 +217,8 @@ function calcClose(id, btn, use) {
       wrap = inp.closest(".amtwrap");
     if (box) box.classList.remove("calcing");
     if (wrap) wrap.classList.remove("calcing");
+    const sh = inp.closest(".sheet");
+    if (sh) sh.classList.remove("calcing");
   }
   const mirror = $("#cm-" + id);
   if (mirror) {

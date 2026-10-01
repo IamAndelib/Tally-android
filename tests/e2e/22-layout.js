@@ -4,7 +4,8 @@
 // the screen, text cut off without an ellipsis, controls overlapping each other, tap targets that are too small and
 // sheets taller than the screen. Screenshots of every state go to tests/e2e/output/22-layout/ for review.
 //
-// LAYOUT_FULL=1 runs every size with every text scale (the default is a smaller matrix that still covers the edges).
+// LAYOUT_FULL=1 runs every size with every text scale (the default is a smaller matrix that still covers the edges);
+// LAYOUT_ONLY=<device ids> runs only those sizes.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("22-layout");
 let fails = 0;
@@ -23,12 +24,14 @@ const DEVICES = [
   { id: "max-phone", w: 430, h: 932 },
   { id: "phone-landscape", w: 800, h: 360 },
   { id: "foldable", w: 673, h: 841 },
+  { id: "foldable-landscape", w: 841, h: 673 },
   { id: "tablet-portrait", w: 800, h: 1280 },
   { id: "tablet-landscape", w: 1280, h: 800 },
 ];
 const SCALES = [1, 1.3];
-const FULL = !!process.env.LAYOUT_FULL;
-const matrix = DEVICES.flatMap(d =>
+const FULL = !!process.env.LAYOUT_FULL,
+  ONLY = (process.env.LAYOUT_ONLY || "").split(",").filter(Boolean); // e.g. LAYOUT_ONLY=small-16x9,pixel
+const matrix = DEVICES.filter(d => !ONLY.length || ONLY.includes(d.id)).flatMap(d =>
   SCALES.filter(
     s => FULL || s === 1 || ["small-16x9", "phone-20x9", "phone-landscape", "tablet-portrait"].includes(d.id)
   ).map(s => ({ ...d, s }))
@@ -190,6 +193,23 @@ function inspect() {
     if (!inScroller && (b.right > vw + 1 || b.left < -1))
       out.push("text off screen " + name(e) + " '" + e.textContent.trim().slice(0, 30) + "'");
   }
+  // 7. text too small to read (the smallest size per state is reported once)
+  let tiny = null;
+  for (const e of all) {
+    if (![...e.childNodes].some(c => c.nodeType === 3 && c.textContent.trim())) continue;
+    const px = parseFloat(getComputedStyle(e).fontSize);
+    if (px < (e.matches(".rt .cn, .rt .cp") ? 9 : 10) && (!tiny || px < tiny[0])) tiny = [px, e]; // ring names: see ringHTML
+  }
+  if (tiny)
+    out.push(
+      "text too small " +
+        tiny[0].toFixed(1) +
+        "px " +
+        name(tiny[1]) +
+        " '" +
+        tiny[1].textContent.trim().slice(0, 20) +
+        "'"
+    );
   // 3. controls overlapping, 4. tap targets too small
   const ctl = all.filter(
     e =>
@@ -219,23 +239,45 @@ function inspect() {
   const tiles =
     layer.id !== "app"
       ? []
-      : [...document.querySelectorAll("#app .ring .cat .ci, #app .ring .cat .cn")].filter(vis).map(e => {
-          const r = document.createRange();
-          r.selectNodeContents(e);
-          return e.classList.contains("cn") ? r.getBoundingClientRect() : e.getBoundingClientRect();
-        });
+      : [...document.querySelectorAll("#app .ring .cat .ci, #app .ring .cat .cn, #app .ring .cat .cp")]
+          .filter(e => (vis(e) && e.textContent.trim() !== "") || e.classList.contains("ci"))
+          .map(e => {
+            const r = document.createRange();
+            r.selectNodeContents(e);
+            /* a label's visible part: its text, cut to its own box (long names end in an ellipsis) */
+            const b = e.getBoundingClientRect(),
+              tr = r.getBoundingClientRect();
+            return [
+              e,
+              e.classList.contains("ci")
+                ? b
+                : {
+                    left: Math.max(b.left, tr.left),
+                    right: Math.min(b.right, tr.right),
+                    top: tr.top,
+                    bottom: tr.bottom,
+                  },
+            ];
+          });
   for (let i = 0; i < tiles.length; i++)
     for (let j = i + 1; j < tiles.length; j++) {
-      const a = tiles[i],
-        b = tiles[j];
+      const [ea, a] = tiles[i],
+        [eb, b] = tiles[j];
+      if (ea.closest(".cat") === eb.closest(".cat")) continue;
       if (
-        Math.min(a.right, b.right) - Math.max(a.left, b.left) > 3 &&
-        Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 3
-      ) {
-        out.push("ring tiles overlap");
-        i = tiles.length;
-        break;
-      }
+        Math.min(a.right, b.right) - Math.max(a.left, b.left) > 2 &&
+        Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2
+      )
+        out.push(
+          "ring overlap " +
+            ea.closest(".cat").dataset.v +
+            "." +
+            ea.className.split(" ")[0] +
+            " / " +
+            eb.closest(".cat").dataset.v +
+            "." +
+            eb.className.split(" ")[0]
+        );
     }
   // 6. a sheet or dialog fits the screen (its content scrolls inside)
   const box = layer.querySelector(".p, .dlg, [role=dialog]");
@@ -255,6 +297,7 @@ function inspect() {
       viewport: { width: dev.w, height: dev.h },
       deviceScaleFactor: 1,
       isMobile: true,
+      reducedMotion: "reduce", // sheets and dialogs appear at once, so each state is measured settled
       hasTouch: true,
       locale: "en-US",
     });
@@ -285,7 +328,7 @@ function inspect() {
         scrollTo(0, 0);
       });
       if (open) await open();
-      await page.waitForTimeout(260);
+      await page.waitForTimeout(80);
       const probs = await page.evaluate(inspect);
       await page.screenshot({ path: OUT + "/" + tag + "-" + label + ".png" });
       states.push(label);
@@ -436,6 +479,54 @@ function inspect() {
         })
       )
     );
+    await shot("transfer-fee", async () => {
+      await page.evaluate(() => trSheet());
+      await page.click('#sheet [data-act="tr-fee"]');
+    });
+    await shot(
+      "draw-edit",
+      ev(() => {
+        loanOpen("L1");
+        loanDrawEdit(S.txns.find(x => x.loan === "L1" && x.principal).id);
+      })
+    );
+    await shot(
+      "category-form",
+      ev(() => catForm("groceries", "out"))
+    );
+    await shot(
+      "asset-form",
+      ev(() => assetForm("a1"))
+    );
+    await shot(
+      "assets-all",
+      ev(() => {
+        S.accounts[1].archived = true;
+        V.showArchived = true;
+        V.showCleared = true;
+        V.screen = "assets";
+        render();
+      })
+    );
+    await page.evaluate(() => {
+      S.accounts[1].archived = false;
+      V.showArchived = false;
+      V.showCleared = false;
+    });
+    await shot(
+      "history-select",
+      ev(() => {
+        V.screen = "history";
+        render();
+        V.sel = new Set();
+        render();
+      })
+    );
+    for (const tab of ["range", "month"])
+      await shot("period-" + tab, async () => {
+        await page.evaluate(() => periodDialog(V));
+        await page.click('#pd [data-act="pd-tab"][data-v="' + tab + '"]');
+      });
     await seed(24);
     await shot("home-24", null);
     await shot(

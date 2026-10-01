@@ -4,18 +4,45 @@
 "use strict";
 
 let FLIP = null;
+/* Window size classes (Material 3), the same widths as the @media rules in css/app.css: below 600px (phones) the
+   bottom bar and one column; from 600px a side rail; from 840px Home, Assets and Liabilities in two panes */
+const RAIL_AT = 600,
+  PANES_AT = 840;
+const twoPane = () => innerWidth >= PANES_AT && document.body.classList.contains("hasnav");
+/* two panes side by side on a wide screen (one centred column if the right one is empty), else one after the other */
+const panes = (left, right) =>
+  !twoPane()
+    ? left + right
+    : '<div class="panes' +
+      (right ? "" : " one") +
+      '"><div class="pane">' +
+      left +
+      "</div>" +
+      (right ? '<div class="pane">' + right + "</div>" : "") +
+      "</div>";
+/* the ring's width: its pane on a wide screen (measured on an empty pane pair), else the column */
+let RINGW = 0;
 function render() {
   const app = $("#app");
   RBC = null;
   if (V.screen !== "history") V.sel = null;
   if (V.screen === "accounts") V.screen = "assets";
+  const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
+  document.body.classList.toggle("hasnav", tabs);
+  document.body.classList.toggle("wide", twoPane());
+  RINGW = 0;
+  if (twoPane() && V.screen === "home") {
+    app.innerHTML = '<div class="panes"><div class="pane"></div><div class="pane"></div></div>';
+    /* and short enough that the buttons below it stay on screen (screen height, not the window's: the keyboard of a
+       sheet that was just saved must not shrink it) */
+    const h = (screen && screen.availHeight) || innerHeight;
+    RINGW = Math.max(300, Math.min(app.querySelector(".pane").clientWidth, h - 400));
+  }
   if (V.screen === "history") app.innerHTML = historyView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
   else if (V.screen === "settings") app.innerHTML = settingsView();
   else app.innerHTML = homeView();
-  const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
-  document.body.classList.toggle("hasnav", tabs);
   document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
@@ -87,9 +114,18 @@ function homeView() {
     topIcons() +
     "</header>";
 
-  if (checkDue()) h += checkCard(b, cur);
+  const wide = twoPane();
+  let side = "";
+  if (checkDue()) side = checkCard(b, cur);
+  else if (wide)
+    side =
+      '<div class="sec">Accounts</div><div class="list">' +
+      act.map(a => accRow(a, b)).join("") +
+      '</div><button class="btn text" data-act="acc-form" style="margin-top:4px">' +
+      ic("add") +
+      "Add account</button>";
   else
-    h +=
+    side =
       '<div class="strip">' +
       act
         .map(
@@ -107,6 +143,18 @@ function homeView() {
       '<button class="acc add" data-act="acc-form" aria-label="Add account">' +
       ic("add") +
       "</button></div>";
+  /* one column: the balances (or the balance card) above the ring; two panes: beside it, with the period's entries */
+  if (!wide) h += side;
+  else {
+    const list = periodTxns().sort(byNewest);
+    side +=
+      '<div class="sec">' +
+      esc(periodLabel()) +
+      "</div>" +
+      (list.length ? dayGroups(list) : '<div class="empty">Nothing written down yet.</div>');
+  }
+  const top = h;
+  h = "";
 
   const inCur = t => {
     const a = acc(t.account);
@@ -157,7 +205,7 @@ function homeView() {
     'Loan</button><button class="fbtn lend" data-act="loan-new" data-v="lend">' +
     emblem(LOAN_EMB.lend) +
     "Lend</button></div>";
-  return h;
+  return wide ? top + panes(h, side) : top + h;
 }
 /* the Home balance card: from the Balance check time on, while that reminder is on, until confirmed today; opened from
    its notification (checkAsked = that day), it shows whatever the time */
@@ -269,7 +317,7 @@ const dragTip = () =>
     : '<p class="hint" style="margin:8px 4px 0">Tip: hold a row and drag it up to the empty slot to bring it back.</p>';
 function assetsView() {
   const b = balances();
-  let h = tabBar("Assets");
+  let h = "";
   h +=
     '<div class="sumcard"><div class="t">Net worth</div>' +
     curLines(netWorth()) +
@@ -295,6 +343,8 @@ function assetsView() {
   h +=
     dropBox("arch", "Drop here to archive") +
     (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
+  const left = h; // two panes: net worth and accounts | what you're owed and other assets
+  h = "";
   const lends = S.loans.filter(l => l.kind === "lend"),
     open = lends.filter(l => loanInfo(l).open),
     done = lends.filter(l => !loanInfo(l).open);
@@ -340,11 +390,11 @@ function assetsView() {
     '<button class="btn text" data-act="asset-edit" style="margin-top:4px">' +
     ic("add") +
     "Add asset</button>";
-  return h;
+  return tabBar("Assets") + panes(left, h);
 }
 function liabsView() {
   const b = balances();
-  let h = tabBar("Liabilities");
+  let h = "";
   const borrows = S.loans.filter(l => l.kind === "borrow"),
     open = borrows.filter(l => loanInfo(l).open),
     done = borrows.filter(l => !loanInfo(l).open);
@@ -378,9 +428,11 @@ function liabsView() {
       ")</button>";
     if (V.showCleared) h += zoneList("borrow-done", done.map(l => loanRow(l, true)).join("")) + dragTip();
   }
-  if (cards.length)
-    h += '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>";
-  return h;
+  /* two panes: what you owe and the loans | credit cards */
+  const right = cards.length
+    ? '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>"
+    : "";
+  return tabBar("Liabilities") + panes(h, right);
 }
 function txLine(t) {
   const a = acc(t.account),
