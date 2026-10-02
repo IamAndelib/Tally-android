@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-10-02
+
 ### Added
 
 - Settings → Region: choose the first day of the week (Monday, Sunday or Saturday) for calendars and weekly
@@ -250,6 +252,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.3.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.0
 [1.2.7]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.7
 [1.2.6]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.6
 [1.2.5]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.5
