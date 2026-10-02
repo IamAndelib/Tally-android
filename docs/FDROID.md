@@ -23,8 +23,10 @@ Everything F-Droid reads is in this repository:
   the full commit hash of the newest release tag.
 
 **Status:** submitted on 2026-09-30 as merge request
-[fdroid/fdroiddata!50680](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50680) ("New app: Tally"), waiting for
-review.
+[fdroid/fdroiddata!50680](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50680) ("New app: Tally"). F-Droid's
+reviewer marked it mostly ready, waiting for their test queue. Until it is merged, every release must also be put into
+the merge request: replace the build in the branch's `metadata/app.tally.expenses.yml` with this repository's recipe
+(without its `#` lines), which names the new version and its full commit hash.
 
 ## Submitting (once)
 You add Tally's recipe to F-Droid's data repository, `fdroiddata` on GitLab, with a merge request. Their CI checks and
