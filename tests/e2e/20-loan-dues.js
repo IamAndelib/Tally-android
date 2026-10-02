@@ -73,7 +73,8 @@ const ok = (c, m) => {
   const lend = (id, person, date) => ({ id, kind: "lend", person, account: "k", date, note: "", status: "open" });
   const settle = () => page.waitForTimeout(150);
   const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
-  const sact = a => page.click(`#sheet [data-act="${a}"]`);
+  // after a tap in a sheet (it may close it): a tap where it was, sooner than 300 ms, counts as a double tap
+  const sact = a => page.click(`#sheet [data-act="${a}"]`).then(() => page.waitForTimeout(300));
   const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")));
   const rem = () => page.evaluate(() => window.__rem);
   const info = id =>
@@ -140,7 +141,6 @@ const ok = (c, m) => {
     r.length === 1 && r[0].date === d.p5 && r[0].amount === (await m(1000)) && r[0].total === "",
     "reminder moves to the 1000's day, no total: " + JSON.stringify(r)
   );
-  await page.waitForTimeout(300); // a tap right where Pay just was, sooner, counts as a double tap
   await act("loan-open", "L");
   await settle();
   ok((await page.inputValue("#f-amt")) === "1,000", "nothing due yet: payment pre-filled with all that is left");

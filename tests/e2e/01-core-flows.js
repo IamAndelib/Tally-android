@@ -20,7 +20,11 @@ const ok = (c, m) => {
   page.on("dialog", d => d.accept());
   await page.goto(URL);
   const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
-  const sact = (a, v) => page.click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
+  // after a tap in a sheet (it may close it): a tap where it was, sooner than 300 ms, counts as a double tap
+  const sact = (a, v) =>
+    page
+      .click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`))
+      .then(() => page.waitForTimeout(300));
   const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")));
   const bal = () =>
     page.evaluate(() => {

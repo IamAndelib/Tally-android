@@ -72,7 +72,11 @@ const ok = (c, m) => {
     if (a === "calc-toggle" && (await page.isHidden(`[data-act="calc-toggle"][data-v="${v}"]`))) a = "calc-kbd";
     return page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
   };
-  const sact = (a, v) => page.click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
+  // after a tap in a sheet (it may close it): a tap where it was, sooner than 300 ms, counts as a double tap
+  const sact = (a, v) =>
+    page
+      .click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`))
+      .then(() => page.waitForTimeout(300));
   const s2act = (a, v) => page.click(`#sheet2 [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
   const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")));
   const bal = () =>
@@ -210,7 +214,6 @@ const ok = (c, m) => {
   );
 
   // ---- 3. loan sheet: multi-draw hero, per-draw due shown, nearer due on the card
-  await page.waitForTimeout(300); // a tap right where Save just was, sooner, counts as a double tap
   await act("tab", "assets");
   await settle();
   await act("loan-open", L.id);
