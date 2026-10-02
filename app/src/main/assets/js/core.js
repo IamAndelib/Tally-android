@@ -207,56 +207,141 @@ function dayLabel(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(undefined, o);
 }
-/* "1234567.891" → "1,234,567.891": thousands commas in every number of the text (never after a decimal point) */
+/* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
+   months: whole months ("Apr – Sep") */
+function rangeLabel(a, b, months) {
+  const s = parseISO(a),
+    e = parseISO(b),
+    y = new Date().getFullYear(),
+    o = months ? { month: "short" } : { day: "numeric", month: "short" };
+  if (s.getFullYear() !== y || e.getFullYear() !== y) o.year = "numeric";
+  try {
+    return new Intl.DateTimeFormat(undefined, o).formatRange(s, e);
+  } catch (x) {
+    return s.toLocaleDateString(undefined, o) + " – " + e.toLocaleDateString(undefined, o);
+  }
+}
+/* Amount fields write numbers the phone's way: "1,234.5" (en), "1.234,5" (de), "1 234,5" (fr), "1’234.5" (de-CH),
+   always in Latin digits (those the keyboard types). Inside, an amount's text is "canonical": "." for the decimal point
+   and no grouping, as calcEval() and evalAmt() read it. */
+const NUMSEP = (() => {
+  let p = [];
+  try {
+    p = new Intl.NumberFormat(undefined, { numberingSystem: "latn" }).formatToParts(12345.6);
+  } catch (e) {}
+  const get = t => (p.find(x => x.type === t) || {}).value;
+  const dec = get("decimal") || ".",
+    grp = get("group") || "";
+  return { dec, grp, intFmt: new Intl.NumberFormat("en-US-u-nu-latn", { useGrouping: false }) };
+})();
+/* a group separator as the phone writes it, or one typed like it (any space for a space, ' for ’) */
+const isGrp = ch =>
+  !!NUMSEP.grp &&
+  (ch === NUMSEP.grp || (/\s/.test(NUMSEP.grp) && /\s/.test(ch)) || (/['’]/.test(NUMSEP.grp) && /['’]/.test(ch)));
+/* the integer part grouped as the phone groups it (Indian lakhs, Spanish 4-digit numbers…), digits unchanged */
+let GROUPER = null;
+function groupInt(n) {
+  if (!n || n[0] === "0" || n.length > 15) return n;
+  try {
+    GROUPER = GROUPER || new Intl.NumberFormat(undefined, { numberingSystem: "latn", maximumFractionDigits: 0 });
+    const out = GROUPER.formatToParts(+n)
+      .map(x => (x.type === "integer" ? x.value : x.type === "group" ? NUMSEP.grp : ""))
+      .join("");
+    return out.replace(new RegExp("[^0-9" + NUMSEP.grp.replace(/[\\\]^-]/g, "\\$&") + "]", "g"), "") === "" ? n : out;
+  } catch (e) {
+    return n;
+  }
+}
+/* other scripts' digits (Arabic-Indic, Devanagari, Bengali…) as 0–9 */
+const DIGIT0 = [
+  0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66, 0xde6, 0xe50, 0xed0,
+];
+const latinDigits = s =>
+  String(s ?? "").replace(/[^\x00-\x7f]/g, ch => {
+    const c = ch.codePointAt(0),
+      z = DIGIT0.find(d0 => c >= d0 && c <= d0 + 9);
+    return z != null
+      ? String(c - z)
+      : c === 0xff0c || c === 0x60c
+        ? ","
+        : c === 0x66b
+          ? NUMSEP.dec
+          : c === 0x66c
+            ? NUMSEP.grp
+            : ch;
+  });
+/* field text → canonical: group separators out, the decimal separator as "." */
+function amtCanon(s) {
+  let out = "";
+  for (const ch of latinDigits(s)) {
+    if (isGrp(ch)) continue;
+    out += ch === NUMSEP.dec ? "." : ch;
+  }
+  return NUMSEP.dec === "." ? out.replace(/,/g, "") : out; // an old-style "1,250" where commas aren't the phone's
+}
+/* canonical → field text: "1234567.891" → "1,234,567.891" (or "1.234.567,891", …) in every number of the text */
 function groupDigits(s) {
-  return String(s ?? "")
-    .replace(/,/g, "")
-    .replace(/(^|[^\d.])(\d+)/g, (m, pre, n) => pre + n.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
+  return String(s ?? "").replace(/\d+(?:\.\d*)?|\.\d*/g, n => {
+    const [i, f] = n.split(".");
+    return groupInt(i) + (f != null ? NUMSEP.dec + f : "");
+  });
 }
 /* Amount inputs (every input[inputmode=decimal]) regroup their digits as you type, keeping the caret beside the same
-   digit. The keypad's "," key is not a separator here: it becomes the decimal point, or is ignored if there is one. */
+   digit. Either separator key ("." or ",") types the decimal point, or nothing if the number already has one. */
 function formatAmountInput(inp, ev) {
-  let v = inp.value,
+  let v = latinDigits(inp.value),
     caret = inp.selectionStart ?? v.length;
-  if (ev && ev.inputType === "insertText" && ev.data === "," && caret > 0 && v[caret - 1] === ",") {
+  const dec = NUMSEP.dec,
+    numCh = ch => /\d/.test(ch) || ch === dec || isGrp(ch);
+  if (ev && ev.inputType === "insertText" && /^[.,]$/.test(ev.data || "") && caret > 0 && v[caret - 1] === ev.data) {
     const before = v.slice(0, caret - 1),
-      after = v.slice(caret),
-      num = before.match(/[\d,.]*$/)[0] + after.match(/^[\d,.]*/)[0],
-      dot = num.includes(".") ? "" : ".";
-    v = before + dot + after;
-    caret = before.length + dot.length;
+      after = v.slice(caret);
+    let a = before.length,
+      b = 0;
+    while (a > 0 && numCh(before[a - 1])) a--;
+    while (b < after.length && numCh(after[b])) b++;
+    const put = (before.slice(a) + after.slice(0, b)).includes(dec) ? "" : dec;
+    v = before + put + after;
+    caret = before.length + put.length;
   } else if (ev && /^insertFrom|^insertReplacement/.test(ev.inputType || "")) {
-    /* pasted or dropped "12,50" or "1.234,56": a comma before the last one or two digits is the decimal point */
-    const p = v.replace(/\d[\d.,]*/g, n =>
-      /^(\d{1,3}(\.\d{3})+|\d+),\d{1,2}$/.test(n) ? n.replace(/\./g, "").replace(",", ".") : n
-    );
+    /* pasted or dropped from elsewhere: a separator before the last one or two digits is the decimal point
+       ("12,50", "1.234,56", "1,234.56"), any other ones group thousands */
+    const p = v.replace(/\d[\d.,'’\s]*\d|\d/g, n => {
+      const seps = n.match(/[.,'’\s]/g) || [],
+        last = Math.max(n.lastIndexOf("."), n.lastIndexOf(",")),
+        tail = last < 0 ? "" : n.slice(last + 1),
+        frac = /^\d{1,2}$/.test(tail) || (seps.length === 1 && n[last] === dec);
+      if (!seps.length) return n;
+      return frac ? groupDigits(n.slice(0, last).replace(/\D/g, "") + "." + tail) : groupDigits(n.replace(/\D/g, ""));
+    });
     if (p !== v) {
       caret += p.length - v.length;
       v = p;
     }
   }
-  const keep = v.slice(0, caret).replace(/,/g, "").length,
-    out = groupDigits(v);
+  let keep = 0;
+  for (const ch of v.slice(0, caret)) if (!isGrp(ch)) keep++;
+  const out = groupDigits(amtCanon(v));
   if (out === inp.value) return;
   inp.value = out;
   let i = 0;
-  for (let n = 0; i < out.length && n < keep; i++) if (out[i] !== ",") n++;
+  for (let n = 0; i < out.length && n < keep; i++) if (!isGrp(out[i])) n++;
   try {
     inp.setSelectionRange(i, i);
   } catch (e) {}
 }
 /* an amount is a finite number below a trillion (a pasted run of digits would otherwise save as Infinity) */
 const amtOk = n => (n != null && isFinite(n) && Math.abs(n) < 1e12 ? n : null);
-/* amount field: accepts "12.50", "1,250.50", "12,50", quick sums like "12+3.5", and the calculator's own
-   expression ("12×3", "50−5") when Save is tapped with the keypad still open (readers never see the grouping) */
+/* amount field: accepts the field's own text ("1,250.50", or "1.250,50" on a German phone), "12,50" and "12.50" alike,
+   quick sums like "12+3.5", and the calculator's own expression ("12×3", "50−5") when Save is tapped with the keypad
+   still open */
 function evalAmt(v) {
-  let s = String(v ?? "")
-    .replace(/\s+/g, "")
-    .replace(/−/g, "-");
-  if (!s) return null;
-  if (/[×÷]/.test(s)) return /^[\d.,+\-×÷]+$/.test(s) ? amtOk(calcEval(s.replace(/,/g, ""))) : null;
-  if (/^[-+]?\d+,\d{1,2}$/.test(s)) s = s.replace(",", ".");
-  else s = s.replace(/,/g, "");
+  let s = latinDigits(v).replace(/−/g, "-");
+  const t = s.replace(/\s+/g, "");
+  if (!t) return null;
+  /* one separator before one or two digits is the decimal point, whatever the phone writes */
+  s = /^[-+]?\d+[.,]\d{1,2}$/.test(t) ? t.replace(",", ".") : amtCanon(s).replace(/\s+/g, "");
+  if (/[×÷]/.test(s)) return /^[\d.+\-×÷]+$/.test(s) ? amtOk(calcEval(s)) : null;
   if (!/^[-+]?(\d+\.?\d*|\.\d+)([-+](\d+\.?\d*|\.\d+))*$/.test(s)) return null;
   let tot = 0;
   s.replace(/([-+]?)(\d+\.?\d*|\.\d+)/g, (m, sg, n) => {

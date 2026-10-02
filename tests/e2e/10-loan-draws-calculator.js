@@ -210,6 +210,7 @@ const ok = (c, m) => {
   );
 
   // ---- 3. loan sheet: multi-draw hero, per-draw due shown, nearer due on the card
+  await page.waitForTimeout(300); // a tap right where Save just was, sooner, counts as a double tap
   await act("tab", "assets");
   await settle();
   await act("loan-open", L.id);

@@ -319,15 +319,15 @@ a {
 .ckrow .nm {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere; /* the whole name, on two lines if need be: this is where balances are checked */
 }
 .ckrow b {
+  flex: none;
   font-weight: 600;
   white-space: nowrap;
 }
 .ckrow .fx {
+  flex: none;
   font-size: 0.8rem;
   font-weight: 600;
   padding: 4px 10px;
@@ -2451,4 +2451,15 @@ body.land .dd::before,
 body.land .dd::after {
   width: 34px;
   height: 34px;
+}
+
+/* the snackbar rises above an open calculator keypad (--calc-h from calcKeepFieldVisible); on a sideways phone the
+   keypad is on the right, so it centres under the form instead */
+body.calcopen #snack .snack {
+  bottom: calc(var(--calc-h, 0px) + 12px);
+}
+body.land.calcopen #snack .snack {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: calc((100% - min(46%, 380px)) / 2);
+  width: calc(100% - min(46%, 380px) - 32px);
 }

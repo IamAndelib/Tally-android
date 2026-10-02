@@ -11,7 +11,11 @@ const RAIL_AT = 600,
   PANES_AT = 840;
 /* a phone held sideways: a short, wide window on a landscape screen. The screen's shape decides, not the window's,
    so the keyboard of an upright phone (which shortens the window) never switches the layout */
-const phoneLand = () => innerWidth > innerHeight && innerHeight < 500 && screen.width > screen.height;
+const phoneLand = () =>
+  innerWidth > innerHeight &&
+  innerHeight < 500 &&
+  screen.width > screen.height &&
+  Math.min(screen.width, screen.height) < 600; // a tablet's keyboard can shorten the window as much: not a phone
 const twoPane = () => document.body.classList.contains("hasnav") && (innerWidth >= PANES_AT || phoneLand());
 /* two panes side by side on a wide screen (one centred column if the right one is empty), else one after the other */
 const panes = (left, right, cls) =>

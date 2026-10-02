@@ -369,18 +369,23 @@ function saveOut(name, mime, text) {
 }
 /* Android back / Escape: closes the top-most layer, else returns Home. False when there is nothing left to close
    (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
+/* Back closes the top layer first: a dialog, then the keypad of the sheet on top, then that sheet */
 function goBack() {
-  if (CALC) {
-    if (CALC.inp && CALC.inp.isConnected) {
-      calcClose(CALC.id, calcToggleBtn(CALC.id), true);
-      return true;
-    }
-    stopRepeat(); // its sheet closed while it was open: forget it and go on
-    CALC = null;
-  }
   if ($("#pop").innerHTML) {
     closePop();
     return true;
+  }
+  if (CALC) {
+    const top = $("#sheet2").innerHTML ? $("#sheet2") : $("#sheet");
+    if (CALC.inp && CALC.inp.isConnected) {
+      if (top.contains(CALC.inp)) {
+        calcClose(CALC.id, calcToggleBtn(CALC.id), true);
+        return true;
+      }
+    } else {
+      stopRepeat(); // its sheet closed while it was open: forget it and go on
+      CALC = null;
+    }
   }
   if ($("#sheet2").innerHTML) {
     closeSheet2();

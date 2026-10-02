@@ -278,10 +278,10 @@ const ok = (c, m) => {
   await settle();
   ok(midDrag[0] === 8 && midDrag[1] && midDrag[2], "band painted live while dragging " + midDrag);
   let rl = await page.textContent(".plabel");
-  ok(/^3\s–\s12 /.test(rl.trim()), "drag picked range: " + rl);
+  ok(/^Jun 3\s*–\s*12$/.test(rl.trim()), "drag picked range: " + rl);
   await act("prev");
   rl = await page.textContent(".plabel");
-  ok(/^24 .+\s–\s2 /.test(rl.trim()), "‹ shifts by the range length: " + rl);
+  ok(/^May 24\s*–\s*Jun 2$/.test(rl.trim()), "‹ shifts by the range length: " + rl);
   // tap start, change month, tap end
   await act("period-open");
   await act("pd-tab", "range");
@@ -291,7 +291,7 @@ const ok = (c, m) => {
   await act("pd-mon", "1");
   await act("pd-rday", thisMonth + "-02");
   rl = await page.textContent(".plabel");
-  ok(/^28 .+\s–\s2 /.test(rl.trim()), "tap-tap across months: " + rl);
+  ok(/^May 28\s*–\s*Jun 2$/.test(rl.trim()), "tap-tap across months: " + rl);
   await act("period-open");
   await act("pd-tab", "month");
   await page.screenshot({ path: OUT + "/period-month.png" });

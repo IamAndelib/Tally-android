@@ -536,10 +536,12 @@ function saveAccount() {
     },
     was = F.id;
   const go = () => {
+    const first = !activeAccounts().length;
     if (was) Object.assign(acc(was), data);
     else S.accounts.push(Object.assign({ id: newId(), archived: false }, data));
     closeSheet();
     commit();
+    if (first) scrollTo(0, 0); // the welcome page was scrolled: Home starts at its top
     snack(was ? "Account saved" : name + " added");
   };
   if (o < 0 && data.type !== "card" && !(was && acc(was).opening === o))

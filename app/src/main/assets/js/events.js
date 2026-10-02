@@ -4,6 +4,26 @@
  */
 "use strict";
 
+/* A second tap right where a tap just closed a sheet or dialog (a double tap on Save) would land on whatever was
+   underneath it: such a tap is dropped. Keyboard and script clicks (detail 0) always go through. */
+let ghostTap = null;
+const layersUp = () => ["#sheet", "#sheet2", "#pop"].filter(id => $(id).innerHTML).length;
+document.addEventListener(
+  "click",
+  ev => {
+    if (!ev.detail) return;
+    const g = ghostTap;
+    ghostTap = null;
+    if (g && ev.timeStamp - g.t < 300 && Math.abs(ev.clientX - g.x) < 24 && Math.abs(ev.clientY - g.y) < 24) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      return;
+    }
+    tapLayers = layersUp();
+  },
+  true
+);
+let tapLayers = 0;
 document.addEventListener("click", ev => {
   if (swallowClick) {
     swallowClick = false;
@@ -565,6 +585,11 @@ document.addEventListener("click", ev => {
       break;
   }
 });
+/* after the tap has been handled (this listener comes after the one above): did it close a layer? */
+document.addEventListener("click", ev => {
+  if (ev.detail && layersUp() < tapLayers) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
+  tapLayers = 0;
+});
 document.addEventListener("input", ev => {
   const id = ev.target.id;
   if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
@@ -624,6 +649,7 @@ document.addEventListener("keydown", e => {
     const on = !!($("#sheet").innerHTML || $("#sheet2").innerHTML || $("#pop").innerHTML);
     document.documentElement.classList.toggle("lock", on);
     document.body.classList.toggle("lock", on);
+    if (!document.querySelector(".calc:not([hidden])")) document.body.classList.remove("calcopen"); // its sheet went
   }).observe($(id), { childList: true })
 );
 /* the ring is laid out in px from the window: redo it when the width changes (not when an upright phone's keyboard
@@ -644,6 +670,11 @@ addEventListener("resize", () => {
   if (LP) return;
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
+  /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */
+  if (CALC && CALC.inp && CALC.inp.isConnected)
+    setTimeout(() => {
+      if (CALC && CALC.inp.isConnected) calcKeepFieldVisible(CALC.inp, $("#calc-" + CALC.id));
+    }, 0);
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") catchUpToday();

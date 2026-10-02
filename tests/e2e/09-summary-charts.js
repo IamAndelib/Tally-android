@@ -170,7 +170,7 @@ const ok = (c, m) => {
     })
   );
   ok(
-    rows.length === 8 && rows.every(r => r.fit && /^\d+( \w+)?–\d+ \w+/.test(r.l)),
+    rows.length === 8 && rows.every(r => r.fit && /\d\s*–\s*(\w+ )?\d/.test(r.l)),
     "weeks: 8 rows with readable ranges " + rows.map(r => r.l).join(", ")
   );
   await tap('#sm .smrow[data-v="3"]');
