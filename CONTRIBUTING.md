@@ -19,7 +19,7 @@ Tally is a native Android shell around a web page.
 - **`MainActivity.java`** hosts a WebView that loads `assets/index.html` from
   `https://appassets.androidplatform.net/assets/` (`WebViewAssetLoader`) and exposes a small bridge, `window.Android`:
   `ready` (ends the launch screen), `haptic`, `saveFile`, `getColors` (Material You palette), `setBars`,
-  `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `is24h`, `reminderHealth` /
+  `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `is24h`, `fontScale`, `reminderHealth` /
   `openSetting` / `permsIntro` (permissions), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` /
   `backupStatus` / `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls
   the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`,

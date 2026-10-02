@@ -51,7 +51,7 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif;
-  font-size: 16px;
+  font-size: 1rem; /* every size in rem follows the phone's text size (applyTextScale) */
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   padding-top: env(safe-area-inset-top, 0px);
@@ -432,7 +432,14 @@ body.hist #app {
 .rt .cn,
 .rt .cp {
   font-size: var(--f);
-  line-height: 1.25;
+  line-height: 1.3; /* tall enough for descenders (g, y) inside the clipped name */
+}
+.rt .cp {
+  line-height: 1.1; /* digits only, no descenders: the tightest line */
+}
+.rt .cn {
+  max-width: 92%; /* a little air between neighbouring names in a full ring */
+  flex-shrink: 0; /* whole or not at all (ringHTML leaves out a name that has no room) */
 }
 .dcenter {
   position: absolute;
@@ -584,12 +591,19 @@ body.hist #app {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  height: 48px;
+  min-height: 48px; /* grows to two lines rather than cutting a label off (large text, narrow screens) */
   border-radius: 24px;
-  padding: 0 20px;
+  padding: 6px 20px;
+  line-height: 1.2;
+  text-align: center;
   font-weight: 600;
   background: var(--primary);
   color: var(--on-primary);
+}
+/* buttons side by side keep their label on one line a little longer */
+.row > .btn {
+  padding-left: 12px;
+  padding-right: 12px;
 }
 .btn.tonal {
   background: var(--secondary-container);
@@ -615,6 +629,17 @@ body.hist #app {
 .row > * {
   flex: 1;
   min-width: 0;
+}
+/* note and date side by side, the date below the note on a narrow screen */
+.row.notedate {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.row.notedate > input {
+  flex: 2 1 170px;
+}
+.row.notedate > .nd-date {
+  flex: 1 1 130px;
 }
 .gap {
   height: 8px;
@@ -853,6 +878,9 @@ body.hist #app {
   color: var(--on-surface-variant);
   margin: 16px 0 8px;
 }
+.lbl.set {
+  margin: 12px 4px 8px;
+}
 .field {
   display: block;
   margin: 12px 0 0;
@@ -904,7 +932,7 @@ select option {
   border: 0;
   height: 64px;
   padding: 0;
-  font-size: 2.4rem;
+  font-size: min(2.4rem, 12vw); /* a long amount still fits a narrow phone */
   font-weight: 700;
   letter-spacing: -0.02em;
   caret-color: var(--primary);
@@ -948,7 +976,7 @@ select option {
   position: absolute;
   inset: 0;
   line-height: 64px;
-  font-size: 2.4rem;
+  font-size: min(2.4rem, 12vw);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--on-surface);
@@ -990,6 +1018,8 @@ select option {
   left: 0;
   right: 0;
   bottom: 0;
+  max-width: 560px; /* as wide as the sheet it belongs to, centred on a tablet */
+  margin: 0 auto;
   z-index: 25;
   background: var(--surface-low);
   display: grid;
@@ -1168,6 +1198,8 @@ textarea {
   font-weight: 600;
   white-space: nowrap;
   text-align: right;
+  min-width: 0;
+  max-width: 55%; /* the title keeps at least the rest; the balance line below gives way first */
 }
 .tx.on {
   background: var(--secondary-container);
@@ -1192,14 +1224,17 @@ textarea {
   color: var(--on-surface-variant);
 }
 .tx .a .rb {
-  display: block;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.3em;
   font-weight: 500;
   font-size: 0.72rem;
   color: var(--on-surface-variant);
-  max-width: 170px;
+}
+.tx .a .rbn {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-left: auto;
 }
 .tx .s .st {
   margin-right: 2px;
@@ -1279,6 +1314,10 @@ textarea {
 .welcome p {
   color: var(--on-surface-variant);
   margin: 0 0 24px;
+}
+.welcome .fieldbtn {
+  max-width: 320px;
+  margin: 0 auto 16px;
 }
 .month {
   display: flex;
@@ -2120,7 +2159,18 @@ body.lock {
   padding: 16px;
   width: 100%;
   max-width: 360px;
+  max-height: 100%; /* a short window (split screen, landscape tablet): the dialog scrolls inside */
+  overflow-y: auto;
   animation: fade 0.18s ease-out;
+}
+/* the smallest phones: a little more room, so a calendar's seven columns keep their 40px day circles */
+@media (max-width: 359px) {
+  .pop.scrim {
+    padding: 8px;
+  }
+  .dialog {
+    padding: 12px;
+  }
 }
 @keyframes fade {
   from {
@@ -2260,4 +2310,145 @@ body.lock {
 }
 .dlg-act .btn {
   width: auto;
+}
+
+/* Larger screens, by Material 3 window size class (the widths are RAIL_AT and PANES_AT in js/screens.js).
+   Medium, 600px+ (unfolded foldables, tablets upright): a wider column. */
+@media (min-width: 600px) {
+  main {
+    max-width: 640px;
+  }
+}
+/* A navigation rail on the left instead of the bottom bar: from 600px, and on a phone held sideways (body.rail, set
+   by render(), so an upright phone's keyboard never switches it) */
+body.rail.hasnav {
+  padding-left: 80px;
+}
+body.rail.hasnav main {
+  padding-bottom: 24px;
+}
+body.rail.hasnav .snack {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+body.rail .nav {
+  top: 0;
+  right: auto;
+  width: 80px;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+body.rail .nav .in {
+  height: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+body.rail .nav button {
+  height: 64px;
+}
+/* two panes (only rendered when wanted: 840px+, or a phone held sideways) */
+body.wide main {
+  max-width: 1080px;
+}
+.panes {
+  display: grid;
+  grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+  gap: 32px;
+  align-items: start;
+}
+.panes.one {
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+}
+/* Expanded, 840px+ (tablets sideways, large foldables): sheets as centred dialogs, which settle on the calculator
+   keypad while it is open */
+@media (min-width: 840px) {
+  .sheet {
+    align-items: center;
+    padding: 24px;
+  }
+  .sheet .p {
+    border-radius: 28px;
+    max-height: 100%;
+  }
+  .sheet .handle {
+    display: none;
+  }
+  .sheet.calcing {
+    align-items: flex-end;
+    padding-bottom: 0;
+  }
+  .sheet.calcing .p {
+    border-radius: 28px 28px 0 0;
+  }
+}
+/* A phone held sideways (body.land): the ring alone on the left, staying in view while the right side (the buttons,
+   the balances and the entries) scrolls; sheets use the full height; the calculator keypad sits beside the form */
+body.land .panes {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+body.land .panes.one {
+  grid-template-columns: minmax(0, 640px);
+}
+/* the ring's pane is the window's height and centres it, so the spare room is shared above and below */
+body.land .panes.home > .pane:first-child {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* that full-height pane would make the page scroll by main's bottom padding: the right pane carries it instead */
+body.land.hasnav main {
+  padding-bottom: 0;
+}
+body.land .panes.home > .pane:last-child {
+  padding-bottom: 24px;
+}
+body.land .sheet {
+  padding: 0;
+}
+body.land .sheet .p {
+  max-height: 100%;
+}
+body.land .sheet .handle {
+  display: none;
+}
+body.land .calc {
+  top: 0;
+  bottom: 0;
+  left: auto;
+  right: 0;
+  width: min(46%, 380px);
+  max-width: none;
+  margin: 0;
+  border-radius: 20px 0 0 20px;
+  grid-template-rows: auto repeat(4, minmax(0, 1fr));
+  padding: calc(6px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px))
+    calc(8px + env(safe-area-inset-bottom, 0px)) 10px;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.22);
+}
+body.land .calc > button {
+  height: auto; /* the keys share the height; the bar's keyboard button keeps its size */
+}
+body.land .sheet.calcing {
+  justify-content: flex-start;
+  align-items: flex-end;
+  padding: 0;
+}
+body.land .sheet.calcing .p {
+  max-width: calc(100% - min(46%, 380px));
+  border-radius: 0 28px 0 0;
+}
+/* a month of days in less height */
+body.land .dd {
+  height: 34px;
+}
+body.land .dd::before,
+body.land .dd::after {
+  width: 34px;
+  height: 34px;
 }

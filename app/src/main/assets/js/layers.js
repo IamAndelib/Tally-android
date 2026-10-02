@@ -10,7 +10,8 @@ function calGrid(m, o) {
   const t = today(),
     [y, mo] = m.split("-").map(Number),
     first = m + "-01";
-  const off = (parseISO(first).getDay() + 6) % 7,
+  const w = S.settings.week,
+    off = (parseISO(first).getDay() - w + 7) % 7,
     rows = Math.ceil((off + new Date(y, mo, 0).getDate()) / 7);
   const has = new Set(S.txns.map(x => x.date)),
     minM = o.min ? o.min.slice(0, 7) : "",
@@ -37,7 +38,7 @@ function calGrid(m, o) {
       { length: 7 },
       (_, i) =>
         "<span>" +
-        esc(parseISO(addDays("2024-01-01", i)).toLocaleDateString(undefined, { weekday: "narrow" })) +
+        esc(parseISO(addDays("2024-01-07", w + i)).toLocaleDateString(undefined, { weekday: "narrow" })) +
         "</span>"
     ).join("") +
     "</div>";
@@ -198,20 +199,20 @@ function dpSet(v) {
     $("#loan-due").textContent = dueHead(l, loanInfo(l));
   }
 }
-/* the phone's 12 / 24-hour setting (Android.is24h), else the locale's; re-read on resume (H24 = null) */
-let H24 = null;
-function is24h() {
-  if (H24 == null) {
-    try {
-      H24 =
-        window.Android && Android.is24h
-          ? !!Android.is24h()
-          : !/^h1[12]$/.test(new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hourCycle);
-    } catch (e) {
-      H24 = true;
-    }
+/* Settings → Region → Time format: "24" (the default) or "12" */
+const is24h = () => S.settings.clock !== "12";
+/* the phone's 12 / 24-hour setting (Android.is24h), else the locale's: only for saves from before the Time format
+   setting, so they keep what they showed */
+function phoneClock() {
+  try {
+    const h24 =
+      window.Android && Android.is24h
+        ? !!Android.is24h()
+        : !/^h1[12]$/.test(new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hourCycle);
+    return h24 ? "24" : "12";
+  } catch (e) {
+    return "24";
   }
-  return H24;
 }
 const timeLabel = hm => {
   const [h, m] = hm.split(":").map(Number),
@@ -421,30 +422,25 @@ function setPressed(act, v) {
 let F = null;
 /* currency picker */
 const MAJOR = [
-  "CAD",
   "USD",
   "EUR",
-  "GBP",
-  "BDT",
-  "INR",
-  "PKR",
-  "AUD",
-  "NZD",
   "JPY",
+  "GBP",
   "CNY",
+  "INR",
+  "CAD",
+  "AUD",
+  "CHF",
   "HKD",
   "SGD",
-  "MYR",
-  "THB",
-  "IDR",
-  "PHP",
   "KRW",
+  "BRL",
+  "MXN",
+  "ZAR",
   "AED",
   "SAR",
-  "QAR",
-  "KWD",
   "TRY",
-  "CHF",
+  "NZD",
   "SEK",
   "NOK",
   "DKK",
@@ -453,19 +449,24 @@ const MAJOR = [
   "HUF",
   "RUB",
   "UAH",
-  "ZAR",
+  "IDR",
+  "MYR",
+  "THB",
+  "PHP",
+  "VND",
+  "PKR",
+  "BDT",
+  "LKR",
+  "NPR",
   "NGN",
   "EGP",
   "KES",
-  "BRL",
-  "MXN",
   "ARS",
   "CLP",
   "COP",
-  "LKR",
-  "NPR",
-  "VND",
   "ILS",
+  "QAR",
+  "KWD",
 ];
 let CURPICK = null,
   curDN,
@@ -506,9 +507,9 @@ function allCurs() {
   }
   return curAll;
 }
-function curPicker(current, onPick) {
+function curPicker(current, onPick, title) {
   openSheet2(
-    "Currency",
+    title || "Currency",
     '<div class="qbar"><input id="cur-q" type="search" placeholder="Search name or code" autocomplete="off" aria-label="Search currency"></div><div id="curlist" data-cur="' +
       esc(current) +
       '"></div>'

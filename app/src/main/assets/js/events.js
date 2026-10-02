@@ -409,11 +409,15 @@ document.addEventListener("click", ev => {
       });
       break;
     case "pick-maincur":
-      curPicker(S.settings.cur, c => {
-        S.settings.cur = c;
-        V.cur = null;
-        commit();
-      });
+      pickMainCur();
+      break;
+    case "week":
+      S.settings.week = +v;
+      commit();
+      break;
+    case "clock":
+      S.settings.clock = v === "12" ? "12" : "24";
+      commit();
       break;
     case "cur-pick": {
       const f = CURPICK;
@@ -612,13 +616,24 @@ document.addEventListener("keydown", e => {
     document.body.classList.toggle("lock", on);
   }).observe($(id), { childList: true })
 );
-/* the ring is laid out in px from the screen width: redo it when the width changes (not when the keyboard opens) */
-let lastW = innerWidth;
+/* the ring is laid out in px from the window: redo it when the width changes (not when an upright phone's keyboard
+   opens), any screen when the layout changes (rail, two panes, a phone turned sideways), and on a sideways phone when
+   the height comes back (a sheet's keyboard closed) */
+let lastW = innerWidth,
+  lastH = innerHeight;
+const sizeClass = () => (phoneLand() ? 3 : innerWidth >= PANES_AT ? 2 : innerWidth >= RAIL_AT ? 1 : 0);
+let lastC = sizeClass();
 addEventListener("resize", () => {
-  if (innerWidth !== lastW) {
-    lastW = innerWidth;
-    if ((V.screen === "home" || V.screen === "settings") && !LP) render();
-  }
+  const c = sizeClass(),
+    w = innerWidth !== lastW,
+    hh = innerHeight !== lastH,
+    crossed = c !== lastC;
+  lastW = innerWidth;
+  lastH = innerHeight;
+  lastC = c;
+  if (LP) return;
+  if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
+  else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") catchUpToday();

@@ -16,6 +16,7 @@ function setArchived(id, on) {
   );
 }
 function assetForm(id) {
+  if (!id && !S.settings.cur) return pickMainCur(() => assetForm());
   const x = id
     ? S.assets.find(a => a.id === id)
     : { name: "", e: "", i: "diamond", c: "#a646c9", value: "", currency: S.settings.cur };
@@ -172,9 +173,9 @@ function txSheet(id, type, catId) {
     "</div>" +
     accChips("f-acc", F.account, null, accChoices(F.account));
   h +=
-    '<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
+    '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : "") +
-    '" aria-label="Note"><div style="flex:0 0 150px">' +
+    '" aria-label="Note"><div class="nd-date">' +
     dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
     "</div></div>";
   h +=
@@ -263,9 +264,9 @@ function trSheet(id, from) {
     "Add a fee (ATM, cash-out)</button>";
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
-    '<div class="row" style="margin-top:12px"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
+    '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : "") +
-    '" aria-label="Note"><div style="flex:0 0 150px">' +
+    '" aria-label="Note"><div class="nd-date">' +
     dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
     "</div></div>";
   h +=
@@ -429,7 +430,22 @@ function fixPreview() {
       ? "Already matches."
       : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
 }
+/* the main currency: from Settings and the welcome card, and asked first when a new notebook's first account or
+   asset is added before one was chosen */
+function pickMainCur(next) {
+  curPicker(
+    S.settings.cur,
+    c => {
+      S.settings.cur = c;
+      V.cur = null;
+      commit();
+      if (next) next();
+    },
+    S.settings.cur ? "Main currency" : "Your currency"
+  );
+}
 function accForm(id) {
+  if (!id && !S.settings.cur) return pickMainCur(() => accForm());
   const a = id ? acc(id) : { name: "", type: firstType(), currency: S.settings.cur, opening: "" };
   const used = id && S.txns.some(t => t.account === id || t.to === id);
   F = {
@@ -448,7 +464,7 @@ function accForm(id) {
     emblemEditor({ i: F.i, e: F.e, c: F.col }) +
     '<label class="field"><span>Name</span><input id="f-name" value="' +
     esc(a.name) +
-    '" placeholder="e.g. RBC Chequing, bKash, Wallet" maxlength="30"></label>';
+    '" placeholder="e.g. Main bank, Cash, Savings" maxlength="30"></label>';
   h +=
     '<div class="lbl">Type</div><div class="chips" id="f-types">' +
     visTypes(a.type)

@@ -1,0 +1,3 @@
+- Choose your currency when you start, and set the first day of the week and 12/24-hour time in Settings → Region.
+- Works on every screen: small and large phones, foldables and tablets, and phones held sideways.
+- Follows your phone's text size; category names are easier to read.

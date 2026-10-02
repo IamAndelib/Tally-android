@@ -132,6 +132,9 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(false);
         s.setGeolocationEnabled(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        // the page follows the phone's text size itself (fontScale(), capped so layouts hold), not the WebView's
+        // text zoom, which would scale text past what the layout was made for
+        s.setTextZoom(100);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -704,6 +707,12 @@ public class MainActivity extends Activity {
                     catch (ActivityNotFoundException ignored) { }
                 }
             });
+        }
+
+        /** The phone's text size (Settings → Display → Font size), 1 = default. A change restarts the activity. */
+        @JavascriptInterface
+        public float fontScale() {
+            return MainActivity.this.getResources().getConfiguration().fontScale;
         }
 
         /** The phone's 12 / 24-hour setting, for the time picker and time labels. */

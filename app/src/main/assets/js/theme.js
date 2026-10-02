@@ -88,6 +88,16 @@ function readSys() {
     SYS = null;
   }
 }
+/* The phone's text size (Android.fontScale; the WebView's own text zoom is off): every size in rem follows it through
+   the root font size, between the smallest setting and TEXT_MAX, the largest the layouts are checked for */
+const TEXT_MAX = 1.3;
+function applyTextScale() {
+  let f = 1;
+  try {
+    if (window.Android && Android.fontScale) f = +Android.fontScale() || 1;
+  } catch (e) {}
+  document.documentElement.style.fontSize = 16 * Math.min(Math.max(f, 0.85), TEXT_MAX) + "px";
+}
 function applyTheme() {
   const root = document.documentElement,
     pref = S.settings.theme || "system";

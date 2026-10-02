@@ -4,18 +4,56 @@
 "use strict";
 
 let FLIP = null;
+/* Window size classes (Material 3), the same widths as the @media rules in css/app.css: below 600px (phones) the
+   bottom bar and one column; from 600px a side rail; from 840px Home, Assets and Liabilities in two panes. A phone
+   held sideways gets the rail and two panes too, with the ring alone on the left (body.land) */
+const RAIL_AT = 600,
+  PANES_AT = 840;
+/* a phone held sideways: a short, wide window on a landscape screen. The screen's shape decides, not the window's,
+   so the keyboard of an upright phone (which shortens the window) never switches the layout */
+const phoneLand = () => innerWidth > innerHeight && innerHeight < 500 && screen.width > screen.height;
+const twoPane = () => document.body.classList.contains("hasnav") && (innerWidth >= PANES_AT || phoneLand());
+/* two panes side by side on a wide screen (one centred column if the right one is empty), else one after the other */
+const panes = (left, right, cls) =>
+  !twoPane()
+    ? left + right
+    : '<div class="panes' +
+      (right ? "" : " one") +
+      (cls ? " " + cls : "") +
+      '"><div class="pane">' +
+      left +
+      "</div>" +
+      (right ? '<div class="pane">' + right + "</div>" : "") +
+      "</div>";
+/* the ring's width: its pane on a wide screen (measured on an empty pane pair), else the column */
+let RINGW = 0;
 function render() {
   const app = $("#app");
   RBC = null;
   if (V.screen !== "history") V.sel = null;
   if (V.screen === "accounts") V.screen = "assets";
+  const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
+  const land = phoneLand();
+  document.body.classList.toggle("hasnav", tabs);
+  document.body.classList.toggle("land", land);
+  document.body.classList.toggle("rail", innerWidth >= RAIL_AT || land);
+  document.body.classList.toggle("wide", twoPane());
+  RINGW = 0;
+  if (twoPane() && V.screen === "home") {
+    app.innerHTML =
+      '<div class="panes' + (land ? " home" : "") + '"><div class="pane"></div><div class="pane"></div></div>';
+    const pw = app.querySelector(".pane").clientWidth;
+    /* sideways phone: the ring alone fills the height under the app bar. Tablet: short enough that the buttons below
+       it stay on screen (screen height, not the window's: the keyboard of a sheet just saved must not shrink it) */
+    RINGW = land
+      ? Math.max(240, Math.min(pw, innerHeight - 12))
+      : Math.max(300, Math.min(pw, ((screen && screen.availHeight) || innerHeight) - 400));
+  }
   if (V.screen === "history") app.innerHTML = historyView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
   else if (V.screen === "settings") app.innerHTML = settingsView();
   else app.innerHTML = homeView();
-  const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
-  document.body.classList.toggle("hasnav", tabs);
   document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
@@ -57,7 +95,11 @@ function homeView() {
       '<header class="appbar"><h1>Tally</h1>' +
       topIcons() +
       "</header>" +
-      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="btn" data-act="acc-form">' +
+      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="Currency"><span>' +
+      esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose your currency") +
+      "</span>" +
+      ic("down") +
+      '</button><button class="btn" data-act="acc-form">' +
       ic("add") +
       "Add first account</button></div>"
     );
@@ -83,9 +125,18 @@ function homeView() {
     topIcons() +
     "</header>";
 
-  if (checkDue()) h += checkCard(b, cur);
+  const wide = twoPane();
+  let side = "";
+  if (checkDue()) side = checkCard(b, cur);
+  else if (wide)
+    side =
+      '<div class="sec">Accounts</div><div class="list">' +
+      act.map(a => accRow(a, b)).join("") +
+      '</div><button class="btn text" data-act="acc-form" style="margin-top:4px">' +
+      ic("add") +
+      "Add account</button>";
   else
-    h +=
+    side =
       '<div class="strip">' +
       act
         .map(
@@ -103,6 +154,18 @@ function homeView() {
       '<button class="acc add" data-act="acc-form" aria-label="Add account">' +
       ic("add") +
       "</button></div>";
+  /* one column: the balances (or the balance card) above the ring; two panes: beside it, with the period's entries */
+  if (!wide) h += side;
+  else {
+    const list = periodTxns().sort(byNewest);
+    side +=
+      '<div class="sec">' +
+      esc(periodLabel()) +
+      "</div>" +
+      (list.length ? dayGroups(list) : '<div class="empty">Nothing written down yet.</div>');
+  }
+  const top = h;
+  h = "";
 
   const inCur = t => {
     const a = acc(t.account);
@@ -120,7 +183,7 @@ function homeView() {
   });
   spent = r2(spent);
   got = r2(got);
-  h += ringHTML(outCats(), { mode: "home", by, spent, got, cur });
+  const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
   const total = r2(act.filter(a => a.currency === cur).reduce((s, a) => s + b[a.id], 0));
   const n = periodTxns().length;
@@ -153,7 +216,10 @@ function homeView() {
     'Loan</button><button class="fbtn lend" data-act="loan-new" data-v="lend">' +
     emblem(LOAN_EMB.lend) +
     "Lend</button></div>";
-  return h;
+  /* one column: ring, then the buttons; tablet: ring and buttons | the rest; sideways phone: the ring, the full height
+     of the screen | the app bar, buttons and the rest, the ring staying in view while the right side scrolls */
+  if (!wide) return top + ring + h;
+  return document.body.classList.contains("land") ? panes(ring, top + h + side, "home") : top + panes(ring + h, side);
 }
 /* the Home balance card: from the Balance check time on, while that reminder is on, until confirmed today; opened from
    its notification (checkAsked = that day), it shows whatever the time */
@@ -265,7 +331,7 @@ const dragTip = () =>
     : '<p class="hint" style="margin:8px 4px 0">Tip: hold a row and drag it up to the empty slot to bring it back.</p>';
 function assetsView() {
   const b = balances();
-  let h = tabBar("Assets");
+  let h = "";
   h +=
     '<div class="sumcard"><div class="t">Net worth</div>' +
     curLines(netWorth()) +
@@ -291,6 +357,8 @@ function assetsView() {
   h +=
     dropBox("arch", "Drop here to archive") +
     (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
+  const left = h; // two panes: net worth and accounts | what you're owed and other assets
+  h = "";
   const lends = S.loans.filter(l => l.kind === "lend"),
     open = lends.filter(l => loanInfo(l).open),
     done = lends.filter(l => !loanInfo(l).open);
@@ -336,11 +404,11 @@ function assetsView() {
     '<button class="btn text" data-act="asset-edit" style="margin-top:4px">' +
     ic("add") +
     "Add asset</button>";
-  return h;
+  return tabBar("Assets") + panes(left, h);
 }
 function liabsView() {
   const b = balances();
-  let h = tabBar("Liabilities");
+  let h = "";
   const borrows = S.loans.filter(l => l.kind === "borrow"),
     open = borrows.filter(l => loanInfo(l).open),
     done = borrows.filter(l => !loanInfo(l).open);
@@ -374,9 +442,11 @@ function liabsView() {
       ")</button>";
     if (V.showCleared) h += zoneList("borrow-done", done.map(l => loanRow(l, true)).join("")) + dragTip();
   }
-  if (cards.length)
-    h += '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>";
-  return h;
+  /* two panes: what you owe and the loans | credit cards */
+  const right = cards.length
+    ? '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>"
+    : "";
+  return tabBar("Liabilities") + panes(h, right);
 }
 function txLine(t) {
   const a = acc(t.account),
@@ -456,14 +526,14 @@ function rbLines(t) {
   if (t.type === "transfer") {
     const to = acc(t.to);
     return (
-      '<span class="rb">↓ ' +
-      esc((a ? a.name : "?") + " " + money(r.a, a ? a.currency : "")) +
-      "</span>" +
-      (to && r.t != null ? '<span class="rb">↑ ' + esc(to.name + " " + money(r.t, to.currency)) + "</span>" : "")
+      rbLine("↓ " + (a ? a.name : "?"), money(r.a, a ? a.currency : "")) +
+      (to && r.t != null ? rbLine("↑ " + to.name, money(r.t, to.currency)) : "")
     );
   }
-  return a ? '<span class="rb">' + esc(a.name + " " + money(r.a, a.currency)) + "</span>" : "";
+  return a ? rbLine(a.name, money(r.a, a.currency)) : "";
 }
+/* on a narrow screen the account name gives way (ellipsis), never the balance */
+const rbLine = (name, bal) => '<span class="rb"><span class="rbn">' + esc(name) + "</span> " + esc(bal) + "</span>";
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
@@ -661,12 +731,34 @@ function settingsView() {
     '"><span class="mid"><div>Strength</div>' +
     sliderHtml(S.settings.hapticLevel || 3, S.settings.haptics === false) +
     '<div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
+  const seg = (act, cur, opts) =>
+    '<div class="seg">' +
+    opts
+      .map(
+        ([k, l]) =>
+          '<button data-act="' + act + '" data-v="' + k + '" aria-pressed="' + (cur === k) + '">' + esc(l) + "</button>"
+      )
+      .join("") +
+    "</div>";
   h +=
-    '<div class="sec">Main currency</div><button class="fieldbtn" data-act="pick-maincur"><span>' +
-    esc(curLabel(S.settings.cur)) +
+    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="Main currency"><span>' +
+    esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose") +
     "</span>" +
     ic("down") +
-    "</button>";
+    '</button><div class="lbl set">First day of week</div>' +
+    seg(
+      "week",
+      String(S.settings.week),
+      [1, 0, 6].map(d => [
+        String(d),
+        parseISO(addDays("2024-01-07", d)).toLocaleDateString(undefined, { weekday: "long" }),
+      ])
+    ) +
+    '<div class="lbl set">Time format</div>' +
+    seg("clock", S.settings.clock, [
+      ["24", "24-hour"],
+      ["12", "12-hour"],
+    ]);
   const r = S.settings.remind,
     remRow = (k, act, title, sub, on, time) =>
       '<div class="setrow"><span class="mid"><div>' +

@@ -64,8 +64,16 @@ const ok = (c, m) => {
     await page.fill("#f-open", String(open));
     await sact("acc-save");
   }
+  // a new notebook starts by choosing its currency on the welcome card
+  ok((await page.textContent(".welcome .fieldbtn")).includes("Choose your currency"), "welcome asks for a currency");
+  await act("pick-maincur");
+  await page.fill("#cur-q", "canad");
+  await settle();
+  await page.click('#curlist [data-v="CAD"]');
+  ok((await state()).settings.cur === "CAD", "chosen currency becomes the main one");
+  ok((await page.textContent(".welcome .fieldbtn")).includes("CAD"), "welcome shows the chosen currency");
   await act("acc-form");
-  await addAccount("RBC", "bank", null, 500);
+  await addAccount("Bank", "bank", null, 500);
   if (await page.$('[data-act="check-ok"]')) await act("check-ok"); // the balance card, once its time has come
   await page.click(".acc.add");
   await addAccount("Wallet", "cash", null, 40);
@@ -105,7 +113,7 @@ const ok = (c, m) => {
   ok(await sameSheet(), "sheet not rebuilt while cycling categories/accounts");
   ok((await page.inputValue("#f-amt")) === "10+2.5", "typed amount kept");
   await sact("tx-save");
-  ok((await bal()).RBC === 487.5, "RBC 487.50 after groceries");
+  ok((await bal()).Bank === 487.5, "Bank 487.50 after groceries");
   // save requires category
   await act("add-out");
   await page.fill("#f-amt", "5");
@@ -138,7 +146,7 @@ const ok = (c, m) => {
   ok((await page.textContent("#tr-prev")).includes("62.00"), "preview includes fee");
   await sact("tr-save");
   let b = await bal();
-  ok(b.RBC === 525.5 && b.Wallet === 100, "after transfer+fee " + JSON.stringify(b));
+  ok(b.Bank === 525.5 && b.Wallet === 100, "after transfer+fee " + JSON.stringify(b));
   ok((await page.textContent("#snack")).includes("Transferred"), "snackbar says Transferred");
   await act("tr-new");
   await sact("tr-to", S.accounts[2].id);
@@ -148,7 +156,7 @@ const ok = (c, m) => {
   await page.fill("#f-toamt", "850");
   await sact("tr-save");
   b = await bal();
-  ok(b.bKash === 2850 && b.RBC === 515.5, "bKash 2850 " + JSON.stringify(b));
+  ok(b.bKash === 2850 && b.Bank === 515.5, "bKash 2850 " + JSON.stringify(b));
   // eating out entry so donut has 2+ categories
   await act("add-cat", "food");
   await page.fill("#f-amt", "8");
@@ -466,12 +474,14 @@ const ok = (c, m) => {
         dn = ring.querySelector(".dwrap").getBoundingClientRect();
       const box = r => [r.left, r.top, r.right, r.bottom];
       const tiles = [...ring.querySelectorAll(".cat")];
-      const labels = tiles.map(b => {
-        const n = b.querySelector(".cn"),
-          rg = document.createRange();
+      /* a full ring may leave names out (they show whole or not at all) */
+      const names = tiles.map(b => b.querySelector(".cn")).filter(Boolean);
+      const labels = names.map(n => {
+        const rg = document.createRange();
         rg.selectNodeContents(n);
         return box(rg.getBoundingClientRect());
       });
+      const cut = names.filter(n => n.scrollHeight > n.offsetHeight + 1).length;
       return {
         rr: box(rr),
         dn: box(dn),
@@ -481,6 +491,7 @@ const ok = (c, m) => {
         t: tiles.map(b => box(b.getBoundingClientRect())),
         ci: tiles.map(b => box(b.querySelector(".ci").getBoundingClientRect())),
         labels,
+        cut,
         over: document.documentElement.scrollWidth > innerWidth,
       };
     });
@@ -509,8 +520,8 @@ const ok = (c, m) => {
     });
     const even = n < 3 || Math.max(...gaps) / Math.min(...gaps) < 1.12;
     ok(
-      g.t.length === n && inside && !iconHits && !labelHits && !onDonut && even && !g.over,
-      `n=${n}: tiles=${g.t.length} inside=${inside} iconHits=${iconHits} labelHits=${labelHits} onDonut=${onDonut} spacing=${(Math.max(...gaps) / Math.min(...gaps)).toFixed(2)} icon=${dia(g.ci[0]).toFixed(0)}px`
+      g.t.length === n && inside && !iconHits && !labelHits && !g.cut && !onDonut && even && !g.over,
+      `n=${n}: tiles=${g.t.length} inside=${inside} iconHits=${iconHits} labelHits=${labelHits} cut=${g.cut} names=${g.labels.length} onDonut=${onDonut} spacing=${(Math.max(...gaps) / Math.min(...gaps)).toFixed(2)} icon=${dia(g.ci[0]).toFixed(0)}px`
     );
     if ([5, 9, 12, 16, 24].includes(n)) await page.screenshot({ path: OUT + `/home-n${n}.png` });
   }

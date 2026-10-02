@@ -10,7 +10,11 @@ function blank() {
   return {
     v: 6,
     settings: {
-      cur: "CAD",
+      /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
+         times show as 24-hour (ISO 8601) until changed in Settings → Region */
+      cur: "",
+      week: 1,
+      clock: "24",
       theme: "system",
       haptics: true,
       hapticLevel: 3,
@@ -39,7 +43,7 @@ function migrate(o) {
       const c = String(v || "")
         .trim()
         .toUpperCase();
-      return isCur(c) ? c : s.settings.cur;
+      return isCur(c) ? c : s.settings.cur || "USD";
     };
   /* every id and every reference to one goes through sid(): the app's own ids pass unchanged, anything else
      (quotes, markup, "__proto__") is swapped for a fresh id, the same one everywhere it appears */
@@ -50,8 +54,23 @@ function migrate(o) {
       if (!ids.has(v)) ids.set(v, "x" + newId());
       return ids.get(v);
     };
-  Object.assign(s.settings, o.settings && typeof o.settings === "object" ? o.settings : {});
-  s.settings.cur = isCur(s.settings.cur) ? s.settings.cur : "CAD";
+  const os = o.settings && typeof o.settings === "object" ? o.settings : {};
+  Object.assign(s.settings, os);
+  /* a missing or broken main currency: an account's, else still to choose (or USD, for accounts with none valid) */
+  if (!isCur(s.settings.cur)) {
+    const accs = Array.isArray(o.accounts) ? o.accounts.filter(a => a && a.id) : [];
+    s.settings.cur =
+      accs
+        .map(a =>
+          String(a.currency || "")
+            .trim()
+            .toUpperCase()
+        )
+        .find(isCur) || (accs.length ? "USD" : "");
+  }
+  s.settings.week = Number.isInteger(os.week) && os.week >= 0 && os.week <= 6 ? os.week : 1;
+  /* saves from before the Time format setting keep what the phone showed them */
+  s.settings.clock = os.clock === "12" || os.clock === "24" ? os.clock : phoneClock();
   if (!["system", "light", "dark"].includes(s.settings.theme)) s.settings.theme = "system";
   const obj = v => (v && typeof v === "object" ? v : {}),
     hm = (v, d) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : d),

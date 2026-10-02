@@ -138,7 +138,12 @@ const ok = (c, m) => {
       );
     });
     await tp.tap('[data-act="go-today"]');
-    await tp.waitForTimeout(50);
+    // the click follows the touch a moment later (longer on a busy machine): wait for its effect, not a fixed time
+    await tp
+      .waitForFunction(() => document.querySelector(".pnav .plabel").textContent.includes("Today"), null, {
+        timeout: 1500,
+      })
+      .catch(() => {});
     console.log(
       "DBG",
       JSON.stringify(await tp.evaluate(() => window.__ev)),

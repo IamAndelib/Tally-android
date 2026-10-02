@@ -177,6 +177,8 @@ function calcOpen(id, btn) {
       wrap = inp.closest(".amtwrap");
     if (box) box.classList.add("calcing");
     if (wrap) wrap.classList.add("calcing");
+    const sh = inp.closest(".sheet");
+    if (sh) sh.classList.add("calcing"); // a centred sheet (tablet) settles on the keypad
   }
   const mirror = $("#cm-" + id);
   if (mirror) mirror.hidden = false;
@@ -191,6 +193,7 @@ function calcOpen(id, btn) {
 function calcKeepFieldVisible(inp, panel) {
   const sheet = inp.closest(".p"),
     line = inp.closest(".amtwrap") || inp;
+  if (document.body.classList.contains("land")) panel = null; // sideways phone: the keypad sits beside the form
   if (sheet && panel) sheet.style.paddingBottom = panel.offsetHeight + 16 + "px";
   /* where the keypad will end up, from its layout: it is still sliding up (up to 40px lower) when this runs, so its
      bounding box would put the limit too low and leave the field half behind it */
@@ -215,6 +218,8 @@ function calcClose(id, btn, use) {
       wrap = inp.closest(".amtwrap");
     if (box) box.classList.remove("calcing");
     if (wrap) wrap.classList.remove("calcing");
+    const sh = inp.closest(".sheet");
+    if (sh) sh.classList.remove("calcing");
   }
   const mirror = $("#cm-" + id);
   if (mirror) {

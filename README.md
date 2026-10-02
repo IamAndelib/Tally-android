@@ -67,6 +67,9 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 - **Home-screen widget** with today's balance, today's spending and a quick-add button.
 - **Material You:** follows your wallpaper colours on Android 12+, light and dark themes, and an emblem and colour for
   every category, account and asset. Choose what the middle of the donut shows.
+- **Phones, foldables and tablets:** the layout adapts from small phones to tablets (a side rail and two panes on
+  wide screens), and follows the phone's text size.
+- **Region settings:** your main currency, the first day of the week and 12- or 24-hour time.
 - **Haptic feedback** on every tap, with an on/off switch and a strength slider.
 
 **Your data**
