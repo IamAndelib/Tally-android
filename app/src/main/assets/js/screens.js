@@ -11,7 +11,11 @@ const RAIL_AT = 600,
   PANES_AT = 840;
 /* a phone held sideways: a short, wide window on a landscape screen. The screen's shape decides, not the window's,
    so the keyboard of an upright phone (which shortens the window) never switches the layout */
-const phoneLand = () => innerWidth > innerHeight && innerHeight < 500 && screen.width > screen.height;
+const phoneLand = () =>
+  innerWidth > innerHeight &&
+  innerHeight < 500 &&
+  screen.width > screen.height &&
+  Math.min(screen.width, screen.height) < 600; // a tablet's keyboard can shorten the window as much: not a phone
 const twoPane = () => document.body.classList.contains("hasnav") && (innerWidth >= PANES_AT || phoneLand());
 /* two panes side by side on a wide screen (one centred column if the right one is empty), else one after the other */
 const panes = (left, right, cls) =>
@@ -181,11 +185,11 @@ function homeView() {
       by[t.cat] = (by[t.cat] || 0) + t.amount;
     } else if (t.type === "income") got += t.amount;
   });
-  spent = r2(spent);
-  got = r2(got);
+  spent = rnd(spent);
+  got = rnd(got);
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
-  const total = r2(act.filter(a => a.currency === cur).reduce((s, a) => s + b[a.id], 0));
+  const total = rnd(act.filter(a => a.currency === cur).reduce((s, a) => s + b[a.id], 0));
   const n = periodTxns().length;
   if (!(V.period === "day" && V.anchor === today()))
     h +=
@@ -237,7 +241,7 @@ function checkCard(b, cur) {
   const hr = new Date().getHours();
   const hello = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
   const y = addDays(today(), -1);
-  const ySpent = r2(
+  const ySpent = rnd(
     S.txns
       .filter(t => t.date === y && t.type === "expense" && acc(t.account) && acc(t.account).currency === cur)
       .reduce((s, t) => s + t.amount, 0)
@@ -280,7 +284,7 @@ function tabBar(title) {
 function perCur(add) {
   const m = {};
   add((c, v) => {
-    m[c] = r2((m[c] || 0) + v);
+    m[c] = rnd((m[c] || 0) + v);
   });
   return m;
 }
@@ -554,7 +558,7 @@ function dayGroups(list) {
         }
       });
       const tot = Object.entries(sp)
-        .map(([c, v]) => "−" + money(r2(v), c))
+        .map(([c, v]) => "−" + money(rnd(v), c))
         .join(" · ");
       h +=
         '<div class="day"><span>' +

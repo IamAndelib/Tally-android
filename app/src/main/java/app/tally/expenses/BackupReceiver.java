@@ -40,7 +40,7 @@ public class BackupReceiver extends BroadcastReceiver {
     private static final String PREFS = "tally_backup";
     private static final int REQ = 3, NOTE_ID = 3;
     /** The largest backup read back (Restore, checks): far above any real one (a few hundred KB after years). */
-    static final int MAX = 20 * 1024 * 1024;
+    static final int MAX = 10 * 1024 * 1024; // a Tally backup is well under 1 MB; more is not one
 
     @Override
     public void onReceive(Context ctx, Intent in) {
@@ -49,6 +49,8 @@ public class BackupReceiver extends BroadcastReceiver {
         final Context app = ctx.getApplicationContext();
         new Thread(() -> {
             try {
+                // the next one first: if Android ends this process mid-write, tomorrow's backup is still armed
+                schedule(app);
                 String err = run(app, false);
                 if (err != null) {
                     // a lost folder needs a new pick; otherwise (e.g. kept in the temp file) Settings says what happened
@@ -57,7 +59,6 @@ public class BackupReceiver extends BroadcastReceiver {
                             err + (folder ? " Tap to choose the folder again." : " Tap to open Settings."),
                             ReminderReceiver.openApp(app, "backup", NOTE_ID), null);
                 }
-                schedule(app);
             } finally {
                 pr.finish();
             }
@@ -174,7 +175,8 @@ public class BackupReceiver extends BroadcastReceiver {
             Uri main = find(cr, tree, NAME);
             if (main == null) main = DocumentsContract.createDocument(cr, dir, "application/json", NAME);
             if (main == null || !put(cr, main, bytes)) return "The backup was saved as \"" + TEMP + "\".";
-            DocumentsContract.deleteDocument(cr, tmp);
+            // the backup is written and checked: a temp file the provider won't delete is no failure
+            try { DocumentsContract.deleteDocument(cr, tmp); } catch (Exception ignored) { }
             return null;
         } catch (SecurityException e) {
             return "Tally can't open the backup folder any more.";
@@ -188,7 +190,7 @@ public class BackupReceiver extends BroadcastReceiver {
      * bytes. "rw" + truncate first, since a bare "w" doesn't truncate on some Android versions (a shorter backup
      * would keep the old tail and stop being valid JSON); "wt" where "rw" isn't offered.
      */
-    private static boolean put(ContentResolver cr, Uri doc, byte[] bytes) {
+    static boolean put(ContentResolver cr, Uri doc, byte[] bytes) {
         boolean wrote = false;
         try {
             ParcelFileDescriptor pfd = cr.openFileDescriptor(doc, "rw");

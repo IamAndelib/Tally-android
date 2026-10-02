@@ -175,6 +175,13 @@ const ok = (c, m) => {
   ok(S.settings.dragTip === true, "drag tip dismissed after first drag");
   // accounts -> archived (drop box when the archive list is collapsed/empty)
   r = await drag('[data-src="acc"] [data-v="w"]', '.dropbox[data-zone="arch"]');
+  // Wallet still holds money: archiving asks first, and the row stays put until then
+  ok(
+    (await page.textContent("#pop .dlg-x")).includes("left out of your totals") &&
+      !(await state()).accounts.find(a => a.id === "w").archived,
+    "archiving an account with money asks first"
+  );
+  await tap('#pop [data-act="ask-ok"]');
   S = await state();
   ok(
     S.accounts.find(a => a.id === "w").archived,

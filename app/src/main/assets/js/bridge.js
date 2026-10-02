@@ -15,8 +15,8 @@ function syncWidget() {
   if (act.length) {
     const cur = cs.includes(S.settings.cur) ? S.settings.cur : cs[0],
       b = balances();
-    const total = r2(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
-    const spent = r2(
+    const total = rnd(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
+    const spent = rnd(
       S.txns
         .filter(x => x.type === "expense" && x.date === t && (acc(x.account) || {}).currency === cur)
         .reduce((q, x) => q + x.amount, 0)
@@ -47,6 +47,9 @@ function checkText() {
    once the balances were confirmed today) and the loan / lending due days, each at its own time */
 function syncReminders() {
   if (!(window.Android && Android.setReminders)) return;
+  /* a +1 day tapped on a notification while the page was in the background: apply it first, or the old due date
+     sent below would bring the reminder back */
+  applyNativeActions();
   const r = S.settings.remind;
   const last = S.txns.reduce((m, t) => {
     const c = t.ts ? iso(new Date(t.ts)) : t.date,
@@ -366,18 +369,23 @@ function saveOut(name, mime, text) {
 }
 /* Android back / Escape: closes the top-most layer, else returns Home. False when there is nothing left to close
    (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
+/* Back closes the top layer first: a dialog, then the keypad of the sheet on top, then that sheet */
 function goBack() {
-  if (CALC) {
-    if (CALC.inp && CALC.inp.isConnected) {
-      calcClose(CALC.id, calcToggleBtn(CALC.id), true);
-      return true;
-    }
-    stopRepeat(); // its sheet closed while it was open: forget it and go on
-    CALC = null;
-  }
   if ($("#pop").innerHTML) {
     closePop();
     return true;
+  }
+  if (CALC) {
+    const top = $("#sheet2").innerHTML ? $("#sheet2") : $("#sheet");
+    if (CALC.inp && CALC.inp.isConnected) {
+      if (top.contains(CALC.inp)) {
+        calcClose(CALC.id, calcToggleBtn(CALC.id), true);
+        return true;
+      }
+    } else {
+      stopRepeat(); // its sheet closed while it was open: forget it and go on
+      CALC = null;
+    }
   }
   if ($("#sheet2").innerHTML) {
     closeSheet2();

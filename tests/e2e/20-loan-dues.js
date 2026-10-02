@@ -73,7 +73,8 @@ const ok = (c, m) => {
   const lend = (id, person, date) => ({ id, kind: "lend", person, account: "k", date, note: "", status: "open" });
   const settle = () => page.waitForTimeout(150);
   const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
-  const sact = a => page.click(`#sheet [data-act="${a}"]`);
+  // after a tap in a sheet (it may close it): a tap where it was, sooner than 300 ms, counts as a double tap
+  const sact = a => page.click(`#sheet [data-act="${a}"]`).then(() => page.waitForTimeout(300));
   const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")));
   const rem = () => page.evaluate(() => window.__rem);
   const info = id =>

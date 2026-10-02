@@ -32,8 +32,10 @@ const calcPanelHtml = id =>
       (k === "⌫" ? "del" : /[+−×÷]/.test(k) ? "op" : "") +
       '" data-act="calc-key" data-v="' +
       esc(k) +
-      '">' +
-      esc(k) +
+      '"' +
+      (k === "." ? ' aria-label="Decimal point"' : "") +
+      ">" +
+      esc(k === "." ? NUMSEP.dec : k) + // the phone's decimal separator
       "</button>"
   ).join("") +
   "</div>";
@@ -63,9 +65,12 @@ function amtField(id, cur, val, o = {}) {
     calcPanelHtml(id)
   );
 }
-/* left-to-right with standard × ÷ before + − precedence (no parentheses — this is a phone calculator, not a parser) */
+/* left-to-right with standard × ÷ before + − precedence (no parentheses — this is a phone calculator, not a parser).
+   expr is canonical, or the keypad's own text (the phone's decimal separator, no grouping) */
 function calcEval(expr) {
   const m = String(expr || "")
+    .split(NUMSEP.dec)
+    .join(".")
     .replace(/−/g, "-")
     .match(/\d+\.?\d*|\.\d+|[+\-×÷]/g);
   if (!m || !m.length) return null;
@@ -102,7 +107,7 @@ function calcEval(expr) {
   }
   terms.push(sign * val);
   const tot = terms.reduce((a, b) => a + b, 0);
-  return amtOk(r2(tot));
+  return amtOk(rnd(tot));
 }
 let CALC = null;
 /* the calculator's amount field is readOnly (so it can't show a native caret) — this mirrors its text with a
@@ -122,7 +127,7 @@ function calcMirrorSync(id) {
   const res = $("#cr-" + id);
   if (res) {
     const v = /[+−×÷]/.test(CALC.expr.slice(1)) ? calcEval(CALC.expr) : null;
-    res.textContent = v == null ? "" : "= " + v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    res.textContent = v == null ? "" : "= " + v.toLocaleString(undefined, { maximumFractionDigits: 3 });
   }
 }
 /* keeps the caret in view: as the expression grows the display slides left, like a calculator's */
@@ -165,8 +170,13 @@ function calcOpen(id, btn) {
   document
     .querySelectorAll('[data-act="calc-toggle"][aria-expanded="true"]')
     .forEach(b => b.setAttribute("aria-expanded", "false"));
+  /* the expression is shown with the phone's decimal separator and no grouping */
   const inp = $("#" + id),
-    start = inp ? inp.value.replace(/[^0-9.+\-×÷−]/g, "") : "";
+    start = inp
+      ? amtCanon(inp.value)
+          .replace(/[^0-9.+\-×÷−]/g, "")
+          .replace(/\./g, NUMSEP.dec)
+      : "";
   /* inp: the field this calculator belongs to; once its sheet is gone the calculator is stale (see goBack) */
   CALC = { id, expr: start, pos: start.length, inp };
   if (inp) {
@@ -179,6 +189,7 @@ function calcOpen(id, btn) {
     if (wrap) wrap.classList.add("calcing");
     const sh = inp.closest(".sheet");
     if (sh) sh.classList.add("calcing"); // a centred sheet (tablet) settles on the keypad
+    document.body.classList.add("calcopen");
   }
   const mirror = $("#cm-" + id);
   if (mirror) mirror.hidden = false;
@@ -194,7 +205,9 @@ function calcKeepFieldVisible(inp, panel) {
   const sheet = inp.closest(".p"),
     line = inp.closest(".amtwrap") || inp;
   if (document.body.classList.contains("land")) panel = null; // sideways phone: the keypad sits beside the form
-  if (sheet && panel) sheet.style.paddingBottom = panel.offsetHeight + 16 + "px";
+  if (sheet) sheet.style.paddingBottom = panel ? panel.offsetHeight + 16 + "px" : "";
+  /* the snackbar rises above the keypad (css: body.calcopen .snack) */
+  document.body.style.setProperty("--calc-h", panel ? panel.offsetHeight + "px" : "0px");
   /* where the keypad will end up, from its layout: it is still sliding up (up to 40px lower) when this runs, so its
      bounding box would put the limit too low and leave the field half behind it */
   const r = line.getBoundingClientRect(),
@@ -208,7 +221,7 @@ function calcClose(id, btn, use) {
   const inp = $("#" + id);
   if (use && CALC && CALC.id === id && CALC.inp === inp && CALC.expr) {
     const val = calcEval(CALC.expr);
-    if (val != null && inp) inp.value = String(val);
+    if (val != null && inp) inp.value = groupDigits(String(val));
   }
   if (inp) {
     inp.readOnly = false;
@@ -232,6 +245,7 @@ function calcClose(id, btn, use) {
   if (sheet) sheet.style.paddingBottom = "";
   if (btn) btn.setAttribute("aria-expanded", "false");
   if (CALC && CALC.id === id) CALC = null;
+  if (!CALC) document.body.classList.remove("calcopen");
 }
 /* the field's calculator icon: opens the calculator, or evaluates, uses the result and closes it */
 function calcToggle(id, btn) {
@@ -261,8 +275,8 @@ function calcTapCaret(id, mirror, x, y) {
     calcMirrorSync(id);
   }
 }
-/* one calculator key, applied at the caret: ⌫ deletes before it, an operator right after another replaces it,
-   a number gets at most one ".", a leading operator can only be − */
+/* one calculator key, applied at the caret: ⌫ deletes before it, an operator next to another replaces it,
+   a number gets at most one decimal point, a leading operator can only be − */
 function calcKey(k) {
   if (!CALC) return;
   const before = CALC.expr.slice(0, CALC.pos),
@@ -277,14 +291,22 @@ function calcKey(k) {
     if (before && OP.test(before.slice(-1))) {
       if (before.length === 1 && k !== "−") return; // a lone leading − can't become × ÷ +
       CALC.expr = before.slice(0, -1) + k + after;
+    } else if (before && OP.test(after.charAt(0))) {
+      CALC.expr = before + k + after.slice(1); // right before another operator: replaces that one
+      CALC.pos++;
     } else {
       CALC.expr = before + k + after;
       CALC.pos++;
     }
   } else if (k === ".") {
-    const num = (before.match(/[0-9.]*$/) || [""])[0] + (after.match(/^[0-9.]*/) || [""])[0];
-    if (num.includes(".")) return;
-    CALC.expr = before + "." + after;
+    const d = NUMSEP.dec,
+      isNum = ch => /\d/.test(ch) || ch === d;
+    let a = before.length,
+      b = 0;
+    while (a > 0 && isNum(before[a - 1])) a--;
+    while (b < after.length && isNum(after[b])) b++;
+    if ((before.slice(a) + after.slice(0, b)).includes(d)) return;
+    CALC.expr = before + d + after;
     CALC.pos++;
   } else {
     CALC.expr = before + k + after;

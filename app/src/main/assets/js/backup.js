@@ -126,8 +126,8 @@ function saveBackup(then) {
   saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
   if (!bridged && then) then();
 }
-/* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (OK / No).
-   OK backs up now into the auto backup's folder when that's set up, else (or if that fails) saves a file; then the
+/* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (Save backup /
+   Skip). Save backup backs up now into the auto backup's folder when that's set up, else (or if that fails) saves a file; then the
    final Yes / No. */
 function wipeAll() {
   const had = hasBackup(),
@@ -138,12 +138,12 @@ function wipeAll() {
     had
       ? "Your last backup may not have your latest entries. Save them before deleting everything?"
       : "Save a backup of your data before deleting it?",
-    "OK",
+    "Save backup",
     () => {
       if (!auto || backupNow()) return saveBackup(wipeConfirm); // a failed Back up now: a file instead
       wipeConfirm();
     },
-    { cancel: "No", no: wipeConfirm }
+    { cancel: "Skip", no: wipeConfirm }
   );
 }
 /* the final Yes / No; keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto

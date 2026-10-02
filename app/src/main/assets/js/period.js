@@ -39,17 +39,7 @@ function periodLabel(p = V) {
     return p.anchor === t ? "Today" : p.anchor === addDays(t, -1) ? "Yesterday" : dayLabel(p.anchor);
   if (p.period === "range") {
     if (s === e) return s === t ? "Today" : dayLabel(s);
-    const a = parseISO(s),
-      b = parseISO(e),
-      mo = x => x.toLocaleDateString(undefined, { month: "short" });
-    return (
-      a.getDate() +
-      (a.getMonth() !== b.getMonth() || a.getFullYear() !== b.getFullYear() ? " " + mo(a) : "") +
-      "\u2009–\u2009" +
-      b.getDate() +
-      " " +
-      mo(b)
-    );
+    return rangeLabel(s, e);
   }
   const m = p.anchor.slice(0, 7);
   if (p === HP || m.slice(0, 4) === t.slice(0, 4)) return monthLabel(m, p === HP);

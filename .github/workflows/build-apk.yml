@@ -9,8 +9,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+# read-only by default; only the jobs that publish (the builds branch, a release) may write
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check:
@@ -21,6 +22,8 @@ jobs:
         working-directory: tests
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -44,8 +47,12 @@ jobs:
     concurrency:
       group: build-apk-${{ github.ref_type }}
       cancel-in-progress: false
+    permissions:
+      contents: write # pushes the builds branch (with its own token, below)
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -130,6 +137,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           name: release-check
@@ -150,8 +158,12 @@ jobs:
     env:
       # SHA-256 of the release signing certificate (public; also in README.md so people can verify their download)
       RELEASE_CERT_SHA256: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18d2fac88
+    permissions:
+      contents: write # creates the release and its tag
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Is there a new version to release?
         id: version
         env:
@@ -206,6 +218,7 @@ jobs:
       - name: Verify the APK
         if: steps.version.outputs.publish == 'true'
         run: |
+          set -o pipefail
           apk=app/build/outputs/apk/release/app-release.apk
           tools="$ANDROID_HOME/build-tools/35.0.0"
           "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt

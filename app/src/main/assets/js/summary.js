@@ -82,19 +82,14 @@ function smBuckets() {
   const sp = S.txns.filter(x => x.type === "expense" && inCur(x));
   out.forEach(b => {
     b.list = sp.filter(x => x.date >= b.s && x.date <= b.e);
-    b.v = r2(b.list.reduce((q, x) => q + x.amount, 0));
+    b.v = rnd(b.list.reduce((q, x) => q + x.amount, 0));
     const last = b.e < t ? b.e : t;
     b.days = last < b.s ? 0 : Math.round((parseISO(last) - parseISO(b.s)) / 864e5) + 1;
   });
   return out;
 }
-/* "3–9 Aug", "31 Aug–6 Sep" */
-function wkLabel(a, b) {
-  const s = parseISO(a),
-    e = parseISO(b),
-    mo = x => x.toLocaleDateString(undefined, { month: "short" });
-  return s.getDate() + (s.getMonth() !== e.getMonth() ? " " + mo(s) : "") + "–" + e.getDate() + " " + mo(e);
-}
+/* "3 – 9 Aug", "31 Aug – 6 Sep" (the phone's order) */
+const wkLabel = (a, b) => rangeLabel(a, b);
 /* categories of a set of expenses, biggest first */
 function catSplit(list) {
   const m = {};
@@ -102,7 +97,7 @@ function catSplit(list) {
     m[x.cat] = (m[x.cat] || 0) + x.amount;
   });
   return Object.entries(m)
-    .map(([k, v]) => [k, r2(v)])
+    .map(([k, v]) => [k, rnd(v)])
     .sort((p, q) => q[1] - p[1]);
 }
 /* donut of a month by category: category colours, 2px gaps, total in the middle */
@@ -231,7 +226,7 @@ function smRender() {
     const p = Math.round(part ? (b.v / b.days / (prev.v / len(prev)) - 1) * 100 : ((b.v - prev.v) / prev.v) * 100);
     cmp = p === 0 ? "Same as " + unit : (p > 0 ? "↑ " : "↓ ") + Math.abs(p) + "% vs " + unit;
   }
-  const avg = SM.mode !== "d" && b.days > 0 && b.v ? "Avg " + money(r2(b.v / b.days), cur) + " a day" : "";
+  const avg = SM.mode !== "d" && b.days > 0 && b.v ? "Avg " + money(rnd(b.v / b.days), cur) + " a day" : "";
   const top = M ? split : split.slice(0, 3);
   h +=
     '<div class="smd">' +
@@ -277,21 +272,7 @@ function smRender() {
   el.innerHTML = h;
 }
 /* "18 – 24 Sep", "3 Aug – 27 Sep", "Apr – Sep" (year added when it isn't this year) */
-function smSpan(bars) {
-  const s = parseISO(bars[0].s),
-    e = parseISO(bars[bars.length - 1].e),
-    y = new Date().getFullYear(),
-    yr = e.getFullYear() !== y ? " " + e.getFullYear() : "";
-  if (SM.mode === "m")
-    return (
-      s.toLocaleDateString(undefined, { month: "short" }) +
-      " – " +
-      e.toLocaleDateString(undefined, { month: "short" }) +
-      yr
-    );
-  const mo = x => x.toLocaleDateString(undefined, { month: "short" });
-  return s.getDate() + (s.getMonth() !== e.getMonth() ? " " + mo(s) : "") + " – " + e.getDate() + " " + mo(e) + yr;
-}
+const smSpan = bars => rangeLabel(bars[0].s, bars[bars.length - 1].e, SM.mode === "m");
 function smNav(d) {
   const t = today();
   let e = SM.end;

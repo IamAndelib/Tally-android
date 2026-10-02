@@ -4,16 +4,30 @@
  */
 "use strict";
 
+/* archiving an account that still holds money (or owes it) asks first: its balance leaves the totals */
 function setArchived(id, on) {
   const a = acc(id);
   if (!a || a.archived === on) return;
-  withUndo(
-    on ? a.name + " archived" : a.name + " is back",
-    () => {
-      acc(id).archived = on;
-    },
-    { row: id }
+  const go = () =>
+    withUndo(
+      on ? a.name + " archived" : a.name + " is back",
+      () => {
+        acc(id).archived = on;
+      },
+      { row: id }
+    );
+  const bal = balances()[id] || 0;
+  if (!on || Math.abs(bal) < 0.0005) return go();
+  askDialog(
+    "Archive " + a.name + "?",
+    "It still " +
+      (bal > 0 ? "has " : "owes ") +
+      money(Math.abs(bal), a.currency) +
+      ". Archived accounts are left out of your totals; their entries stay in History.",
+    "Archive",
+    go
   );
+  render(); // a dragged row goes back to its place until the answer
 }
 function assetForm(id) {
   if (!id && !S.settings.cur) return pickMainCur(() => assetForm());
@@ -371,7 +385,7 @@ function accOpen(id) {
     "</div>";
   h +=
     '<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>' +
-    amtField("f-actual", a.currency, "", { label: "Actual balance", placeholder: groupDigits(r2(bal)) }) +
+    amtField("f-actual", a.currency, "", { label: "Actual balance", placeholder: groupDigits(rnd(bal)) }) +
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
   h +=
     '<div class="gap"></div><div class="row">' +
@@ -399,7 +413,7 @@ function saveFix() {
     snack("Type what you have now");
     return;
   }
-  const d = r2(val - balances()[F.id]);
+  const d = rnd(val - balances()[F.id]);
   if (d === 0) {
     snack("Already matches");
     return;
@@ -424,7 +438,7 @@ function fixPreview() {
     el.textContent = "";
     return;
   }
-  const d = r2(v - balances()[F.id]);
+  const d = rnd(v - balances()[F.id]);
   el.textContent =
     d === 0
       ? "Already matches."
@@ -522,10 +536,12 @@ function saveAccount() {
     },
     was = F.id;
   const go = () => {
+    const first = !activeAccounts().length;
     if (was) Object.assign(acc(was), data);
     else S.accounts.push(Object.assign({ id: newId(), archived: false }, data));
     closeSheet();
     commit();
+    if (first) scrollTo(0, 0); // the welcome page was scrolled: Home starts at its top
     snack(was ? "Account saved" : name + " added");
   };
   if (o < 0 && data.type !== "card" && !(was && acc(was).opening === o))
@@ -749,7 +765,7 @@ function saveTr() {
       if (!oldFee) S.txns.push(f);
       Object.assign(f, {
         type: "expense",
-        amount: r2(fee),
+        amount: rnd(fee),
         account: from,
         cat: "fees",
         date,

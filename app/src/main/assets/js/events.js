@@ -4,6 +4,26 @@
  */
 "use strict";
 
+/* A second tap right where a tap just closed a sheet or dialog (a double tap on Save) would land on whatever was
+   underneath it: such a tap is dropped. Keyboard and script clicks (detail 0) always go through. */
+let ghostTap = null;
+const layersUp = () => ["#sheet", "#sheet2", "#pop"].filter(id => $(id).innerHTML).length;
+document.addEventListener(
+  "click",
+  ev => {
+    if (!ev.detail) return;
+    const g = ghostTap;
+    ghostTap = null;
+    if (g && ev.timeStamp - g.t < 300 && Math.abs(ev.clientX - g.x) < 24 && Math.abs(ev.clientY - g.y) < 24) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      return;
+    }
+    tapLayers = layersUp();
+  },
+  true
+);
+let tapLayers = 0;
 document.addEventListener("click", ev => {
   if (swallowClick) {
     swallowClick = false;
@@ -264,9 +284,12 @@ document.addEventListener("click", ev => {
     case "tx-save":
       saveTx();
       break;
-    case "row-exp":
-      el.classList.toggle("open");
+    case "row-exp": {
+      const row = el.closest(".tx");
+      row.classList.toggle("open");
+      el.setAttribute("aria-expanded", row.classList.contains("open"));
       break;
+    }
     case "tx-del": {
       const id = F.id;
       closeSheet();
@@ -486,11 +509,21 @@ document.addEventListener("click", ev => {
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel],
-        n = ids.length;
-      withUndo("Deleted " + n + " " + (n === 1 ? "entry" : "entries"), () => {
-        deleteEntries(ids);
-        V.sel = null;
-      });
+        l = paidPast(ids);
+      if (l) {
+        snack(paidPastMsg(l));
+        return;
+      }
+      let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
+      withUndo(
+        () => "Deleted " + n + " " + (n === 1 ? "entry" : "entries"),
+        () => {
+          n = S.txns.length;
+          deleteEntries(ids);
+          n -= S.txns.length;
+          V.sel = null;
+        }
+      );
       break;
     }
     case "theme":
@@ -555,6 +588,11 @@ document.addEventListener("click", ev => {
       break;
   }
 });
+/* after the tap has been handled (this listener comes after the one above): did it close a layer? */
+document.addEventListener("click", ev => {
+  if (ev.detail && layersUp() < tapLayers) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
+  tapLayers = 0;
+});
 document.addEventListener("input", ev => {
   const id = ev.target.id;
   if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
@@ -614,8 +652,48 @@ document.addEventListener("keydown", e => {
     const on = !!($("#sheet").innerHTML || $("#sheet2").innerHTML || $("#pop").innerHTML);
     document.documentElement.classList.toggle("lock", on);
     document.body.classList.toggle("lock", on);
+    if (!document.querySelector(".calc:not([hidden])")) document.body.classList.remove("calcopen"); // its sheet went
+    layerFocus();
   }).observe($(id), { childList: true })
 );
+/* Screen readers and keyboards stay in the top layer: what lies behind it is hidden from them (aria-hidden, and inert
+   where the WebView knows it), focus moves into a layer as it opens and back to where it was when it closes */
+const LAYERS = ["#app", "#nav", "#sheet", "#sheet2", "#pop"],
+  focusBack = {};
+function layerFocus() {
+  let top = -1,
+    back = null;
+  LAYERS.forEach((id, i) => {
+    const el = $(id),
+      on = i > 1 && !!el.innerHTML;
+    if (on) top = i;
+    if (on && !el.dataset.up) {
+      el.dataset.up = "1";
+      focusBack[id] = document.activeElement;
+    } else if (!on && el.dataset.up) {
+      delete el.dataset.up;
+      back = focusBack[id] || back;
+      focusBack[id] = null;
+    }
+  });
+  LAYERS.forEach((id, i) => {
+    const el = $(id),
+      below = i < top;
+    if (below) el.setAttribute("aria-hidden", "true");
+    else el.removeAttribute("aria-hidden");
+    el.inert = below;
+  });
+  /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
+  if (back && back.isConnected && back !== document.body) back.focus({ preventScroll: true });
+  if (top < 0) return;
+  const t = $(LAYERS[top]);
+  if (t.contains(document.activeElement)) return;
+  const d = t.querySelector('[role="dialog"], [role="alertdialog"]');
+  if (d) {
+    d.tabIndex = -1;
+    d.focus({ preventScroll: true });
+  }
+}
 /* the ring is laid out in px from the window: redo it when the width changes (not when an upright phone's keyboard
    opens), any screen when the layout changes (rail, two panes, a phone turned sideways), and on a sideways phone when
    the height comes back (a sheet's keyboard closed) */
@@ -634,6 +712,11 @@ addEventListener("resize", () => {
   if (LP) return;
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
+  /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */
+  if (CALC && CALC.inp && CALC.inp.isConnected)
+    setTimeout(() => {
+      if (CALC && CALC.inp.isConnected) calcKeepFieldVisible(CALC.inp, $("#calc-" + CALC.id));
+    }, 0);
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") catchUpToday();

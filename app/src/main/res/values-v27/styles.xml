@@ -1,0 +1,11 @@
+<resources>
+    <!-- Android 8.1+: as values/styles.xml, with the navigation bar on the surface colour and dark buttons (dark mode
+         keeps values-night) -->
+    <style name="AppTheme.Base" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+</resources>

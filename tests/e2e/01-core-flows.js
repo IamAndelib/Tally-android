@@ -20,7 +20,11 @@ const ok = (c, m) => {
   page.on("dialog", d => d.accept());
   await page.goto(URL);
   const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
-  const sact = (a, v) => page.click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
+  // after a tap in a sheet (it may close it): a tap where it was, sooner than 300 ms, counts as a double tap
+  const sact = (a, v) =>
+    page
+      .click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`))
+      .then(() => page.waitForTimeout(300));
   const state = () => page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")));
   const bal = () =>
     page.evaluate(() => {
@@ -278,10 +282,10 @@ const ok = (c, m) => {
   await settle();
   ok(midDrag[0] === 8 && midDrag[1] && midDrag[2], "band painted live while dragging " + midDrag);
   let rl = await page.textContent(".plabel");
-  ok(/^3\s–\s12 /.test(rl.trim()), "drag picked range: " + rl);
+  ok(/^Jun 3\s*–\s*12$/.test(rl.trim()), "drag picked range: " + rl);
   await act("prev");
   rl = await page.textContent(".plabel");
-  ok(/^24 .+\s–\s2 /.test(rl.trim()), "‹ shifts by the range length: " + rl);
+  ok(/^May 24\s*–\s*Jun 2$/.test(rl.trim()), "‹ shifts by the range length: " + rl);
   // tap start, change month, tap end
   await act("period-open");
   await act("pd-tab", "range");
@@ -291,7 +295,7 @@ const ok = (c, m) => {
   await act("pd-mon", "1");
   await act("pd-rday", thisMonth + "-02");
   rl = await page.textContent(".plabel");
-  ok(/^28 .+\s–\s2 /.test(rl.trim()), "tap-tap across months: " + rl);
+  ok(/^May 28\s*–\s*Jun 2$/.test(rl.trim()), "tap-tap across months: " + rl);
   await act("period-open");
   await act("pd-tab", "month");
   await page.screenshot({ path: OUT + "/period-month.png" });

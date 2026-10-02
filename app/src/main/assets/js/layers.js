@@ -63,7 +63,19 @@ function calGrid(m, o) {
         o.act +
         '" data-v="' +
         d +
+        /* read out as the whole date, with today and the chosen day marked */
+        '" aria-label="' +
+        esc(
+          parseISO(d).toLocaleDateString(undefined, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }) + (has.has(d) ? ", has entries" : "")
+        ) +
         '"' +
+        (d === t ? ' aria-current="date"' : "") +
+        (o.sel && d === o.sel ? ' aria-pressed="true"' : "") +
         (off2 ? " disabled" : "") +
         ">" +
         parseISO(d).getDate() +
@@ -247,15 +259,15 @@ function timePicker(title, cur, onPick) {
     const v = c.id === "h" ? (h24 ? h : h % 12 || 12) : c.id === "m" ? m : h < 12 ? "AM" : "PM";
     c.idx = (c.loop ? c.vals.length : 0) + c.vals.indexOf(v);
   });
-  TP = { cols, onPick };
   const txt = (c, v) => (c.id === "ap" ? v : c.id === "h" && !h24 ? String(v) : pad(v));
+  TP = { cols, onPick, txt };
   const col = c => {
     let rows = "";
     for (let i = 0; i < c.vals.length * c.copies; i++)
       rows +=
         '<div class="witem' +
         (i === c.idx ? " sel" : "") +
-        '" data-act="tp-row" data-v="' +
+        '" data-act="tp-row" aria-hidden="true" data-v="' +
         c.id +
         ":" +
         i +
@@ -267,9 +279,12 @@ function timePicker(title, cur, onPick) {
       (c.loop ? "" : " ap") +
       '" id="tp-' +
       c.id +
-      '" tabindex="0" role="listbox" aria-label="' +
+      /* a spin button for screen readers: ↑/↓ (or TalkBack's adjust) step it, the value is read out */
+      '" tabindex="0" role="spinbutton" aria-label="' +
       c.label +
-      '"><div class="wpad"></div>' +
+      '" ' +
+      wheelAria(c) +
+      '><div class="wpad"></div>' +
       rows +
       '<div class="wpad"></div></div>'
     );
@@ -291,6 +306,20 @@ function timePicker(title, cur, onPick) {
     el.addEventListener("scroll", () => wheelScrolled(c, el));
   });
 }
+/* the wheel's value for screen readers (its rows are hidden from them) */
+function wheelAria(c) {
+  const len = c.vals.length,
+    v = c.vals[c.idx % len];
+  return (
+    'aria-valuemin="0" aria-valuemax="' +
+    (len - 1) +
+    '" aria-valuenow="' +
+    (c.idx % len) +
+    '" aria-valuetext="' +
+    esc(TP.txt(c, v)) +
+    '"'
+  );
+}
 /* live: the row now in the middle is highlighted and ticks; once still, a wrapping wheel moves back to its middle copy */
 function wheelScrolled(c, el) {
   const n = c.vals.length * c.copies,
@@ -300,6 +329,8 @@ function wheelScrolled(c, el) {
     rows[c.idx].classList.remove("sel");
     rows[i].classList.add("sel");
     c.idx = i;
+    el.setAttribute("aria-valuenow", i % c.vals.length);
+    el.setAttribute("aria-valuetext", TP ? TP.txt(c, c.vals[i % c.vals.length]) : "");
     buzz("tick");
   }
   clearTimeout(c.t);

@@ -171,7 +171,7 @@ const ok = (c, m) => {
     "tapping a payment row expands it: " + JSON.stringify(ex)
   );
   await page.screenshot({ path: OUT + "/loan-expanded.png" });
-  await tap(row);
+  await tap(row + " .txh"); // the row's head opens and closes it
   ok(!(await page.$eval(row, e => e.classList.contains("open"))), "tap again collapses");
   ok(
     await page.evaluate(s => {
