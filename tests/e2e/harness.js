@@ -22,10 +22,14 @@ const launchOptions = process.env.CHROMIUM_PATH ? { executablePath: process.env.
 
 const today = process.env.TALLY_TODAY || "2026-06-17";
 if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) throw new Error("TALLY_TODAY must be YYYY-MM-DD, not " + today);
+/* the same wall-clock time on TALLY_TODAY (setFullYear keeps it across a daylight-saving change, where a difference of
+   midnights would move it by an hour, onto the wrong day near midnight) */
 const shift = (() => {
   const [y, m, d] = today.split("-").map(Number),
-    now = new Date();
-  return new Date(y, m - 1, d).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    now = new Date(),
+    then = new Date(now.getTime());
+  then.setFullYear(y, m - 1, d);
+  return then.getTime() - now.getTime();
 })();
 /* the same Date, moved by `shift` ms whenever it means "now"; runs in Node and, as a string, in every page */
 function shiftDate(ms) {

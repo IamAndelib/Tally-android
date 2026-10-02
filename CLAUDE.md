@@ -63,7 +63,8 @@ never count as spending or income; loans and lendings move money but are never s
   carry a public version without names or amounts.
 - Haptics play on the `Vibrator` as media vibration (a click primitive where the hardware has one, else a pulse);
   never `performHapticFeedback` or the predefined `EFFECT_*`, which some phones replace with stronger fallbacks.
-- Android's own backup is encrypted-only (`backup_rules.xml`, `data_extraction_rules.xml`).
+- Android's own backup is encrypted-only (`backup_rules.xml`, `data_extraction_rules.xml`), and off before Android 9
+  (`@bool/allow_backup`), which ignores that rule.
 - Every device rotates freely (no orientation lock: WCAG 1.3.4); rotation doesn't restart the activity
   (`configChanges`), the page re-renders on the resize.
 - The WebView's text zoom is off (`setTextZoom(100)`): the page follows the phone's text size itself
@@ -94,12 +95,18 @@ never count as spending or income; loans and lendings move money but are never s
   from settings only, never from the phone (only `migrate()` reads the phone's clock, for older saves).
 - Loan amounts, due amounts and status are always derived by `loanInfo()` (payments go to the draw due soonest);
   nothing about them is stored on the loan.
-- Amount fields: read them with `evalAmt()`, never `parseFloat` (thousands separators, calculator expressions). The
-  calculator's minus is `−` (U+2212). `.caretmirror` must stay non-flex (`caretRangeFromPoint` hit-testing).
+- Amounts are kept to 3 decimals (`rnd()`) and shown in the currency's own (`money()`). Amount fields show the
+  phone's separators (`NUMSEP`): put a number in with `groupDigits(String(n))`, read one with `evalAmt()`, never
+  `parseFloat` (separators, calculator expressions). The calculator's minus is `−` (U+2212). `.caretmirror` must stay
+  non-flex (`caretRangeFromPoint` hit-testing).
+- Layers are `#sheet`, `#sheet2` and `#pop`, each holding one `role="dialog"`/`"alertdialog"`: `layerFocus()` moves the
+  focus into the top one, hides what lies behind from screen readers (`aria-hidden`, `inert`) and gives the focus back
+  when it closes. Back closes the top layer first (`goBack()`); a tap right where a tap just closed one is dropped.
 - Screen sizes follow Material 3 window size classes: below 600px the bottom bar and one column; from `RAIL_AT`
   (600px) a side rail; from `PANES_AT` (840px) Home, Assets and Liabilities in two panes (`panes()`), and sheets as
   centred dialogs. The JS constants and the `@media` widths in `css/app.css` must match. A phone held sideways
-  (`phoneLand()`: a short, wide window on a landscape *screen*, so an upright phone's keyboard never counts) gets
+  (`phoneLand()`: a short, wide window on a landscape *screen* under 600px on its short side, so neither an upright
+  phone's keyboard nor a tablet's counts) gets
   `body.rail` + `body.land`: the ring alone on the left at full height, the app bar, buttons and lists on the right,
   sheets at full height and the calculator keypad beside the form. The Home ring's width comes from its pane
   (`RINGW`, capped by the screen or window height). Ring names are whole or left out (`ringHTML` sizes icon, name and %

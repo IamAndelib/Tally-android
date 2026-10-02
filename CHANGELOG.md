@@ -5,6 +5,40 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Money in every currency: amounts keep up to 3 decimals and show in each currency's own (¥1,250, KD 1.250), and a
+  rounded-away amount never shows as "−$0.00".
+- Amount fields and the calculator write numbers the phone's way (1.234,56 on a German phone, 1 234,56 on a French
+  one); either separator key types the decimal point, and a pasted "12,50" or "1.234,56" reads as meant.
+- A loan's draw can no longer be deleted (alone or in a multi-select) below what was already paid back, and a payment
+  can't be dated before the loan began.
+- Undo disappears once something newer is saved, so it can never bring back an older state over it; deleting several
+  entries says how many actually went (a transfer's fee goes with it).
+- Archiving an account that still holds money asks first, since its balance leaves the totals.
+- Backups and saved data from anywhere load safely: unknown settings are ignored, odd values can't stop the notebook
+  from opening, impossible dates and amounts are fixed or left out.
+- Back closes the top-most thing first (a date picker before the keypad under it); the keypad follows the phone when it
+  is turned; messages show above the keypad instead of under it; a quick second tap where a sheet just closed no
+  longer opens what was underneath; an operator typed right before another replaces it.
+- The morning balance check shows whole account names; date ranges follow the phone's date order and show the year
+  when it isn't this one; a tablet with its keyboard open keeps the tablet layout; Delete all data's backup question
+  answers "Save backup" or "Skip"; Home starts at its top after the first account.
+- Android: Android's own backup is off on Android 7 and 8, which can't keep it encrypted; reminders for different loans
+  can no longer replace each other; the daily backup stays scheduled even if a run fails; saving a file no longer
+  pauses the app; a missing or updating System WebView shows a message instead of a crash; in split screen Tally
+  keeps working while it is visible; a "+1 day" tapped on a reminder is never undone by the app; light system bars
+  from the first frame; WebView usage statistics are turned off.
+
+### Accessibility
+
+- Sheets and dialogs take the screen reader's and keyboard's focus as they open, hide the page behind them, and give
+  the focus back when they close.
+- Loan history rows, the time wheels, the ring's currency switch, the loan's progress bar and calendar days now say
+  what they are and their state; colour swatches have names.
+- Ring percentages keep their category's colour but always read at 4.5:1 or more; colour swatches and switches are
+  48px to tap.
+
 ## [1.3.0] — 2026-10-02
 
 ### Added
