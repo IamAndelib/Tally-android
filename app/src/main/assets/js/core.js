@@ -118,7 +118,8 @@ const addDays = (s, n) => {
   d.setDate(d.getDate() + n);
   return iso(d);
 };
-const r2 = n => Math.round(n * 100) / 100;
+/* amounts are kept to 3 decimals, the most any currency uses (dinars); "+ 0" turns −0 into 0 */
+const rnd = n => Math.round(n * 1000) / 1000 + 0;
 /* whether the phone has a font for every non-ASCII character of s. A missing glyph ("tofu") draws exactly like a code
    point no font has (U+10FFFD), so compare the two on a tiny canvas; the answer is cached per string. */
 const DRAWN = new Map();
@@ -158,7 +159,7 @@ function money(n, cur, short) {
     k = cur + (short ? (big ? "|s0" : "|s") : "");
   let f = NF.get(k);
   if (!f) {
-    const o = { style: "currency", currency: cur, maximumFractionDigits: 2 };
+    const o = { style: "currency", currency: cur }; // the currency's own decimals: ¥1,250, $12.50, KD 1.250
     if (short) {
       o.currencyDisplay = "narrowSymbol";
       if (big) {
@@ -173,11 +174,12 @@ function money(n, cur, short) {
       if (sym && !canDraw(sym)) f = new Intl.NumberFormat(undefined, Object.assign(o, { currencyDisplay: "code" }));
     } catch (e) {
       /* no currency chosen yet (a new notebook), or one this phone doesn't know */
-      return (cur ? cur + " " : "") + r2(n).toLocaleString();
+      return (cur ? cur + " " : "") + rnd(n).toLocaleString();
     }
+    f.dp = 10 ** f.resolvedOptions().maximumFractionDigits;
     NF.set(k, f);
   }
-  return f.format(n);
+  return f.format(Math.round(n * f.dp) / f.dp + 0); // −0.001 would show as "−$0.00"
 }
 const signed = (n, cur) => (n > 0 ? "+" : n < 0 ? "−" : "") + money(Math.abs(n), cur);
 function shiftMonth(m, d) {
@@ -223,6 +225,15 @@ function formatAmountInput(inp, ev) {
       dot = num.includes(".") ? "" : ".";
     v = before + dot + after;
     caret = before.length + dot.length;
+  } else if (ev && /^insertFrom|^insertReplacement/.test(ev.inputType || "")) {
+    /* pasted or dropped "12,50" or "1.234,56": a comma before the last one or two digits is the decimal point */
+    const p = v.replace(/\d[\d.,]*/g, n =>
+      /^(\d{1,3}(\.\d{3})+|\d+),\d{1,2}$/.test(n) ? n.replace(/\./g, "").replace(",", ".") : n
+    );
+    if (p !== v) {
+      caret += p.length - v.length;
+      v = p;
+    }
   }
   const keep = v.slice(0, caret).replace(/,/g, "").length,
     out = groupDigits(v);
@@ -252,10 +263,17 @@ function evalAmt(v) {
     tot += (sg === "-" ? -1 : 1) * parseFloat(n);
     return m;
   });
-  return amtOk(r2(tot));
+  return amtOk(rnd(tot));
 }
 let snackT = null,
   undoFn = null;
+/* a newer change makes the Undo on screen stale: it goes, the message stays */
+function dropUndo() {
+  if (!undoFn) return;
+  undoFn = null;
+  const b = $('#snack [data-act="undo"]');
+  if (b) b.remove();
+}
 function snack(msg, undo) {
   undoFn = undo || null;
   $("#snack").innerHTML =

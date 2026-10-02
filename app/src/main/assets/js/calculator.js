@@ -102,7 +102,7 @@ function calcEval(expr) {
   }
   terms.push(sign * val);
   const tot = terms.reduce((a, b) => a + b, 0);
-  return amtOk(r2(tot));
+  return amtOk(rnd(tot));
 }
 let CALC = null;
 /* the calculator's amount field is readOnly (so it can't show a native caret) — this mirrors its text with a
@@ -122,7 +122,7 @@ function calcMirrorSync(id) {
   const res = $("#cr-" + id);
   if (res) {
     const v = /[+−×÷]/.test(CALC.expr.slice(1)) ? calcEval(CALC.expr) : null;
-    res.textContent = v == null ? "" : "= " + v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    res.textContent = v == null ? "" : "= " + v.toLocaleString(undefined, { maximumFractionDigits: 3 });
   }
 }
 /* keeps the caret in view: as the expression grows the display slides left, like a calculator's */
@@ -261,7 +261,7 @@ function calcTapCaret(id, mirror, x, y) {
     calcMirrorSync(id);
   }
 }
-/* one calculator key, applied at the caret: ⌫ deletes before it, an operator right after another replaces it,
+/* one calculator key, applied at the caret: ⌫ deletes before it, an operator next to another replaces it,
    a number gets at most one ".", a leading operator can only be − */
 function calcKey(k) {
   if (!CALC) return;
@@ -277,6 +277,9 @@ function calcKey(k) {
     if (before && OP.test(before.slice(-1))) {
       if (before.length === 1 && k !== "−") return; // a lone leading − can't become × ÷ +
       CALC.expr = before.slice(0, -1) + k + after;
+    } else if (before && OP.test(after.charAt(0))) {
+      CALC.expr = before + k + after.slice(1); // right before another operator: replaces that one
+      CALC.pos++;
     } else {
       CALC.expr = before + k + after;
       CALC.pos++;

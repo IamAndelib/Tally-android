@@ -486,11 +486,21 @@ document.addEventListener("click", ev => {
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel],
-        n = ids.length;
-      withUndo("Deleted " + n + " " + (n === 1 ? "entry" : "entries"), () => {
-        deleteEntries(ids);
-        V.sel = null;
-      });
+        l = paidPast(ids);
+      if (l) {
+        snack(paidPastMsg(l));
+        return;
+      }
+      let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
+      withUndo(
+        () => "Deleted " + n + " " + (n === 1 ? "entry" : "entries"),
+        () => {
+          n = S.txns.length;
+          deleteEntries(ids);
+          n -= S.txns.length;
+          V.sel = null;
+        }
+      );
       break;
     }
     case "theme":

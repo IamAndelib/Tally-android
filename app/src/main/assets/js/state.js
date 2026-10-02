@@ -35,45 +35,50 @@ function blank() {
 function migrate(o) {
   const s = blank();
   if (!o || typeof o !== "object") return s;
-  const own = (m, k) => typeof k === "string" && Object.prototype.hasOwnProperty.call(m, k),
-    num = v => (isFinite(+v) ? +v : 0),
-    hex = v => /^#[0-9a-f]{6}$/i.test(v),
+  /* text from a field that may hold anything (an object would make String() throw); a number that fits as an amount;
+     a real calendar date (2024-02-30 becomes 2024-03-01, as the app itself would read it) */
+  const str = v => (typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : ""),
+    own = (m, k) => typeof k === "string" && Object.prototype.hasOwnProperty.call(m, k),
+    okNum = v => (typeof v === "number" || typeof v === "string") && amtOk(+v) != null,
+    num = v => (okNum(v) ? +v : 0),
+    isDay = v => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v),
+    day = v => iso(parseISO(v)),
+    hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v),
     isCur = v => /^[A-Z]{3}$/.test(v),
     curOf = v => {
-      const c = String(v || "")
-        .trim()
-        .toUpperCase();
+      const c = str(v).trim().toUpperCase();
       return isCur(c) ? c : s.settings.cur || "USD";
     };
   /* every id and every reference to one goes through sid(): the app's own ids pass unchanged, anything else
-     (quotes, markup, "__proto__") is swapped for a fresh id, the same one everywhere it appears */
+     (quotes, markup, "__proto__", "constructor") is swapped for a fresh id, the same one everywhere it appears */
   const ids = new Map(),
     sid = v => {
-      v = String(v ?? "");
-      if (/^[A-Za-z0-9-]{1,64}$/.test(v)) return v;
+      v = str(v);
+      if (/^[A-Za-z0-9-]{1,64}$/.test(v) && !(v in Object.prototype)) return v;
+      if (!v) return "x" + newId(); // no usable id: nothing can refer to it either
       if (!ids.has(v)) ids.set(v, "x" + newId());
       return ids.get(v);
     };
-  const os = o.settings && typeof o.settings === "object" ? o.settings : {};
-  Object.assign(s.settings, os);
+  const ver = typeof o.v === "number" ? o.v : 0,
+    os = o.settings && typeof o.settings === "object" ? o.settings : {};
+  /* only the settings Tally knows, each checked below */
+  Object.keys(s.settings)
+    .concat(["backupAsk", "customCols", "dragTip", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
+    .concat(["lastCheck", "savedBackup"])
+    .forEach(k => {
+      if (own(os, k)) s.settings[k] = os[k];
+    });
   /* a missing or broken main currency: an account's, else still to choose (or USD, for accounts with none valid) */
   if (!isCur(s.settings.cur)) {
     const accs = Array.isArray(o.accounts) ? o.accounts.filter(a => a && a.id) : [];
-    s.settings.cur =
-      accs
-        .map(a =>
-          String(a.currency || "")
-            .trim()
-            .toUpperCase()
-        )
-        .find(isCur) || (accs.length ? "USD" : "");
+    s.settings.cur = accs.map(a => str(a.currency).trim().toUpperCase()).find(isCur) || (accs.length ? "USD" : "");
   }
   s.settings.week = Number.isInteger(os.week) && os.week >= 0 && os.week <= 6 ? os.week : 1;
   /* saves from before the Time format setting keep what the phone showed them */
   s.settings.clock = os.clock === "12" || os.clock === "24" ? os.clock : phoneClock();
   if (!["system", "light", "dark"].includes(s.settings.theme)) s.settings.theme = "system";
   const obj = v => (v && typeof v === "object" ? v : {}),
-    hm = (v, d) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : d),
+    hm = (v, d) => (typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : d),
     r = obj(s.settings.remind),
     bk = obj(s.settings.backup);
   s.settings.remind = {
@@ -89,15 +94,17 @@ function migrate(o) {
   ["batteryOk", "notifAsked", "exactAsked", "batteryAsked"].forEach(k => delete s.settings[k]);
   /* when a backup was last saved here (ms) and when the auto-backup suggestion last showed (YYYY-MM-DD) */
   if (!(Number.isFinite(s.settings.savedBackup) && s.settings.savedBackup > 0)) delete s.settings.savedBackup;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s.settings.backupAsk || "")) delete s.settings.backupAsk;
+  if (!isDay(s.settings.backupAsk)) delete s.settings.backupAsk;
+  if (!isDay(s.settings.lastCheck)) delete s.settings.lastCheck;
+  if (s.settings.dragTip !== true) delete s.settings.dragTip;
   s.settings.haptics = s.settings.haptics !== false;
-  s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(+s.settings.hapticLevel) || 3));
+  s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(num(s.settings.hapticLevel)) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
   ["lastAcc", "lastAccIn"].forEach(k => {
     if (s.settings[k] != null) s.settings[k] = sid(s.settings[k]);
   });
   s.settings.customCols = (Array.isArray(s.settings.customCols) ? s.settings.customCols : [])
-    .filter(c => /^#[0-9a-f]{6}$/.test(c))
+    .filter(c => typeof c === "string" && /^#[0-9a-f]{6}$/.test(c))
     .slice(0, 6);
   s.settings.hiddenCols = (Array.isArray(s.settings.hiddenCols) ? s.settings.hiddenCols : []).filter(c =>
     PALETTE.includes(c)
@@ -109,7 +116,7 @@ function migrate(o) {
     .filter(t => t && t.id && t.name && !own(TYPES, t.id))
     .map(t => ({
       id: sid(t.id),
-      name: String(t.name).slice(0, 20),
+      name: str(t.name).slice(0, 20),
       i: own(ICONS, t.i) ? t.i : "account_balance_wallet",
       c: hex(t.c) ? t.c : "#5f7389",
     }));
@@ -119,29 +126,29 @@ function migrate(o) {
       const type = own(TYPES, a.type) ? a.type : sid(a.type);
       return {
         id: sid(a.id),
-        name: String(a.name || "Account"),
+        name: str(a.name) || "Account",
         type: own(TYPES, type) || s.types.some(t => t.id === type) ? type : "bank",
         currency: curOf(a.currency),
         opening: num(a.opening),
         archived: !!a.archived,
         i: own(ICONS, a.i) ? a.i : "",
-        e: a.i ? "" : String(a.e || ""),
+        e: a.i ? "" : str(a.e),
         c: hex(a.c) ? a.c : "",
       };
     });
   if (Array.isArray(o.cats)) {
     const valid = o.cats.filter(c => c && c.id && c.name && c.id !== "transfer");
-    if (o.v >= 2) {
+    if (ver >= 2) {
       s.cats = valid.map(c => ({
         id: sid(c.id),
-        name: String(c.name),
-        e: String(c.e || "🏷️"),
+        name: str(c.name),
+        e: str(c.e) || "🏷️",
         c: hex(c.c) ? c.c : "#9AA3B2",
         i: own(ICONS, c.i) ? c.i : "",
         kind: c.kind === "in" ? "in" : "out",
         hidden: !!c.hidden,
       }));
-      if (!(o.v >= 4))
+      if (!(ver >= 4))
         s.cats.forEach(c => {
           const d = CATS.find(x => x.id === c.id);
           if (!d) return;
@@ -157,8 +164,8 @@ function migrate(o) {
         .forEach(c =>
           s.cats.splice(12, 0, {
             id: sid(c.id),
-            name: String(c.name),
-            e: String(c.e || "🏷️"),
+            name: str(c.name),
+            e: str(c.e) || "🏷️",
             c: hex(c.c) ? c.c : "#9AA3B2",
             kind: "out",
           })
@@ -167,20 +174,20 @@ function migrate(o) {
   }
   const okAcc = new Set(s.accounts.map(a => a.id));
   s.txns = (Array.isArray(o.txns) ? o.txns : [])
-    .filter(t => t && t.id && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && isFinite(+t.amount) && okAcc.has(sid(t.account)))
+    .filter(t => t && t.id && isDay(t.date) && okNum(t.amount) && okAcc.has(sid(t.account)))
     .map(t0 => {
       const t = {
         id: sid(t0.id),
         ts: num(t0.ts),
-        date: t0.date,
+        date: day(t0.date),
         type: t0.type,
         amount: +t0.amount,
         account: sid(t0.account),
-        note: String(t0.note || ""),
+        note: str(t0.note),
       };
       if (t0.type === "transfer") {
         t.to = sid(t0.to);
-        if (t0.toAmount != null && t0.toAmount !== "" && isFinite(+t0.toAmount)) t.toAmount = +t0.toAmount;
+        if (t0.toAmount !== "" && okNum(t0.toAmount)) t.toAmount = +t0.toAmount;
         if (t0.feeId) t.feeId = sid(t0.feeId);
       } else if (t0.type === "adjust") {
         /* signed amount, nothing else */
@@ -189,7 +196,7 @@ function migrate(o) {
         t.dir = t0.dir === "in" ? "in" : "out";
         t.loan = sid(t0.loan);
         if (t0.principal) t.principal = true;
-        if (t0.principal && /^\d{4}-\d{2}-\d{2}$/.test(t0.due || "")) t.due = t0.due;
+        if (t0.principal && isDay(t0.due)) t.due = day(t0.due);
       } else if (t0.type === "expense" || t0.type === "income") {
         if (t0.cat === "transfer") {
           // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
@@ -214,7 +221,7 @@ function migrate(o) {
       .sort((x, y) => x.date.localeCompare(y.date) || x.ts - y.ts)
       .pop();
   s.loans = (Array.isArray(o.loans) ? o.loans : [])
-    .filter(l => l && l.id && (l.kind === "borrow" || l.kind === "lend") && (o.v >= 6 || isFinite(+l.amount)))
+    .filter(l => l && l.id && (l.kind === "borrow" || l.kind === "lend") && (ver >= 6 || okNum(l.amount)))
     .map(l => {
       const id = sid(l.id),
         draw = newestDraw(id),
@@ -224,27 +231,27 @@ function migrate(o) {
         id,
         ts: num(l.ts),
         kind: l.kind,
-        person: String(l.person || ""),
+        person: str(l.person),
         account,
-        date: /^\d{4}-\d{2}-\d{2}$/.test(l.date) ? l.date : today(),
-        note: String(l.note || ""),
+        date: isDay(l.date) ? day(l.date) : today(),
+        note: str(l.note),
         status: l.status === "writeoff" ? "writeoff" : "open",
       };
     })
     .filter(Boolean);
   /* v6: a loan's due date used to live on the loan itself; move it onto its (first/only) principal draw */
-  if (!(o.v >= 6) && Array.isArray(o.loans))
+  if (!(ver >= 6) && Array.isArray(o.loans))
     o.loans.forEach(ol => {
-      if (!ol || !/^\d{4}-\d{2}-\d{2}$/.test(ol.due || "")) return;
+      if (!ol || !isDay(ol.due)) return;
       const draw = s.txns.find(t => t.type === "loan" && t.principal && t.loan === sid(ol.id));
-      if (draw && !draw.due) draw.due = ol.due;
+      if (draw && !draw.due) draw.due = day(ol.due);
     });
   s.assets = (Array.isArray(o.assets) ? o.assets : [])
     .filter(x => x && x.id)
     .map(x => ({
       id: sid(x.id),
-      name: String(x.name || "Asset"),
-      e: x.e && x.e !== "💎" ? String(x.e) : "",
+      name: str(x.name) || "Asset",
+      e: x.e && x.e !== "💎" ? str(x.e) : "",
       i: own(ICONS, x.i) ? x.i : !x.e || x.e === "💎" ? "diamond" : "",
       c: hex(x.c) ? x.c : "#a646c9",
       value: num(x.value),
@@ -287,6 +294,7 @@ function save() {
   mirrorSoon();
 }
 function commit() {
+  dropUndo(); // an Undo still on screen would restore its snapshot over this newer change
   save();
   render();
   syncReminders();
@@ -315,12 +323,12 @@ function runBal() {
     .sort((x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0))
     .forEach(t => {
       if (!applyEntry(b, t)) return;
-      const r = { a: r2(b[t.account]), t: t.type === "transfer" && t.to in b ? r2(b[t.to]) : null };
+      const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
       if (t.type === "loan" && t.loan in amt) {
         if (t.principal) amt[t.loan] += t.amount;
         else {
           paid[t.loan] += t.amount;
-          r.left = Math.max(0, r2(amt[t.loan] - paid[t.loan]));
+          r.left = Math.max(0, rnd(amt[t.loan] - paid[t.loan]));
           r.ls = r.left <= 0 ? "cleared" : "partly";
         }
       }
@@ -334,7 +342,7 @@ function balances(before) {
   S.txns.forEach(t => {
     if (!before || t.date < before) applyEntry(b, t);
   });
-  for (const k in b) b[k] = r2(b[k]);
+  for (const k in b) b[k] = rnd(b[k]);
   return b;
 }
 const openingBalances = () => {
@@ -359,13 +367,14 @@ function currencies() {
 }
 /* Every add/edit/delete of entries goes through here: snapshot entries, loans and accounts, apply the change,
    save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. */
+/* msg may be a function, read after the change */
 function withUndo(msg, change, fx) {
   const before = JSON.stringify({ txns: S.txns, loans: S.loans, accounts: S.accounts });
   change();
   FX = fx || {};
   commit();
   FX = {};
-  snack(msg, () => {
+  snack(typeof msg === "function" ? msg() : msg, () => {
     const o = JSON.parse(before);
     S.txns = o.txns;
     S.loans = o.loans;
@@ -392,7 +401,7 @@ function guardOverdraw(mutate, date, proceed) {
     S.txns = T;
     S.loans = L;
   }
-  const low = (n, o) => n < -0.004 && n < o - 0.004;
+  const low = (n, o) => n < -0.0005 && n < o - 0.0005;
   const bad = S.accounts.find(a => a.type !== "card" && (low(b1[a.id], b0[a.id]) || low(d1[a.id], d0[a.id])));
   if (!bad) {
     proceed();

@@ -187,6 +187,8 @@ const ok = (c, m) => {
   );
   await page.screenshot({ path: OUT + "/acc-sheet.png" });
   await tap('#sheet [data-act="acc-arch"]');
+  ok(await page.isVisible('#pop [data-act="ask-ok"]'), "Archive asks first while the account holds money");
+  await tap('#pop [data-act="ask-ok"]');
   let S = await state();
   ok(S.accounts.find(a => a.id === "k").archived, "Archive archives");
   await tap('[data-act="toggle-arch"]');

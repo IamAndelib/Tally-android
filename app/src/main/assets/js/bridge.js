@@ -15,8 +15,8 @@ function syncWidget() {
   if (act.length) {
     const cur = cs.includes(S.settings.cur) ? S.settings.cur : cs[0],
       b = balances();
-    const total = r2(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
-    const spent = r2(
+    const total = rnd(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
+    const spent = rnd(
       S.txns
         .filter(x => x.type === "expense" && x.date === t && (acc(x.account) || {}).currency === cur)
         .reduce((q, x) => q + x.amount, 0)

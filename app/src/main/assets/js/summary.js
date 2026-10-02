@@ -82,7 +82,7 @@ function smBuckets() {
   const sp = S.txns.filter(x => x.type === "expense" && inCur(x));
   out.forEach(b => {
     b.list = sp.filter(x => x.date >= b.s && x.date <= b.e);
-    b.v = r2(b.list.reduce((q, x) => q + x.amount, 0));
+    b.v = rnd(b.list.reduce((q, x) => q + x.amount, 0));
     const last = b.e < t ? b.e : t;
     b.days = last < b.s ? 0 : Math.round((parseISO(last) - parseISO(b.s)) / 864e5) + 1;
   });
@@ -102,7 +102,7 @@ function catSplit(list) {
     m[x.cat] = (m[x.cat] || 0) + x.amount;
   });
   return Object.entries(m)
-    .map(([k, v]) => [k, r2(v)])
+    .map(([k, v]) => [k, rnd(v)])
     .sort((p, q) => q[1] - p[1]);
 }
 /* donut of a month by category: category colours, 2px gaps, total in the middle */
@@ -231,7 +231,7 @@ function smRender() {
     const p = Math.round(part ? (b.v / b.days / (prev.v / len(prev)) - 1) * 100 : ((b.v - prev.v) / prev.v) * 100);
     cmp = p === 0 ? "Same as " + unit : (p > 0 ? "↑ " : "↓ ") + Math.abs(p) + "% vs " + unit;
   }
-  const avg = SM.mode !== "d" && b.days > 0 && b.v ? "Avg " + money(r2(b.v / b.days), cur) + " a day" : "";
+  const avg = SM.mode !== "d" && b.days > 0 && b.v ? "Avg " + money(rnd(b.v / b.days), cur) + " a day" : "";
   const top = M ? split : split.slice(0, 3);
   h +=
     '<div class="smd">' +
