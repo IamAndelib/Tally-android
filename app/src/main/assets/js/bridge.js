@@ -47,6 +47,9 @@ function checkText() {
    once the balances were confirmed today) and the loan / lending due days, each at its own time */
 function syncReminders() {
   if (!(window.Android && Android.setReminders)) return;
+  /* a +1 day tapped on a notification while the page was in the background: apply it first, or the old due date
+     sent below would bring the reminder back */
+  applyNativeActions();
   const r = S.settings.remind;
   const last = S.txns.reduce((m, t) => {
     const c = t.ts ? iso(new Date(t.ts)) : t.date,

@@ -29,6 +29,7 @@ import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
@@ -60,6 +61,8 @@ public class MainActivity extends Activity {
     private boolean paused;
     /** The notification prompt came from a Settings "Allow" button: refused for good, it opens the settings page. */
     private boolean notifFromButton;
+    /** Android's notification prompt is up (its answer not back yet). */
+    private boolean asking;
 
     private WebView web;
     /** Holds the WebView; padded for the system bars and keyboard, since Android 15 draws apps edge to edge. */
@@ -82,15 +85,27 @@ public class MainActivity extends Activity {
         Intent i = new Intent(ctx, MainActivity.class)
                 .setAction(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LAUNCHER)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        if (open != null) i.putExtra("open", open);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        // only when there is something to open: a plain tap on the widget must not close a save dialog or a
+        // settings page left open on top of Tally
+        if (open != null) i.putExtra("open", open).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return i;
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        web = new WebView(this);
+        try {
+            web = new WebView(this);
+        } catch (RuntimeException e) { // Android System WebView missing, disabled or being updated
+            ready = true;
+            TextView msg = new TextView(this);
+            msg.setText(R.string.no_webview);
+            msg.setGravity(android.view.Gravity.CENTER);
+            msg.setPadding(64, 64, 64, 64);
+            setContentView(msg);
+            return;
+        }
         root = new FrameLayout(this);
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
@@ -217,11 +232,22 @@ public class MainActivity extends Activity {
         paused = true;
         if (web == null) return;
         web.evaluateJavascript("window.tallyPause&&window.tallyPause()", v -> {
-            if (paused && !isDestroyed() && web != null) {
-                web.onPause();
-                web.pauseTimers();
-            }
+            if (Build.VERSION.SDK_INT >= 29) sleep();
         });
+    }
+
+    /** Before Android 10 a visible app in split screen is paused too: there it only sleeps once out of sight. */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (Build.VERSION.SDK_INT < 29) sleep();
+    }
+
+    private void sleep() {
+        if (paused && !isDestroyed() && web != null) {
+            web.onPause();
+            web.pauseTimers();
+        }
     }
 
     /** The answer to Android's notification prompt: the page re-checks (Settings' card, the first-open dialog). */
@@ -229,6 +255,9 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode != NOTIF_REQ) return;
+        asking = false;
+        // empty: the request was interrupted (a second one while the prompt was up), not refused
+        if (results.length == 0) return;
         boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
         boolean fromButton = notifFromButton;
         notifFromButton = false;
@@ -250,6 +279,8 @@ public class MainActivity extends Activity {
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED) {
             return false;
         }
+        if (asking) return true; // its prompt is already up: one Allow, one prompt
+        asking = true;
         getSharedPreferences("tally_perms", MODE_PRIVATE).edit().putBoolean("notif", true).apply();
         requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIF_REQ);
         return true;
@@ -379,24 +410,37 @@ public class MainActivity extends Activity {
         return new File(getCacheDir(), "pending-save");
     }
 
+    private static byte[] readFile(File f) throws IOException {
+        try (InputStream in = new FileInputStream(f)) {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            for (int r; (r = in.read(buf)) > 0; ) out.write(buf, 0, r);
+            return out.toByteArray();
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SAVE_FILE) {
-            boolean ok = false;
-            File f = pendingSave();
-            if (resultCode == RESULT_OK && data != null && data.getData() != null && f.exists()) {
-                try (InputStream in = new FileInputStream(f);
-                     OutputStream os = getContentResolver().openOutputStream(data.getData())) {
-                    if (os != null) {
-                        byte[] buf = new byte[16384];
-                        for (int r; (r = in.read(buf)) > 0; ) os.write(buf, 0, r);
-                        ok = true;
-                    }
-                } catch (Exception ignored) { }
-            }
-            f.delete();
-            callPage("window.tallySaved&&window.tallySaved(" + ok + ")");
+            final File f = pendingSave();
+            final Uri doc = resultCode == RESULT_OK && data != null ? data.getData() : null;
+            final Context app = getApplicationContext();
+            // written off the UI thread (a slow cloud folder must not freeze the app) and read back like the auto
+            // backup: "Saved" only when the file holds exactly the bytes, so Delete all data never goes on after a
+            // backup that didn't land (a provider often reports a failed write only when the file is closed)
+            new Thread(() -> {
+                boolean ok = false;
+                if (doc != null && f.exists()) {
+                    try { ok = BackupReceiver.put(app.getContentResolver(), doc, readFile(f)); }
+                    catch (Throwable ignored) { }
+                }
+                f.delete();
+                final boolean saved = ok;
+                runOnUiThread(() -> {
+                    if (!isDestroyed()) callPage("window.tallySaved&&window.tallySaved(" + saved + ")");
+                });
+            }).start();
         } else if (requestCode == PICK_RESTORE) {
             restorePicked(resultCode == RESULT_OK && data != null ? data.getData() : null);
         } else if (requestCode == PICK_FOLDER) {
@@ -433,7 +477,9 @@ public class MainActivity extends Activity {
             String text = null, err = null;
             try {
                 text = new String(BackupReceiver.readDoc(app.getContentResolver(), doc, BackupReceiver.MAX), StandardCharsets.UTF_8);
-            } catch (SecurityException | IOException e) {
+            } catch (IOException e) {
+                err = "too big".equals(e.getMessage()) ? "That file is too big to be a Tally backup" : "Couldn't read that file";
+            } catch (Throwable e) { // SecurityException, or out of memory on a small phone
                 err = "Couldn't read that file";
             }
             final String t = text, e2 = err;
@@ -746,7 +792,8 @@ public class MainActivity extends Activity {
                 try { c = Color.parseColor(color); } catch (Exception e) { return; }
                 Window w = getWindow();
                 w.setStatusBarColor(c);
-                w.setNavigationBarColor(c);
+                // before Android 8 the navigation bar's buttons are always white: keep it dark under a light page
+                w.setNavigationBarColor(Build.VERSION.SDK_INT >= 26 || dark ? c : Color.BLACK);
                 if (web != null) web.setBackgroundColor(c);
                 // root shows behind the (transparent) system bars on Android 15+; it is coloured only once the page
                 // shows, so until then the logo in the window background stays visible

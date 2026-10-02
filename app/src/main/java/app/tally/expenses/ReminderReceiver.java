@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 
@@ -170,7 +171,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         SharedPreferences p = prefs(ctx);
         try {
             JSONArray armed = new JSONArray(p.getString("armed", "[]"));
-            for (int i = 0; i < armed.length(); i++) am.cancel(broadcast(ctx, A_DUE, armed.getString(i), code(armed.getString(i))));
+            for (int i = 0; i < armed.length(); i++) am.cancel(broadcast(ctx, A_DUE, armed.getString(i), code(ctx, armed.getString(i))));
         } catch (JSONException ignored) { }
         JSONArray nowArmed = new JSONArray();
         Set<String> keep = new HashSet<>(Arrays.asList("shown:nudge", "shown:check"));
@@ -203,7 +204,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 c2.set(Calendar.SECOND, 0);
                 when = c2.getTimeInMillis();
             }
-            arm(am, when, broadcast(ctx, A_DUE, id, code(id)));
+            arm(am, when, broadcast(ctx, A_DUE, id, code(ctx, id)));
             nowArmed.put(id);
             keep.add("shown:" + id);
         }
@@ -240,7 +241,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 ? (dueToday ? "Payback day is today" : "Payback was due " + pretty(date))
                 : (dueToday ? "Due today" : "Was due " + pretty(date)))
                 + (total.isEmpty() ? "" : " · " + total + " in all");
-        int base = code(id);
+        int base = code(ctx, id);
         Notification.Action[] actions = {
                 action(ctx, "Record payment", openApp(ctx, "loan:" + id + ":pay", base + 1)),
                 action(ctx, "+1 day", extendIntent(ctx, id, 1, base + 2)),
@@ -279,8 +280,8 @@ public class ReminderReceiver extends BroadcastReceiver {
             JSONObject d = dues.optJSONObject(i);
             String id = d == null ? "" : d.optString("id");
             if (id.isEmpty() || d.optString("date").compareTo(t) > 0) continue; // not due (any more)
-            due.add(code(id));
-            if (up.contains(code(id))) showDue(ctx, d, true);
+            due.add(code(ctx, id));
+            if (up.contains(code(ctx, id))) showDue(ctx, d, true);
         }
         for (int id : up) {
             if (id >= 1000 && !due.contains(id)) nm.cancel(id); // loan notices (code() ≥ 1000) no longer due
@@ -359,7 +360,7 @@ public class ReminderReceiver extends BroadcastReceiver {
             p.edit().putString("config", cfg.toString()).putString("actions", q.toString()).remove("shown:" + id).apply();
         } catch (JSONException ignored) { }
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm != null) nm.cancel(code(id));
+        if (nm != null) nm.cancel(code(ctx, id));
     }
 
     // ---------- helpers ----------
@@ -389,8 +390,24 @@ public class ReminderReceiver extends BroadcastReceiver {
         return null;
     }
 
-    /** Four request codes per loan: notification/tap, Record payment, +1 day, +1 week. */
-    private static int code(String id) { return 1000 + (id.hashCode() & 0xffff) * 4; }
+    /**
+     * Four request codes per loan (notification/tap, Record payment, +1 day, +1 week), from a slot kept per loan id,
+     * so two loans never share one: a hash alone can collide, and the second loan's reminder would replace the first's.
+     * A loan's first slot is still its hash's, so alarms armed before this keep their codes.
+     */
+    private static synchronized int code(Context ctx, String id) {
+        SharedPreferences p = prefs(ctx);
+        JSONObject m;
+        try { m = new JSONObject(p.getString("codes", "{}")); } catch (JSONException e) { m = new JSONObject(); }
+        if (m.has(id)) return m.optInt(id);
+        Set<Integer> used = new HashSet<>();
+        for (Iterator<String> k = m.keys(); k.hasNext(); ) used.add(m.optInt(k.next()));
+        int slot = id.hashCode() & 0xffff, c;
+        while (used.contains(c = 1000 + slot * 4)) slot = (slot + 1) & 0xffff;
+        try { m.put(id, c); } catch (JSONException ignored) { }
+        p.edit().putString("codes", m.toString()).apply();
+        return c;
+    }
 
     private static SharedPreferences prefs(Context ctx) { return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
 

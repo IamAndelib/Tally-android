@@ -1,0 +1,4 @@
+<resources>
+    <!-- Android 9+: backup honours the "encrypted only" rules (xml/backup_rules.xml, xml/data_extraction_rules.xml) -->
+    <bool name="allow_backup">true</bool>
+</resources>

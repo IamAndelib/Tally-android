@@ -1,0 +1,5 @@
+<resources>
+    <!-- Android's own backup: before Android 9 it ignores the "encrypted only" rule in xml/backup_rules.xml and could
+         copy the notebook unencrypted, so it stays off there (values-v28 turns it on) -->
+    <bool name="allow_backup">false</bool>
+</resources>
