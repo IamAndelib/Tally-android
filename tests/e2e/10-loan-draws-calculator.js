@@ -256,7 +256,7 @@ const ok = (c, m) => {
   await act("loan-open", L.id);
   await settle();
   const draw3kId = d5draw.id;
-  await page.click(`#sheet [data-act="row-exp"]:has([data-v="${draw3kId}"])`).catch(() => {});
+  await page.click(`#sheet .tx.exp:has([data-v="${draw3kId}"]) [data-act="row-exp"]`);
   // find and expand the row containing this draw's Edit button, then open the edit sheet
   await page.click(`[data-act="loandraw-edit"][data-v="${draw3kId}"]`);
   await settle();

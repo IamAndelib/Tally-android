@@ -284,9 +284,12 @@ document.addEventListener("click", ev => {
     case "tx-save":
       saveTx();
       break;
-    case "row-exp":
-      el.classList.toggle("open");
+    case "row-exp": {
+      const row = el.closest(".tx");
+      row.classList.toggle("open");
+      el.setAttribute("aria-expanded", row.classList.contains("open"));
       break;
+    }
     case "tx-del": {
       const id = F.id;
       closeSheet();
@@ -650,8 +653,47 @@ document.addEventListener("keydown", e => {
     document.documentElement.classList.toggle("lock", on);
     document.body.classList.toggle("lock", on);
     if (!document.querySelector(".calc:not([hidden])")) document.body.classList.remove("calcopen"); // its sheet went
+    layerFocus();
   }).observe($(id), { childList: true })
 );
+/* Screen readers and keyboards stay in the top layer: what lies behind it is hidden from them (aria-hidden, and inert
+   where the WebView knows it), focus moves into a layer as it opens and back to where it was when it closes */
+const LAYERS = ["#app", "#nav", "#sheet", "#sheet2", "#pop"],
+  focusBack = {};
+function layerFocus() {
+  let top = -1,
+    back = null;
+  LAYERS.forEach((id, i) => {
+    const el = $(id),
+      on = i > 1 && !!el.innerHTML;
+    if (on) top = i;
+    if (on && !el.dataset.up) {
+      el.dataset.up = "1";
+      focusBack[id] = document.activeElement;
+    } else if (!on && el.dataset.up) {
+      delete el.dataset.up;
+      back = focusBack[id] || back;
+      focusBack[id] = null;
+    }
+  });
+  LAYERS.forEach((id, i) => {
+    const el = $(id),
+      below = i < top;
+    if (below) el.setAttribute("aria-hidden", "true");
+    else el.removeAttribute("aria-hidden");
+    el.inert = below;
+  });
+  /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
+  if (back && back.isConnected && back !== document.body) back.focus({ preventScroll: true });
+  if (top < 0) return;
+  const t = $(LAYERS[top]);
+  if (t.contains(document.activeElement)) return;
+  const d = t.querySelector('[role="dialog"], [role="alertdialog"]');
+  if (d) {
+    d.tabIndex = -1;
+    d.focus({ preventScroll: true });
+  }
+}
 /* the ring is laid out in px from the window: redo it when the width changes (not when an upright phone's keyboard
    opens), any screen when the layout changes (rail, two panes, a phone turned sideways), and on a sideways phone when
    the height comes back (a sheet's keyboard closed) */

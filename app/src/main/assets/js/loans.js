@@ -288,7 +288,12 @@ function loanOpen(id, focusPay) {
     '">' +
     esc(stLabel(l, i.st)) +
     "</span></div></div>";
-  h += '<div class="bar" aria-label="' + pct + '% paid"><span style="width:' + pct + '%"></span></div>';
+  h +=
+    '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+    pct +
+    '" aria-label="Paid back"><span style="width:' +
+    pct +
+    '%"></span></div>';
   if (i.open) {
     // the draw whose due date the card changes: the one due next, else the newest still (or ever) out
     const dueDraw = i.dueDraw || i.draws.filter(t => i.rem[t.id] > 0).pop() || i.draws[i.draws.length - 1] || null;
@@ -351,7 +356,8 @@ function loanOpen(id, focusPay) {
                   : "this cleared the loan"
                 : money(r.left || 0, i.cur) + " left after this");
         return (
-          '<div class="tx exp" data-act="row-exp">' +
+          /* the row's head is the button that opens its details (they hold buttons of their own) */
+          '<div class="tx exp"><button class="txh" data-act="row-exp" aria-expanded="false">' +
           emblem(t.principal ? LOAN_EMB[l.kind] : { i: "paid", c: "#15a06f" }, "em") +
           '<span class="mid"><div class="d">' +
           esc(t.principal ? (lend ? "Lent" : "Borrowed") : lend ? "Got back" : "Paid back") +
@@ -365,7 +371,7 @@ function loanOpen(id, focusPay) {
           "</span>" +
           '<span class="chev">' +
           ic("down") +
-          "</span>" +
+          "</span></button>" +
           '<div class="more">' +
           esc(more) +
           '<div class="medit"><button class="btn text" data-act="loandraw-edit" data-v="' +

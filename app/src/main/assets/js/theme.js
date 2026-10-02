@@ -13,6 +13,34 @@ function hexRgb(h) {
 function rgbHex(c) {
   return "#" + c.map(v => pad(Math.round(v).toString(16))).join("");
 }
+/* WCAG 2 relative luminance and contrast ratio of two #rrggbb colours */
+function lumOf(c) {
+  const [r, g, b] = hexRgb(c).map(v => {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const contrast = (a, b) => {
+  const x = lumOf(a),
+    y = lumOf(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+/* a colour as small text on the page's surface: the same hue, taken towards black (light theme) or white (dark) just
+   enough to read at 4.5:1 (WCAG AA); cached per colour and surface */
+const INKS = new Map();
+function inkOn(c) {
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim(),
+    k = c + bg;
+  if (!/^#[0-9a-f]{6}$/i.test(c) || !/^#[0-9a-f]{6}$/i.test(bg)) return c;
+  if (INKS.has(k)) return INKS.get(k);
+  const to = lumOf(bg) > 0.18 ? [0, 0, 0] : [255, 255, 255],
+    rgb = hexRgb(c);
+  let out = c;
+  for (let f = 0.05; f <= 1 && contrast(out, bg) < 4.5; f += 0.05) out = rgbHex(rgb.map((v, i) => v + (to[i] - v) * f));
+  INKS.set(k, out);
+  return out;
+}
 function tone(pal, t) {
   for (let i = 0; i < TONES.length - 1; i++) {
     const hi = TONES[i],

@@ -95,15 +95,61 @@ function normHex(v) {
       .join("");
   return /^[0-9a-f]{6}$/.test(h) ? "#" + h : null;
 }
+/* a colour's name for screen readers: the palette's own, else from its hue and lightness ("dark blue") */
+const COL_NAMES = {
+  "#15a06f": "Green",
+  "#c98500": "Amber",
+  "#0a91b8": "Cyan",
+  "#7c9a0d": "Olive",
+  "#a646c9": "Purple",
+  "#e0578c": "Pink",
+  "#4b5fd6": "Indigo",
+  "#e0504f": "Red",
+  "#2a78d6": "Blue",
+  "#df5f2b": "Orange",
+  "#00897b": "Teal",
+  "#b0671f": "Brown",
+  "#5f7389": "Slate grey",
+  "#c2185b": "Raspberry",
+  "#689f38": "Leaf green",
+  "#6a3fb5": "Violet",
+  "#0288d1": "Sky blue",
+  "#a1887f": "Taupe",
+};
+function colName(x) {
+  if (COL_NAMES[x]) return COL_NAMES[x];
+  const [r, g, b] = hexRgb(x).map(v => v / 255),
+    max = Math.max(r, g, b),
+    min = Math.min(r, g, b),
+    l = (max + min) / 2,
+    d = max - min;
+  const shade = l < 0.3 ? "Dark " : l > 0.7 ? "Light " : "";
+  if (d < 0.12) return l < 0.15 ? "Black" : l > 0.9 ? "White" : (shade + "grey").replace(/^g/, "G");
+  let h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  const hue = [
+    [15, "red"],
+    [45, "orange"],
+    [70, "yellow"],
+    [160, "green"],
+    [200, "teal"],
+    [255, "blue"],
+    [290, "purple"],
+    [335, "pink"],
+    [360, "red"],
+  ].find(x2 => h < x2[0])[1];
+  const n = shade + hue;
+  return n[0].toUpperCase() + n.slice(1);
+}
 const colDot = (x, sel) =>
   '<button class="dot" data-act="f-col" data-v="' +
   x +
-  '" style="background:' +
+  '" style="background-color:' +
   x +
   '" aria-pressed="' +
   (x === sel) +
-  '" aria-label="Colour ' +
-  x +
+  '" aria-label="' +
+  esc(colName(x)) +
   '"></button>';
 const LOAN_EMB = { borrow: { i: "handshake", c: "#6a3fb5" }, lend: { i: "volunteer_activism", c: "#0288d1" } };
 /* search: every word must match the start of a word in the name or tags; whole-word matches rank first */

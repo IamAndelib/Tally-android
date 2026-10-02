@@ -107,7 +107,7 @@ function ringHTML(cats, o) {
       (names ? '<span class="cn">' + esc(p.c.name) + "</span>" : "") +
       (home
         ? '<span class="cp" style="color:' +
-          p.c.c +
+          inkOn(p.c.c) + // the category's colour, readable on the surface
           '">' +
           (v ? Math.max(1, Math.round((v / o.spent) * 100)) + "%" : "") +
           "</span>"
@@ -276,9 +276,17 @@ function ringHTML(cats, o) {
       '<div class="dcenter">' +
       mid +
       (cs.length > 1 && mode !== "none"
-        ? '<span class="curbtn" data-act="cur-next" role="button">' + esc(o.cur) + " ⇄</span>"
+        ? '<span class="curbtn" data-act="cur-next" aria-hidden="true">' + esc(o.cur) + " ⇄</span>"
         : "") +
-      "</div></button>";
+      "</div></button>" +
+      /* the same switch for screen readers and keyboards, as a button of its own (not one inside the donut's) */
+      (cs.length > 1 && mode !== "none"
+        ? '<button class="vh" data-act="cur-next">Showing ' +
+          esc(o.cur) +
+          ". Switch to " +
+          esc(cs[(cs.indexOf(o.cur) + 1) % cs.length]) +
+          "</button>"
+        : "");
   } else {
     RE = { L, order: cats.map(c => c.id) };
     center =
