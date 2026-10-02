@@ -1,0 +1,5 @@
+- Amounts follow your phone's number format and each currency's own decimals.
+- Safer data: loan payments, Undo, archiving and restoring backups are better guarded.
+- Smoother use: the back button, calculator keypad, double taps and date ranges behave as expected.
+- Better with screen readers, larger touch targets and easier-to-read percentages.
+- Android fixes for reminders, the daily backup and saving files.

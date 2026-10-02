@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-10-02
+
 ### Fixed
 
 - Money in every currency: amounts keep up to 3 decimals and show in each currency's own (¥1,250, KD 1.250), and a
@@ -286,6 +288,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.3.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.1
 [1.3.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.0
 [1.2.7]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.7
 [1.2.6]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.6
