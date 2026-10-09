@@ -1,8 +1,12 @@
-# Publishing Tally on F-Droid
+# Tally on F-Droid
 
-[F-Droid](https://f-droid.org) is the app store for free and open-source Android apps. It's free, needs no developer
-account fee, and **builds the app itself from the public source code**. Tally qualifies:
-- MIT licence;
+[F-Droid](https://f-droid.org) is the app store for free and open-source Android apps. It **builds each app itself from
+the public source code**. Tally is in F-Droid's catalogue as `app.tally.expenses`: it was accepted on 2026-10-08
+([fdroid/fdroiddata!50680](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50680)), starting with 1.3.1. Its
+page, once F-Droid has published the first build, is <https://f-droid.org/packages/app.tally.expenses/>.
+
+Tally qualifies because it has:
+- an MIT licence;
 - no ads, no tracking, no network use (it doesn't even ask for the Internet permission);
 - one library, AndroidX WebKit, which is open source and comes from Google's Maven;
 - no signing key or other unknown binary in the source tree (only the standard Gradle wrapper).
@@ -14,48 +18,25 @@ release APK is) and `AllowedAPKSigningKeys` (the release certificate). If a rele
 that version rather than shipping something else. CI's **F-Droid reproducible build** job runs F-Droid's own build and
 comparison on every push, so a mismatch shows up here first.
 
-Everything F-Droid reads is in this repository:
-- `fastlane/metadata/android/en-US/`: title, short and full description, icon, feature graphic, screenshots, and a
-  changelog per version (`changelogs/<versionCode>.txt`);
-- `gradle.properties`: `tallyVersion` / `tallyVersionCode`;
-- git tags `vX.Y.Z`, created by CI with every release, each with its signed `Tally-vX.Y.Z.apk`;
-- [`docs/fdroid/app.tally.expenses.yml`](fdroid/app.tally.expenses.yml): the build recipe to submit. Its `commit:` is
-  the full commit hash of the newest release tag.
+## What F-Droid reads
+- **Its own copy of the recipe**, `metadata/app.tally.expenses.yml` in
+  [fdroiddata](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/app.tally.expenses.yml). This is the one F-Droid
+  builds from. Its update bot adds a build to it for every new release.
+- From this repository:
+  - `fastlane/metadata/android/en-US/`: title, short and full description, icon, feature graphic, screenshots, and a
+    changelog per version (`changelogs/<versionCode>.txt`). Changes here show up with the next build;
+  - `gradle.properties`: `tallyVersion` / `tallyVersionCode`;
+  - git tags `vX.Y.Z`, created by CI with every release, each with its signed `Tally-vX.Y.Z.apk`.
 
-**Status:** submitted on 2026-09-30 as merge request
-[fdroid/fdroiddata!50680](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50680) ("New app: Tally"). F-Droid's
-reviewer marked it mostly ready, waiting for their test queue. Until it is merged, every release must also be put into
-the merge request: replace the build in the branch's `metadata/app.tally.expenses.yml` with this repository's recipe
-(without its `#` lines), which names the new version and its full commit hash.
+[`docs/fdroid/app.tally.expenses.yml`](fdroid/app.tally.expenses.yml) is the reference copy of the recipe, as
+accepted. CI lints it and builds every commit with it, filling in that commit's version and hash, so it doesn't need
+updating for a release. To change anything else in the recipe (categories, build settings, the signing certificate),
+change it here, check that CI stays green, then open a merge request with the same change on `fdroiddata`.
 
-## Submitting (once)
-You add Tally's recipe to F-Droid's data repository, `fdroiddata` on GitLab, with a merge request. Their CI checks and
-builds it, then a volunteer reviews it. This follows F-Droid's
-[Quick Start Guide](https://f-droid.org/docs/Submitting_to_F-Droid_Quick_Start_Guide/):
-
-1. **GitLab account.** Create one at <https://gitlab.com>, and turn on two-factor login (Preferences → Account).
-2. **Fork.** Open <https://gitlab.com/fdroid/fdroiddata> (its display name is "Data") and click **Fork**, into your own
-   namespace, **public**, with **only the default branch `master`** (the repository is huge).
-3. **Add the recipe.** In your fork's `metadata` folder: **+ → Upload file**. Upload the recipe here, without its `#`
-   comment lines at the top, as `app.tally.expenses.yml`. Uploading keeps it byte-exact, which pasting may not.
-   Commit message `New App: app.tally.expenses`, to a **new branch** `app.tally.expenses`, without "create a merge
-   request".
-4. **Merge request.** Open a merge request from that branch into `fdroid/fdroiddata` → **`master`**, titled
-   "New app: Tally", with "Allow commits from members who can merge" ticked. Fill in the "App inclusion" template's
-   checklist, and say plainly that Tally was built with AI assistance and that you review, test and maintain it. The
-   repository shows this anyway (CLAUDE.md, co-author lines).
-5. **Pipeline.** F-Droid's checks (`fdroid lint`, `rewritemeta`, `fdroid build` + the reproducibility check) run on
-   the merge request, not on a branch push. On a new GitLab account the pipeline may fail at once with **0 jobs**,
-   because GitLab wants identity verification (phone or card) for its shared runners. Don't give either; F-Droid's
-   checklist says to leave a comment asking them to trigger the CI instead. Tick the two "Pipeline" boxes only once
-   it has passed.
-6. **Review.** Answer questions in the merge request. Once it's merged, Tally appears in F-Droid after the next build
-   cycle, usually within a few days.
-
-## After it's in
-Nothing to do per release. When CI publishes a new `vX.Y.Z` tag, F-Droid's update checker notices it
+## Releases
+Nothing to do on F-Droid's side. When CI publishes a new `vX.Y.Z` tag, F-Droid's update checker notices it
 (`UpdateCheckMode: Tags`). It reads the new version from `gradle.properties` (`UpdateCheckData`), adds a build, checks
-it against `Tally-vX.Y.Z.apk` and publishes. Just keep the release checklist:
+it against `Tally-vX.Y.Z.apk` and publishes, usually within a few days. Just keep the release checklist:
 - bump `tallyVersion` **and** `tallyVersionCode`;
 - add the `CHANGELOG.md` section **and** `fastlane/metadata/android/en-US/changelogs/<tallyVersionCode>.txt` (CI
   refuses to release without it);
