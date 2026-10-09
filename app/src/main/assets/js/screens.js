@@ -306,6 +306,14 @@ function netWorth() {
   });
 }
 function accRow(a, b, drag) {
+  /* a card with bill days: what is still to pay on its bill, and when */
+  const bill = a.type === "card" && !a.archived ? cardBill(a) : null,
+    open = bill && (bill.state === "due" || bill.state === "overdue"),
+    sub = open
+      ? money(bill.left, a.currency) + " due " + dayLabel(bill.due)
+      : bill && bill.state === "paid"
+        ? "Bill paid · " + a.currency
+        : typeName(a.type) + " · " + a.currency;
   return (
     '<button class="tx' +
     (FX.row === a.id ? " flash" : "") +
@@ -318,10 +326,11 @@ function accRow(a, b, drag) {
     '<span class="mid"><div class="d">' +
     esc(a.name) +
     '</div><div class="s">' +
-    esc(typeName(a.type) + " · " + a.currency) +
+    esc(sub) +
     '</div></span><span class="a">' +
     esc(money(b[a.id], a.currency)) +
     (a.archived ? '<small><span class="st">Archived</span></small>' : "") +
+    (bill && bill.state === "overdue" ? '<small><span class="st overdue">Overdue</span></small>' : "") +
     "</span></button>"
   );
 }
@@ -790,7 +799,14 @@ function settingsView() {
     '<div class="list">' +
     remRow("nudge", "rem-daily", "Evening nudge", "If nothing was written that day", r.daily, r.time) +
     remRow("check", "rem-check", "Balance check", "Do your balances still match?", r.check, r.checkTime) +
-    remRow("due", "rem-dues", "Loan &amp; lending due days", "On the day, with +1 day / +1 week", r.dues, r.dueTime) +
+    remRow(
+      "due",
+      "rem-dues",
+      "Due days",
+      "Loans on the day; card bills " + CARD_EARLY + " days before",
+      r.dues,
+      r.dueTime
+    ) +
     "</div>";
   h +=
     '<div class="sec">Spending categories</div><p class="hint" style="margin:0 4px 8px">Laid out exactly like your home screen. Tap to edit, hold and drag to move.</p>' +

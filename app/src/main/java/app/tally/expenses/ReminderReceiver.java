@@ -30,13 +30,15 @@ import java.util.Set;
 /**
  * Shows Tally's reminders. The page sends its reminder settings with Android.setReminders(json):
  *   {daily:{on,h,m}, lastEntry:"yyyy-MM-dd", check:{on,h,m,text,checked}, duesAt:{h,m},
- *    dues:[{id,date,kind:"borrow"|"lend",who,amount,total?}]}
+ *    dues:[{id,date,kind:"borrow"|"lend"|"card",who,amount,total?,due?}]}
  * - daily: at h:m, "Nothing written today" if lastEntry is not today; re-armed for the next day.
  * - check: at h:m, "Do your balances still match?" with the balances in text, unless checked (the day the balances
  *   were last confirmed) is today. Tapping it opens the morning check on Home.
  * - dues: on the due date at duesAt (and each day while overdue), with "Record payment", "+1 day", "+1 week".
  *   amount is what is due by date; total (only when larger) is the whole tab, shown after the date.
  *   The +N buttons move the stored date and queue {type:"extend",id,days} for the page (Android.takeActions()).
+ *   A credit card bill (kind "card", id = the card account) arrives a little before its due date (date), with the
+ *   due date itself in due, and a single "Pay card": a bank's due date can't be put off.
  * Every alarm is exact when the phone allows it (see {@link #arm}); each daily notice shows at most once a day.
  */
 public class ReminderReceiver extends BroadcastReceiver {
@@ -233,6 +235,17 @@ public class ReminderReceiver extends BroadcastReceiver {
     /** quiet: re-writes one already on screen (new amount, total or date), without a sound or a "shown" mark. */
     private static void showDue(Context ctx, JSONObject d, boolean quiet) {
         String id = d.optString("id"), date = d.optString("date"), who = d.optString("who"), amount = d.optString("amount");
+        if ("card".equals(d.optString("kind"))) {
+            String due = d.optString("due", date);
+            int when = due.compareTo(today());
+            int base = code(ctx, id);
+            Notification.Action[] actions = { action(ctx, "Pay card", openApp(ctx, "card:" + id + ":pay", base + 1)) };
+            show(ctx, CH_DUES, base, who + ": " + amount + " to pay",
+                    when > 0 ? "Card bill due " + pretty(due) : when == 0 ? "Card bill due today" : "Card bill was due " + pretty(due),
+                    openApp(ctx, "card:" + id, base), actions, quiet);
+            if (!quiet) prefs(ctx).edit().putString("shown:" + id, today()).apply();
+            return;
+        }
         String total = d.optString("total");
         boolean lend = "lend".equals(d.optString("kind"));
         boolean dueToday = date.equals(today());
@@ -296,7 +309,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         nm.createNotificationChannels(Arrays.asList(
                 new NotificationChannel(CH_NUDGE, "Evening nudge", NotificationManager.IMPORTANCE_DEFAULT),
                 new NotificationChannel(CH_CHECK, "Balance check", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_DUES, "Loan & lending due days", NotificationManager.IMPORTANCE_DEFAULT),
+                new NotificationChannel(CH_DUES, "Due days: loans and card bills", NotificationManager.IMPORTANCE_DEFAULT),
                 new NotificationChannel(CH_BACKUP, "Backup problems", NotificationManager.IMPORTANCE_DEFAULT)));
     }
 
@@ -329,7 +342,7 @@ public class ReminderReceiver extends BroadcastReceiver {
     private static String publicText(String channel) {
         switch (channel) {
             case CH_CHECK: return "Balance check";
-            case CH_DUES: return "A loan or lending is due";
+            case CH_DUES: return "A payment is due";
             case CH_BACKUP: return "Backup problem";
             default: return "Nothing written today";
         }

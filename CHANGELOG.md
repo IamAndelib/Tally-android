@@ -5,6 +5,23 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Credit card bills. Copy the statement and due dates from a card's statement once (and, if you like, its limit), and
+  Tally follows the standard monthly cycle: each bill is what was owed on the statement day, less what you've paid
+  since. The card shows the bill, when it's due, what's left of the limit and a *Pay card* button that fills in the
+  payment. Liabilities shows each card's bill, *Overdue* when it's late, and a reminder comes two days before the due
+  date until the bill is paid. Interest and fees from the statement are entered as spending in Fees; a card with two
+  currencies is two card accounts.
+- When someone pays back more than they owed, the extra can be tracked as income (a fee they covered, say), or, when
+  you paid more, as spending in Fees, instead of a new loan the other way.
+
+### Changed
+
+- A credit card's balance is entered as what you owe, as a positive amount, and its "Doesn't match?" asks what you
+  really owe.
+- The due-day reminder setting covers loans and card bills ("Due days").
+
 ## [1.3.1] — 2026-10-02
 
 ### Fixed

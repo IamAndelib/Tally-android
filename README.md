@@ -44,8 +44,12 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Loans and net worth**
 
 - **Loans and lendings** per person: money you borrowed or lent, in several draws with their own due dates, partial
-  payments (counted against the draw due soonest, so each draw shows what's left of it), "paid more than owed",
-  write-off / forgive, and reopen.
+  payments (counted against the draw due soonest, so each draw shows what's left of it), "paid more than owed" (the
+  extra as a loan the other way, or as income or spending), write-off / forgive, and reopen.
+- **Credit cards** with their limit and monthly bill: copy the statement and due dates from a statement once, and
+  Tally shows each bill (what was owed on the statement day, less what you've paid since), when it's due, what's left
+  of the limit, and a *Pay card* button. A reminder comes two days before the due date until the bill is paid. A card
+  with two currencies is two card accounts.
 - **Assets and Liabilities** tabs with net worth per currency, other assets (a laptop, gold, …), cleared loans and
   archived accounts. Drag a row between sections to archive it, mark it cleared or reopen it.
 
@@ -59,7 +63,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Around the phone**
 
 - **Reminders**, each at the time you pick: an evening nudge if nothing was written that day, a daily balance check,
-  and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons. A due
+  due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons, and card bill
+  reminders with *Pay card*. A due
   reminder asks for what is due, with the whole tab beside it. Reminders still showing update themselves when you
   write something down, and go away once they no longer apply.
   On first open Tally asks for the two things they need (notifications and unrestricted battery), each with its own

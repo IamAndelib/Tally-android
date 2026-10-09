@@ -43,8 +43,10 @@ function checkText() {
       .join(" · ") + (act.length > 4 ? " · …" : "")
   );
 }
+/* how many days before a card bill's due date its reminder starts (then daily until it is paid) */
+const CARD_EARLY = 2;
 /* Sends the reminder settings to the shell (ReminderReceiver.java): the evening nudge, the balance check (skipped
-   once the balances were confirmed today) and the loan / lending due days, each at its own time */
+   once the balances were confirmed today), the loan / lending due days and credit card bills, each at its own time */
 function syncReminders() {
   if (!(window.Android && Android.setReminders)) return;
   /* a +1 day tapped on a notification while the page was in the background: apply it first, or the old due date
@@ -69,7 +71,25 @@ function syncReminders() {
             who: loanWho(l),
             amount: money(i.dueAmt, i.cur),
             total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
-          }));
+          }))
+          /* credit card bills still to pay: from CARD_EARLY days before the due date, so there is time to pay */
+          .concat(
+            activeAccounts()
+              .map(a => ({ a, b: cardBill(a) }))
+              .filter(x => x.b && x.b.left > 0)
+              .map(({ a, b }) => {
+                const early = addDays(b.due, -CARD_EARLY);
+                return {
+                  id: a.id,
+                  date: early > b.stmt ? early : addDays(b.stmt, 1),
+                  due: b.due,
+                  kind: "card",
+                  who: a.name,
+                  amount: money(b.left, a.currency),
+                  total: "",
+                };
+              })
+          );
   try {
     Android.setReminders(
       JSON.stringify({
@@ -309,8 +329,8 @@ function fixReminders(kind) {
     Android.openSetting(kind);
   } catch (e) {}
 }
-/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
-   "backup" from a failed auto backup (window.tallyOpen) */
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" or "card:<id>[:pay]" from a reminder, "check" from
+   the balance check, "backup" from a failed auto backup (window.tallyOpen) */
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
   if (k === "add") {
@@ -343,6 +363,18 @@ function openFromNative(s) {
     render();
     const el = $(k === "check" ? "#app .check" : "#bk");
     if (el) el.scrollIntoView({ block: "center" });
+    return;
+  }
+  if (k === "card" && acc(id) && acc(id).type === "card") {
+    /* a card bill reminder: the card, or Pay card straight away */
+    applyNativeActions();
+    closePop();
+    BACKTO = null;
+    closeSheet();
+    V.screen = "liabs";
+    render();
+    if (pay === "pay") payCard(id);
+    else accOpen(id);
     return;
   }
   if (k !== "loan" || !loan(id)) return;

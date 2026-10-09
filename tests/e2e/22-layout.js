@@ -98,7 +98,16 @@ function sampleState(t, nCats) {
     accounts: [
       { id: "b", name: "Everyday account", type: "bank", currency: "USD", opening: 3200 },
       { id: "c", name: "Cash", type: "cash", currency: "USD", opening: 240 },
-      { id: "k", name: "Credit card", type: "card", currency: "USD", opening: -350 },
+      {
+        id: "k",
+        name: "Credit card",
+        type: "card",
+        currency: "USD",
+        opening: -350,
+        limit: 2000,
+        stmtDay: 5,
+        dueDay: 25,
+      },
       { id: "s", name: "Savings abroad", type: "savings", currency: "EUR", opening: 12000 },
     ],
     cats: nCats > 12 ? undefined : undefined,
@@ -453,6 +462,14 @@ function inspect() {
     await shot(
       "account-form",
       ev(() => accForm("b"))
+    );
+    await shot(
+      "card",
+      ev(() => accOpen("k"))
+    );
+    await shot(
+      "card-form",
+      ev(() => accForm("k"))
     );
     await shot(
       "lend-form",

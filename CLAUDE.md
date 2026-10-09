@@ -44,8 +44,8 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers and balance fixes
-never count as spending or income; loans and lendings move money but are never spending either.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers (paying a card too)
+and balance fixes never count as spending or income; loans and lendings move money but are never spending either.
 
 ## Details that are easy to break
 
@@ -94,7 +94,8 @@ never count as spending or income; loans and lendings move money but are never s
   `assetForm()`, which ask for it first. Week start (`settings.week`) and time format (`settings.clock`) are read
   from settings only, never from the phone (only `migrate()` reads the phone's clock, for older saves).
 - Loan amounts, due amounts and status are always derived by `loanInfo()` (payments go to the draw due soonest);
-  nothing about them is stored on the loan.
+  nothing about them is stored on the loan. A credit card stores only its `limit`, `stmtDay` and `dueDay`; its bill is
+  always derived by `cardBill()` (owed on the statement day, less what came in since).
 - Amounts are kept to 3 decimals (`rnd()`) and shown in the currency's own (`money()`). Amount fields show the
   phone's separators (`NUMSEP`): put a number in with `groupDigits(String(n))`, read one with `evalAmt()`, never
   `parseFloat` (separators, calculator expressions). The calculator's minus is `−` (U+2212). `.caretmirror` must stay

@@ -15,17 +15,18 @@ Move money between your own accounts, even between currencies, and add an ATM or
 FIX A BALANCE IN SECONDS
 If an account doesn't match what you really have, type the real amount and Tally records the difference.
 
-LOANS AND LENDINGS
+LOANS, LENDINGS AND CREDIT CARDS
 Keep track of money you borrowed or lent: several amounts per person, due dates, partial payments, reminders and
-write-offs. See your net worth on the Assets and Liabilities tabs.
+write-offs. Credit cards show their limit, each monthly bill and when it's due, with a reminder before the due date.
+See your net worth on the Assets and Liabilities tabs.
 
 LOOK BACK
 History for any day, week, range or month, with each account's balance after every entry. Tap the donut for your last
 7 days, 8 weeks or a month by category.
 
 REMINDERS AND A WIDGET
-An evening nudge if you haven't written anything today, loan due-date reminders, and a home-screen widget with today's
-balance, today's spending and a quick add.
+An evening nudge if you haven't written anything today, loan and card bill reminders, and a home-screen widget with
+today's balance, today's spending and a quick add.
 
 YOUR DATA STAYS YOURS
 No account, no ads, no tracking, no internet needed. Everything is stored on your phone. Back up to a file whenever

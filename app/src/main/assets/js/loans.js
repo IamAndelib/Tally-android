@@ -625,7 +625,8 @@ function payLoan() {
     });
   });
 }
-/* someone paid back more than they owed (or you did): clear this one and track the extra as a loan the other way */
+/* someone paid back more than they owed (or you did): the payment clears this one, and the extra is either a loan the
+   other way, or income (they covered a fee, say) / spending (interest you paid) in the same account */
 function overpay(l, i, amt, account, date) {
   const lend = l.kind === "lend",
     who = loanWho(l),
@@ -635,26 +636,29 @@ function overpay(l, i, amt, account, date) {
     nid = newId(),
     qid = newId(),
     ts = Date.now();
-  askDialog(
-    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
-    lend
-      ? "Track the extra " + money(extra, cur) + " as a loan from " + who + " (you now owe it)?"
-      : "Track the extra " + money(extra, cur) + " as a lending to " + who + " (they owe you)?",
-    lend ? "Track as loan" : "Track as lending",
-    () => {
-      const mutate = () => {
-        if (i.left > 0)
-          S.txns.push({
-            id: pid,
-            ts,
-            type: "loan",
-            dir: lend ? "in" : "out",
-            loan: l.id,
-            amount: i.left,
-            account,
-            date,
-            note: "",
-          });
+  const clear = () => {
+    if (i.left > 0)
+      S.txns.push({
+        id: pid,
+        ts,
+        type: "loan",
+        dir: lend ? "in" : "out",
+        loan: l.id,
+        amount: i.left,
+        account,
+        date,
+        note: "",
+      });
+  };
+  const book = (mutate, msg, row) =>
+    guardOverdraw(mutate, date, () => {
+      closeSheet();
+      withUndo(msg, mutate, { row });
+    });
+  const asLoan = () =>
+    book(
+      () => {
+        clear();
         S.loans.push({
           id: nid,
           ts,
@@ -677,19 +681,48 @@ function overpay(l, i, amt, account, date) {
           date,
           note: "",
         });
-      };
-      guardOverdraw(mutate, date, () => {
-        closeSheet();
-        withUndo(
-          lend
-            ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
-            : "Loan cleared · " + who + " owes you " + money(extra, cur),
-          mutate,
-          { row: nid }
-        );
-      });
-    },
-    { cancel: "Go back" }
+      },
+      lend
+        ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
+        : "Loan cleared · " + who + " owes you " + money(extra, cur),
+      nid
+    );
+  const asMoney = () =>
+    book(
+      () => {
+        clear();
+        S.txns.push({
+          id: qid,
+          ts: ts + 1,
+          type: lend ? "income" : "expense",
+          cat: lend ? "otherin" : "fees",
+          amount: extra,
+          account,
+          date,
+          note: (lend ? "Extra from " : "Extra to ") + who,
+        });
+      },
+      (lend ? "Lending cleared · extra " : "Loan cleared · extra ") +
+        money(extra, cur) +
+        (lend ? " as income" : " as spending"),
+      l.id
+    );
+  askDialog(
+    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
+    lend
+      ? "What is the extra " +
+          money(extra, cur) +
+          "? A loan from " +
+          who +
+          " (you now owe it), or income, such as a fee they covered."
+      : "What is the extra " +
+          money(extra, cur) +
+          "? A lending to " +
+          who +
+          " (they owe you), or spending, such as interest or a fee.",
+    lend ? "Track as loan" : "Track as lending",
+    asLoan,
+    { alt: [lend ? "Track as income" : "Track as spending", asMoney], cancel: "Go back" }
   );
 }
 /* dropped on Cleared: ask how it was cleared, because one way moves money */

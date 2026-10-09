@@ -259,6 +259,7 @@ function pickType(v) {
   if (!F || F.kind !== "accf") return;
   F.type = v;
   setPressed("f-type", v);
+  cardFormSync();
   if (!F.iSet) {
     F.i = typeIcon(v);
     F.e = "";

@@ -296,6 +296,9 @@ document.addEventListener("click", ev => {
       withUndo("Deleted", () => deleteEntries([id]));
       break;
     }
+    case "card-pay":
+      payCard(v);
+      break;
     case "tr-new":
       trSheet();
       break;

@@ -123,18 +123,28 @@ function migrate(o) {
   s.accounts = (Array.isArray(o.accounts) ? o.accounts : [])
     .filter(a => a && a.id)
     .map(a => {
-      const type = own(TYPES, a.type) ? a.type : sid(a.type);
-      return {
-        id: sid(a.id),
-        name: str(a.name) || "Account",
-        type: own(TYPES, type) || s.types.some(t => t.id === type) ? type : "bank",
-        currency: curOf(a.currency),
-        opening: num(a.opening),
-        archived: !!a.archived,
-        i: own(ICONS, a.i) ? a.i : "",
-        e: a.i ? "" : str(a.e),
-        c: hex(a.c) ? a.c : "",
-      };
+      const type = own(TYPES, a.type) ? a.type : sid(a.type),
+        mday = v => (Number.isInteger(v) && v >= 1 && v <= 31 ? v : 0),
+        x = {
+          id: sid(a.id),
+          name: str(a.name) || "Account",
+          type: own(TYPES, type) || s.types.some(t => t.id === type) ? type : "bank",
+          currency: curOf(a.currency),
+          opening: num(a.opening),
+          archived: !!a.archived,
+          i: own(ICONS, a.i) ? a.i : "",
+          e: a.i ? "" : str(a.e),
+          c: hex(a.c) ? a.c : "",
+        };
+      /* a credit card's limit and bill days (both days, or neither) */
+      if (x.type === "card") {
+        if (num(a.limit) > 0) x.limit = num(a.limit);
+        if (mday(a.stmtDay) && mday(a.dueDay)) {
+          x.stmtDay = a.stmtDay;
+          x.dueDay = a.dueDay;
+        }
+      }
+      return x;
     });
   if (Array.isArray(o.cats)) {
     const valid = o.cats.filter(c => c && c.id && c.name && c.id !== "transfer");
@@ -344,6 +354,49 @@ function balances(before) {
   });
   for (const k in b) b[k] = rnd(b[k]);
   return b;
+}
+/* ---- credit cards: the bill, from the two days of the month on the card's statement ---- */
+/* the day d of month m ("YYYY-MM"), or that month's last day when it is shorter */
+function dayIn(m, d) {
+  const [y, mo] = m.split("-").map(Number);
+  return m + "-" + pad(Math.min(d, new Date(y, mo, 0).getDate()));
+}
+/* A card's latest bill, in the monthly cycle card issuers use everywhere: on the statement day the issuer totals what
+   is owed (the bill); it is due on the next due day after that, and paying it all by then avoids interest. Money that
+   comes into the card after the statement (payments, refunds) pays the bill first; spending after it goes on the next
+   one. Null for a card without bill days. */
+function cardBill(a, t = today()) {
+  if (!a || a.type !== "card" || !a.stmtDay || !a.dueDay) return null;
+  const m = t.slice(0, 7);
+  let stmt = dayIn(m, a.stmtDay);
+  if (stmt > t) stmt = dayIn(shiftMonth(m, -1), a.stmtDay);
+  let due = dayIn(stmt.slice(0, 7), a.dueDay);
+  if (due <= stmt) due = dayIn(shiftMonth(stmt.slice(0, 7), 1), a.dueDay);
+  const bill = rnd(Math.max(0, -(balances(addDays(stmt, 1))[a.id] || 0)));
+  let paid = 0;
+  S.txns.forEach(x => {
+    if (x.date <= stmt) return;
+    const b = { [a.id]: 0 };
+    b[x.account] = b[x.account] || 0; // a transfer into the card starts from another account
+    if (applyEntry(b, x) && b[a.id] > 0) paid += b[a.id];
+  });
+  paid = rnd(Math.min(paid, bill));
+  const left = rnd(bill - paid),
+    days = Math.round((parseISO(due) - parseISO(t)) / 864e5);
+  return {
+    stmt,
+    due,
+    bill,
+    paid,
+    left,
+    days,
+    state: bill <= 0 ? "none" : left <= 0 ? "paid" : days < 0 ? "overdue" : "due",
+  };
+}
+/* what a card owes now (0 when it is in credit) and, with a limit, what is left to spend */
+function cardOwed(a, b) {
+  const owed = rnd(Math.max(0, -((b || balances())[a.id] || 0)));
+  return { owed, avail: a.limit ? rnd(a.limit - owed) : null };
 }
 const openingBalances = () => {
   const b = {};

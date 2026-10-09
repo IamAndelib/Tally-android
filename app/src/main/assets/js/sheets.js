@@ -240,7 +240,7 @@ function readVals() {
   return { amount: g("f-amt"), note: g("f-note"), date: g("f-date"), toAmount: g("f-toamt"), fee: g("f-fee") };
 }
 /* transfer between own accounts, with optional fee */
-function trSheet(id, from) {
+function trSheet(id, from, toAcc, amount) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
     snack("Add a second account to transfer");
@@ -250,7 +250,7 @@ function trSheet(id, from) {
   const t = id ? S.txns.find(x => x.id === id) : null;
   const fee = t && t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
   const f = t ? t.account : from || (act[0] || {}).id;
-  const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
+  const to = t ? t.to : toAcc && toAcc !== f ? toAcc : (act.find(a => a.id !== f) || {}).id;
   F = { kind: "tr", id, from: f, to, showFee: !!fee };
   const list = accChoices(f, to);
   let h = '<div class="lbl" style="margin-top:4px">From</div>' + accChips("tr-from", F.from, null, list);
@@ -259,7 +259,10 @@ function trSheet(id, from) {
     ic("swapv") +
     "</button></div>";
   h += '<div class="lbl">To</div>' + accChips("tr-to", F.to, F.from, list);
-  h += amtField("f-amt", "", t ? String(t.amount) : "", { curId: "tr-cur", label: "Amount sent" });
+  h += amtField("f-amt", "", t ? String(t.amount) : amount ? String(amount) : "", {
+    curId: "tr-cur",
+    label: "Amount sent",
+  });
   h +=
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
     esc(t && t.toAmount != null ? String(t.toAmount) : "") +
@@ -363,12 +366,98 @@ function adjSheet(id) {
       '<button class="btn danger" data-act="adj-del">Delete this fix</button>'
   );
 }
+/* a card's limit (what is left to spend) and its latest bill, with Pay card; or a nudge to add the bill dates */
+function cardInfo(a) {
+  const { owed, avail } = cardOwed(a),
+    bill = cardBill(a),
+    cur = a.currency;
+  let h = "";
+  if (a.limit) {
+    const pct = Math.max(0, Math.min(100, Math.round((owed / a.limit) * 100)));
+    h +=
+      '<div class="card cardlim"><div class="lrow"><span>' +
+      (avail < 0 ? "Over the limit by " + esc(money(-avail, cur)) : "Available " + esc(money(avail, cur))) +
+      '</span><span class="muted">of ' +
+      esc(money(a.limit, cur)) +
+      "</span></div>" +
+      '<div class="bar' +
+      (avail < 0 ? " over" : "") +
+      '" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+      pct +
+      '" aria-label="Limit used"><span style="width:' +
+      pct +
+      '%"></span></div></div>';
+  }
+  if (!bill)
+    return (
+      h +
+      '<div class="card"><h3>Card bill</h3><p class="muted small" style="margin:0">Add the statement and due dates from your bill, and Tally shows what to pay and reminds you before it’s due.</p><div class="gap"></div><button class="btn tonal" data-act="acc-form" data-v="' +
+      a.id +
+      '">' +
+      ic("event") +
+      "Add bill dates</button></div>"
+    );
+  const when =
+    bill.state === "paid" || bill.state === "none"
+      ? ""
+      : bill.days === 0
+        ? "due today"
+        : bill.days > 0
+          ? "due " + dayLabel(bill.due) + " · " + bill.days + (bill.days === 1 ? " day" : " days")
+          : "was due " + dayLabel(bill.due);
+  h +=
+    '<div class="card cardbill"><h3>Bill of ' +
+    esc(dayLabel(bill.stmt)) +
+    (bill.state === "overdue" ? ' <span class="st overdue">Overdue</span>' : "") +
+    (bill.state === "paid" ? ' <span class="st cleared">Paid</span>' : "") +
+    '</h3><div class="billv">' +
+    esc(money(bill.state === "paid" || bill.state === "none" ? bill.bill : bill.left, cur)) +
+    "</div>" +
+    '<p class="muted small" style="margin:0">' +
+    esc(
+      bill.state === "none"
+        ? "Nothing to pay on this statement."
+        : bill.state === "paid"
+          ? "Paid in full. The next bill comes on the statement day."
+          : (bill.paid > 0 ? "Paid " + money(bill.paid, cur) + " of " + money(bill.bill, cur) + " · " : "") +
+            when +
+            ". Paying it all by then avoids interest."
+    ) +
+    "</p>" +
+    (bill.state === "due" || bill.state === "overdue"
+      ? '<div class="gap"></div><button class="btn" data-act="card-pay" data-v="' +
+        a.id +
+        '">' +
+        ic("check") +
+        "Pay card</button>"
+      : "") +
+    "</div>" +
+    '<p class="hint" style="margin:0 4px 8px">Interest or fees on your statement? Add them as spending in Fees, paid with this card.</p>';
+  return h;
+}
+/* Pay card: a transfer into the card, of the bill still to pay, from the account paid from last (or the first one in
+   the card's currency) */
+function payCard(id) {
+  const a = acc(id),
+    bill = cardBill(a);
+  if (!a) return;
+  const from = [S.settings.lastAcc]
+    .concat(activeAccounts().map(x => x.id))
+    .map(acc)
+    .find(x => x && !x.archived && x.type !== "card" && x.currency === a.currency);
+  if (!from) {
+    snack("Add an account in " + a.currency + " to pay from");
+    return;
+  }
+  trSheet(null, from.id, a.id, bill && bill.left > 0 ? bill.left : null);
+}
 /* account: live balance, set actual balance, transfer, edit */
 function accOpen(id) {
   const a = acc(id);
   if (!a) return;
   const bal = balances()[id],
-    start = balances(today())[id];
+    start = balances(today())[id],
+    card = a.type === "card";
   F = { kind: "acc", id };
   let h =
     '<div class="hero">' +
@@ -378,14 +467,23 @@ function accOpen(id) {
     " · " +
     esc(a.currency) +
     (a.archived ? " · archived" : "") +
-    '</div><div class="v">' +
-    esc(money(bal, a.currency)) +
     "</div>" +
-    (start !== bal ? '<div class="t">Started today with ' + esc(money(start, a.currency)) + "</div>" : "") +
+    /* a card: what is owed, or what it holds in credit */
+    (card ? '<div class="t">' + (bal > 0 ? "In credit" : "You owe") + "</div>" : "") +
+    '<div class="v">' +
+    esc(money(card ? Math.abs(bal) : bal, a.currency)) +
+    "</div>" +
+    (start !== bal && !card ? '<div class="t">Started today with ' + esc(money(start, a.currency)) + "</div>" : "") +
     "</div>";
+  if (card && !a.archived) h += cardInfo(a);
   h +=
-    '<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>' +
-    amtField("f-actual", a.currency, "", { label: "Actual balance", placeholder: groupDigits(rnd(bal)) }) +
+    '<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">' +
+    (card ? "Type what you really owe now." : "Type what you really have now.") +
+    " Tally records the difference as a balance fix.</p>" +
+    amtField("f-actual", a.currency, "", {
+      label: card ? "Actual amount owed" : "Actual balance",
+      placeholder: groupDigits(rnd(card ? -bal : bal)),
+    }) +
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
   h +=
     '<div class="gap"></div><div class="row">' +
@@ -405,10 +503,15 @@ function accOpen(id) {
     "Edit account</button>";
   openSheet(a.name, h);
 }
+/* the "Doesn't match?" field as a balance: a card's is typed as what is owed */
+function fixVal(a) {
+  const v = evalAmt($("#f-actual").value);
+  return v == null ? null : a.type === "card" ? rnd(-v) : v;
+}
 /* "Set actual balance": records the difference as a balance fix dated today */
 function saveFix() {
   const a = acc(F.id),
-    val = evalAmt($("#f-actual").value);
+    val = fixVal(a);
   if (val == null) {
     snack("Type what you have now");
     return;
@@ -426,14 +529,20 @@ function saveFix() {
     };
   guardOverdraw(mutate, today(), () => {
     closeSheet();
-    withUndo(a.name + " set to " + money(val, a.currency), mutate, { row: id });
+    withUndo(
+      a.type === "card"
+        ? a.name + ": you owe " + money(Math.max(0, -val), a.currency)
+        : a.name + " set to " + money(val, a.currency),
+      mutate,
+      { row: id }
+    );
   });
 }
 function fixPreview() {
   const el = $("#fix-prev");
   if (!el || !F || F.kind !== "acc") return;
   const a = acc(F.id),
-    v = evalAmt($("#f-actual").value);
+    v = fixVal(a);
   if (v == null) {
     el.textContent = "";
     return;
@@ -442,7 +551,9 @@ function fixPreview() {
   el.textContent =
     d === 0
       ? "Already matches."
-      : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
+      : a.type === "card"
+        ? (d > 0 ? "Lowers what you owe by " : "Raises what you owe by ") + money(Math.abs(d), a.currency) + "."
+        : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
 }
 /* the main currency: from Settings and the welcome card, and asked first when a new notebook's first account or
    asset is added before one was chosen */
@@ -458,10 +569,29 @@ function pickMainCur(next) {
     S.settings.cur ? "Main currency" : "Your currency"
   );
 }
+/* the balance field of the account form: a card's is what is owed */
+const openLabel = (type, edit) =>
+  type === "card" ? (edit ? "Owed at the start" : "You owe now") : edit ? "Starting balance" : "Balance right now";
+const openHint = (type, edit) =>
+  edit
+    ? (type === "card" ? "What you owed" : "What it held") +
+      " before your first entry here. To correct today’s balance, use “Doesn’t match?” instead."
+    : "";
+/* the type changed in the form: a card shows its own fields */
+function cardFormSync() {
+  if (!F || F.kind !== "accf") return;
+  const card = F.type === "card",
+    w = $("#card-wrap");
+  if (w) w.hidden = !card;
+  $("#f-openlbl").textContent = openLabel(F.type, !!F.id);
+  $("#f-openhint").textContent = openHint(F.type, !!F.id);
+}
 function accForm(id) {
   if (!id && !S.settings.cur) return pickMainCur(() => accForm());
   const a = id ? acc(id) : { name: "", type: firstType(), currency: S.settings.cur, opening: "" };
-  const used = id && S.txns.some(t => t.account === id || t.to === id);
+  const used = id && S.txns.some(t => t.account === id || t.to === id),
+    card = a.type === "card",
+    bill = cardBill(a);
   F = {
     kind: "accf",
     id,
@@ -495,18 +625,30 @@ function accForm(id) {
     "</span>" +
     ic("down") +
     "</button></div>" +
-    '<label class="field"><span>' +
-    (id ? "Starting balance" : "Balance right now") +
+    '<label class="field"><span id="f-openlbl">' +
+    openLabel(a.type, !!id) +
+    /* a card's balance is entered as what is owed (stored negative, like every balance) */
     '</span><input id="f-open" inputmode="decimal" autocomplete="off" value="' +
-    esc(a.opening === "" ? "" : a.opening) +
+    esc(a.opening === "" ? "" : card ? rnd(-a.opening) : a.opening) +
     '" placeholder="0.00"></label></div>';
   h +=
-    '<p class="hint">' +
-    (id
-      ? "What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead."
-      : "Credit card? Enter what you owe as a negative number.") +
+    '<p class="hint"><span id="f-openhint">' +
+    openHint(a.type, !!id) +
+    "</span>" +
     (used ? " Currency is locked because this account has entries." : "") +
     "</p>";
+  /* credit card: its limit and the two dates on its statement, both optional */
+  h +=
+    '<div id="card-wrap"' +
+    (card ? "" : " hidden") +
+    '><label class="field"><span>Credit limit (optional)</span><input id="f-limit" inputmode="decimal" autocomplete="off" value="' +
+    esc(a.limit ? a.limit : "") +
+    '" placeholder="0.00"></label>' +
+    '<div class="lbl">Bill dates (optional)</div><div class="row billdates"><div class="field"><span>Statement date</span>' +
+    dateField("f-stmt", bill ? bill.stmt : "", { opt: true, none: "Pick a date", label: "Statement date" }) +
+    '</div><div class="field"><span>Payment due</span>' +
+    dateField("f-duedate", bill ? bill.due : "", { opt: true, none: "Pick a date", label: "Payment due date" }) +
+    '</div></div><p class="hint">Copy both from your latest statement. Tally repeats them every month, works out each bill and reminds you before it’s due.</p></div>';
   h += '<div class="gap"></div><button class="btn" data-act="acc-save">' + (id ? "Save" : "Add account") + "</button>";
   if (id) {
     if (!used) h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">Delete account</button>';
@@ -520,7 +662,8 @@ function saveAccount() {
     return;
   }
   const raw = $("#f-open").value.trim(),
-    o = raw ? evalAmt(raw) : 0;
+    o = raw ? evalAmt(raw) : 0,
+    card = F.type === "card";
   if (o == null) {
     snack("That balance isn't a number");
     return;
@@ -529,22 +672,59 @@ function saveAccount() {
       name,
       type: F.type,
       currency: F.cur,
-      opening: o,
+      opening: card ? rnd(-o) : o,
       i: F.iSet ? F.i : "",
       e: F.iSet ? F.e : "",
       c: F.cSet ? F.col : "",
     },
     was = F.id;
+  if (card) {
+    const lim = $("#f-limit").value.trim() ? evalAmt($("#f-limit").value) : 0,
+      st = $("#f-stmt").dataset.v,
+      du = $("#f-duedate").dataset.v;
+    if (lim == null || lim < 0) {
+      snack("That limit isn't an amount");
+      return;
+    }
+    if (!st !== !du) {
+      snack("Add both bill dates, or neither");
+      return;
+    }
+    if (st && du <= st) {
+      snack("The payment is due after the statement date");
+      return;
+    }
+    data.limit = lim || undefined;
+    data.stmtDay = st ? +st.slice(8) : undefined;
+    data.dueDay = du ? +du.slice(8) : undefined;
+  }
   const go = () => {
     const first = !activeAccounts().length;
-    if (was) Object.assign(acc(was), data);
-    else S.accounts.push(Object.assign({ id: newId(), archived: false }, data));
+    if (was) {
+      const x = acc(was);
+      Object.assign(x, data);
+      ["limit", "stmtDay", "dueDay"].forEach(k => x[k] === undefined && delete x[k]); // removed, or no longer a card
+      if (!card) ["limit", "stmtDay", "dueDay"].forEach(k => delete x[k]);
+    } else
+      S.accounts.push(
+        JSON.parse(JSON.stringify(Object.assign({ id: newId(), archived: false }, data))) // without the unset fields
+      );
     closeSheet();
     commit();
     if (first) scrollTo(0, 0); // the welcome page was scrolled: Home starts at its top
     snack(was ? "Account saved" : name + " added");
   };
-  if (o < 0 && data.type !== "card" && !(was && acc(was).opening === o))
+  if (card && o < 0 && !(was && acc(was).opening === -o))
+    askDialog(
+      "Card in credit?",
+      "A negative amount means the card holds " +
+        money(-o, data.currency) +
+        " of your money. Usually you enter what you owe, as a positive amount.",
+      "Save anyway",
+      go,
+      { cancel: "Go back" }
+    );
+  else if (o < 0 && !card && !(was && acc(was).opening === o))
     askDialog(
       "Start below zero?",
       "Only credit cards usually go below zero. Save " + name + " at " + signed(o, data.currency) + "?",

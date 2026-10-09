@@ -218,6 +218,28 @@ const ok = (c, m) => {
   await tap('[data-act="undo"]');
   S = await state();
   ok(!S.loans.some(l => l.kind === "borrow" && l.person === "Swarna") && S.txns.length === 6, "Undo removes both");
+  // or as income (they covered a fee): the lending clears, no new loan, the extra lands in Bkash
+  await page.waitForTimeout(300);
+  await tap('.list [data-v="L1"]');
+  await page.fill("#f-amt", "800");
+  await tap('#sheet [data-act="f-acc"][data-v="k"]');
+  await tap('#sheet [data-act="loan-pay"]');
+  ok((await txt('#pop [data-act="ask-alt"]')).trim() === "Track as income", "it also offers Track as income");
+  await tap('#pop [data-act="ask-alt"]');
+  S = await state();
+  const inc = S.txns.find(t => t.type === "income" && t.amount === 300 && t.account === "k");
+  ok(
+    inc &&
+      inc.cat === "otherin" &&
+      inc.note === "Extra from Swarna" &&
+      !S.loans.some(l => l.kind === "borrow" && l.person === "Swarna") &&
+      S.txns.length === 8 &&
+      (await page.evaluate(() => !loanInfo(loan("L1")).open)),
+    "extra 300 as income in Bkash, the lending cleared, no new loan"
+  );
+  ok((await bal("k")) === kb + 800, "Bkash still got the full 800");
+  await tap('[data-act="undo"]');
+  ok((await state()).txns.length === 6, "Undo removes both");
   // mirror: paying back more than owed on a loan
   await tap('[data-act="tab"][data-v="liabs"]');
   await tap('.list [data-v="B1"]');
@@ -230,6 +252,23 @@ const ok = (c, m) => {
   ok(
     ml && S.txns.some(t => t.loan === ml.id && t.principal && t.amount === 200),
     "mirror case: the extra becomes a lending"
+  );
+  await tap('[data-act="undo"]');
+  // or as spending (interest, a fee) in Fees
+  const wb = await bal("w");
+  await page.waitForTimeout(300);
+  await tap('.list [data-v="B1"]');
+  await page.fill("#f-amt", "1200");
+  await tap('#sheet [data-act="f-acc"][data-v="w"]');
+  await tap('#sheet [data-act="loan-pay"]');
+  ok((await txt('#pop [data-act="ask-alt"]')).trim() === "Track as spending", "mirror: offers Track as spending");
+  await tap('#pop [data-act="ask-alt"]');
+  S = await state();
+  ok(
+    S.txns.some(t => t.type === "expense" && t.cat === "fees" && t.amount === 200 && t.note === "Extra to Mimi") &&
+      !S.loans.some(l => l.kind === "lend" && l.person === "Mimi") &&
+      (await bal("w")) === wb - 1200,
+    "mirror: the extra 200 is spending in Fees, the loan cleared"
   );
   await tap('[data-act="undo"]');
 
