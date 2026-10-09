@@ -1,5 +1,5 @@
-# Draft F-Droid metadata for Tally. It goes into https://gitlab.com/fdroid/fdroiddata as metadata/app.tally.expenses.yml
-# (see docs/FDROID.md). Descriptions, screenshots and changelogs come from fastlane/metadata/ in the app's repository.
+# Tally's F-Droid recipe, as accepted into https://gitlab.com/fdroid/fdroiddata (metadata/app.tally.expenses.yml; see
+# docs/FDROID.md). Descriptions, screenshots and changelogs come from fastlane/metadata/ in the app's repository.
 # Binaries + AllowedAPKSigningKeys: F-Droid rebuilds Tally, checks it matches the signed GitHub release APK, and ships
 # that APK (reproducible build); CI's "F-Droid reproducible build" job runs the same check on every push.
 Categories:

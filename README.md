@@ -219,9 +219,9 @@ Pushing a tag `vX.Y.Z` that matches the version does the same.
 
 ## Stores
 
-Guides for publishing: [Google Play](docs/PLAY_STORE.md) and [F-Droid](docs/FDROID.md) (reproducible: F-Droid ships the same
-signed APK as the GitHub release, and CI checks that on every push). Store texts and
-screenshots live in `fastlane/metadata/android/en-US/`.
+Tally is on [F-Droid](docs/FDROID.md), which ships the same signed APK as the GitHub release (reproducible builds,
+checked by CI on every push); new releases reach it by themselves. The guide for [Google Play](docs/PLAY_STORE.md)
+covers publishing there. Store texts and screenshots live in `fastlane/metadata/android/en-US/`.
 
 ## License
 
