@@ -20,11 +20,8 @@ days in a row**. Line up 12+ friends or classmates with Android phones and a Goo
 tap a link, join, and install Tally from Play (and keep it installed).
 
 ## 3. Put the privacy policy online
-Play needs a public web link to your privacy policy, and this repository is private. Easiest options:
-- **Make the repository public** (Settings → General → Change visibility) and use
-  `https://github.com/IamAndelib/Tally-android/blob/main/docs/privacy-policy.md`, or
-- create a public **GitHub Gist** (<https://gist.github.com>), paste the contents of `docs/privacy-policy.md`, and use
-  its link.
+Play needs a public web link to your privacy policy. The repository is public, so use
+`https://github.com/IamAndelib/Tally-android/blob/main/docs/privacy-policy.md`.
 
 ## 4. Create the app
 In Play Console: **Create app** → name "Tally: Pocket Money Notebook" → language English → **App** → **Free** → tick
@@ -81,7 +78,7 @@ automatically.
 
 ## Worth knowing
 - Test builds ("Tally Dev") and GitHub APKs are separate from the Play version. A phone with the GitHub-installed
-  release can update from Play only if Play App Signing uses the same key; to be safe, back up (Settings → Backup),
+  release can update from Play only if Play App Signing uses the same key; to be safe, back up (Settings → Your data → Save backup),
   uninstall, install from Play, restore.
 - Play requires apps to target a recent Android version; each year this moves up by one. When Play Console warns
   about it, ask for a targetSdk bump.

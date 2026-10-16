@@ -76,14 +76,14 @@ spending either.
   CSS is in `rem`, and a box holding text grows with it (`min-height`, not `height`).
 
 **Reminders, widget and backup**
-- Every alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact. Never `USE_EXACT_ALARM` (Play
-  reserves it for clock and calendar apps). `BootReceiver` and `TallyWidget.onUpdate` re-arm; receivers never re-arm
-  each other.
+- Every reminder and backup alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact (only the
+  widget's midnight refresh is a plain inexact `set`). Never `USE_EXACT_ALARM` (Play reserves it for clock and calendar
+  apps). `BootReceiver` and `TallyWidget.onUpdate` re-arm; receivers never re-arm each other.
 - A changed reminder sync updates notifications still on screen (`refreshShown()`) quietly, or removes them once they
   no longer apply; a dismissed one never comes back.
-- Permissions: the page offers two (notifications, unrestricted battery, which also allows exact alarms). The
-  first-open dialog shows once per install (`Android.permsIntro()`), and each Allow opens exactly one Android prompt.
-  No automatic chain of prompts.
+- Permissions: the page offers two (notifications, unrestricted battery, which also allows exact alarms), plus Alarms
+  & reminders only while the battery is unrestricted but exact alarms are still off. The first-open dialog shows once
+  per install (`Android.permsIntro()`), and each Allow opens exactly one Android prompt. No automatic chain of prompts.
 - The widget has no periodic updates; the page pushes ready-formatted numbers (`syncWidget()`).
 - Auto backup (`BackupReceiver.java`) rewrites the **same** "Tally backup.json" document in place (never delete +
   rename: the new file's stale indexed size broke Restore), verifies every write, and never writes an empty or

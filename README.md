@@ -93,7 +93,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 | **Material You colours** | Android 12 or newer (older versions use Tally's own colours) |
 | **Notifications** | optional; Tally asks on first open (Android 13+), and you can allow it later in Settings |
 
-Tally is a phone app; it runs on tablets and foldables too, laid out for a single column.
+Tally is made for phones and runs on tablets and foldables too, with a side rail and two panes on wide screens.
 
 ## Install
 
@@ -140,7 +140,7 @@ content.
 | Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
 | Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |
-| Vibrate | a short tick when saving |
+| Vibrate | short ticks as you tap, drag and save (Settings → Feel turns them off) |
 
 ## Build from source
 
@@ -203,6 +203,7 @@ app/src/main/
     ReminderReceiver.java notifications and alarms;  BootReceiver.java re-arms them
     BackupReceiver.java   the daily auto backup into the folder you picked
     TallyWidget.java      home-screen widget;        QuickAddActivity.java its + dialog
+    OpenActivity.java     opens the app from a widget tap
 tests/                    end-to-end tests (Playwright) and lint
 tools/gen_icons.py        regenerates js/icons.js
 ```

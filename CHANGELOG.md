@@ -5,12 +5,76 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-10-16
+
 ### Added
 
 - A loan payment can carry a fee, such as a sending or cash-out charge: "Add a fee" on the payment card. Like a
   transfer's fee, it comes off the account, shows with the payment in History and is never counted as spending.
 - Paid more than you owed? The extra can now also be booked as income (they paid you more: the income form opens, so
   you pick its category) or as that payment's fee (you paid them more), besides a new loan the other way.
+- Restore can be undone. Picking a backup folder that already holds a Tally backup asks whether to restore it or
+  replace it, instead of writing over it.
+- CSV export: a transfer's received currency and a loan's person, as new last columns.
+
+### Fixed
+
+- Saved data:
+  - A save that fails (phone storage full) now says so, with a button to save a backup file.
+  - Amounts Tally works out itself past a trillion (a balance fix in some currencies) are no longer dropped on the next
+    start, and amounts up to 9 trillion can be typed.
+  - Delete all data stops when its backup wasn't saved.
+  - Restore says how many accounts and entries it will really bring back, and warns about a backup from a newer
+    Tally.
+  - Data that couldn't be read at start-up stays offered in Settings until it is saved as a file or deleted, and no
+    longer switches auto backup off.
+  - Odd backups load the same every time (repeated ids, impossible years, nameless types); deleting an asset can be
+    undone.
+  - CSV opens in Excel with names in any script, amounts are rounded, and the formula guard also works after spaces.
+- Amounts:
+  - Text a keyboard inserts in one go (a clipboard suggestion, voice) reads like a paste. Pasted "1,234.567" and
+    "0,250" keep their decimals, a currency sign around a pasted amount is dropped, and Arabic and full-width commas
+    and Myanmar, Khmer and full-width digits work.
+  - Money rounds as shown (1.005 → 1.01, negatives away from zero), and a balance fix that differs only below the
+    currency's decimals already matches.
+  - Chart labels use the phone's short form (1.5K); a minus sign stays on its amount's line; the ring's currency
+    switch stays when the donut shows no stats.
+- Loans:
+  - Enter in Edit payment no longer records a new payment on the loan underneath.
+  - A loan whose leftover is below the currency's smallest coin is cleared.
+  - No payment can end up before the loan began; the merge hint says what will be owed; a name typed out in full adds
+    to that person's open tab; notes on added amounts show; a written-off lending shows what was let go; clearing by
+    drag names the account it uses.
+  - A new due date moves every amount due by then. +1 day or +1 week on a reminder counts from the day it was tapped,
+    and an Undo can't take it back.
+- Dates:
+  - Dates use the Gregorian calendar on phones set to the Persian or Hijri calendar.
+  - At midnight with the app open, Home, History and an open form move to the new day.
+  - Due reminders show dates in the phone's own order; an entry dated ahead no longer silences the evening reminder
+    until its date.
+- Screens:
+  - Undo no longer sits over a sheet opened after a change, where a tap meant for the sheet could undo it; Undo closes
+    open sheets first; an entry deleted meanwhile no longer opens as an empty form; Enter in the icon search only
+    searches.
+  - With every account archived, Home says so and offers to show them.
+  - Long names stay readable in the balance check, Settings and account chips at narrow widths and large text, and
+    names in right-to-left scripts keep their direction.
+- Android:
+  - With auto backup on but its folder out of reach (a new phone, a reinstall), Settings says so and asks for the
+    folder again. Folder problems are said instead of looking like a cancel, "Couldn't back up" goes once a backup
+    succeeds, and Back up now says when there is nothing ready to save.
+  - Restore refuses a file that isn't a backup before reading it all, so a large wrong file can't freeze the app.
+  - The first-open permissions dialog survives a first launch from the widget; no reminder is set before the app has
+    first opened; permission answers stay out of Android's own backup.
+
+### Accessibility
+
+- Screen readers hear values: the donut's totals, ring percentages, the chosen date and currency and a dialog's text;
+  chart bars say which one is selected.
+- The focus stays on its control when the screen, a calendar or a chart redraws, and goes to its replacement after a
+  sheet closes.
+- App-bar icons, the period arrows and the add-colour button are 48px to tap; ring percentages redraw after a light or
+  dark switch.
 
 ## [1.3.2] — 2026-10-16
 
@@ -307,6 +371,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.0
 [1.3.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.2
 [1.3.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.1
 [1.3.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.0

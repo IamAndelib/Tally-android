@@ -1,0 +1,4 @@
+- A loan payment can carry a fee (sending or cash-out charge). It comes off the account and never counts as spending.
+- Paid back more than owed? Book the extra as income, as the payment's fee, or as a new loan.
+- Restore can be undone and says what it will bring back; a failed save now tells you.
+- Many fixes for amounts, dates, loans, backups and screen readers.
