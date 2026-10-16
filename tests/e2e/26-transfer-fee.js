@@ -47,8 +47,8 @@ const ok = (c, m) => {
         v: 6,
         settings: { cur: "BDT", clock: "24", lastCheck: y, dragTip: true },
         accounts: [
-          { id: "a", name: "City Bank", type: "bank", currency: "BDT", opening: 119269 },
-          { id: "b", name: "Brac Joint", type: "bank", currency: "BDT", opening: 44177 },
+          { id: "a", name: "City Bank", type: "bank", currency: "BDT", opening: 120000 },
+          { id: "b", name: "Brac Joint", type: "bank", currency: "BDT", opening: 45000 },
         ],
         txns: [{ id: "e1", ts: 1, date: t, type: "expense", amount: 50, account: "a", cat: "groceries", note: "" }],
       });
@@ -75,7 +75,7 @@ const ok = (c, m) => {
   await page.click('#sheet [data-act="tr-save"]');
   await page.waitForTimeout(350);
   const bal = await page.evaluate(() => balances());
-  ok(bal.a === 99209 && bal.b === 64177, "City Bank −20,010 (and the 50), Brac Joint +20,000 " + JSON.stringify(bal));
+  ok(bal.a === 99940 && bal.b === 65000, "City Bank −20,010 (and the 50), Brac Joint +20,000 " + JSON.stringify(bal));
   const S = await state(),
     fee = S.txns.find(x => x.feeOf),
     tr = S.txns.find(x => x.type === "transfer");
@@ -167,7 +167,7 @@ const ok = (c, m) => {
         name: "City Bank",
         type: "bank",
         currency: "BDT",
-        opening: 119269,
+        opening: 120000,
         archived: false,
         i: "",
         e: "",
@@ -178,7 +178,7 @@ const ok = (c, m) => {
         name: "Brac Joint",
         type: "bank",
         currency: "BDT",
-        opening: 44177,
+        opening: 45000,
         archived: false,
         i: "",
         e: "",
@@ -257,7 +257,7 @@ const ok = (c, m) => {
       .filter(e => e.textContent)
       .map(e => e.closest("[data-v]").dataset.v + " " + e.textContent),
   }));
-  ok(up.bal.a === 99209 && up.bal.b === 64177, "after the update: balances as before " + JSON.stringify(up.bal));
+  ok(up.bal.a === 99940 && up.bal.b === 65000, "after the update: balances as before " + JSON.stringify(up.bal));
   ok(
     /50\.00/.test(up.centre) && !/60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 100%"]',
     "after the update: spent 50, only Groceries on the ring, nothing under Food " + JSON.stringify(up)

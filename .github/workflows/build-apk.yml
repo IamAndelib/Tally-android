@@ -150,16 +150,24 @@ jobs:
 
   # Publishes a GitHub Release, signed with the private release key, whenever main (or a pushed tag vX.Y.Z) carries a
   # version that has no release yet. So releasing is: bump tallyVersion + CHANGELOG.md in a PR and merge it.
+  # On any other branch carrying such a version (the release PR's), it makes a preview instead, for the maintainer to
+  # install over the current release before merging: the same APK, signed with the release key, as a draft release
+  # (seen only by people with write access; a draft has no tag, so F-Droid never sees it). Its versionCode is one below
+  # the release's: Android installs it over the current release (the same versionCode is allowed, a lower one isn't),
+  # and the release then updates over it as it does for everyone.
   release:
     name: Signed release
-    if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
     needs: check
     runs-on: ubuntu-latest
+    # one at a time per branch, so two pushes never race over the same release or preview
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
     env:
       # SHA-256 of the release signing certificate (public; also in README.md so people can verify their download)
       RELEASE_CERT_SHA256: 9db8c89c59480ed9c673d9b96ec3f082b2836b1ced0e07a7dd418bd18d2fac88
     permissions:
-      contents: write # creates the release and its tag
+      contents: write # creates the release and its tag, or the preview draft
     steps:
       - uses: actions/checkout@v4
         with:
@@ -168,6 +176,7 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
+          HAS_KEY: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' && secrets.RELEASE_KEYSTORE_PASSWORD != '' }}
         run: |
           version=$(sed -n 's/^tallyVersion=//p' gradle.properties)
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
@@ -182,9 +191,22 @@ jobs:
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $version"; exit 1; }
           code=$(sed -n 's/^tallyVersionCode=//p' gradle.properties)
           [ -s "fastlane/metadata/android/en-US/changelogs/$code.txt" ] || { echo "::error::Add fastlane/metadata/android/en-US/changelogs/$code.txt (F-Droid's release notes)"; exit 1; }
-          echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "TAG=v$version" >> "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" = tag ] || [ "$GITHUB_REF" = refs/heads/main ]; then
+            mode=release name=$version
+          else
+            mode=preview name="$version-preview.$GITHUB_RUN_NUMBER" code=$((code - 1))
+            if [ "$HAS_KEY" != true ]; then
+              echo "::warning::No release key in this repository's secrets: no preview of $version"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            [ "$code" -gt 0 ] || { echo "::error::tallyVersionCode is too low for a preview"; exit 1; }
+          fi
+          echo "MODE=$mode" >> "$GITHUB_ENV"
+          echo "EXPECT_NAME=$name" >> "$GITHUB_ENV"
+          echo "EXPECT_CODE=$code" >> "$GITHUB_ENV"
           echo "publish=true" >> "$GITHUB_OUTPUT"
       - if: steps.version.outputs.publish == 'true'
         uses: actions/setup-java@v4
@@ -213,7 +235,11 @@ jobs:
           fi
           export TALLY_KEYSTORE="$RUNNER_TEMP/release.jks"
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$TALLY_KEYSTORE"
-          gradle assembleRelease bundleRelease --no-daemon
+          if [ "$MODE" = release ]; then
+            gradle assembleRelease bundleRelease --no-daemon
+          else
+            gradle assembleRelease --no-daemon -PtallyVersion="$EXPECT_NAME" -PtallyVersionCode="$EXPECT_CODE"
+          fi
           rm -f "$TALLY_KEYSTORE"
       - name: Verify the APK
         if: steps.version.outputs.publish == 'true'
@@ -223,25 +249,46 @@ jobs:
           tools="$ANDROID_HOME/build-tools/35.0.0"
           "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
           grep -q "SHA-256 digest: $RELEASE_CERT_SHA256" certs.txt || { echo "::error::Not signed with the Tally release key"; exit 1; }
-          "$tools/aapt" dump badging "$apk" | grep -q "versionCode='$VERSION_CODE' versionName='$VERSION'" || { echo "::error::version isn't $VERSION ($VERSION_CODE)"; exit 1; }
+          "$tools/aapt" dump badging "$apk" | grep -qF "versionCode='$EXPECT_CODE' versionName='$EXPECT_NAME'" || { echo "::error::version isn't $EXPECT_NAME ($EXPECT_CODE)"; exit 1; }
           if "$tools/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -q debuggable; then
             echo "::error::The release APK is debuggable"
             exit 1
           fi
+      # only the newest preview is kept, and a release's previews go once it is out
+      - name: Remove earlier previews
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft and (.tag_name | startswith("preview-"))) | .id' |
+            while read -r id; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
       - name: Publish the GitHub Release
         if: steps.version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          out="Tally-$TAG.apk"
+          out="Tally-v$EXPECT_NAME.apk"
           cp app/build/outputs/apk/release/app-release.apk "$out"
           sha256sum "$out" > "$out.sha256"
+          # the notes are this version's section of CHANGELOG.md, plus how to install (and verify)
+          awk -v v="[$VERSION]" '/^## /{p = index($0, v) > 0; next} p' CHANGELOG.md > notes.md
+          if [ "$MODE" = preview ]; then
+            # tagged "preview-…", never "v…": even if the draft were published, F-Droid's tag pattern wouldn't match it
+            {
+              echo
+              echo "### Preview"
+              echo "A preview of $VERSION for the maintainers to try before it is released. Back up first (Settings →"
+              echo "Backup), then install \`$out\` over the current release: it keeps its data, and $VERSION updates over it."
+            } >> notes.md
+            gh release create "preview-$VERSION" "$out" "$out.sha256" --draft --prerelease --target "$GITHUB_SHA" \
+              --title "Tally $EXPECT_NAME (preview)" --notes-file notes.md
+            exit 0
+          fi
           # the bundle is what Google Play takes; same release (upload) key
           aab="Tally-$TAG.aab"
           cp app/build/outputs/bundle/release/app-release.aab "$aab"
           keytool -printcert -jarfile "$aab" | grep -qi "$(printf '%s' "$RELEASE_CERT_SHA256" | sed 's/../&:/g; s/:$//')" || { echo "::error::AAB not signed with the release key"; exit 1; }
-          # the notes are this version's section of CHANGELOG.md, plus how to install and verify
-          awk -v v="[$VERSION]" '/^## /{p = index($0, v) > 0; next} p' CHANGELOG.md > notes.md
           fp=$(printf '%s' "$RELEASE_CERT_SHA256" | tr a-f A-F | sed 's/../&:/g; s/:$//')
           {
             echo

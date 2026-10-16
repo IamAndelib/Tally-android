@@ -21,7 +21,9 @@ lives in it, and the code comments explain the rest: keep facts in one place and
   personal details, chat-style notes or duplicated documentation.
 - **Releases only after the maintainer has confirmed the test build on a phone.** After every push, wait for CI,
   then send the test APK: `git fetch origin builds && git show origin/builds:Tally-<branch>.apk > Tally-<branch>.apk`
-  (it installs as "Tally Dev", next to the release, with separate data).
+  (it installs as "Tally Dev", next to the release, with separate data). A release PR's branch also gets a preview
+  signed with the release key (the draft release `preview-X.Y.Z`), for trying the update over the installed release;
+  this environment can't download it, so the maintainer takes it from the Releases page.
 
 ## Quality bar
 
@@ -129,7 +131,9 @@ and balance fixes never count as spending or income; loans and lendings move mon
     of `docs/fdroid/app.tally.expenses.yml`), then F-Droid's own build compared with our signed APK. It must stay green:
     F-Droid ships our signed APK only while builds are reproducible;
   - `release`: on `main`, when `v<tallyVersion>` has no GitHub Release yet, signs with the release key from secrets,
-    verifies it and publishes the release and tag.
+    verifies it and publishes the release and tag. On another branch with such a version, it makes the preview instead
+    (versionCode one below the release's, versionName `X.Y.Z-preview.<run>`, a draft with no tag) and keeps only the
+    newest preview.
 - Releasing: in a PR, bump `tallyVersion` + `tallyVersionCode`, add the `CHANGELOG.md` section and
   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, then merge into `main`; CI creates the tag (this
   environment can't push tags). F-Droid picks up new tags by itself (see [docs/FDROID.md](docs/FDROID.md)).

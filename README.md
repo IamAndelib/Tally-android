@@ -212,7 +212,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how the pieces fit together and how t
 
 1. In a pull request, bump `tallyVersion` and `tallyVersionCode` in `gradle.properties`, add the version's section to
    `CHANGELOG.md` and its short notes to `fastlane/metadata/android/en-US/changelogs/<tallyVersionCode>.txt`.
-2. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
+2. Try it as users will get it. On the pull request's branch, CI makes a **preview**: a draft release
+   `preview-X.Y.Z` (only people with write access see drafts) whose APK, signed with the release key, installs over
+   the current release and keeps its data. The release itself updates over it later.
+3. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
    from the `RELEASE_KEYSTORE_BASE64` and `RELEASE_KEYSTORE_PASSWORD` repository secrets), verifies the signature,
    and publishes the GitHub Release `vX.Y.Z` — tag, APK, SHA-256 and the changelog section as notes.
 
