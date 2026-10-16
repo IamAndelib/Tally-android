@@ -189,11 +189,18 @@ function shown(n, cur) {
   const f = NF.get(cur || S.settings.cur);
   return f ? toDp(n, f.dp) : rnd(n);
 }
-/* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none, kept on the amount's line (a
-   word joiner) */
+/* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none, where the phone's language puts it
+   (€ −5,00 in Dutch, beside the number in Arabic), as a true minus or a plus, kept on the amount's line (a word joiner) */
 const signed = (n, cur) => {
   const v = shown(n, cur);
-  return (v > 0 ? "+\u2060" : v < 0 ? "−\u2060" : "") + money(Math.abs(v), cur);
+  if (!v) return money(0, cur);
+  const f = NF.get(cur || S.settings.cur),
+    sign = (v > 0 ? "+" : "−") + "\u2060";
+  if (!f) return sign + money(Math.abs(v), cur); // a currency this phone doesn't know
+  return f
+    .formatToParts(-Math.abs(v))
+    .map(p => (p.type === "minusSign" ? sign : p.value))
+    .join("");
 };
 /* the phone's language for dates, on the Gregorian calendar Tally counts in (a phone set to the Persian or Hijri
    calendar would otherwise name a Gregorian month after one of its own) */

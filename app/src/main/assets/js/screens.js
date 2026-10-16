@@ -595,7 +595,7 @@ function dayGroups(list) {
       if (cur) h += "</div>";
       cur = t.date;
       const tot = Object.entries(days.get(cur) || {})
-        .map(([c, v]) => "−" + money(rnd(v), c))
+        .map(([c, v]) => signed(-v, c))
         .join(" · ");
       h +=
         '<div class="day"><span>' +
