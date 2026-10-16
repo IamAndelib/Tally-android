@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://f-droid.org/packages/app.tally.expenses"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/IamAndelib/Tally-android/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/IamAndelib/Tally-android?label=release"></a>
   <a href="https://github.com/IamAndelib/Tally-android/actions/workflows/build-apk.yml"><img alt="Build" src="https://github.com/IamAndelib/Tally-android/actions/workflows/build-apk.yml/badge.svg"></a>
   <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3ddc84?logo=android&logoColor=white">
@@ -97,12 +101,17 @@ Tally is made for phones and runs on tablets and foldables too, with a side rail
 
 ## Install
 
+**From F-Droid** (recommended): [get Tally on F-Droid](https://f-droid.org/packages/app.tally.expenses) with the
+F-Droid app, which brings every update by itself.
+
+**From GitHub:**
+
 1. On your phone, open the [latest release](https://github.com/IamAndelib/Tally-android/releases/latest) and download
    `Tally-vX.Y.Z.apk`.
 2. Open the file. If Android asks, allow your browser or file manager to *install unknown apps*.
 3. Open Tally, add the places your money lives with what each holds right now, and you're set.
 
-Updates install over the previous version and keep your data.
+Both are the same APK with the same signature, so either one updates the other and keeps your data.
 
 <details>
 <summary>Verify your download (optional)</summary>
@@ -226,8 +235,9 @@ Pushing a tag `vX.Y.Z` that matches the version does the same.
 
 ## Stores
 
-Tally is on [F-Droid](docs/FDROID.md), which ships the same signed APK as the GitHub release (reproducible builds,
-checked by CI on every push); new releases reach it by themselves. The guide for [Google Play](docs/PLAY_STORE.md)
+Tally is on [F-Droid](https://f-droid.org/packages/app.tally.expenses), which ships the same signed APK as the GitHub
+release (reproducible builds, checked by CI on every push); new releases reach it by themselves (see
+[docs/FDROID.md](docs/FDROID.md)). The guide for [Google Play](docs/PLAY_STORE.md)
 covers publishing there. Store texts and screenshots live in `fastlane/metadata/android/en-US/`.
 
 ## License
