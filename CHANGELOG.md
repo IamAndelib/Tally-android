@@ -17,9 +17,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
   replace it, instead of writing over it.
 - CSV export: a transfer's received currency and a loan's person, as new last columns.
 
+### Changed
+
+- Every button, chip, list row and calendar day is at least 48px to tap; account chips, segmented buttons and calendar
+  days are a little taller.
+- On a phone held sideways, the date and period pickers show the calendar beside the rest, so a whole month fits.
+
 ### Fixed
 
 - Saved data:
+  - An entry saved just before Tally was swiped away from recent apps is no longer lost. Android's web view writes its
+    storage a few seconds late, so Tally now also keeps its own copy of every save, written at once, and opens with
+    whichever is newer.
   - A save that fails (phone storage full) now says so, with a button to save a backup file.
   - Amounts Tally works out itself past a trillion (a balance fix in some currencies) are no longer dropped on the next
     start, and amounts up to 9 trillion can be typed.
@@ -37,8 +46,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
     and Myanmar, Khmer and full-width digits work.
   - Money rounds as shown (1.005 → 1.01, negatives away from zero), and a balance fix that differs only below the
     currency's decimals already matches.
-  - Chart labels use the phone's short form (1.5K); a minus sign stays on its amount's line; the ring's currency
-    switch stays when the donut shows no stats.
+  - Chart labels use the phone's short form (1.5K); a sign sits where the phone's language puts it (after the € in
+    Dutch, beside the number in Arabic) and stays on its amount's line; the ring's currency switch stays when the
+    donut shows no stats.
 - Loans:
   - Enter in Edit payment no longer records a new payment on the loan underneath.
   - A loan whose leftover is below the currency's smallest coin is cleared.
@@ -59,11 +69,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
   - With every account archived, Home says so and offers to show them.
   - Long names stay readable in the balance check, Settings and account chips at narrow widths and large text, and
     names in right-to-left scripts keep their direction.
+  - A two-finger pinch on the summary chart no longer moves it to another week or month.
 - Android:
   - With auto backup on but its folder out of reach (a new phone, a reinstall), Settings says so and asks for the
     folder again. Folder problems are said instead of looking like a cancel, "Couldn't back up" goes once a backup
     succeeds, and Back up now says when there is nothing ready to save.
-  - Restore refuses a file that isn't a backup before reading it all, so a large wrong file can't freeze the app.
+  - Back up now and Restore from the backup folder no longer freeze the screen while a slow folder (a cloud drive)
+    answers; Restore refuses a file that isn't a backup before reading it all, so a large wrong file can't freeze the
+    app.
+  - Two exports started at once each save their own file.
+  - The widget fits its text at large text sizes instead of cutting it off.
+  - If Tally's screen keeps stopping, it shows a message instead of restarting over and over.
   - The first-open permissions dialog survives a first launch from the widget; no reminder is set before the app has
     first opened; permission answers stay out of Android's own backup.
 
@@ -73,8 +89,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
   chart bars say which one is selected.
 - The focus stays on its control when the screen, a calendar or a chart redraws, and goes to its replacement after a
   sheet closes.
-- App-bar icons, the period arrows and the add-colour button are 48px to tap; ring percentages redraw after a light or
-  dark switch.
+- Ring percentages redraw after a light or dark switch.
 
 ## [1.3.2] — 2026-10-16
 

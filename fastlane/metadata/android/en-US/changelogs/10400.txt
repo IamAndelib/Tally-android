@@ -1,4 +1,5 @@
-- A loan payment can carry a fee (sending or cash-out charge). It comes off the account and never counts as spending.
+- An entry saved just before closing Tally from recent apps is no longer lost.
+- Loan payments can carry a fee; it comes off the account and never counts as spending.
 - Paid back more than owed? Book the extra as income, as the payment's fee, or as a new loan.
-- Restore can be undone and says what it will bring back; a failed save now tells you.
-- Many fixes for amounts, dates, loans, backups and screen readers.
+- Every button is at least 48px to tap; Restore can be undone.
+- Many fixes for amounts, dates, loans, backups, the widget and screen readers.
