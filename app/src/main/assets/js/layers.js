@@ -97,10 +97,12 @@ function askDialog(title, text, okText, onOk, o) {
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-label="' +
     esc(title) +
-    '"><h3 class="dlg-t">' +
+    '"' +
+    (text ? ' aria-describedby="dlg-x"' : "") +
+    '><h3 class="dlg-t">' +
     esc(title) +
     "</h3>" +
-    (text ? '<p class="dlg-x">' + esc(text) + "</p>" : "") +
+    (text ? '<p class="dlg-x" id="dlg-x">' + esc(text) + "</p>" : "") +
     (o.alt
       ? '<div class="dlg-act stack"><button class="btn text" data-act="ask-ok">' +
         esc(okText) +
@@ -163,6 +165,26 @@ function dateField(id, val, o) {
     "</button>"
   );
 }
+/* Part of the page drawn anew (a screen, a calendar, a chart) keeps the keyboard's and screen reader's place: the
+   control that had the focus gets it back, found again by its id or by what it does (data-act, data-v). */
+function keepFocus(root, draw) {
+  const a = document.activeElement,
+    k = root && a && a !== root && root.contains(a) ? focusKey(a) : null;
+  draw();
+  const now = document.activeElement;
+  if (k && !(now && now !== document.body && now.isConnected)) refocus(root, k);
+}
+const focusKey = el => ({ id: el.id, act: el.dataset && el.dataset.act, v: el.dataset && el.dataset.v });
+function refocus(root, k) {
+  const sel = k.id
+      ? "#" + CSS.escape(k.id)
+      : k.act
+        ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
+        : "",
+    el = sel && root.querySelector(sel);
+  if (el) el.focus({ preventScroll: true });
+  return !!el;
+}
 function setDateField(el, v, keepNow) {
   const shownAs = v ? shortDay(v) : el.dataset.none;
   el.dataset.v = v || "";
@@ -184,6 +206,9 @@ function datePicker(el) {
   dpRender();
 }
 function dpRender() {
+  keepFocus($("#dp"), drawDp);
+}
+function drawDp() {
   const el = $("#dp");
   if (!el || !DP) return;
   const t = today(),
@@ -577,7 +602,7 @@ function curList(q) {
     esc(c) +
     '"><span class="code">' +
     esc(c) +
-    '</span><span class="mid"><div class="d">' +
+    '</span><span class="mid"><div class="d" dir="auto">' +
     esc(curName(c) || c) +
     '</div></span><span class="a muted">' +
     esc(curSym(c)) +

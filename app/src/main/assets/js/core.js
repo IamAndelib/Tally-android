@@ -189,10 +189,11 @@ function shown(n, cur) {
   const f = NF.get(cur || S.settings.cur);
   return f ? toDp(n, f.dp) : rnd(n);
 }
-/* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none */
+/* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none, kept on the amount's line (a
+   word joiner) */
 const signed = (n, cur) => {
   const v = shown(n, cur);
-  return (v > 0 ? "+" : v < 0 ? "−" : "") + money(Math.abs(v), cur);
+  return (v > 0 ? "+\u2060" : v < 0 ? "−\u2060" : "") + money(Math.abs(v), cur);
 };
 /* the phone's language for dates, on the Gregorian calendar Tally counts in (a phone set to the Persian or Hijri
    calendar would otherwise name a Gregorian month after one of its own) */
@@ -228,6 +229,8 @@ function dayLabel(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(DATE_LOC, o);
 }
+/* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
+const dayName = d => (d === today() ? "Today" : d === addDays(today(), -1) ? "Yesterday" : dayLabel(d));
 /* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
    months: whole months ("Apr – Sep") */
 function rangeLabel(a, b, months) {
@@ -369,8 +372,9 @@ function formatAmountInput(inp, ev) {
     inp.setSelectionRange(i, i);
   } catch (e) {}
 }
-/* an amount is a finite number below a trillion (a pasted run of digits would otherwise save as Infinity) */
-const amtOk = n => (n != null && isFinite(n) && Math.abs(n) < 1e12 ? n : null);
+/* an amount is a finite number below 9 trillion, where doubles still keep its 3 decimals exactly (room for a flat
+   priced in Iranian rial; a pasted run of digits would otherwise save as Infinity) */
+const amtOk = n => (n != null && isFinite(n) && Math.abs(n) < 9e12 ? n : null);
 /* amount field: accepts the field's own text ("1,250.50", or "1.250,50" on a German phone), "12,50" and "12.50" alike,
    quick sums like "12+3.5", and the calculator's own expression ("12×3", "50−5") when Save is tapped with the keypad
    still open */

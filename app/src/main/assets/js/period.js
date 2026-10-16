@@ -35,12 +35,8 @@ function range(p = V) {
 function periodLabel(p = V) {
   const t = today(),
     [s, e] = range(p);
-  if (p.period === "day")
-    return p.anchor === t ? "Today" : p.anchor === addDays(t, -1) ? "Yesterday" : dayLabel(p.anchor);
-  if (p.period === "range") {
-    if (s === e) return s === t ? "Today" : dayLabel(s);
-    return rangeLabel(s, e);
-  }
+  if (p.period === "day") return dayName(p.anchor);
+  if (p.period === "range") return s === e ? dayName(s) : rangeLabel(s, e);
   const m = p.anchor.slice(0, 7);
   if (p === HP || m.slice(0, 4) === t.slice(0, 4)) return monthLabel(m, p === HP);
   return parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short", year: "numeric" });
@@ -116,6 +112,9 @@ function periodDialog(p) {
   pdRender();
 }
 function pdRender() {
+  keepFocus($("#pd"), drawPd);
+}
+function drawPd() {
   const el = $("#pd");
   if (!el) return;
   const t = today(),

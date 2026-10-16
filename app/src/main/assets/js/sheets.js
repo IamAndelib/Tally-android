@@ -101,8 +101,9 @@ const accChips = (act, sel, disabled, list) =>
         (a.id === disabled ? " disabled" : "") +
         ">" +
         emblem(accEmb(a), "sm") +
+        '<span class="chn" dir="auto">' +
         esc(a.name) +
-        "</button>"
+        "</span></button>"
     )
     .join("") +
   "</div>";
@@ -125,7 +126,7 @@ const catBtns = (list, sel) =>
         (c.id === sel) +
         '">' +
         emblem(c, "ci") +
-        '<span class="cn">' +
+        '<span class="cn" dir="auto">' +
         esc(c.name) +
         "</span></button>"
     )
@@ -534,7 +535,7 @@ function accForm(id) {
     (id ? "Starting balance" : "Balance right now") +
     '</span><input id="f-open" inputmode="decimal" autocomplete="off" value="' +
     esc(a.opening === "" ? "" : a.opening) +
-    '" placeholder="0.00"></label></div>';
+    '" placeholder="0"></label></div>';
   h +=
     '<p class="hint">' +
     (id

@@ -309,6 +309,7 @@ a {
 }
 .ckrow {
   display: flex;
+  flex-wrap: wrap; /* a long name keeps its words: the amount and Fix go below it, on the right */
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -317,12 +318,13 @@ a {
   text-align: left;
 }
 .ckrow .nm {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 6em;
+  min-width: 6em;
   overflow-wrap: anywhere; /* the whole name, on two lines if need be: this is where balances are checked */
 }
 .ckrow b {
   flex: none;
+  margin-left: auto;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -653,7 +655,8 @@ body.hist #app {
   margin-top: 8px;
 }
 .chip {
-  height: 40px;
+  min-height: 40px;
+  max-width: 100%;
   padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--outline-variant);
@@ -676,6 +679,16 @@ body.hist #app {
 .chip[aria-pressed="true"]::after {
   content: "✓";
   font-size: 0.8rem;
+  flex: none;
+}
+/* an account's name in its chip: cut with "…" when it doesn't fit, the emblem and ✓ stay whole */
+.chip .chn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip > .emb {
+  flex: none;
 }
 .smc {
   display: flex;
@@ -1797,6 +1810,7 @@ body.hasnav .snack {
 /* settings rows + switch */
 .setrow {
   display: flex;
+  flex-wrap: wrap; /* narrow and large text: the time and switch go below the title rather than break its words */
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
@@ -1805,8 +1819,11 @@ body.hasnav .snack {
   border-top: 1px solid var(--outline-variant);
 }
 .setrow .mid {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 8em;
+  min-width: 8em;
+}
+.setrow .mid + * {
+  margin-left: auto;
 }
 .setrow .s {
   font-size: 0.8rem;

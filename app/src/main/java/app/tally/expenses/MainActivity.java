@@ -702,7 +702,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(i, PICK_RESTORE);
                 } catch (ActivityNotFoundException e) {
-                    restoreResult(null, "No file picker on this phone");
+                    restoreResult("null," + JSONObject.quote("No file picker on this phone"));
                 }
             });
         }

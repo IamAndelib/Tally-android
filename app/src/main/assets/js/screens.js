@@ -31,12 +31,16 @@ const panes = (left, right, cls) =>
       "</div>";
 /* the ring's width: its pane on a wide screen (measured on an empty pane pair), else the column */
 let RINGW = 0;
+/* the screen, drawn anew; the control that had the focus gets it back (keepFocus) */
 function render() {
+  keepFocus($("#app"), drawScreen);
+}
+function drawScreen() {
   const app = $("#app");
   RBC = null;
   if (V.screen !== "history") V.sel = null;
   if (V.screen === "accounts") V.screen = "assets";
-  const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
+  const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
   document.body.classList.toggle("land", land);
@@ -94,12 +98,26 @@ function subBar(title) {
 }
 function homeView() {
   const act = activeAccounts();
+  /* every account archived: not a new notebook, so a way back to them */
+  if (!act.length && S.accounts.length)
+    return (
+      '<header class="appbar"><h1>Tally</h1>' +
+      topIcons() +
+      "</header>" +
+      '<div class="welcome"><div class="big">🗄️</div><h2>Every account is archived</h2><p>Bring one back from ' +
+      'Assets, or add a new one.</p><button class="btn tonal" data-act="show-arch">Show archived accounts</button>' +
+      '<div class="gap"></div><button class="btn" data-act="acc-form">' +
+      ic("add") +
+      "Add an account</button></div>"
+    );
   if (!act.length) {
     return (
       '<header class="appbar"><h1>Tally</h1>' +
       topIcons() +
       "</header>" +
-      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="Currency"><span>' +
+      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
+      esc("Currency: " + (S.settings.cur ? curLabel(S.settings.cur) : "not chosen yet")) +
+      '"><span>' +
       esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose your currency") +
       "</span>" +
       ic("down") +
@@ -147,7 +165,7 @@ function homeView() {
           a =>
             '<button class="acc" data-act="acc-open" data-v="' +
             a.id +
-            '"><span class="n">' +
+            '"><span class="n" dir="auto">' +
             emblem(accEmb(a), "sm") +
             esc(a.name) +
             '</span><span class="b">' +
@@ -259,7 +277,7 @@ function checkCard(b, cur) {
           a.id +
           '">' +
           emblem(accEmb(a), "sm") +
-          '<span class="nm">' +
+          '<span class="nm" dir="auto">' +
           esc(a.name) +
           "</span><b>" +
           esc(money(b[a.id], a.currency)) +
@@ -315,7 +333,7 @@ function accRow(a, b, drag) {
     (drag ? ' data-drag="acc:' + a.id + '"' : "") +
     ">" +
     emblem(accEmb(a), "em") +
-    '<span class="mid"><div class="d">' +
+    '<span class="mid"><div class="d" dir="auto">' +
     esc(a.name) +
     '</div><div class="s">' +
     esc(typeName(a.type) + " · " + a.currency) +
@@ -396,7 +414,7 @@ function assetsView() {
               x.id +
               '">' +
               emblem(x, "em") +
-              '<span class="mid"><div class="d">' +
+              '<span class="mid"><div class="d" dir="auto">' +
               esc(x.name) +
               '</div></span><span class="a">' +
               esc(money(x.value, x.currency)) +
@@ -526,7 +544,7 @@ function txLine(t) {
     (selMode ? ' aria-pressed="' + on + '"' : "") +
     ">" +
     (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
-    '<span class="mid"><div class="d">' +
+    '<span class="mid"><div class="d" dir="auto">' +
     esc(d) +
     '</div><div class="s">' +
     loanPill(t) +
@@ -554,7 +572,8 @@ function rbLines(t) {
   return a ? rbLine(a.name, money(r.a, a.currency)) : "";
 }
 /* on a narrow screen the account name gives way (ellipsis), never the balance */
-const rbLine = (name, bal) => '<span class="rb"><span class="rbn">' + esc(name) + "</span> " + esc(bal) + "</span>";
+const rbLine = (name, bal) =>
+  '<span class="rb"><span class="rbn" dir="auto">' + esc(name) + "</span> " + esc(bal) + "</span>";
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
@@ -563,18 +582,20 @@ function loanPill(t) {
 function dayGroups(list) {
   let h = "",
     cur = "";
+  /* each day's spending per currency, in one pass (a year of History is thousands of rows) */
+  const days = new Map();
+  list.forEach(x => {
+    if (!isSpend(x)) return;
+    const c = (acc(x.account) || {}).currency,
+      sp = days.get(x.date) || {};
+    sp[c] = (sp[c] || 0) + x.amount;
+    days.set(x.date, sp);
+  });
   list.forEach(t => {
     if (t.date !== cur) {
       if (cur) h += "</div>";
       cur = t.date;
-      const sp = {};
-      list.forEach(x => {
-        if (x.date === cur && isSpend(x)) {
-          const c = (acc(x.account) || {}).currency;
-          sp[c] = (sp[c] || 0) + x.amount;
-        }
-      });
-      const tot = Object.entries(sp)
+      const tot = Object.entries(days.get(cur) || {})
         .map(([c, v]) => "−" + money(rnd(v), c))
         .join(" · ");
       h +=
@@ -683,7 +704,7 @@ function catGrid(kind) {
         esc(c.id) +
         '">' +
         emblem(c, "ci") +
-        '<span class="cn">' +
+        '<span class="cn" dir="auto">' +
         esc(c.name) +
         "</span></button>";
     });
@@ -762,7 +783,9 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="Main currency"><span>' +
+    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
+    esc("Main currency: " + (S.settings.cur ? curLabel(S.settings.cur) : "not chosen yet")) +
+    '"><span>' +
     esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose") +
     "</span>" +
     ic("down") +

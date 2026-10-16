@@ -159,4 +159,5 @@ function onSystemTheme(p) {
     SYS = null;
   }
   applyTheme();
+  render(); // the ring's percentages are inked for the surface they're drawn on
 }

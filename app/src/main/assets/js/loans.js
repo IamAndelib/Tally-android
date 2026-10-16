@@ -145,7 +145,7 @@ function loanRow(l, drag) {
     (drag ? ' data-drag="loan:' + l.id + '"' : "") +
     ">" +
     emblem(LOAN_EMB[l.kind], "em") +
-    '<span class="mid"><div class="d">' +
+    '<span class="mid"><div class="d" dir="auto">' +
     esc(loanWho(l)) +
     '</div><div class="s">' +
     esc(sub) +
@@ -367,7 +367,7 @@ function loanOpen(id, focusPay) {
           /* the row's head is the button that opens its details (they hold buttons of their own) */
           '<div class="tx exp"><button class="txh" data-act="row-exp" aria-expanded="false">' +
           emblem(t.principal ? LOAN_EMB[l.kind] : { i: "paid", c: "#15a06f" }, "em") +
-          '<span class="mid"><div class="d">' +
+          '<span class="mid"><div class="d" dir="auto">' +
           esc(t.principal ? (lend ? "Lent" : "Borrowed") : lend ? "Got back" : "Paid back") +
           "</div>" +
           (t.principal ? "" : '<div class="s">' + loanPill(t) + "</div>") +

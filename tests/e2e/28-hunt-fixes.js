@@ -16,6 +16,10 @@
 //  I. the shell: a picked folder holding a backup asks first, an unreachable folder is said, the first-open
 //     permissions stay up when opened from the widget, the evening nudge never counts a future day, a fee sits above
 //     its transfer
+//  J. screens: long account names keep their words on the balance check, in Settings and in chips; every account
+//     archived isn't a new notebook; focus stays on the control after a redraw; screen readers hear values (donut
+//     totals, ring %, currency, dialog text, chart bars pressed); the ring redraws on a theme switch; a one-day range
+//     says Yesterday; chart labels follow the phone; the currency switch stays with "No stats"
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("28-hunt-fixes");
 let fails = 0;
@@ -327,7 +331,7 @@ const ok = (c, m) => {
         money(1.005, "USD") === "$1.01" &&
         money(-0.125, "USD") === "-$0.13" &&
         signed(-0.004, "USD") === "$0.00" &&
-        signed(-5, "USD") === "−$5.00"
+        signed(-5, "USD") === "−\u2060$5.00"
     ),
     "money rounds as shown: $1.005 is $1.01, −0.125 is −$0.13, and −0.004 has no sign"
   );
@@ -720,6 +724,131 @@ const ok = (c, m) => {
     }),
     "a fee saved with its transfer's own time lists just above it"
   );
+
+  // ---- J. screens
+  const small = await browser.newContext({ viewport: { width: 320, height: 640 }, locale: "en-US" });
+  await small.addInitScript(() => {
+    window.Android = {
+      setReminders() {},
+      takeActions: () => "[]",
+      getColors: () => null,
+      setBars() {},
+      fontScale: () => 1.3,
+    };
+  });
+  const sp = await small.newPage();
+  sp.on("pageerror", e => errors.push(e.message));
+  await sp.goto(appUrl);
+  await sp.evaluate(
+    y => {
+      localStorage.setItem(
+        "tally:v1",
+        JSON.stringify({
+          v: 6,
+          settings: { cur: "IDR", clock: "24", lastCheck: y, dragTip: true },
+          accounts: [{ id: "a", name: "Everyday account", type: "bank", currency: "IDR", opening: 125500000 }],
+          txns: [],
+          loans: [],
+          assets: [],
+        })
+      );
+    },
+    await page.evaluate(() => addDays(today(), -1))
+  );
+  await sp.reload();
+  await sp.waitForTimeout(200);
+  const nm = await sp.evaluate(() => {
+    const n = document.querySelector(".ckrow .nm");
+    return n ? n.getBoundingClientRect().width : -1;
+  });
+  ok(nm > 60, "the balance check keeps a long name readable at 320px and large text (" + Math.round(nm) + "px)");
+  await sp.evaluate(() => {
+    V.screen = "settings";
+    render();
+  });
+  const broken = await sp.evaluate(() =>
+    [...document.querySelectorAll(".setrow .mid > div:first-child")]
+      .filter(d => {
+        const r = document.createRange();
+        r.selectNodeContents(d);
+        return r.getClientRects().length > 1 && d.textContent.split(/\s+/).length < r.getClientRects().length;
+      })
+      .map(d => d.textContent)
+  );
+  ok(broken.length === 0, "Settings titles don't break inside words " + JSON.stringify(broken));
+  await sp.evaluate(() => {
+    S.accounts[0].name = "Everyday spending account at the big bank";
+    txSheet(null, "expense", "food");
+  });
+  const chip = await sp.evaluate(() => {
+    const c = document.querySelector('#sheet [data-act="f-acc"]'),
+      n = c.querySelector(".chn");
+    return { fits: c.getBoundingClientRect().right <= innerWidth, cut: getComputedStyle(n).textOverflow };
+  });
+  ok(chip.fits && chip.cut === "ellipsis", "a long account name in its chip is cut with … " + JSON.stringify(chip));
+  await small.close();
+  await seed({ accounts: [{ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1, archived: true }] });
+  ok(
+    (await page.textContent("#app")).includes("Every account is archived") && (await page.isVisible("#nav")),
+    "every account archived: Home says so, and the tabs stay"
+  );
+  await page.click('[data-act="show-arch"]');
+  ok((await page.textContent("#app")).includes("Bank"), "and Show archived accounts lists them");
+  await seed({
+    txns: [{ id: "e", ts: 1, date: t, type: "expense", amount: 30, account: "a", cat: "food", note: "" }],
+  });
+  await page.focus('[data-act="prev"]');
+  await page.keyboard.press("Enter");
+  await settle();
+  ok(
+    await page.evaluate(() => document.activeElement.dataset.act === "prev"),
+    "after ‹ redraws Home, the focus is still on ‹"
+  );
+  await page.keyboard.press("Enter");
+  await page.evaluate(() => {
+    V.anchor = today();
+    render();
+  });
+  const names = await page.evaluate(() => ({
+    donut: $(".dwrap").getAttribute("aria-label"),
+    tile: $('#ring [data-v="food"]').getAttribute("aria-label"),
+  }));
+  ok(
+    /spent \$30\.00/.test(names.donut) && /100% of spending/.test(names.tile),
+    "the donut and ring tiles say their values " + JSON.stringify(names)
+  );
+  await page.evaluate(() => askDialog("Archive Bank?", "Its balance leaves the totals.", "Archive", () => {}));
+  ok(
+    await page.evaluate(() => {
+      const d = document.querySelector('#pop [role="alertdialog"]');
+      return $("#" + d.getAttribute("aria-describedby")).textContent.includes("leaves the totals");
+    }),
+    "a dialog's text is its description"
+  );
+  await page.evaluate(() => closePop());
+  ok(
+    await page.evaluate(() => {
+      V.period = "range";
+      V.rs = V.re = addDays(today(), -1);
+      const yl = periodLabel();
+      V.period = "day";
+      V.anchor = today();
+      return yl === "Yesterday";
+    }),
+    "a one-day range of yesterday says Yesterday"
+  );
+  ok(
+    await page.evaluate(() => compact(1500) === "1.5K" && compact(0.25) === "0.25"),
+    "chart labels in the phone's own short form"
+  );
+  await seed({
+    settings: { cur: "USD", clock: "24", lastCheck: t, dragTip: true, donut: "none" },
+    accounts: [
+      { id: "a", name: "Bank", type: "bank", currency: "USD", opening: 100 },
+      { id: "e", name: "Euro", type: "bank", currency: "EUR", opening: 50 },
+    ],
+  });
+  ok(!!(await page.$('[data-act="cur-next"]')), 'two currencies with "No stats": the currency switch is still there');
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

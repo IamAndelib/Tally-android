@@ -5,13 +5,15 @@
 "use strict";
 
 let SM = null;
+/* a bar's short label in the phone's own way ("1.5K", "1,5 k", "١٫٥ ألف"), small amounts with their decimals */
+let COMPACT = null;
 const compact = n => {
-  n = Math.round(n);
-  const a = Math.abs(n);
-  if (a < 1000) return String(n);
-  if (a < 1e4) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k";
-  if (a < 1e6) return Math.round(n / 1e3) + "k";
-  return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+  try {
+    COMPACT = COMPACT || new Intl.NumberFormat(undefined, { notation: "compact", maximumSignificantDigits: 3 });
+    return COMPACT.format(n);
+  } catch (e) {
+    return String(Math.round(n));
+  }
 };
 /* weeks start on the day chosen in Settings → Region */
 const weekStart = d => addDays(d, -((parseISO(d).getDay() - S.settings.week + 7) % 7));
@@ -48,7 +50,7 @@ function smBuckets() {
         s: d,
         e: d,
         x: parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" }),
-        full: d === t ? "Today" : d === addDays(t, -1) ? "Yesterday" : dayLabel(d),
+        full: dayName(d),
       });
     }
   else if (SM.mode === "w") {
@@ -137,6 +139,9 @@ function smDonut(split, total) {
   );
 }
 function smRender() {
+  keepFocus($("#sm"), drawSm);
+}
+function drawSm() {
   const el = $("#sm");
   if (!el || !SM) return;
   const all = smBuckets(),
@@ -164,7 +169,7 @@ function smRender() {
   const split = catSplit(b.list);
   if (SM.mode === "d")
     h +=
-      '<div class="smchart smc" role="list">' +
+      '<div class="smchart smc">' +
       bars
         .map((x, k) => {
           const pct = max ? (x.v / max) * 100 : 0,
@@ -172,7 +177,9 @@ function smRender() {
           return (
             '<button class="smcol' +
             (k === i ? " on" : "") +
-            '" role="listitem" data-act="sm-pick" data-v="' +
+            '" aria-pressed="' +
+            (k === i) +
+            '" data-act="sm-pick" data-v="' +
             k +
             '"' +
             (future ? " disabled" : "") +
@@ -192,14 +199,16 @@ function smRender() {
       "</div>";
   else if (SM.mode === "w")
     h +=
-      '<div class="smchart smrows" role="list">' +
+      '<div class="smchart smrows">' +
       bars
         .map((x, k) => {
           const pct = max ? (x.v / max) * 100 : 0;
           return (
             '<button class="smrow' +
             (k === i ? " on" : "") +
-            '" role="listitem" data-act="sm-pick" data-v="' +
+            '" aria-pressed="' +
+            (k === i) +
+            '" data-act="sm-pick" data-v="' +
             k +
             '" aria-label="' +
             esc(x.full + ": " + money(x.v, cur)) +
@@ -246,7 +255,7 @@ function smRender() {
           return (
             '<div class="tx">' +
             emblem(c, "em") +
-            '<span class="mid"><div class="d">' +
+            '<span class="mid"><div class="d" dir="auto">' +
             esc(c.name) +
             (M ? ' <span class="muted small">' + (p < 1 ? "<1" : Math.round(p)) + "%</span>" : "") +
             '</div><span class="pbar"><span style="width:' +

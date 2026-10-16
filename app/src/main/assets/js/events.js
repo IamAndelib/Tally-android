@@ -480,6 +480,11 @@ document.addEventListener("click", ev => {
       V.showArchived = !V.showArchived;
       render();
       break;
+    case "show-arch": // Home with every account archived
+      V.screen = "assets";
+      V.showArchived = true;
+      render();
+      break;
     case "hmon":
       if (+v < 0 || canNext(HP)) {
         shiftPeriod(+v, HP);
@@ -700,7 +705,8 @@ function layerFocus() {
     if (on) top = i;
     if (on && !el.dataset.up) {
       el.dataset.up = "1";
-      focusBack[id] = document.activeElement;
+      const a = document.activeElement;
+      focusBack[id] = a && a !== document.body ? { el: a, k: focusKey(a) } : null;
       /* a layer opened later covers the message bar: its Undo goes with it, so a tap meant for the layer can't undo
          the last change (a layer opened by that same change, like the list a saved entry came from, keeps it) */
       if (undoFn && Date.now() - SNACK_AT > 300) hideSnack();
@@ -718,7 +724,9 @@ function layerFocus() {
     el.inert = below;
   });
   /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
-  if (back && back.isConnected && back !== document.body) back.focus({ preventScroll: true });
+  /* (or to the control that replaced it: saving redraws the screen) */
+  if (back && back.el.isConnected) back.el.focus({ preventScroll: true });
+  else if (back) refocus(document, back.k);
   if (top < 0) return;
   const t = $(LAYERS[top]);
   if (t.contains(document.activeElement)) return;

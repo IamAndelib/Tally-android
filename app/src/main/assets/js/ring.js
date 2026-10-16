@@ -101,10 +101,14 @@ function ringHTML(cats, o) {
       '" data-v="' +
       esc(p.c.id) +
       '"' +
-      (home ? ' aria-label="Add ' + esc(p.c.name) + '"' : "") +
+      (home
+        ? ' aria-label="' +
+          esc("Add " + p.c.name + (v ? ", " + Math.max(1, Math.round((v / o.spent) * 100)) + "% of spending" : "")) +
+          '"'
+        : "") +
       ">" +
       emblem(p.c, "ci") +
-      (names ? '<span class="cn">' + esc(p.c.name) + "</span>" : "") +
+      (names ? '<span class="cn" dir="auto">' + esc(p.c.name) + "</span>" : "") +
       (home
         ? '<span class="cp" style="color:' +
           inkOn(p.c.c) + // the category's colour, readable on the surface
@@ -269,18 +273,18 @@ function ringHTML(cats, o) {
         big(o.spent, "") +
         (!o.spent && !o.got ? '<div class="hint">Tap a category</div>' : "");
     center =
-      '<button class="dwrap" data-act="summary" aria-label="Spending summary" style="' +
+      '<button class="dwrap" data-act="summary" aria-label="' +
+      esc("Spending summary: spent " + money(o.spent, o.cur) + (o.got ? ", received " + money(o.got, o.cur) : "")) +
+      '" style="' +
       box +
       '">' +
       donut +
       '<div class="dcenter">' +
       mid +
-      (cs.length > 1 && mode !== "none"
-        ? '<span class="curbtn" data-act="cur-next" aria-hidden="true">' + esc(o.cur) + " ⇄</span>"
-        : "") +
+      (cs.length > 1 ? '<span class="curbtn" data-act="cur-next" aria-hidden="true">' + esc(o.cur) + " ⇄</span>" : "") +
       "</div></button>" +
       /* the same switch for screen readers and keyboards, as a button of its own (not one inside the donut's) */
-      (cs.length > 1 && mode !== "none"
+      (cs.length > 1
         ? '<button class="vh" data-act="cur-next">Showing ' +
           esc(o.cur) +
           ". Switch to " +
