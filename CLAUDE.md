@@ -21,7 +21,10 @@ lives in it, and the code comments explain the rest: keep facts in one place and
   personal details, chat-style notes or duplicated documentation.
 - **Releases only after the maintainer has confirmed the test build on a phone.** After every push, wait for CI,
   then send the test APK: `git fetch origin builds && git show origin/builds:Tally-<branch>.apk > Tally-<branch>.apk`
-  (it installs as "Tally Dev", next to the release, with separate data).
+  (it installs as "Tally Dev", next to the release, with separate data). A release PR's branch also gets a preview
+  signed with the release key (the draft release `preview-X.Y.Z`), for trying the update over the installed release.
+  This environment can't download release files; to send the preview here, make an RSA key pair in the scratchpad, run
+  `build-apk.yml` on the branch with `preview_key` (the public key, base64), then fetch `origin/previews` and decrypt.
 
 ## Quality bar
 
@@ -44,8 +47,8 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers and balance fixes
-never count as spending or income; loans and lendings move money but are never spending either.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers (with their fees)
+and balance fixes never count as spending or income; loans and lendings move money but are never spending either.
 
 ## Details that are easy to break
 
@@ -129,7 +132,9 @@ never count as spending or income; loans and lendings move money but are never s
     of `docs/fdroid/app.tally.expenses.yml`), then F-Droid's own build compared with our signed APK. It must stay green:
     F-Droid ships our signed APK only while builds are reproducible;
   - `release`: on `main`, when `v<tallyVersion>` has no GitHub Release yet, signs with the release key from secrets,
-    verifies it and publishes the release and tag.
+    verifies it and publishes the release and tag. On another branch with such a version, it makes the preview instead
+    (versionCode one below the release's, versionName `X.Y.Z-preview.<run>`, a draft with no tag) and keeps only the
+    newest preview.
 - Releasing: in a PR, bump `tallyVersion` + `tallyVersionCode`, add the `CHANGELOG.md` section and
   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, then merge into `main`; CI creates the tag (this
   environment can't push tags). F-Droid picks up new tags by itself (see [docs/FDROID.md](docs/FDROID.md)).

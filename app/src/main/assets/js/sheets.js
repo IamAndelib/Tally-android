@@ -314,7 +314,7 @@ function trSync() {
   $("#tr-cur").textContent = fa ? fa.currency : "";
   $("#recv-wrap").hidden = !diff;
   if (diff) $("#recv-lbl").textContent = "Amount that arrived in " + ta.name + " (" + ta.currency + ")";
-  $("#fee-lbl").textContent = "Fee charged (" + (fa ? fa.currency : "") + ") · counted as spending";
+  $("#fee-lbl").textContent = "Fee charged (" + (fa ? fa.currency : "") + ") · not counted as spending";
   trPreview();
 }
 function trPreview() {

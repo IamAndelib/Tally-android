@@ -41,6 +41,11 @@ function migrate(o) {
     own = (m, k) => typeof k === "string" && Object.prototype.hasOwnProperty.call(m, k),
     okNum = v => (typeof v === "number" || typeof v === "string") && amtOk(+v) != null,
     num = v => (okNum(v) ? +v : 0),
+    /* a moment in ms (Date.now()), 0 when there is none; not an amount: today's are past a trillion */
+    stamp = v => {
+      const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? +v : NaN;
+      return Number.isFinite(n) && n > 0 && n < 8.64e15 ? Math.round(n) : 0;
+    },
     isDay = v => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v),
     day = v => iso(parseISO(v)),
     hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v),
@@ -178,7 +183,7 @@ function migrate(o) {
     .map(t0 => {
       const t = {
         id: sid(t0.id),
-        ts: num(t0.ts),
+        ts: stamp(t0.ts),
         date: day(t0.date),
         type: t0.type,
         amount: +t0.amount,
@@ -214,6 +219,18 @@ function migrate(o) {
       return t;
     })
     .filter(Boolean);
+  /* entries without a time (1.3.1 read times as amounts and dropped them all) get one on their own day, in the order
+     they were written, so the newest still comes first; balances don't depend on it */
+  s.txns.forEach((t, i) => {
+    if (!t.ts) t.ts = parseISO(t.date).getTime() + i;
+  });
+  /* a transfer and its fee point at each other; a fee whose transfer is gone is plain spending, and a transfer whose
+     fee is gone has none (balances stay as they are either way) */
+  const byId = new Map(s.txns.map(t => [t.id, t]));
+  s.txns.forEach(t => {
+    if (t.feeOf && (byId.get(t.feeOf) || {}).type !== "transfer") delete t.feeOf;
+    if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
+  });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
   const newestDraw = id =>
     s.txns
@@ -229,7 +246,7 @@ function migrate(o) {
       if (!account) return null;
       return {
         id,
-        ts: num(l.ts),
+        ts: stamp(l.ts),
         kind: l.kind,
         person: str(l.person),
         account,
@@ -303,6 +320,10 @@ function commit() {
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
 const activeAccounts = () => S.accounts.filter(a => !a.archived);
+/* A transfer's fee is its own entry, an expense linked to the transfer (feeOf ↔ feeId), so it comes off the paying
+   account in every version of Tally; but like the transfer it is never spending: the ring, day totals, summaries and
+   the widget count only isSpend() entries, and History shows the fee with its transfer. */
+const isSpend = t => t.type === "expense" && !t.feeOf;
 const outCats = () => S.cats.filter(c => c.kind === "out" && !c.hidden);
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
 /* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment

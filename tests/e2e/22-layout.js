@@ -446,6 +446,10 @@ function inspect() {
       "transfer",
       ev(() => trSheet())
     );
+    await shot("transfer-fee", async () => {
+      await page.evaluate(() => trSheet());
+      await page.click('#sheet [data-act="tr-fee"]');
+    });
     await shot(
       "account",
       ev(() => accOpen("b"))

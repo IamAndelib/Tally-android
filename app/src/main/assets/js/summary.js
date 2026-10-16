@@ -79,7 +79,7 @@ function smBuckets() {
     const a = acc(x.account);
     return a && a.currency === SM.cur;
   };
-  const sp = S.txns.filter(x => x.type === "expense" && inCur(x));
+  const sp = S.txns.filter(x => isSpend(x) && inCur(x));
   out.forEach(b => {
     b.list = sp.filter(x => x.date >= b.s && x.date <= b.e);
     b.v = rnd(b.list.reduce((q, x) => q + x.amount, 0));

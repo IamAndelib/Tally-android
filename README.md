@@ -36,7 +36,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   account keeps its own currency, any of the world's currencies.
 - **Morning check.** Once a day Tally lists your balances and asks if they still match.
 - **Transfers** between your own accounts never count as spending. Moving money between currencies asks for the amount
-  that arrived; an ATM or cash-out fee can be added and is saved as a linked expense.
+  that arrived; an ATM or cash-out fee can be added: it comes off the paying account and shows with the transfer in
+  History, without counting as spending.
 - **Balance fixes.** When an account doesn't match reality, type what it really holds and Tally records the difference.
 - **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), with a cursor you can move.
 - **Overdraw warning.** Accounts other than credit cards warn before a save takes them below zero.
@@ -211,7 +212,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how the pieces fit together and how t
 
 1. In a pull request, bump `tallyVersion` and `tallyVersionCode` in `gradle.properties`, add the version's section to
    `CHANGELOG.md` and its short notes to `fastlane/metadata/android/en-US/changelogs/<tallyVersionCode>.txt`.
-2. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
+2. Try it as users will get it. On the pull request's branch, CI makes a **preview**: a draft release
+   `preview-X.Y.Z` (only people with write access see drafts) whose APK, signed with the release key, installs over
+   the current release and keeps its data. The release itself updates over it later.
+3. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
    from the `RELEASE_KEYSTORE_BASE64` and `RELEASE_KEYSTORE_PASSWORD` repository secrets), verifies the signature,
    and publishes the GitHub Release `vX.Y.Z` — tag, APK, SHA-256 and the changelog section as notes.
 

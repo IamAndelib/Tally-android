@@ -180,7 +180,7 @@ function homeView() {
     got = 0;
   const by = {};
   pt.forEach(t => {
-    if (t.type === "expense") {
+    if (isSpend(t)) {
       spent += t.amount;
       by[t.cat] = (by[t.cat] || 0) + t.amount;
     } else if (t.type === "income") got += t.amount;
@@ -243,7 +243,7 @@ function checkCard(b, cur) {
   const y = addDays(today(), -1);
   const ySpent = rnd(
     S.txns
-      .filter(t => t.date === y && t.type === "expense" && acc(t.account) && acc(t.account).currency === cur)
+      .filter(t => t.date === y && isSpend(t) && acc(t.account) && acc(t.account).currency === cur)
       .reduce((s, t) => s + t.amount, 0)
   );
   return (
@@ -486,6 +486,15 @@ function txLine(t) {
     s = (lend ? "Lending" : "Loan") + " · " + (a ? a.name : "?");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
+  } else if (t.feeOf) {
+    /* a transfer's fee: shown with its transfer, not as a category's spending */
+    const tr = S.txns.find(x => x.id === t.feeOf),
+      to = tr && acc(tr.to);
+    em = { i: "swap_horiz", c: "#5f7389" };
+    cls = "xfer";
+    d = t.note || "Transfer fee";
+    s = (a ? a.name : "?") + (to ? " → " + to.name : "");
+    amt = "−" + esc(money(t.amount, cur));
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
@@ -552,7 +561,7 @@ function dayGroups(list) {
       cur = t.date;
       const sp = {};
       list.forEach(x => {
-        if (x.date === cur && x.type === "expense") {
+        if (x.date === cur && isSpend(x)) {
           const c = (acc(x.account) || {}).currency;
           sp[c] = (sp[c] || 0) + x.amount;
         }

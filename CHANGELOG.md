@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.2] — 2026-10-16
+
+### Fixed
+
+- A transfer's fee (ATM or cash-out charge) no longer counts as spending. It still comes off the account that paid
+  it, and History shows it with its transfer ("Bank → Savings"), but it is left out of the ring, the day's
+  total, the spending summary, the balance check and the widget, like the transfer itself. Before, it was saved in the
+  built-in "Fees" category and showed up under whatever that category had been renamed to, such as "Food".
+- Entries keep their time of day again. 1.3.1 dropped it every time the app started, so entries made on the same day
+  could show in the wrong order. Entries that lost their time are put back in the order they were written, newest
+  first; balances never depended on it.
+
 ## [1.3.1] — 2026-10-02
 
 ### Fixed
@@ -288,6 +300,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.3.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.2
 [1.3.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.1
 [1.3.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.0
 [1.2.7]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.2.7

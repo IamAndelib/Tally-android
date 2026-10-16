@@ -18,7 +18,7 @@ function syncWidget() {
     const total = rnd(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
     const spent = rnd(
       S.txns
-        .filter(x => x.type === "expense" && x.date === t && (acc(x.account) || {}).currency === cur)
+        .filter(x => isSpend(x) && x.date === t && (acc(x.account) || {}).currency === cur)
         .reduce((q, x) => q + x.amount, 0)
     );
     o = { date: t, balance: money(total, cur), spent: money(spent, cur), zero: money(0, cur) };

@@ -1,0 +1,2 @@
+- A transfer's fee (ATM or cash-out charge) no longer counts as spending; it still comes off the paying account and shows with its transfer in History. Fees saved by older versions are fixed by themselves.
+- Entries keep their time of day again, so the newest entry of a day is listed first.
