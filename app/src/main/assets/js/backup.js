@@ -12,7 +12,11 @@ function exportCsv() {
       .replace(/"/g, '""') +
     '"';
   const kind = t =>
-    t.type === "loan" ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir : t.type;
+    t.type === "loan"
+      ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir
+      : t.feeOf
+        ? "transfer-fee"
+        : t.type;
   const lines = [
     ["date", "type", "amount", "currency", "account", "to_account", "to_amount", "category", "note"].join(","),
   ];
@@ -30,7 +34,7 @@ function exportCsv() {
           q(a ? a.name : ""),
           q(to ? to.name : ""),
           t.type === "transfer" ? (t.toAmount != null ? t.toAmount : t.amount) : "",
-          q(t.type === "expense" || t.type === "income" ? cat(t.cat).name : ""),
+          q((t.type === "expense" && !t.feeOf) || t.type === "income" ? cat(t.cat).name : ""),
           q(t.note),
         ].join(",")
       );

@@ -63,7 +63,7 @@ function migrate(o) {
     os = o.settings && typeof o.settings === "object" ? o.settings : {};
   /* only the settings Tally knows, each checked below */
   Object.keys(s.settings)
-    .concat(["backupAsk", "customCols", "dragTip", "feeCat", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
+    .concat(["backupAsk", "customCols", "dragTip", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
     .concat(["lastCheck", "savedBackup"])
     .forEach(k => {
       if (own(os, k)) s.settings[k] = os[k];
@@ -100,7 +100,7 @@ function migrate(o) {
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(num(s.settings.hapticLevel)) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
-  ["lastAcc", "lastAccIn", "feeCat"].forEach(k => {
+  ["lastAcc", "lastAccIn"].forEach(k => {
     if (s.settings[k] != null) s.settings[k] = sid(s.settings[k]);
   });
   s.settings.customCols = (Array.isArray(s.settings.customCols) ? s.settings.customCols : [])
@@ -214,6 +214,13 @@ function migrate(o) {
       return t;
     })
     .filter(Boolean);
+  /* a transfer and its fee point at each other; a fee whose transfer is gone is plain spending, and a transfer whose
+     fee is gone has none (balances stay as they are either way) */
+  const byId = new Map(s.txns.map(t => [t.id, t]));
+  s.txns.forEach(t => {
+    if (t.feeOf && (byId.get(t.feeOf) || {}).type !== "transfer") delete t.feeOf;
+    if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
+  });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
   const newestDraw = id =>
     s.txns
@@ -303,6 +310,10 @@ function commit() {
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
 const activeAccounts = () => S.accounts.filter(a => !a.archived);
+/* A transfer's fee is its own entry, an expense linked to the transfer (feeOf ↔ feeId), so it comes off the paying
+   account in every version of Tally; but like the transfer it is never spending: the ring, day totals, summaries and
+   the widget count only isSpend() entries, and History shows the fee with its transfer. */
+const isSpend = t => t.type === "expense" && !t.feeOf;
 const outCats = () => S.cats.filter(c => c.kind === "out" && !c.hidden);
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
 /* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment

@@ -161,10 +161,17 @@ const ok = (c, m) => {
   await sact("tr-save");
   b = await bal();
   ok(b.bKash === 2850 && b.Bank === 515.5, "bKash 2850 " + JSON.stringify(b));
-  // eating out entry so donut has 2+ categories
+  // eating out and transport entries so the donut has 3 categories (the transfer's fee isn't spending)
   await act("add-cat", "food");
   await page.fill("#f-amt", "8");
   await sact("tx-save");
+  await act("add-cat", "transport");
+  await page.fill("#f-amt", "3");
+  await sact("tx-save");
+  ok(
+    !(await page.$eval('#ring [data-v="fees"] .cp', e => e.textContent).catch(() => "")),
+    "the transfer's fee is not on the ring"
+  );
 
   // ---- leader lines: one per spent category, start on the donut rim, end near the icon, never cross
   await settle();

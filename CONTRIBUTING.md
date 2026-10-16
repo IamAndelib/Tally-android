@@ -60,7 +60,9 @@ All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
   `income` (with `cat`), `transfer` (with `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
-  `loan` (money moving for a loan: `dir`, `loan`, and `principal` + optional `due` for a draw).
+  `loan` (money moving for a loan: `dir`, `loan`, and `principal` + optional `due` for a draw). A transfer's fee is an
+  `expense` linked both ways (`feeOf` on the fee, `feeId` on the transfer) that is never counted as spending
+  (`isSpend()`).
 - A **loan** is a person tab, `{id, kind: "borrow" | "lend", person, account, date, note, status}`. Its amounts, what's
   left and its status are always derived from its entries by `loanInfo()`, never stored.
 - Balances are never stored either: `balances()` adds every entry to each account's opening balance.

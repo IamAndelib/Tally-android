@@ -7,10 +7,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- A transfer's fee always went to the built-in "Fees" category, even after that category had been renamed into
-  something else (such as "Food") or removed, so a cash-out charge could show up as food. The transfer sheet now shows
-  which spending category the fee counts in, and lets you change it; Tally remembers the choice for the next fee. A
-  fee already saved can be moved by opening its transfer.
+- A transfer's fee (ATM or cash-out charge) no longer counts as spending. It still comes off the account that paid
+  it, and History shows it with its transfer ("City Bank → Brac Joint"), but it is left out of the ring, the day's
+  total, the spending summary, the balance check and the widget, like the transfer itself. Before, it was saved in the
+  built-in "Fees" category and showed up under whatever that category had been renamed to, such as "Food".
 
 ## [1.3.1] — 2026-10-02
 

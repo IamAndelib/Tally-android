@@ -278,15 +278,6 @@ document.addEventListener("click", ev => {
     case "f-cat":
       pickCat(v);
       break;
-    case "fee-showcats": {
-      const g = $("#fee-catgrid");
-      g.hidden = !g.hidden;
-      el.setAttribute("aria-expanded", String(!g.hidden));
-      break;
-    }
-    case "fee-cat":
-      pickFeeCat(v);
-      break;
     case "f-acc":
       pickAccount(v);
       break;
@@ -326,7 +317,6 @@ document.addEventListener("click", ev => {
     case "tr-fee":
       F.showFee = true;
       $("#fee-wrap").hidden = false;
-      $("#feecat-wrap").hidden = false;
       el.hidden = true;
       $("#f-fee").focus();
       trPreview();

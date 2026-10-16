@@ -44,8 +44,8 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers and balance fixes
-never count as spending or income; loans and lendings move money but are never spending either.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers (with their fees)
+and balance fixes never count as spending or income; loans and lendings move money but are never spending either.
 
 ## Details that are easy to break
 
