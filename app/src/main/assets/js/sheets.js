@@ -115,11 +115,13 @@ function accChoices(...keep) {
   return l;
 }
 /* quick add / edit for spending and money in */
-const catBtns = (list, sel) =>
+const catBtns = (list, sel, act = "f-cat") =>
   list
     .map(
       c =>
-        '<button class="cat" data-act="f-cat" data-v="' +
+        '<button class="cat" data-act="' +
+        act +
+        '" data-v="' +
         esc(c.id) +
         '" aria-pressed="' +
         (c.id === sel) +
@@ -239,6 +241,44 @@ function readVals() {
   };
   return { amount: g("f-amt"), note: g("f-note"), date: g("f-date"), toAmount: g("f-toamt"), fee: g("f-fee") };
 }
+/* The spending category a transfer's fee goes in: the one picked for the last fee; else the built-in Fees, unless
+   that slot was turned into something else (renamed and given another icon) or removed; else Other. The transfer
+   sheet shows it and lets it be changed, so a fee never lands in a category without the user seeing which. */
+function feeCatDefault() {
+  const vis = id => {
+    const c = S.cats.find(x => x.id === id);
+    return c && c.kind === "out" && !c.hidden ? c : null;
+  };
+  const f = vis("fees"),
+    d = CATS.find(x => x.id === "fees");
+  return (
+    vis(S.settings.feeCat) ||
+    (f && (f.name === d.name || f.i === d.i) ? f : null) ||
+    vis("other") ||
+    outCats()[0]
+  ).id;
+}
+/* the categories offered for a fee: the visible spending ones, and the fee's own if it was hidden since */
+function feeCats(sel) {
+  const list = outCats(),
+    k = S.cats.find(c => c.id === sel);
+  return k && !list.includes(k) ? list.concat([k]) : list;
+}
+const feeChip = id => {
+  const k = cat(id);
+  return { html: catChipInner(k), label: "Fee counted as spending in " + k.name };
+};
+/* the fee's category, picked in the transfer sheet */
+function pickFeeCat(id) {
+  F.feeCat = id;
+  setPressed("fee-cat", id);
+  const chip = $("#fee-catchip"),
+    c = feeChip(id);
+  chip.innerHTML = c.html;
+  chip.setAttribute("aria-label", c.label);
+  chip.setAttribute("aria-expanded", "false");
+  $("#fee-catgrid").hidden = true;
+}
 /* transfer between own accounts, with optional fee */
 function trSheet(id, from) {
   const act = activeAccounts();
@@ -251,7 +291,8 @@ function trSheet(id, from) {
   const fee = t && t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
   const f = t ? t.account : from || (act[0] || {}).id;
   const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
-  F = { kind: "tr", id, from: f, to, showFee: !!fee };
+  F = { kind: "tr", id, from: f, to, showFee: !!fee, feeCat: fee ? fee.cat : feeCatDefault() };
+  const fc = feeChip(F.feeCat);
   const list = accChoices(f, to);
   let h = '<div class="lbl" style="margin-top:4px">From</div>' + accChips("tr-from", F.from, null, list);
   h +=
@@ -270,6 +311,17 @@ function trSheet(id, from) {
     '><span id="fee-lbl"></span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
     esc(fee ? String(fee.amount) : "") +
     '"></label>';
+  /* which spending category the fee counts in, shown with the fee and changeable */
+  h +=
+    '<div class="feecat" id="feecat-wrap"' +
+    (F.showFee ? "" : " hidden") +
+    '><span class="muted small">Counted as spending in</span><button class="catchip" id="fee-catchip" data-act="fee-showcats" aria-expanded="false" aria-label="' +
+    esc(fc.label) +
+    '">' +
+    fc.html +
+    '</button><div class="catgrid" id="fee-catgrid" hidden>' +
+    catBtns(feeCats(F.feeCat), F.feeCat, "fee-cat") +
+    "</div></div>";
   h +=
     '<button class="btn text" id="fee-btn" data-act="tr-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
     (F.showFee ? " hidden" : "") +
@@ -314,7 +366,7 @@ function trSync() {
   $("#tr-cur").textContent = fa ? fa.currency : "";
   $("#recv-wrap").hidden = !diff;
   if (diff) $("#recv-lbl").textContent = "Amount that arrived in " + ta.name + " (" + ta.currency + ")";
-  $("#fee-lbl").textContent = "Fee charged (" + (fa ? fa.currency : "") + ") · counted as spending";
+  $("#fee-lbl").textContent = "Fee charged (" + (fa ? fa.currency : "") + ")";
   trPreview();
 }
 function trPreview() {
@@ -749,7 +801,9 @@ function saveTr() {
     note = (v.note || "").trim(),
     nid = newId(),
     fid = newId(),
-    ts = Date.now();
+    ts = Date.now(),
+    feeCat = S.cats.some(c => c.id === F.feeCat) ? F.feeCat : feeCatDefault();
+  if (fee > 0) S.settings.feeCat = feeCat; // the next fee starts in the same category
   const mutate = () => {
     let t = id ? S.txns.find(x => x.id === id) : null;
     if (!t) {
@@ -767,7 +821,7 @@ function saveTr() {
         type: "expense",
         amount: rnd(fee),
         account: from,
-        cat: "fees",
+        cat: feeCat,
         date,
         note: "Transfer fee",
         feeOf: t.id,

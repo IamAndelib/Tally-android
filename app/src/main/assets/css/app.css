@@ -2500,3 +2500,16 @@ body.land.calcopen #snack .snack {
 [role="alertdialog"]:focus {
   outline: none;
 }
+
+/* a transfer's fee: the spending category it counts in, under the fee field */
+.feecat {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.feecat .catgrid {
+  flex-basis: 100%;
+  margin-top: 4px;
+}

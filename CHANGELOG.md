@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A transfer's fee always went to the built-in "Fees" category, even after that category had been renamed into
+  something else (such as "Food") or removed, so a cash-out charge could show up as food. The transfer sheet now shows
+  which spending category the fee counts in, and lets you change it; Tally remembers the choice for the next fee. A
+  fee already saved can be moved by opening its transfer.
+
 ## [1.3.1] — 2026-10-02
 
 ### Fixed

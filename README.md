@@ -36,7 +36,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   account keeps its own currency, any of the world's currencies.
 - **Morning check.** Once a day Tally lists your balances and asks if they still match.
 - **Transfers** between your own accounts never count as spending. Moving money between currencies asks for the amount
-  that arrived; an ATM or cash-out fee can be added and is saved as a linked expense.
+  that arrived; an ATM or cash-out fee can be added and is saved as a linked expense, in a category you see and can
+  change (Fees to start with).
 - **Balance fixes.** When an account doesn't match reality, type what it really holds and Tally records the difference.
 - **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), with a cursor you can move.
 - **Overdraw warning.** Accounts other than credit cards warn before a save takes them below zero.

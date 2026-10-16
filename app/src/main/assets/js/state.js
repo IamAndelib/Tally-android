@@ -63,7 +63,7 @@ function migrate(o) {
     os = o.settings && typeof o.settings === "object" ? o.settings : {};
   /* only the settings Tally knows, each checked below */
   Object.keys(s.settings)
-    .concat(["backupAsk", "customCols", "dragTip", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
+    .concat(["backupAsk", "customCols", "dragTip", "feeCat", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
     .concat(["lastCheck", "savedBackup"])
     .forEach(k => {
       if (own(os, k)) s.settings[k] = os[k];
@@ -100,7 +100,7 @@ function migrate(o) {
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(num(s.settings.hapticLevel)) || 3));
   if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
-  ["lastAcc", "lastAccIn"].forEach(k => {
+  ["lastAcc", "lastAccIn", "feeCat"].forEach(k => {
     if (s.settings[k] != null) s.settings[k] = sid(s.settings[k]);
   });
   s.settings.customCols = (Array.isArray(s.settings.customCols) ? s.settings.customCols : [])
