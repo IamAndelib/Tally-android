@@ -11,6 +11,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
   it, and History shows it with its transfer ("City Bank → Brac Joint"), but it is left out of the ring, the day's
   total, the spending summary, the balance check and the widget, like the transfer itself. Before, it was saved in the
   built-in "Fees" category and showed up under whatever that category had been renamed to, such as "Food".
+- Entries keep their time of day again. 1.3.1 dropped it every time the app started, so entries made on the same day
+  could show in the wrong order. Entries that lost their time are put back in the order they were written, newest
+  first; balances never depended on it.
 
 ## [1.3.1] — 2026-10-02
 

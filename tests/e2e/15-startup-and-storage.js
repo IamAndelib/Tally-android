@@ -4,6 +4,7 @@
 //  - saved data that can't be read is kept aside and offered as a file, never silently dropped
 //  - editing a loan draw can't leave its due date before its own date
 //  - Escape (desktop) closes the top layer like the Android back button
+//  - entry times survive a restart, and entries that lost theirs (1.3.1) list newest first again
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("15-startup-and-storage");
 let fails = 0;
@@ -285,6 +286,69 @@ const daysFromNow = n => {
   );
   ok(blocked.length === 0, "no Content-Security-Policy violations: " + JSON.stringify(blocked.slice(0, 3)));
   ok(requests.length === 0, "no requests outside the app: " + JSON.stringify(requests.slice(0, 3)));
+
+  // ---- 7. entry times survive a restart (1.3.1 read them as amounts and dropped them all). Entries that lost theirs
+  // get one on their own day, in the order they were written, so the newest of a day lists first again.
+  const now = await page.evaluate(() => Date.now()),
+    d0 = daysFromNow(0),
+    d1 = daysFromNow(-1),
+    ex = (id, amount, date, ts) =>
+      Object.assign(
+        { id, type: "expense", amount, account: "w", cat: "food", date, note: id },
+        ts == null ? {} : { ts }
+      );
+  await seed({
+    ...base,
+    txns: [
+      ex("e1", 1, d0),
+      ex("e2", 2, d0, 0),
+      ex("e3", 3, d1, 0),
+      ex("e4", 4, d0, "0"),
+      ex("e5", 5, d0, now),
+      {
+        id: "p1",
+        ts: now,
+        type: "loan",
+        amount: 100,
+        account: "w",
+        date: d1,
+        note: "",
+        dir: "out",
+        loan: "L",
+        principal: true,
+      },
+    ],
+    loans: [{ id: "L", ts: now, kind: "lend", person: "Sam", account: "w", date: d1, status: "open" }],
+  });
+  const times = await page.evaluate(() => ({
+    ts: Object.fromEntries(S.txns.map(t => [t.id, t.ts])),
+    days: S.txns.filter(t => /^e[1-4]$/.test(t.id)).map(t => iso(new Date(t.ts)) === t.date),
+    loan: S.loans[0].ts,
+    bal: balances().w,
+  }));
+  ok(times.ts.e5 === now && times.ts.p1 === now && times.loan === now, "a saved time survives a restart " + now);
+  ok(
+    times.days.every(Boolean) && times.ts.e1 < times.ts.e2 && times.ts.e2 < times.ts.e4 && times.ts.e4 < now,
+    "entries without one get a time on their own day, in the order written " + JSON.stringify(times.ts)
+  );
+  ok(times.bal === 5000 - 15 - 100, "balances don't change " + times.bal);
+  await page.evaluate(() => {
+    V.screen = "history";
+    render();
+  });
+  await settle();
+  const order = await page.$$eval("#app [data-v]", es => es.map(e => e.dataset.v).filter(v => /^e\d$/.test(v)));
+  ok(
+    JSON.stringify(order) === '["e5","e4","e2","e1","e3"]',
+    "History lists the newest of each day first " + JSON.stringify(order)
+  );
+  await page.reload();
+  await settle();
+  ok(
+    (await page.evaluate(() => JSON.stringify(Object.fromEntries(S.txns.map(t => [t.id, t.ts]))))) ===
+      JSON.stringify(times.ts),
+    "and the times stay the same on the next start"
+  );
 
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

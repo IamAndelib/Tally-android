@@ -139,6 +139,148 @@ const ok = (c, m) => {
   }, t);
   ok(m[0] && m[1] && m[2] === 2, "dangling links dropped, entries kept " + JSON.stringify(m));
 
+  // ---- 5. updating from 1.3.1: a notebook exactly as 1.3.1 saved it (made by 1.3.1's own transfer sheet, its "Fees"
+  // slot renamed "Food"; 1.3.1 counted the fee as 10 of 60 spent). Its fee stops being spending on its own, nothing
+  // to sort out by hand, and the stored entries stay exactly as they were.
+  const saved131 = {
+    v: 6,
+    settings: {
+      cur: "BDT",
+      week: 1,
+      clock: "24",
+      theme: "system",
+      haptics: true,
+      hapticLevel: 3,
+      donut: "both",
+      remind: { daily: true, time: "21:00", dues: true, dueTime: "09:00", check: true, checkTime: "08:00" },
+      backup: { on: false, time: "23:00" },
+      customCols: [],
+      dragTip: true,
+      hiddenCols: [],
+      hiddenTypes: [],
+      lastCheck: "2026-10-16",
+      lastAcc: "a",
+    },
+    accounts: [
+      {
+        id: "a",
+        name: "City Bank",
+        type: "bank",
+        currency: "BDT",
+        opening: 119269,
+        archived: false,
+        i: "",
+        e: "",
+        c: "",
+      },
+      {
+        id: "b",
+        name: "Brac Joint",
+        type: "bank",
+        currency: "BDT",
+        opening: 44177,
+        archived: false,
+        i: "",
+        e: "",
+        c: "",
+      },
+    ],
+    types: [],
+    cats: [
+      { id: "groceries", name: "Groceries", e: "🛒", c: "#15a06f", i: "shopping_cart", kind: "out", hidden: false },
+      { id: "food", name: "Eating out", e: "🍔", c: "#c98500", i: "restaurant", kind: "out", hidden: false },
+      { id: "transport", name: "Transport", e: "🚌", c: "#0a91b8", i: "directions_bus", kind: "out", hidden: false },
+      { id: "housing", name: "Rent", e: "🏠", c: "#7c9a0d", i: "home", kind: "out", hidden: false },
+      { id: "bills", name: "Bills", e: "📱", c: "#a646c9", i: "receipt_long", kind: "out", hidden: false },
+      { id: "shopping", name: "Shopping", e: "🛍️", c: "#e0578c", i: "shopping_bag", kind: "out", hidden: false },
+      { id: "education", name: "Study", e: "📚", c: "#4b5fd6", i: "school", kind: "out", hidden: false },
+      { id: "health", name: "Health", e: "💊", c: "#e0504f", i: "medication", kind: "out", hidden: false },
+      { id: "fun", name: "Fun", e: "🎬", c: "#2a78d6", i: "movie", kind: "out", hidden: false },
+      { id: "family", name: "Family", e: "🎁", c: "#df5f2b", i: "family_restroom", kind: "out", hidden: false },
+      { id: "fees", name: "Food", e: "🏦", c: "#c98500", i: "restaurant", kind: "out", hidden: false },
+      { id: "other", name: "Other", e: "🧾", c: "#b0671f", i: "category", kind: "out", hidden: false },
+      { id: "income", name: "Income", e: "💰", c: "#15a06f", i: "payments", kind: "in", hidden: false },
+      { id: "gift", name: "Gift", e: "🎁", c: "#e0578c", i: "redeem", kind: "in", hidden: false },
+      { id: "otherin", name: "Other", e: "➕", c: "#5f7389", i: "add_circle", kind: "in", hidden: false },
+    ],
+    txns: [
+      {
+        id: "9lk97fyx8yjr",
+        ts: 1792152369639,
+        type: "transfer",
+        amount: 20000,
+        account: "a",
+        to: "b",
+        date: "2026-10-16",
+        note: "",
+        feeId: "4a1u7d6x8yjr",
+      },
+      {
+        id: "4a1u7d6x8yjr",
+        ts: 1792152369639,
+        type: "expense",
+        amount: 10,
+        account: "a",
+        cat: "fees",
+        date: "2026-10-16",
+        note: "Transfer fee",
+        feeOf: "9lk97fyx8yjr",
+      },
+      {
+        id: "c5zetmox8z6g",
+        ts: 1792152370456,
+        type: "expense",
+        amount: 50,
+        account: "a",
+        cat: "groceries",
+        date: "2026-10-16",
+        note: "",
+      },
+    ],
+    loans: [],
+    assets: [],
+  };
+  await page.evaluate(
+    ([o, t]) => {
+      o.txns.forEach(x => (x.date = t));
+      o.settings.lastCheck = t;
+      localStorage.setItem("tally:v1", JSON.stringify(o));
+    },
+    [saved131, t]
+  );
+  await page.reload();
+  await settle();
+  const up = await page.evaluate(() => ({
+    bal: balances(),
+    centre: document.querySelector(".dcenter").textContent,
+    ring: [...document.querySelectorAll("#ring .cp")]
+      .filter(e => e.textContent)
+      .map(e => e.closest("[data-v]").dataset.v + " " + e.textContent),
+  }));
+  ok(up.bal.a === 99209 && up.bal.b === 64177, "after the update: balances as before " + JSON.stringify(up.bal));
+  ok(
+    /50\.00/.test(up.centre) && !/60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 100%"]',
+    "after the update: spent 50, only Groceries on the ring, nothing under Food " + JSON.stringify(up)
+  );
+  await page.evaluate(() => {
+    V.screen = "history";
+    render();
+  });
+  await settle();
+  const oldFee = saved131.txns.find(x => x.feeOf);
+  const upRow = (await page.textContent(`[data-v="${oldFee.id}"]`)).replace(/\s+/g, " ");
+  ok(
+    /Transfer fee\s*City Bank → Brac Joint/.test(upRow) && !upRow.includes("Food"),
+    "after the update, History: " + upRow
+  );
+  ok((await page.textContent("#app .day")).includes("50.00"), "the day's total is 50");
+  const kept = await page.evaluate(id => S.txns.find(x => x.id === id), oldFee.id);
+  const changed = Object.keys(oldFee).filter(k => k !== "date" && kept[k] !== oldFee[k]);
+  ok(
+    changed.length === 0 && Object.keys(kept).length === Object.keys(oldFee).length,
+    "the saved fee entry itself is unchanged (an older version still reads it) " + JSON.stringify(kept)
+  );
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");
