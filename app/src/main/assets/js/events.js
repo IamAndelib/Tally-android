@@ -227,6 +227,10 @@ document.addEventListener("click", ev => {
       if (undoFn) {
         const f = undoFn;
         undoFn = null;
+        /* what an open layer shows may be what Undo takes away: back to the screen first */
+        closePop();
+        BACKTO = null;
+        closeSheet();
         f();
       }
       break;
@@ -628,7 +632,13 @@ document.addEventListener("keydown", e => {
       e.preventDefault();
       b.click();
     }
+  } else if (e.key === "Enter" && e.target.id === "ic-emo") {
+    e.preventDefault();
+    $('#sheet2 [data-act="ic-emo-ok"]').click();
   } else if (e.key === "Enter" && F && e.target.tagName === "INPUT") {
+    /* Enter saves the layer the field is in: in the second sheet (editing a loan entry, an emblem search) it never
+       saves, or records a payment on, the sheet underneath */
+    const two = !!e.target.closest("#sheet2");
     const map = {
       tx: "tx-save",
       tr: "tr-save",
@@ -639,7 +649,8 @@ document.addEventListener("keydown", e => {
       loan: "loan-pay",
       assetf: "asset-save",
     };
-    const b = map[F.kind] && document.querySelector('[data-act="' + map[F.kind] + '"]');
+    const act = two ? (F.kind === "loan" ? "loandraw-save" : "") : map[F.kind],
+      b = act && $((two ? "#sheet2" : "#sheet") + ' [data-act="' + act + '"]');
     if (b) {
       e.preventDefault();
       b.click();
@@ -670,6 +681,9 @@ function layerFocus() {
     if (on && !el.dataset.up) {
       el.dataset.up = "1";
       focusBack[id] = document.activeElement;
+      /* a layer opened later covers the message bar: its Undo goes with it, so a tap meant for the layer can't undo
+         the last change (a layer opened by that same change, like the list a saved entry came from, keeps it) */
+      if (undoFn && Date.now() - SNACK_AT > 300) hideSnack();
     } else if (!on && el.dataset.up) {
       delete el.dataset.up;
       back = focusBack[id] || back;

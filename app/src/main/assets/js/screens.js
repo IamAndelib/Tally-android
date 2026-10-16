@@ -772,7 +772,7 @@ function settingsView() {
       String(S.settings.week),
       [1, 0, 6].map(d => [
         String(d),
-        parseISO(addDays("2024-01-07", d)).toLocaleDateString(undefined, { weekday: "long" }),
+        parseISO(addDays("2024-01-07", d)).toLocaleDateString(DATE_LOC, { weekday: "long" }),
       ])
     ) +
     '<div class="lbl set">Time format</div>' +

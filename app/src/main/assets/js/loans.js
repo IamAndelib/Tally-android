@@ -14,17 +14,19 @@ function loanInfo(l) {
     .filter(t => t.type === "loan" && t.loan === l.id && t.principal)
     .sort((x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0));
   const pays = S.txns.filter(t => t.type === "loan" && t.loan === l.id && !t.principal);
-  const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
-    paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
-    left = rnd(Math.max(0, total - paid));
   const newest = draws[draws.length - 1],
     a = acc(newest ? newest.account : l.account),
-    cur = a ? a.currency : S.settings.cur;
+    cur = a ? a.currency : S.settings.cur,
+    /* what's left, none when it shows as nothing (a third of a cent, after paying the $33.33 shown of $33.333) */
+    owed = n => (shown(n, cur) > 0 ? rnd(n) : 0);
+  const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
+    paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
+    left = owed(total - paid);
   const order = draws.slice().sort((x, y) => (x.due ? (y.due ? x.due.localeCompare(y.due) : -1) : y.due ? 1 : 0)),
     rem = {};
   let pool = paid;
   order.forEach(t => {
-    const r = rnd(Math.max(0, t.amount - pool));
+    const r = owed(t.amount - pool);
     pool = rnd(Math.max(0, pool - t.amount));
     rem[t.id] = r;
   });
@@ -230,7 +232,7 @@ function loanForm(kind) {
   h += '<div class="lbl">' + (lend ? "From account" : "Into account") + "</div>" + accChips("f-acc", F.account);
   h +=
     '<div class="row" style="margin-top:4px"><div class="field"><span>Date</span>' +
-    dateField("f-date", entryDate(), { max: today() }) +
+    dateField("f-date", entryDate(), { max: today(), now: true }) +
     "</div>" +
     '<div class="field"><span>' +
     (lend ? "Payback day" : "Return by") +
@@ -324,7 +326,7 @@ function loanOpen(id, focusPay) {
       "</div>" +
       accChips("f-acc", F.account, null, payAccs) +
       '<div style="margin-top:12px">' +
-      dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today() }) +
+      dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today(), now: true }) +
       "</div>" +
       feeField(false, "", "Fee charged (" + i.cur + ") · not counted as spending", "Add a fee (sending, cash-out)") +
       '<div class="gap"></div><button class="btn" data-act="loan-pay">' +

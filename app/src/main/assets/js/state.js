@@ -35,11 +35,12 @@ function blank() {
 function migrate(o) {
   const s = blank();
   if (!o || typeof o !== "object") return s;
-  /* text from a field that may hold anything (an object would make String() throw); a number that fits as an amount;
+  /* text from a field that may hold anything (an object would make String() throw); a stored amount (one the app
+     worked out, like a balance fix, can be past what a field takes, amtOk(); doubles keep its 3 decimals well beyond);
      a real calendar date (2024-02-30 becomes 2024-03-01, as the app itself would read it) */
   const str = v => (typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : ""),
     own = (m, k) => typeof k === "string" && Object.prototype.hasOwnProperty.call(m, k),
-    okNum = v => (typeof v === "number" || typeof v === "string") && amtOk(+v) != null,
+    okNum = v => (typeof v === "number" || typeof v === "string") && Number.isFinite(+v) && Math.abs(+v) < 1e15,
     num = v => (okNum(v) ? +v : 0),
     /* a moment in ms (Date.now()), 0 when there is none; not an amount: today's are past a trillion */
     stamp = v => {
@@ -303,12 +304,23 @@ function loadState() {
     } catch (e2) {}
   }
 }
+/* a save that fails (the phone's storage for Tally is full or blocked) is said in a dialog, which the change's own
+   message can't cover, every time: the change is lost when Tally closes unless it's saved as a file */
 function save() {
   savedJson = JSON.stringify(S);
   try {
     localStorage.setItem(LS, savedJson);
   } catch (e) {
-    snack("Couldn't save on this phone");
+    setTimeout(() =>
+      askDialog(
+        "Couldn't save on this phone",
+        "Tally's storage on this phone is full or blocked, so this change is lost when Tally closes. Save a backup " +
+          "file now to keep everything.",
+        "Save backup",
+        () => saveBackup(),
+        { cancel: "Not now" }
+      )
+    );
   }
   mirrorSoon();
 }
@@ -394,7 +406,8 @@ function currencies() {
    save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. */
 /* msg may be a function, read after the change */
 function withUndo(msg, change, fx) {
-  const before = JSON.stringify({ txns: S.txns, loans: S.loans, accounts: S.accounts });
+  applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
+  const before = JSON.stringify({ txns: S.txns, loans: S.loans, accounts: S.accounts, assets: S.assets });
   change();
   FX = fx || {};
   commit();
@@ -404,6 +417,7 @@ function withUndo(msg, change, fx) {
     S.txns = o.txns;
     S.loans = o.loans;
     S.accounts = o.accounts;
+    S.assets = o.assets;
     commit();
     snack("Undone");
   });

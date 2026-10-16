@@ -82,9 +82,9 @@ function saveAsset() {
 function deleteAsset() {
   const id = F.id;
   closeSheet();
-  S.assets = S.assets.filter(x => x.id !== id);
-  commit();
-  snack("Asset deleted");
+  withUndo("Asset deleted", () => {
+    S.assets = S.assets.filter(x => x.id !== id);
+  });
 }
 const accChips = (act, sel, disabled, list) =>
   '<div class="chips">' +
@@ -140,6 +140,10 @@ function txSheet(id, type, catId, pre) {
     return;
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
+  if (id && !t) {
+    snack("That entry was deleted");
+    return;
+  }
   if (t && t.type === "transfer") {
     trSheet(id);
     return;
@@ -208,7 +212,7 @@ function txSheet(id, type, catId, pre) {
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : pre ? pre.note : "") +
     '" aria-label="Note"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today() }) +
+    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
@@ -268,15 +272,15 @@ function readVals() {
   return { amount: g("f-amt"), note: g("f-note"), date: g("f-date"), toAmount: g("f-toamt"), fee: g("f-fee") };
 }
 /* the optional fee of a transfer or a loan payment: a field behind "Add a fee" (its label can be set later) */
-const feeField = (shown, value, label, add) =>
+const feeField = (open, value, label, add) =>
   '<label class="field" id="fee-wrap"' +
-  (shown ? "" : " hidden") +
+  (open ? "" : " hidden") +
   '><span id="fee-lbl">' +
   esc(label) +
   '</span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
   esc(value) +
   '"></label><button class="btn text" id="fee-btn" data-act="add-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
-  (shown ? " hidden" : "") +
+  (open ? " hidden" : "") +
   ">" +
   ic("add") +
   esc(add) +
@@ -312,7 +316,7 @@ function trSheet(id, from) {
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : "") +
     '" aria-label="Note"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
+    dateField("f-date", t ? t.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tr-save">' +
@@ -445,7 +449,7 @@ function saveFix() {
     return;
   }
   const d = rnd(val - balances()[F.id]);
-  if (d === 0) {
+  if (shown(d, a.currency) === 0) {
     snack("Already matches");
     return;
   }
@@ -471,7 +475,7 @@ function fixPreview() {
   }
   const d = rnd(v - balances()[F.id]);
   el.textContent =
-    d === 0
+    shown(d, a.currency) === 0
       ? "Already matches."
       : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
 }
@@ -707,6 +711,11 @@ function saveTx() {
   }
   if (!v.date) {
     snack("Pick a date");
+    return;
+  }
+  if (F.id && !S.txns.some(x => x.id === F.id)) {
+    closeSheet();
+    snack("That entry was deleted");
     return;
   }
   const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() };

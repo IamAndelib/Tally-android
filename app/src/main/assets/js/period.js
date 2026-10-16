@@ -43,7 +43,7 @@ function periodLabel(p = V) {
   }
   const m = p.anchor.slice(0, 7);
   if (p === HP || m.slice(0, 4) === t.slice(0, 4)) return monthLabel(m, p === HP);
-  return parseISO(m + "-01").toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  return parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short", year: "numeric" });
 }
 function shiftPeriod(n, p = V) {
   if (p.period === "day") p.anchor = addDays(p.anchor, n);
@@ -67,13 +67,40 @@ function entryDate() {
   if (t >= s && t <= e) return V.period === "day" ? V.anchor : t;
   return V.period === "day" ? V.anchor : e;
 }
-/* coming back to the app on a new day: Home jumps to today (unless a sheet is open) */
-let lastDay = today();
+/* A new day, at midnight with the app open or on coming back to it. Home jumps to today (a range ending on the day
+   that ended moves to end today), History leaves that day's month for this one, and an open form's dates move too:
+   the latest day it allows, and a new entry's untouched "today". Widget and reminders follow; with a sheet open,
+   Home redraws once it closes. */
+let lastDay = today(),
+  dayPending = false;
 function catchUpToday() {
-  if (today() === lastDay) return;
-  lastDay = today();
-  V.anchor = today();
-  if (!$("#sheet").innerHTML) render();
+  const t = today(),
+    was = lastDay;
+  if (t === was) return;
+  lastDay = t;
+  if (V.period !== "range") V.anchor = t;
+  else if (V.re === was) {
+    V.rs = addDays(V.rs, Math.round((parseISO(t) - parseISO(was)) / 864e5));
+    V.re = t;
+  }
+  if (HP.period === "month" && HP.anchor.slice(0, 7) === was.slice(0, 7)) HP.anchor = t;
+  document.querySelectorAll(".datefld").forEach(el => {
+    if (el.dataset.max === was) el.dataset.max = t;
+    if (el.dataset.now) setDateField(el, t, true);
+  });
+  syncWidget();
+  syncReminders();
+  if ($("#sheet").innerHTML) dayPending = true;
+  else render();
+}
+/* at each local midnight (a second past it) while Tally is open */
+function armMidnight() {
+  const d = new Date();
+  d.setHours(24, 0, 1, 0);
+  setTimeout(() => {
+    catchUpToday();
+    armMidnight();
+  }, d - Date.now());
 }
 function periodTxns() {
   const [s, e] = range();
@@ -132,7 +159,7 @@ function pdRender() {
           '"' +
           (m > tm ? " disabled" : "") +
           ">" +
-          esc(new Date(PD.year, i, 1).toLocaleDateString(undefined, { month: "short" })) +
+          esc(new Date(PD.year, i, 1).toLocaleDateString(DATE_LOC, { month: "short" })) +
           "</button>"
         );
       }).join("") +

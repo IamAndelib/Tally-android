@@ -44,7 +44,8 @@ function exportCsv() {
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
    `auto` = {when, folder} for the auto backup file, whose dialog also offers "Choose another file". */
 function restoreText(t, auto) {
-  let o = null;
+  let o = null,
+    n = null;
   try {
     o = JSON.parse(t);
   } catch (e) {}
@@ -52,32 +53,43 @@ function restoreText(t, auto) {
     snack("That isn't a Tally backup file");
     return;
   }
+  try {
+    n = migrate(o);
+  } catch (e) {
+    snack("That backup couldn't be read");
+    return;
+  }
+  /* what will really be restored: an entry that can't be read (or on a missing account) is left out, and said so */
+  const count = (k, one, many) => n[k].length + " " + (n[k].length === 1 ? one : many),
+    lost = o.txns.length - n.txns.length + (o.accounts.length - n.accounts.length),
+    newer = typeof o.v === "number" && o.v > blank().v;
   askDialog(
     auto ? "Restore Tally backup.json?" : "Restore this backup?",
     "Replaces everything on this phone with " +
-      o.accounts.length +
-      " accounts and " +
-      o.txns.length +
-      " entries" +
+      count("accounts", "account", "accounts") +
+      " and " +
+      count("txns", "entry", "entries") +
       (auto && auto.when ? " · saved " + backupWhen(auto.when) : "") +
-      ".",
+      "." +
+      (lost > 0 ? " " + lost + (lost === 1 ? " item" : " items") + " in it can't be read and will be left out." : "") +
+      (newer ? " It was made by a newer version of Tally: update Tally first so nothing is left out." : ""),
     "Restore",
     () => {
-      let n;
-      try {
-        n = migrate(o);
-      } catch (e) {
-        snack("That backup couldn't be read");
-        return;
-      }
-      /* this phone's own set-up stays: its auto backup (the folder lives in the shell) */
-      const backup = S.settings.backup;
+      /* this phone's own set-up stays: its auto backup (the folder lives in the shell); Undo brings back what was here */
+      const old = S,
+        backup = S.settings.backup;
       S = n;
       S.settings.backup = backup;
       commit();
       syncBackup();
       applyTheme();
-      snack("Backup restored");
+      snack("Backup restored", () => {
+        S = old;
+        commit();
+        syncBackup();
+        applyTheme();
+        snack("Undone");
+      });
     },
     auto ? { alt: ["Choose another file", pickRestoreFile] } : undefined
   );

@@ -658,7 +658,7 @@ const stub = () => {
   const dlg = await page.textContent("#pop");
   ok(
     dlg.includes("Restore Tally backup.json?") &&
-      dlg.includes("2 accounts and 1 entries") &&
+      dlg.includes("2 accounts and 1 entry") &&
       dlg.includes("saved Today") &&
       dlg.includes("Choose another file"),
     "Restore offers the auto backup with its counts and date: " + dlg

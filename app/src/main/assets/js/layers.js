@@ -38,7 +38,7 @@ function calGrid(m, o) {
       { length: 7 },
       (_, i) =>
         "<span>" +
-        esc(parseISO(addDays("2024-01-07", w + i)).toLocaleDateString(undefined, { weekday: "narrow" })) +
+        esc(parseISO(addDays("2024-01-07", w + i)).toLocaleDateString(DATE_LOC, { weekday: "narrow" })) +
         "</span>"
     ).join("") +
     "</div>";
@@ -66,7 +66,7 @@ function calGrid(m, o) {
         /* read out as the whole date, with today and the chosen day marked */
         '" aria-label="' +
         esc(
-          parseISO(d).toLocaleDateString(undefined, {
+          parseISO(d).toLocaleDateString(DATE_LOC, {
             weekday: "long",
             day: "numeric",
             month: "long",
@@ -134,8 +134,12 @@ const miniDialog = (label, body, okAct, okText) => {
     esc(okText) +
     "</button></div></div></div>";
 };
+/* a date button; o.now: a new entry's "today", which moves to the new day at midnight until a date is picked
+   (catchUpToday). Screen readers hear its label and the date. */
 function dateField(id, val, o) {
   o = o || {};
+  const shownAs = val ? shortDay(val) : o.none || "No date",
+    label = o.label || "Date";
   return (
     '<button class="fieldbtn datefld" id="' +
     id +
@@ -145,22 +149,26 @@ function dateField(id, val, o) {
     (o.min ? ' data-min="' + o.min + '"' : "") +
     (o.max ? ' data-max="' + o.max + '"' : "") +
     (o.opt ? ' data-opt="1"' : "") +
+    (o.now && val === today() ? ' data-now="1"' : "") +
     ' data-none="' +
     esc(o.none || "No date") +
+    '" data-label="' +
+    esc(label) +
     '" aria-label="' +
-    esc(o.label || "Date") +
-    '"' +
-    (o.style ? ' style="' + o.style + '"' : "") +
-    "><span>" +
-    esc(val ? shortDay(val) : o.none || "No date") +
+    esc(label + ": " + shownAs) +
+    '"><span>' +
+    esc(shownAs) +
     "</span>" +
     ic("event") +
     "</button>"
   );
 }
-function setDateField(el, v) {
+function setDateField(el, v, keepNow) {
+  const shownAs = v ? shortDay(v) : el.dataset.none;
   el.dataset.v = v || "";
-  el.firstChild.textContent = v ? shortDay(v) : el.dataset.none;
+  el.firstChild.textContent = shownAs;
+  el.setAttribute("aria-label", el.dataset.label + ": " + shownAs);
+  if (!keepNow) delete el.dataset.now;
 }
 let DP = null;
 function datePicker(el) {
@@ -404,6 +412,10 @@ function closeSheet() {
   closeSheet2();
   $("#sheet").innerHTML = "";
   F = null;
+  if (dayPending) {
+    dayPending = false; // the day changed under the sheet: Home catches up now
+    setTimeout(render, 0);
+  }
   /* came from another sheet (the entries list, a loan): go back to it (after a save/delete has been applied), not to
      Home */
   if (BACKTO) {

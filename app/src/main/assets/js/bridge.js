@@ -207,6 +207,7 @@ function applyNativeActions() {
     }
   });
   if (changed) {
+    dropUndo(); // its snapshot is from before: Undo would take the new due date back
     save();
     render();
   }
@@ -414,10 +415,11 @@ function onFileSaved(ok) {
     save();
   }
   SAVING_BACKUP = false;
-  snack(ok ? "Saved" : "Not saved");
   const then = AFTER_SAVE;
   AFTER_SAVE = null;
-  if (then) then();
+  /* what waited on the file (Delete all data) goes on only once it landed */
+  snack(ok ? "Saved" : then ? "Not saved, so nothing was deleted" : "Not saved");
+  if (then && ok) then();
 }
 /* Auto backup is off but there's something worth keeping (3+ entries): now and then (at start or on return, at most
    once a week, never over another dialog or sheet) suggest turning it on. "Turn on" is the Settings switch. */

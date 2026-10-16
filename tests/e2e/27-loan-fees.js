@@ -119,7 +119,7 @@ const ok = (c, m) => {
     (await page.textContent("#fee-lbl")).includes("not counted as spending") && (await page.isVisible("#f-fee")),
     "the fee field: " + (await page.textContent("#fee-lbl"))
   );
-  await page.fill("#f-fee", "abc");
+  await page.fill("#f-fee", "12+");
   await click('#sheet [data-act="loan-pay"]');
   ok(
     (await page.textContent("#snack")).includes("isn't a number") && (await state()).txns.length === 3,

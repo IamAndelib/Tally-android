@@ -47,7 +47,7 @@ function smBuckets() {
       out.push({
         s: d,
         e: d,
-        x: parseISO(d).toLocaleDateString(undefined, { weekday: "short" }),
+        x: parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" }),
         full: d === t ? "Today" : d === addDays(t, -1) ? "Yesterday" : dayLabel(d),
       });
     }
@@ -58,8 +58,8 @@ function smBuckets() {
       out.push({
         s,
         e: addDays(s, 6),
-        x: parseISO(s).toLocaleDateString(undefined, { day: "numeric", month: "short" }),
-        full: "Week of " + parseISO(s).toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+        x: parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
+        full: "Week of " + parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
       });
     }
   } else {
@@ -70,7 +70,7 @@ function smBuckets() {
       out.push({
         s: m + "-01",
         e: m + "-" + pad(new Date(y, mo, 0).getDate()),
-        x: parseISO(m + "-01").toLocaleDateString(undefined, { month: "short" }),
+        x: parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }),
         full: monthLabel(m),
       });
     }

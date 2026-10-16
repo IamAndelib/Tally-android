@@ -9,6 +9,7 @@ readSys();
 applyTheme();
 applyNativeActions();
 render();
+armMidnight();
 syncReminders();
 syncWidget();
 syncBackup();
