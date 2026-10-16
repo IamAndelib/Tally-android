@@ -5,9 +5,16 @@ on:
   push:
     branches-ignore:
       - builds
+      - previews
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      # for whoever can't download GitHub's release files (an automated session): the preview, encrypted to this key
+      preview_key:
+        description: "Public key (PEM, base64 on one line): also put the preview, encrypted to it, on the previews branch"
+        required: false
+        default: ""
 
 # read-only by default; only the jobs that publish (the builds branch, a release) may write
 permissions:
@@ -263,6 +270,9 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
             --jq '.[] | select(.draft and (.tag_name | startswith("preview-"))) | .id' |
             while read -r id; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
+          if [ "$MODE" = release ]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/previews" 2> /dev/null || true
+          fi
       - name: Publish the GitHub Release
         if: steps.version.outputs.publish == 'true'
         env:
@@ -300,3 +310,29 @@ jobs:
           } >> notes.md
           # creates the tag at this commit when it doesn't exist yet
           gh release create "$TAG" "$out" "$out.sha256" "$aab" --target "$GITHUB_SHA" --title "Tally $VERSION" --notes-file notes.md
+      # the preview for whoever ran this with preview_key (see the trigger above): encrypted to that key with a one-off
+      # AES key, so nothing on the public previews branch can be installed by anyone else; releasing deletes the branch
+      - name: Deliver the preview, encrypted
+        if: steps.version.outputs.publish == 'true' && env.MODE == 'preview' && inputs.preview_key != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_KEY: ${{ inputs.preview_key }}
+        run: |
+          apk="Tally-v$EXPECT_NAME.apk"
+          to="$RUNNER_TEMP/to.pem" key="$RUNNER_TEMP/aes.key" dir="$RUNNER_TEMP/previews"
+          printf '%s' "$PREVIEW_KEY" | base64 -d > "$to"
+          openssl pkey -pubin -in "$to" -noout || { echo "::error::preview_key isn't a public key"; exit 1; }
+          rm -rf "$dir" && mkdir "$dir"
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass "file:$key" -in "$apk" -out "$dir/Tally-preview.apk.enc"
+          openssl pkeyutl -encrypt -pubin -inkey "$to" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+            -in "$key" -out "$dir/Tally-preview.key.enc"
+          rm -f "$key"
+          { echo "$EXPECT_NAME"; sha256sum "$apk"; echo "${GITHUB_SHA::7}"; } > "$dir/Tally-preview.txt"
+          cd "$dir"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Preview $EXPECT_NAME (encrypted)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:previews

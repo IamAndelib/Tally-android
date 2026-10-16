@@ -22,8 +22,9 @@ lives in it, and the code comments explain the rest: keep facts in one place and
 - **Releases only after the maintainer has confirmed the test build on a phone.** After every push, wait for CI,
   then send the test APK: `git fetch origin builds && git show origin/builds:Tally-<branch>.apk > Tally-<branch>.apk`
   (it installs as "Tally Dev", next to the release, with separate data). A release PR's branch also gets a preview
-  signed with the release key (the draft release `preview-X.Y.Z`), for trying the update over the installed release;
-  this environment can't download it, so the maintainer takes it from the Releases page.
+  signed with the release key (the draft release `preview-X.Y.Z`), for trying the update over the installed release.
+  This environment can't download release files; to send the preview here, make an RSA key pair in the scratchpad, run
+  `build-apk.yml` on the branch with `preview_key` (the public key, base64), then fetch `origin/previews` and decrypt.
 
 ## Quality bar
 
