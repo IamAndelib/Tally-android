@@ -113,7 +113,7 @@ function migrate(o) {
   if (s.settings.dragTip !== true) delete s.settings.dragTip;
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(num(s.settings.hapticLevel)) || 3));
-  if (!["out", "in", "both", "none"].includes(s.settings.donut)) s.settings.donut = "both";
+  if (!DONUT_MODES.includes(s.settings.donut)) s.settings.donut = "both";
   ["lastAcc", "lastAccIn"].forEach(k => {
     if (s.settings[k] != null) s.settings[k] = sid(s.settings[k]);
   });
@@ -390,6 +390,17 @@ const activeAccounts = () => S.accounts.filter(a => !a.archived);
    Its stored category ("fees") is only for older versions: Tally never files an entry under a category by itself,
    since a built-in one keeps its id when renamed into anything. */
 const isSpend = t => t.type === "expense" && !t.feeOf;
+/* whether entry t is in currency cur (its account's) */
+const inCur = (t, cur) => (acc(t.account) || {}).currency === cur;
+/* what was spent on day d in currency cur, and the active accounts' total in it (b: balances()) */
+const spentOn = (d, cur) =>
+  rnd(S.txns.filter(t => t.date === d && isSpend(t) && inCur(t, cur)).reduce((q, t) => q + t.amount, 0));
+const balanceIn = (cur, b) =>
+  rnd(
+    activeAccounts()
+      .filter(a => a.currency === cur)
+      .reduce((q, a) => q + b[a.id], 0)
+  );
 const outCats = () => S.cats.filter(c => c.kind === "out" && !c.hidden);
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
 /* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment

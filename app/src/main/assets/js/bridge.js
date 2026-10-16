@@ -15,13 +15,7 @@ function syncWidget() {
   if (act.length) {
     const cur = cs.includes(S.settings.cur) ? S.settings.cur : cs[0],
       b = balances();
-    const total = rnd(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
-    const spent = rnd(
-      S.txns
-        .filter(x => isSpend(x) && x.date === t && (acc(x.account) || {}).currency === cur)
-        .reduce((q, x) => q + x.amount, 0)
-    );
-    o = { date: t, balance: money(total, cur), spent: money(spent, cur), zero: money(0, cur) };
+    o = { date: t, balance: money(balanceIn(cur, b), cur), spent: money(spentOn(t, cur), cur), zero: money(0, cur) };
   }
   const j = JSON.stringify(o);
   if (j === lastWidget) return;

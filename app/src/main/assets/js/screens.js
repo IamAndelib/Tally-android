@@ -188,11 +188,7 @@ function homeView() {
   const top = h;
   h = "";
 
-  const inCur = t => {
-    const a = acc(t.account);
-    return a && a.currency === cur;
-  };
-  const pt = periodTxns().filter(inCur);
+  const pt = periodTxns().filter(t => inCur(t, cur));
   let spent = 0,
     got = 0;
   const by = {};
@@ -206,7 +202,7 @@ function homeView() {
   got = rnd(got);
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
-  const total = rnd(act.filter(a => a.currency === cur).reduce((s, a) => s + b[a.id], 0));
+  const total = balanceIn(cur, b);
   const n = periodTxns().length;
   if (!(V.period === "day" && V.anchor === today()))
     h +=
@@ -258,11 +254,7 @@ function checkCard(b, cur) {
   const hr = new Date().getHours();
   const hello = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
   const y = addDays(today(), -1);
-  const ySpent = rnd(
-    S.txns
-      .filter(t => t.date === y && isSpend(t) && acc(t.account) && acc(t.account).currency === cur)
-      .reduce((s, t) => s + t.amount, 0)
-  );
+  const ySpent = spentOn(y, cur);
   return (
     '<section class="check"><h2>' +
     hello +
@@ -379,29 +371,7 @@ function assetsView() {
     dropBox("arch", "Drop here to archive") +
     (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
   const left = h; // two panes: net worth and accounts | what you're owed and other assets
-  h = "";
-  const lends = S.loans.filter(l => l.kind === "lend"),
-    open = lends.filter(l => loanInfo(l).open),
-    done = lends.filter(l => !loanInfo(l).open);
-  h +=
-    '<div class="sec">Owed to you</div>' +
-    (open.length
-      ? zoneList("lend-open", open.map(l => loanRow(l)).join(""))
-      : '<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>') +
-    dropBox("lend-open", "Drop here to make it active again", "reset") +
-    '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">' +
-    ic("add") +
-    "Lend money</button>";
-  h += dropBox("lend-done", "Drop here to mark it cleared", "check");
-  if (done.length) {
-    h +=
-      '<button class="btn text" data-act="toggle-cleared">' +
-      (V.showCleared ? "Hide" : "Show") +
-      " cleared (" +
-      done.length +
-      ")</button>";
-    if (V.showCleared) h += zoneList("lend-done", done.map(l => loanRow(l)).join("")) + dragTip();
-  }
+  h = loanSection("lend", "Owed to you", "Money you lend shows here until it comes back.", "Lend money");
   h +=
     '<div class="sec">Other assets</div>' +
     (S.assets.length
@@ -427,12 +397,42 @@ function assetsView() {
     "Add asset</button>";
   return tabBar("Assets") + panes(left, h);
 }
+/* one kind of loan on Assets (lend) or Liabilities (borrow): the open ones (or a hint) and a button for a new one, then
+   the cleared ones behind "Show cleared"; open and cleared are drop zones, to drag a loan between them */
+function loanSection(kind, title, none, add) {
+  const mine = S.loans.filter(l => l.kind === kind),
+    open = mine.filter(l => loanInfo(l).open),
+    done = mine.filter(l => !loanInfo(l).open);
+  let h =
+    '<div class="sec">' +
+    title +
+    "</div>" +
+    (open.length
+      ? zoneList(kind + "-open", open.map(l => loanRow(l)).join(""))
+      : '<p class="hint" style="margin:0 4px">' + none + "</p>") +
+    dropBox(kind + "-open", "Drop here to make it active again", "reset") +
+    '<button class="btn text" data-act="loan-new" data-v="' +
+    kind +
+    '" style="margin-top:4px">' +
+    ic("add") +
+    add +
+    "</button>" +
+    dropBox(kind + "-done", "Drop here to mark it cleared", "check");
+  if (done.length) {
+    h +=
+      '<button class="btn text" data-act="toggle-cleared">' +
+      (V.showCleared ? "Hide" : "Show") +
+      " cleared (" +
+      done.length +
+      ")</button>";
+    if (V.showCleared) h += zoneList(kind + "-done", done.map(l => loanRow(l)).join("")) + dragTip();
+  }
+  return h;
+}
 function liabsView() {
   const b = balances();
   let h = "";
-  const borrows = S.loans.filter(l => l.kind === "borrow"),
-    open = borrows.filter(l => loanInfo(l).open),
-    done = borrows.filter(l => !loanInfo(l).open);
+  const open = S.loans.filter(l => l.kind === "borrow" && loanInfo(l).open);
   const cards = activeAccounts().filter(a => a.type === "card");
   const owed = perCur(add => {
     open.forEach(l => {
@@ -444,25 +444,7 @@ function liabsView() {
     });
   });
   h += '<div class="sumcard owe"><div class="t">You owe</div>' + curLines(owed) + "</div>";
-  h +=
-    '<div class="sec">Loans</div>' +
-    (open.length
-      ? zoneList("borrow-open", open.map(l => loanRow(l)).join(""))
-      : '<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>') +
-    dropBox("borrow-open", "Drop here to make it active again", "reset") +
-    '<button class="btn text" data-act="loan-new" data-v="borrow" style="margin-top:4px">' +
-    ic("add") +
-    "Record a loan</button>";
-  h += dropBox("borrow-done", "Drop here to mark it cleared", "check");
-  if (done.length) {
-    h +=
-      '<button class="btn text" data-act="toggle-cleared">' +
-      (V.showCleared ? "Hide" : "Show") +
-      " cleared (" +
-      done.length +
-      ")</button>";
-    if (V.showCleared) h += zoneList("borrow-done", done.map(l => loanRow(l)).join("")) + dragTip();
-  }
+  h += loanSection("borrow", "Loans", "Money you borrow shows here until it’s paid back.", "Record a loan");
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length
     ? '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>"
@@ -792,10 +774,7 @@ function settingsView() {
     seg(
       "week",
       String(S.settings.week),
-      [1, 0, 6].map(d => [
-        String(d),
-        parseISO(addDays("2024-01-07", d)).toLocaleDateString(DATE_LOC, { weekday: "long" }),
-      ])
+      [1, 0, 6].map(d => [String(d), weekdayName(d, "long")])
     ) +
     '<div class="lbl set">Time format</div>' +
     seg("clock", S.settings.clock, [

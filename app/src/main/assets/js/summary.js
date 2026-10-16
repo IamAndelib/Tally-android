@@ -67,26 +67,21 @@ function smBuckets() {
   } else {
     const m0 = e.slice(0, 7);
     for (let i = 6; i >= 0; i--) {
-      const m = shiftMonth(m0, -i),
-        [y, mo] = m.split("-").map(Number);
+      const m = shiftMonth(m0, -i);
       out.push({
         s: m + "-01",
-        e: m + "-" + pad(new Date(y, mo, 0).getDate()),
+        e: monthEnd(m),
         x: parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }),
         full: monthLabel(m),
       });
     }
   }
-  const inCur = x => {
-    const a = acc(x.account);
-    return a && a.currency === SM.cur;
-  };
-  const sp = S.txns.filter(x => isSpend(x) && inCur(x));
+  const sp = S.txns.filter(x => isSpend(x) && inCur(x, SM.cur));
   out.forEach(b => {
     b.list = sp.filter(x => x.date >= b.s && x.date <= b.e);
     b.v = rnd(b.list.reduce((q, x) => q + x.amount, 0));
     const last = b.e < t ? b.e : t;
-    b.days = last < b.s ? 0 : Math.round((parseISO(last) - parseISO(b.s)) / 864e5) + 1;
+    b.days = last < b.s ? 0 : daysBetween(b.s, last) + 1;
   });
   return out;
 }
@@ -226,7 +221,7 @@ function drawSm() {
   /* details for the chosen bar */
   const unit = { d: "the day before", w: "last week", m: "last month" }[SM.mode];
   /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
-  const len = x => Math.round((parseISO(x.e) - parseISO(x.s)) / 864e5) + 1,
+  const len = x => daysBetween(x.s, x.e) + 1,
     part = SM.mode !== "d" && b.days < len(b);
   let cmp = "";
   if (prev && prev.v > 0 && b.days > 0) {
@@ -285,11 +280,7 @@ function smNav(d) {
   let e = SM.end;
   if (SM.mode === "d") e = addDays(e, 7 * d);
   else if (SM.mode === "w") e = addDays(e, 56 * d);
-  else {
-    const m = shiftMonth(e.slice(0, 7), d),
-      [y, mo] = m.split("-").map(Number);
-    e = m + "-" + pad(new Date(y, mo, 0).getDate());
-  }
+  else e = monthEnd(shiftMonth(e.slice(0, 7), d));
   SM.end = e > t ? t : e;
   SM.sel = null;
   smRender();

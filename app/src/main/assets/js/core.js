@@ -118,6 +118,13 @@ const addDays = (s, n) => {
   d.setDate(d.getDate() + n);
   return iso(d);
 };
+/* whole days from date a to date b (rounded: a daylight-saving day is still one) */
+const daysBetween = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 864e5);
+/* how many days month m ("2026-02") has, and its last date */
+const monthDays = m => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+const monthEnd = m => m + "-" + pad(monthDays(m));
+/* a weekday's name in the phone's language, 0 = Sunday (2024-01-07 was one); style "narrow" (M) or "long" (Monday) */
+const weekdayName = (d, style) => parseISO(addDays("2024-01-07", d)).toLocaleDateString(DATE_LOC, { weekday: style });
 /* amounts are kept to 3 decimals, the most any currency uses (dinars); "+ 0" turns −0 into 0 */
 const rnd = n => Math.round(n * 1000) / 1000 + 0;
 /* whether the phone has a font for every non-ASCII character of s. A missing glyph ("tofu") draws exactly like a code
@@ -263,7 +270,7 @@ const NUMSEP = (() => {
   const get = t => (p.find(x => x.type === t) || {}).value;
   const dec = get("decimal") || ".",
     grp = get("group") || "";
-  return { dec, grp, intFmt: new Intl.NumberFormat("en-US-u-nu-latn", { useGrouping: false }) };
+  return { dec, grp };
 })();
 /* a group separator as the phone writes it, or one typed like it (any space for a space, ' for ’) */
 const isGrp = ch =>

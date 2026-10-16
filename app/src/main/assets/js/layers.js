@@ -8,11 +8,10 @@
 /* month grid shared by the period dialog and the date picker */
 function calGrid(m, o) {
   const t = today(),
-    [y, mo] = m.split("-").map(Number),
     first = m + "-01";
   const w = S.settings.week,
     off = (parseISO(first).getDay() - w + 7) % 7,
-    rows = Math.ceil((off + new Date(y, mo, 0).getDate()) / 7);
+    rows = Math.ceil((off + monthDays(m)) / 7);
   const has = new Set(S.txns.map(x => x.date)),
     minM = o.min ? o.min.slice(0, 7) : "",
     maxM = o.max ? o.max.slice(0, 7) : "";
@@ -34,13 +33,7 @@ function calGrid(m, o) {
     "</button></div>";
   h +=
     '<div class="cal"><div class="cal-wd">' +
-    Array.from(
-      { length: 7 },
-      (_, i) =>
-        "<span>" +
-        esc(parseISO(addDays("2024-01-07", w + i)).toLocaleDateString(DATE_LOC, { weekday: "narrow" })) +
-        "</span>"
-    ).join("") +
+    Array.from({ length: 7 }, (_, i) => "<span>" + esc(weekdayName(w + i, "narrow")) + "</span>").join("") +
     "</div>";
   let d = addDays(first, -off);
   for (let r = 0; r < rows; r++) {

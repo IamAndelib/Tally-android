@@ -36,12 +36,12 @@ function nearestInSlice(a, start, w) {
   return circDist(a, start + e) < circDist(a, start + w - e) ? start + e : start + w - e;
 }
 let RE = null; /* the Settings preview's layout + order while it is on screen */
-/* what the middle of the Home donut shows (settings.donut); tapping the Settings donut steps through them in order */
+/* what the middle of the Home donut shows (settings.donut, always one of these: migrate()); tapping the Settings
+   donut steps through them in order */
 const DONUT_MODES = ["out", "in", "both", "none"];
 const DONUT_LABEL = { out: "Spending", in: "Income", both: "Spending + income", none: "No stats" };
 function cycleDonut() {
-  const i = DONUT_MODES.indexOf(S.settings.donut);
-  S.settings.donut = DONUT_MODES[(i < 0 ? DONUT_MODES.indexOf("both") : i) + 1] || DONUT_MODES[0];
+  S.settings.donut = DONUT_MODES[(DONUT_MODES.indexOf(S.settings.donut) + 1) % DONUT_MODES.length];
   save();
   render();
 }
@@ -253,7 +253,7 @@ function ringHTML(cats, o) {
   let center;
   if (home) {
     const cs = currencies(),
-      mode = DONUT_MODES.includes(S.settings.donut) ? S.settings.donut : "both";
+      mode = S.settings.donut;
     /* what the middle shows (Settings: tap the donut): spent, received, both, or nothing; the ring itself never changes */
     const big = (n, cls, sign) =>
       '<div class="s' +
@@ -299,7 +299,7 @@ function ringHTML(cats, o) {
       '">' +
       donut +
       '<div class="dcenter"><span class="dhole"></span><div class="dmode">' +
-      DONUT_LABEL[DONUT_MODES.includes(S.settings.donut) ? S.settings.donut : "both"] +
+      DONUT_LABEL[S.settings.donut] +
       '</div><div class="hint">Tap to change</div></div></button>';
   }
   return (

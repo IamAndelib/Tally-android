@@ -28,9 +28,8 @@ function range(p = V) {
   const a = p.anchor;
   if (p.period === "day") return [a, a];
   if (p.period === "range") return [p.rs, p.re];
-  const m = a.slice(0, 7),
-    [y, mo] = m.split("-").map(Number);
-  return [m + "-01", m + "-" + pad(new Date(y, mo, 0).getDate())];
+  const m = a.slice(0, 7);
+  return [m + "-01", monthEnd(m)];
 }
 function periodLabel(p = V) {
   const t = today(),
@@ -44,7 +43,7 @@ function periodLabel(p = V) {
 function shiftPeriod(n, p = V) {
   if (p.period === "day") p.anchor = addDays(p.anchor, n);
   else if (p.period === "range") {
-    const len = Math.round((parseISO(p.re) - parseISO(p.rs)) / 864e5) + 1;
+    const len = daysBetween(p.rs, p.re) + 1;
     p.rs = addDays(p.rs, n * len);
     p.re = addDays(p.re, n * len);
     if (p.re > today()) {
@@ -76,7 +75,7 @@ function catchUpToday() {
   lastDay = t;
   if (V.period !== "range") V.anchor = t;
   else if (V.re === was) {
-    V.rs = addDays(V.rs, Math.round((parseISO(t) - parseISO(was)) / 864e5));
+    V.rs = addDays(V.rs, daysBetween(was, t));
     V.re = t;
   }
   if (HP.period === "month" && HP.anchor.slice(0, 7) === was.slice(0, 7)) HP.anchor = t;

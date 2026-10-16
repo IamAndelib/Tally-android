@@ -79,6 +79,11 @@ function stLabel(l, st) {
   }[st];
 }
 const loanWho = l => l.person || "Someone";
+/* where a payment goes by default: the loan's account, or (archived) the first active account in its currency */
+const payAccount = (l, i) => {
+  const a = acc(l.account);
+  return a && !a.archived ? l.account : (activeAccounts().find(x => x.currency === i.cur) || {}).id;
+};
 /* after a draw is added, edited or deleted: the loan's account is its newest draw's, its date the oldest draw's */
 function relinkLoan(id) {
   const l = loan(id),
@@ -266,10 +271,7 @@ function loanOpen(id, focusPay) {
   F = {
     kind: "loan",
     id,
-    account:
-      acc(l.account) && !acc(l.account).archived
-        ? l.account
-        : (activeAccounts().find(a => a.currency === i.cur) || {}).id,
+    account: payAccount(l, i),
   };
   const heroLine =
     i.draws.length <= 1
@@ -771,8 +773,7 @@ function clearLoan(id) {
     lend = l.kind === "lend",
     who = loanWho(l);
   if (!i.open) return;
-  const la = acc(l.account),
-    account = la && !la.archived ? l.account : (activeAccounts().find(a => a.currency === i.cur) || {}).id,
+  const account = payAccount(l, i),
     pid = newId(),
     ts = Date.now();
   const paid = () => {

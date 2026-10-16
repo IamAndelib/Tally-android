@@ -432,7 +432,9 @@ document.addEventListener(
     else pressOff(true);
     if (e.touches.length === 1) pressStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
     else {
+      /* a second finger (a pinch) ends every swipe */
       sw = null;
+      smSw = null;
       hsw = null;
       if (LP) {
         clearTimeout(LP.timer);
