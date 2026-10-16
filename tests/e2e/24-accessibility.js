@@ -1,6 +1,6 @@
 // Accessibility: focus moves into sheets and dialogs and back, the page behind them is hidden from screen readers,
 // expandable rows, the time wheel, the ring's currency switch and the loan bar say what they are, calendar days are read
-// as dates, percentages and swatches are readable and large enough to tap.
+// as dates, percentages and swatches are readable, and every control is 48px to tap.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("24-accessibility");
 let fails = 0;
@@ -201,7 +201,7 @@ const ok = (c, m) => {
   await page.evaluate(() => catForm("food"));
   await settle();
   const dots = await page.$$eval("#f-dots .dot[data-act='f-col']", ds =>
-    ds.map(d => [d.getAttribute("aria-label"), d.getBoundingClientRect().width, d.getBoundingClientRect().height])
+    ds.map(d => [d.getAttribute("aria-label"), d.offsetWidth, d.offsetHeight])
   );
   ok(
     dots.every(d => !/#/.test(d[0]) && d[1] >= 48 && d[2] >= 48),
@@ -219,6 +219,103 @@ const ok = (c, m) => {
   await settle();
   const sw = await page.$$eval(".sw", s => s.map(x => x.getBoundingClientRect().height));
   ok(sw.length > 0 && sw.every(h => h >= 48), "switches are 48px tall: " + sw);
+
+  // ---- 7. every control is 48px to tap, on the smallest phone width, on each screen and in each sheet and picker;
+  // calendar days are 48px tall in the columns a 360px dialog has (43px), chart bars far taller than wide
+  const small = await browser.newContext({ viewport: { width: 360, height: 740 }, locale: "en-US" });
+  await small.addInitScript(() => {
+    window.Android = {
+      setReminders() {},
+      takeActions: () => "[]",
+      getColors: () => null,
+      setBars() {},
+      requestNotifications() {},
+    };
+  });
+  const sp = await small.newPage();
+  sp.on("pageerror", e => errors.push(e.message));
+  await sp.goto(appUrl);
+  await sp.evaluate(() => {
+    const t = today();
+    localStorage.setItem(
+      "tally:v1",
+      JSON.stringify({
+        v: 6,
+        settings: { cur: "USD", clock: "24", lastCheck: t, dragTip: true },
+        accounts: [
+          { id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1000 },
+          { id: "b", name: "Cash", type: "cash", currency: "USD", opening: 50 },
+        ],
+        txns: [
+          { id: "e", ts: 1, date: t, type: "expense", amount: 5, account: "a", cat: "food", note: "" },
+          {
+            id: "d",
+            ts: 2,
+            date: t,
+            type: "loan",
+            amount: 9,
+            account: "a",
+            note: "",
+            dir: "out",
+            loan: "L",
+            principal: true,
+          },
+        ],
+        loans: [{ id: "L", kind: "lend", person: "Ann", account: "a", date: t, status: "open" }],
+        assets: [],
+      })
+    );
+  });
+  await sp.reload();
+  await sp.waitForTimeout(200);
+  const tooSmall = () =>
+    sp.evaluate(() => {
+      const top = ["#pop", "#sheet2", "#sheet"].map(s => document.querySelector(s)).find(e => e && e.innerHTML.trim());
+      const out = [];
+      (top || document.querySelector("#app"))
+        .querySelectorAll("button, a, [data-act], [role=button], [role=tab], [role=switch]")
+        .forEach(e => {
+          /* the layout size: a sheet or dialog still opening is drawn a little smaller (its animation's scale) */
+          const b = { width: e.offsetWidth, height: e.offsetHeight };
+          if (!b.width || !b.height || getComputedStyle(e).visibility === "hidden") return;
+          if (e.tagName === "A" && b.height < 24) return; // a link inside a sentence
+          if (e.classList.contains("dd") ? b.height >= 48 && b.width >= 42 : b.width >= 48 && b.height >= 48) return;
+          if (e.classList.contains("smcol") && b.width >= 40 && b.height >= 96) return;
+          out.push(
+            (e.dataset.act || e.className || e.tagName) + " " + Math.round(b.width) + "x" + Math.round(b.height)
+          );
+        });
+      return [...new Set(out)];
+    });
+  const views = [
+    ["Home", () => {}],
+    ["History", () => ((V.screen = "history"), render())],
+    ["Assets", () => ((V.screen = "assets"), render())],
+    ["Liabilities", () => ((V.screen = "liabs"), render())],
+    ["Settings", () => ((V.screen = "settings"), render())],
+    ["an expense", () => ((V.screen = "home"), render(), txSheet(null, "expense", "food"))],
+    ["a transfer", () => trSheet()],
+    ["a balance fix", () => adjSheet()],
+    ["an account", () => accOpen("a")],
+    ["a loan", () => loanOpen("L")],
+    ["a new loan", () => loanForm("borrow")],
+    ["a category", () => catForm("food")],
+    ["the icons", () => iconPicker("food", "#2a78d6", () => {})],
+    ["the currencies", () => curPicker("USD", () => {}, "Currency")],
+    ["the time wheel", () => timePicker("Time", "21:00", () => {})],
+    ["the summary", () => summarySheet()],
+    ["a date picker", () => (txSheet(null, "expense", "food"), $("#sheet .datefld").click())],
+    ["the period picker", () => ((V.screen = "home"), render(), $(".plabel").click())],
+  ];
+  for (const [name, open] of views) {
+    await sp.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+    await sp.waitForTimeout(150);
+    await sp.evaluate(open);
+    await sp.waitForTimeout(350);
+    const bad = await tooSmall();
+    ok(bad.length === 0, "48px to tap: " + name + (bad.length ? " " + bad.join(", ") : ""));
+  }
+  await small.close();
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

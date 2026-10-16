@@ -199,10 +199,10 @@ a {
   min-width: 0;
 }
 .plabel {
-  height: 40px;
+  min-height: 48px;
   min-width: 0;
   padding: 0 12px 0 16px;
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 1.25rem;
   font-weight: 600;
   display: flex;
@@ -652,7 +652,7 @@ body.hist #app {
   margin-top: 8px;
 }
 .chip {
-  min-height: 40px;
+  min-height: 48px;
   max-width: 100%;
   padding: 0 14px;
   border-radius: 10px;
@@ -952,10 +952,10 @@ input:focus-visible {
   margin-bottom: -1px;
 }
 .amtwrap .calcbtn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex: none;
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--primary-container);
   color: var(--on-primary-container);
 }
@@ -1163,6 +1163,7 @@ input {
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 48px;
   padding: 12px 14px;
   text-align: left;
   border-radius: 0;
@@ -1343,12 +1344,12 @@ input {
 .seg {
   display: flex;
   border: 1px solid var(--outline);
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
 }
 .seg button {
   flex: 1;
-  height: 40px;
+  min-height: 48px;
   font-weight: 500;
   font-size: 0.9rem;
   border-radius: 0;
@@ -1829,7 +1830,7 @@ body.hasnav .snack {
 /* a reminder's time in Settings */
 .fieldbtn.tbtn {
   width: auto;
-  height: 44px;
+  min-height: 48px;
   gap: 6px;
   flex: none;
 }
@@ -2232,9 +2233,11 @@ body.lock {
 .wk {
   margin: 2px 0;
 }
-/* the cell spans its column (so a range band joins up); the circle is a fixed 40x40 ::after */
+/* the cell spans its column (so a range band joins up) and is 48px tall to tap; the circle (--dd) is an ::after, and the
+   band is as tall as the circle */
 .dd {
-  height: 40px;
+  --dd: 40px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2247,8 +2250,8 @@ body.lock {
 .dd::before {
   inset: 0;
   margin: auto;
-  width: 40px;
-  height: 40px;
+  width: var(--dd);
+  height: var(--dd);
   border-radius: 50%;
 }
 .dd::after {
@@ -2256,8 +2259,8 @@ body.lock {
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 40px;
-  height: 40px;
+  width: var(--dd);
+  height: var(--dd);
   border-radius: 50%;
   z-index: -1;
 }
@@ -2272,14 +2275,14 @@ body.lock {
   box-shadow: inset 0 0 0 1px var(--primary);
 }
 .dd.in {
-  background: var(--secondary-container);
+  background: linear-gradient(var(--secondary-container), var(--secondary-container)) center / 100% var(--dd) no-repeat;
   color: var(--on-secondary-container);
 }
 .dd.rs {
-  background: linear-gradient(90deg, transparent 50%, var(--secondary-container) 50%);
+  background: linear-gradient(90deg, transparent 50%, var(--secondary-container) 50%) center / 100% var(--dd) no-repeat;
 }
 .dd.re {
-  background: linear-gradient(90deg, var(--secondary-container) 50%, transparent 50%);
+  background: linear-gradient(90deg, var(--secondary-container) 50%, transparent 50%) center / 100% var(--dd) no-repeat;
 }
 .dd.rs.re {
   background: none;
@@ -2308,6 +2311,10 @@ body.lock {
 }
 .cal {
   touch-action: none;
+}
+/* a calendar in a dialog uses some of its padding: seven 48px columns in a 360px dialog */
+.dialog .cal {
+  margin: 0 -4px;
 }
 .mgrid {
   display: grid;
@@ -2470,14 +2477,44 @@ body.land .sheet.calcing .p {
   max-width: calc(100% - min(46%, 380px));
   border-radius: 0 28px 0 0;
 }
-/* a month of days in less height */
+/* a month of days in less height (as Material's own landscape calendar) */
 body.land .dd {
+  --dd: 34px;
   height: 34px;
 }
-body.land .dd::before,
-body.land .dd::after {
-  width: 34px;
-  height: 34px;
+/* the date and period pickers: the calendar beside the rest, so a month fits the height without scrolling */
+body.land #dp,
+body.land #pd {
+  max-width: 640px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-rows: auto 1fr auto;
+  column-gap: 24px;
+}
+body.land #dp {
+  grid-template-areas: "head calh" "head cal" "act cal";
+}
+body.land #pd {
+  grid-template-areas: "head calh" "hint cal" "act cal";
+}
+body.land :is(#dp, #pd) > :is(.dp-h, .seg) {
+  grid-area: head;
+  align-self: start;
+}
+body.land :is(#dp, #pd) > .cal-h {
+  grid-area: calh;
+  margin-top: 0;
+}
+body.land :is(#dp, #pd) > :is(.cal, .mgrid) {
+  grid-area: cal;
+}
+body.land #pd > .hint {
+  grid-area: hint;
+  align-self: center;
+}
+body.land :is(#dp, #pd) > .dlg-act {
+  grid-area: act;
+  align-self: end;
 }
 
 /* the snackbar rises above an open calculator keypad (--calc-h from calcKeepFieldVisible); on a sideways phone the
