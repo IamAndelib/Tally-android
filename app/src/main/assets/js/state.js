@@ -308,13 +308,33 @@ const keptKeys = () => {
 };
 /* the text save() last stored, handed as is to the backup mirror (no second JSON.stringify of the whole notebook) */
 let savedJson = "";
+/* Every save is numbered, here (LS + ":seq") and in the shell's own copy (Android.keepState, SavedCopy.java). WebView
+   writes localStorage to disk a few seconds late, so a save made just before the phone ends Tally (swiped away) can be
+   missing from it, but not from the shell's copy: start-up takes whichever has the higher number. */
+let saveSeq = 0;
+/* the shell's copy: {seq, text}, or null (none yet, or no shell) */
+function shellCopy() {
+  try {
+    const t = window.Android && Android.keptState ? Android.keptState() : "",
+      i = t ? t.indexOf("\n") : -1;
+    return i > 0 ? { seq: +t.slice(0, i) || 0, text: t.slice(i + 1) } : null;
+  } catch (e) {
+    return null;
+  }
+}
 /* Loads the saved notebook. Called once from the start-up code at the end, after every constant migrate() uses exists. */
 function loadState() {
   let raw = null;
   try {
     raw = localStorage.getItem(LS);
+    saveSeq = +localStorage.getItem(LS + ":seq") || 0;
   } catch (e) {
     return;
+  }
+  const kept = shellCopy();
+  if (kept && kept.seq > saveSeq) {
+    raw = kept.text;
+    saveSeq = kept.seq;
   }
   if (!raw) return;
   try {
@@ -330,16 +350,21 @@ function loadState() {
   }
 }
 /* a save that fails (the phone's storage for Tally is full or blocked) is said in a dialog, which the change's own
-   message can't cover, every time: the change is lost when Tally closes unless it's saved as a file */
+   message can't cover, every time: the change may be lost when Tally closes unless it's saved as a file */
 function save() {
   savedJson = JSON.stringify(S);
+  saveSeq++;
+  try {
+    if (window.Android && Android.keepState) Android.keepState(saveSeq, savedJson);
+  } catch (e) {}
   try {
     localStorage.setItem(LS, savedJson);
+    localStorage.setItem(LS + ":seq", String(saveSeq)); // after the data: a number never claims data that didn't fit
   } catch (e) {
     setTimeout(() =>
       askDialog(
         "Couldn't save on this phone",
-        "Tally's storage on this phone is full or blocked, so this change is lost when Tally closes. Save a backup " +
+        "Tally's storage on this phone is full or blocked, so this change may be lost when Tally closes. Save a backup " +
           "file now to keep everything.",
         "Save backup",
         () => saveBackup(),

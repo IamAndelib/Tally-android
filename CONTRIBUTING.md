@@ -56,7 +56,8 @@ Tally is a native Android shell around a web page.
 ### The data
 
 All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
-`{v, settings, accounts, types, cats, txns, loans, assets}`.
+`{v, settings, accounts, types, cats, txns, loans, assets}`. Each save is numbered (`tally:v1:seq`) and also kept by
+the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (see `save()` in `js/state.js`).
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
   `income` (with `cat`), `transfer` (with `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or

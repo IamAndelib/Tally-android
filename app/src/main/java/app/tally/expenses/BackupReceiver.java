@@ -319,7 +319,8 @@ public class BackupReceiver extends BroadcastReceiver {
         }
     }
 
-    private static String read(File f) {
+    /** A small file's text, or null. */
+    static String read(File f) {
         if (!f.exists()) return null;
         try (InputStream in = new FileInputStream(f)) {
             byte[] b = new byte[(int) f.length()];

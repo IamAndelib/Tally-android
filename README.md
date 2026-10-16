@@ -204,6 +204,7 @@ app/src/main/
     BackupReceiver.java   the daily auto backup into the folder you picked
     TallyWidget.java      home-screen widget;        QuickAddActivity.java its + dialog
     OpenActivity.java     opens the app from a widget tap
+    SavedCopy.java        a copy of every save, on disk at once (WebView stores its own seconds later)
 tests/                    end-to-end tests (Playwright) and lint
 tools/gen_icons.py        regenerates js/icons.js
 ```

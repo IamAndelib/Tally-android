@@ -92,6 +92,9 @@ spending either.
 **Page (`app/src/main/assets`)**
 - Classic scripts in one global scope, loaded in the order in `index.html`. Start-up code lives in `js/main.js` only:
   `loadState()` there needs every constant (`migrate()` uses `PALETTE`).
+- Saved data is written only by `save()`: to localStorage and, numbered (`saveSeq`), to the shell's copy
+  (`Android.keepState`, `SavedCopy.java`), because WebView stores localStorage seconds late and a swipe from Recents
+  lost the last save; `loadState()` takes the copy with the higher number (a tie: localStorage).
 - Saved data is never silently dropped: unreadable text is kept and offered as a file. `migrate()` upgrades and
   sanitises every saved state and backup without changing balances. Accounts with entries are archived, never deleted.
 - Every category keeps its id when renamed, and a built-in one can be renamed into anything, so Tally never files an

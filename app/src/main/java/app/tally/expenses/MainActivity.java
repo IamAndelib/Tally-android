@@ -668,6 +668,19 @@ public class MainActivity extends Activity {
             BackupReceiver.setConfig(MainActivity.this, json);
         }
 
+        /** Every save (state.js save()): the shell's own copy, on disk at once (see SavedCopy). */
+        @JavascriptInterface
+        public void keepState(int seq, String json) {
+            SavedCopy.keep(MainActivity.this, seq, json);
+        }
+
+        /** That copy, for the page's start-up: the save number, a line break and the data; "" when there is none. */
+        @JavascriptInterface
+        public String keptState() {
+            String s = SavedCopy.read(MainActivity.this);
+            return s == null ? "" : s;
+        }
+
         /** The page's data, mirrored after every save while auto backup is on (see BackupReceiver). */
         @JavascriptInterface
         public void setBackupData(String json) {
