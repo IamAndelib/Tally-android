@@ -128,14 +128,8 @@ function restoreFile(input) {
    picker reports wrongly). With auto backup on, its file first, with "Choose another file" beside it. */
 const canRestore = () => !!(window.Android && Android.pickRestoreFile);
 function restoreStart() {
-  if (S.settings.backup.on && Android.readAutoBackup) {
-    let r = {};
-    try {
-      r = JSON.parse(Android.readAutoBackup() || "{}");
-    } catch (e) {}
-    if (typeof r.text === "string") return restoreText(r.text, r);
-  }
-  pickRestoreFile();
+  if (!(S.settings.backup.on && Android.readAutoBackup)) return pickRestoreFile();
+  readAutoBackup(r => (typeof r.text === "string" ? restoreText(r.text, r) : pickRestoreFile()));
 }
 function pickRestoreFile() {
   try {
@@ -176,8 +170,8 @@ function wipeAll() {
       : "Save a backup of your data before deleting it?",
     "Save backup",
     () => {
-      if (!auto || backupNow()) return saveBackup(wipeConfirm); // a failed Back up now: a file instead
-      wipeConfirm();
+      if (!auto) return saveBackup(wipeConfirm);
+      backupNow(err => (err ? saveBackup(wipeConfirm) : wipeConfirm())); // a failed Back up now: a file instead
     },
     { cancel: "Skip", no: wipeConfirm }
   );

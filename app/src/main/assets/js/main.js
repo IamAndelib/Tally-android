@@ -43,6 +43,8 @@ Object.assign(window, {
   tallySaved: onFileSaved,
   tallyFolder: onFolderPicked,
   tallyRestore: onRestorePicked,
+  tallyAutoBackup: onAutoBackup,
+  tallyBackedUp: onBackedUp,
   tallyPerms: onPerms,
   tallyPause: flushMirror,
 });

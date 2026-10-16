@@ -233,15 +233,18 @@ public class BackupReceiver extends BroadcastReceiver {
     static byte[] readDoc(ContentResolver cr, Uri doc, int max) throws IOException {
         try (InputStream in = cr.openInputStream(doc)) {
             if (in == null) throw new IOException("no stream");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[16384];
-            int r;
-            while ((r = in.read(buf)) > 0) {
-                out.write(buf, 0, r);
-                if (out.size() > max) throw new IOException("too big");
-            }
-            return out.toByteArray();
+            return readAll(in, max);
         }
+    }
+
+    private static byte[] readAll(InputStream in, int max) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[16384];
+        for (int r; (r = in.read(buf)) > 0; ) {
+            out.write(buf, 0, r);
+            if (out.size() > max) throw new IOException("too big");
+        }
+        return out.toByteArray();
     }
 
     /**
@@ -319,14 +322,18 @@ public class BackupReceiver extends BroadcastReceiver {
         }
     }
 
-    /** A small file's text, or null. */
+    /** A file's bytes. */
+    static byte[] readFile(File f) throws IOException {
+        try (InputStream in = new FileInputStream(f)) {
+            return readAll(in, Integer.MAX_VALUE);
+        }
+    }
+
+    /** A file's text, or null when there is none or it can't be read. */
     static String read(File f) {
         if (!f.exists()) return null;
-        try (InputStream in = new FileInputStream(f)) {
-            byte[] b = new byte[(int) f.length()];
-            int n = 0, r;
-            while (n < b.length && (r = in.read(b, n, b.length - n)) > 0) n += r;
-            return new String(b, 0, n, StandardCharsets.UTF_8);
+        try {
+            return new String(readFile(f), StandardCharsets.UTF_8);
         } catch (IOException e) {
             return null;
         }

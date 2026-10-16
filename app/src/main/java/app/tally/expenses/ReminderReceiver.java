@@ -75,7 +75,7 @@ public class ReminderReceiver extends BroadcastReceiver {
             }
         } else if (A_DUE.equals(a)) {
             JSONObject d = findDue(ctx, in.getStringExtra("id"));
-            if (d != null) showDue(ctx, d);
+            if (d != null) showDue(ctx, d, false);
         } else if (A_EXTEND.equals(a)) {
             extend(ctx, in.getStringExtra("id"), in.getIntExtra("days", 1));
         }
@@ -87,11 +87,7 @@ public class ReminderReceiver extends BroadcastReceiver {
      * say "Nothing written today" about a day that has just begun; it only re-arms.
      */
     private static boolean reached(JSONObject o, int defH) {
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, o == null ? defH : o.optInt("h", defH))));
-        c.set(Calendar.MINUTE, Math.max(0, Math.min(59, o == null ? 0 : o.optInt("m", 0))));
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
+        Calendar c = todayAt(o == null ? defH : o.optInt("h", defH), o == null ? 0 : o.optInt("m", 0));
         return System.currentTimeMillis() >= c.getTimeInMillis() - 60_000; // a minute's slack for clock drift
     }
 
@@ -146,13 +142,19 @@ public class ReminderReceiver extends BroadcastReceiver {
         return am != null && canExact(am);
     }
 
-    /** The next h:m from now (today if still ahead, else tomorrow); out-of-range values are clamped, never rolled over. */
-    static long nextAt(int h, int m) {
+    /** Today at h:m:00, local time; out-of-range values are clamped, never rolled over. */
+    static Calendar todayAt(int h, int m) {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, h)));
         c.set(Calendar.MINUTE, Math.max(0, Math.min(59, m)));
         c.set(Calendar.SECOND, 0);
         c.set(Calendar.MILLISECOND, 0);
+        return c;
+    }
+
+    /** The next h:m from now: today if still ahead, else tomorrow. */
+    static long nextAt(int h, int m) {
+        Calendar c = todayAt(h, m);
         if (c.getTimeInMillis() <= System.currentTimeMillis() + 1000) c.add(Calendar.DAY_OF_MONTH, 1);
         return c.getTimeInMillis();
     }
@@ -227,10 +229,6 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     // ---------- notifications ----------
-
-    private static void showDue(Context ctx, JSONObject d) {
-        showDue(ctx, d, false);
-    }
 
     /** quiet: re-writes one already on screen (new amount, total or date), without a sound or a "shown" mark. */
     private static void showDue(Context ctx, JSONObject d, boolean quiet) {

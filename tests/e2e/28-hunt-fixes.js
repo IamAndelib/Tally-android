@@ -437,7 +437,7 @@ const ok = (c, m) => {
         },
         backupStatus: () =>
           JSON.stringify(cfg().status || { folder: "Documents/Tally", usable: true, last: 0, error: "" }),
-        readAutoBackup: () => JSON.stringify(cfg().auto || { error: "none" }),
+        readAutoBackup: () => setTimeout(() => window.tallyAutoBackup(cfg().auto || { error: "none" })),
         saveFile(name) {
           rec("saveFile", name);
         },

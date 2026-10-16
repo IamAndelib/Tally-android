@@ -57,7 +57,8 @@ spending either.
 - Only `https://appassets.androidplatform.net/…` stays in the WebView; other http(s) links open the browser, every
   other scheme is dropped. File and content access stay off; the WebView never reads files itself (Restore and file
   saving go through native pickers).
-- Shell → page answers (`tallySaved`, `tallyRestore`, `tallyFolder`, `tallyOpen`) go through `callPage()`, queued until
+- Shell → page answers (`tallySaved`, `tallyRestore`, `tallyFolder`, `tallyOpen`, `tallyBackedUp`, `tallyAutoBackup`) go
+  through `callPage()`, queued until
   the page calls `Android.ready()` at the end of `js/main.js` (not from rAF: a hidden WebView may never run it). The
   page installs its `window.tally*` hooks last, in `js/main.js`.
 - `onRenderProcessGone` recreates the activity, so every `web` use is null-guarded.

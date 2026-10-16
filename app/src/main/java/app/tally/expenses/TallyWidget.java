@@ -7,11 +7,19 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.ArrayMap;
+import android.util.SizeF;
+import android.util.TypedValue;
+import android.view.View;
 import android.widget.RemoteViews;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 
 /**
@@ -23,6 +31,10 @@ import java.util.Calendar;
 public class TallyWidget extends AppWidgetProvider {
     static final String A_TICK = "app.tally.expenses.WIDGET_TICK";
     private static final String PREFS = "tally_widget";
+    /** The layout's text sizes (sp): heading, balance, spending line; a line of text is about 1.33 sizes tall. */
+    private static final float T_TITLE = 12, T_BALANCE = 22, T_SPENT = 13, LINE = 1.33f;
+    /** The layout's vertical padding (dp). */
+    private static final int PAD = 20;
 
     static void save(Context ctx, String json) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("data", json).apply();
@@ -33,7 +45,7 @@ public class TallyWidget extends AppWidgetProvider {
         AppWidgetManager m = AppWidgetManager.getInstance(ctx);
         int[] ids = m.getAppWidgetIds(new ComponentName(ctx, TallyWidget.class));
         if (ids == null || ids.length == 0) return;
-        for (int id : ids) m.updateAppWidget(id, build(ctx));
+        for (int id : ids) m.updateAppWidget(id, build(ctx, m, id));
         scheduleMidnight(ctx);
     }
 
@@ -43,10 +55,16 @@ public class TallyWidget extends AppWidgetProvider {
      */
     @Override
     public void onUpdate(Context ctx, AppWidgetManager m, int[] ids) {
-        for (int id : ids) m.updateAppWidget(id, build(ctx));
+        for (int id : ids) m.updateAppWidget(id, build(ctx, m, id));
         scheduleMidnight(ctx);
         ReminderReceiver.schedule(ctx);
         BackupReceiver.schedule(ctx);
+    }
+
+    /** Resized: the text is fitted to the new height. */
+    @Override
+    public void onAppWidgetOptionsChanged(Context ctx, AppWidgetManager m, int id, Bundle options) {
+        m.updateAppWidget(id, build(ctx, m, id));
     }
 
     @Override
@@ -58,8 +76,44 @@ public class TallyWidget extends AppWidgetProvider {
         }
     }
 
-    private static RemoteViews build(Context ctx) {
+    /**
+     * The widget for each size the home screen may show it at (Android 12+ picks among them itself), else for its
+     * height in the current orientation.
+     */
+    @SuppressWarnings("deprecation") // getParcelableArrayList(String): its typed form needs Android 13
+    private static RemoteViews build(Context ctx, AppWidgetManager m, int id) {
+        Bundle o = m.getAppWidgetOptions(id);
+        if (Build.VERSION.SDK_INT >= 31) {
+            ArrayList<SizeF> sizes = o.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES);
+            if (sizes != null && !sizes.isEmpty() && sizes.size() <= 16) {
+                ArrayMap<SizeF, RemoteViews> each = new ArrayMap<>();
+                for (SizeF s : sizes) each.put(s, build(ctx, s.getHeight()));
+                return new RemoteViews(each);
+            }
+        }
+        boolean land = ctx.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        return build(ctx, o.getInt(land ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
+                : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT));
+    }
+
+    /**
+     * The widget at a height (dp; 0 = unknown, as laid out). Its text follows the phone's text size as far as the
+     * height allows: at large sizes the heading goes first, then the text shrinks to fit (to 85% of the normal size at
+     * least), instead of being cut off at the top and bottom.
+     */
+    private static RemoteViews build(Context ctx, float height) {
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_tally);
+        if (height > 0) {
+            float fs = ctx.getResources().getConfiguration().fontScale, room = height - PAD;
+            boolean title = LINE * (T_TITLE + T_BALANCE + T_SPENT) * fs <= room;
+            float lines = LINE * ((title ? T_TITLE : 0) + T_BALANCE + T_SPENT);
+            float k = Math.max(0.85f, Math.min(fs, room / lines));
+            v.setViewVisibility(R.id.w_title, title ? View.VISIBLE : View.GONE);
+            v.setTextViewTextSize(R.id.w_title, TypedValue.COMPLEX_UNIT_DIP, T_TITLE * k);
+            v.setTextViewTextSize(R.id.w_balance, TypedValue.COMPLEX_UNIT_DIP, T_BALANCE * k);
+            v.setTextViewTextSize(R.id.w_spent_label, TypedValue.COMPLEX_UNIT_DIP, T_SPENT * k);
+            v.setTextViewTextSize(R.id.w_spent, TypedValue.COMPLEX_UNIT_DIP, T_SPENT * k);
+        }
         String balance = ctx.getString(R.string.w_open), spent = "";
         try {
             JSONObject o = new JSONObject(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("data", "{}"));
@@ -89,12 +143,9 @@ public class TallyWidget extends AppWidgetProvider {
     private static void scheduleMidnight(Context ctx) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
-        Calendar c = Calendar.getInstance();
+        Calendar c = ReminderReceiver.todayAt(0, 0);
         c.add(Calendar.DAY_OF_MONTH, 1);
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 5);
-        c.set(Calendar.MILLISECOND, 0);
+        c.add(Calendar.SECOND, 5);
         Intent i = new Intent(ctx, TallyWidget.class).setAction(A_TICK);
         am.set(AlarmManager.RTC, c.getTimeInMillis(), PendingIntent.getBroadcast(ctx, 42, i,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));

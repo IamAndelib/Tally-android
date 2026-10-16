@@ -286,29 +286,51 @@ function onFolderPicked(err) {
   if (err) return snack(err);
   /* the folder already holds a Tally backup (after a reinstall, from another phone, or Tally Dev's): never written
      over unasked */
-  let r = {};
-  try {
-    r = JSON.parse((Android.readAutoBackup && Android.readAutoBackup()) || "{}");
-  } catch (e) {}
-  if (typeof r.text !== "string" || !r.text.trim()) return backupOn();
-  askDialog(
-    "This folder already has a Tally backup",
-    "Restore it on this phone, or replace it with this phone's data from now on?",
-    "Restore it",
-    () => restoreText(r.text, null, backupOn),
-    { alt: ["Replace it", backupOn], cancel: "Not now" }
-  );
+  readAutoBackup(r => {
+    if (typeof r.text !== "string" || !r.text.trim()) return backupOn();
+    askDialog(
+      "This folder already has a Tally backup",
+      "Restore it on this phone, or replace it with this phone's data from now on?",
+      "Restore it",
+      () => restoreText(r.text, null, backupOn),
+      { alt: ["Replace it", backupOn], cancel: "Not now" }
+    );
+  });
 }
-/* "Back up now": writes the latest save into the auto backup's folder at once; returns the problem, "" when done */
-function backupNow() {
-  mirrorNow();
-  let err = "Backup isn't available here";
+/* The auto backup's file, which the shell reads on a thread of its own (a slow folder can't freeze the page) and hands
+   to window.tallyAutoBackup: `then` gets {text, when, folder}, or {error} */
+let autoReadThen = null;
+function readAutoBackup(then) {
+  autoReadThen = then;
   try {
-    err = Android.backupNow();
-  } catch (e) {}
+    Android.readAutoBackup();
+  } catch (e) {
+    onAutoBackup({ error: "Backup isn't available here" });
+  }
+}
+function onAutoBackup(r) {
+  const then = autoReadThen;
+  autoReadThen = null;
+  if (then) then(r && typeof r === "object" ? r : {});
+}
+/* "Back up now": the shell writes the latest save into the auto backup's folder on a thread of its own and answers
+   through window.tallyBackedUp; `then` gets the problem, "" when done */
+let backedUpThen = null;
+function backupNow(then) {
+  mirrorNow();
+  backedUpThen = then || null;
+  try {
+    Android.backupNow();
+  } catch (e) {
+    onBackedUp("Backup isn't available here");
+  }
+}
+function onBackedUp(err) {
   if (V.screen === "settings") render();
   snack(err || "Backed up");
-  return err || "";
+  const then = backedUpThen;
+  backedUpThen = null;
+  if (then) then(err || "");
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
 function reminderHealth() {

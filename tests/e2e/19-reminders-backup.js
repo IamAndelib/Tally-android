@@ -56,16 +56,17 @@ const stub = () => {
     backupStatus() {
       return JSON.stringify(window.__cfg.status || { folder: "", usable: true, last: 0, error: "" });
     },
+    /* both answer later, through the page's hook, like the shell's own threads */
     backupNow() {
       rec("now");
-      return window.__cfg.nowErr || "";
+      setTimeout(() => window.tallyBackedUp(window.__cfg.nowErr || ""));
     },
     pickBackupFolder() {
       rec("pick");
     },
     readAutoBackup() {
       rec("readAuto");
-      return JSON.stringify(window.__cfg.auto || { error: "No folder is chosen." });
+      setTimeout(() => window.tallyAutoBackup(window.__cfg.auto || { error: "No folder is chosen." }));
     },
     pickRestoreFile() {
       rec("pickRestore");
@@ -485,9 +486,11 @@ const stub = () => {
   bk = await page.evaluate(() => window.__backup);
   ok(bk.on && bk.h === 22 && bk.m === 15, "backup time 22:15 re-arms it");
   await act("bk-now");
+  await settle();
   ok((await page.textContent("#snack")).includes("Backed up") && (await calls("now")).length === 1, "Back up now");
   await page.evaluate(() => (window.__cfg.nowErr = "The backup folder can't be found."));
   await act("bk-now");
+  await settle();
   ok((await page.textContent("#snack")).includes("can't be found"), "a failed backup says why");
   await page.evaluate(() => {
     window.__cfg.status = {
