@@ -302,7 +302,7 @@ const ago = n => {
   await act("tr-new");
   await settle();
   await page.fill("#f-amt", "20");
-  await act("tr-fee");
+  await act("add-fee");
   await page.fill("#f-fee", "abc");
   await act("tr-save");
   await settle();

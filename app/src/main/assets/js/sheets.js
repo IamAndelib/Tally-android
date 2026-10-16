@@ -131,7 +131,9 @@ const catBtns = (list, sel) =>
     )
     .join("");
 const catChipInner = k => emblem(k, "ci") + esc(k.name) + ic("down");
-function txSheet(id, type, catId) {
+/* pre (a new entry made for something else, e.g. an over-repaid lending's extra): {amount, cur, account, date, note,
+   also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
+function txSheet(id, type, catId, pre) {
   if (!id && !activeAccounts().length) {
     snack("Add an account first");
     accForm();
@@ -150,15 +152,24 @@ function txSheet(id, type, catId) {
     loanOpen(t.loan);
     return;
   }
+  /* a fee opens what it was charged on: its transfer or its loan */
   if (t && t.feeOf && S.txns.some(x => x.id === t.feeOf)) {
-    trSheet(t.feeOf);
+    txSheet(t.feeOf);
     return;
   }
   type = t ? t.type : type;
   const inc = type === "income";
   const last = inc ? S.settings.lastAccIn : S.settings.lastAcc;
   const def = acc(last) && !acc(last).archived ? last : (activeAccounts()[0] || {}).id;
-  F = { kind: "tx", id, type, cat: t ? t.cat : catId || (inc ? "income" : null), account: t ? t.account : def };
+  F = {
+    kind: "tx",
+    id,
+    type,
+    cat: t ? t.cat : catId || (inc && !pre ? "income" : null),
+    account: t ? t.account : pre ? pre.account : def,
+    pre,
+  };
+  if (pre && pre.back) BACKTO = { screen: V.screen, open: () => loanOpen(pre.back) };
   const k = F.cat ? cat(F.cat) : null,
     a = acc(F.account);
   let list = inc ? inCats() : outCats();
@@ -180,17 +191,24 @@ function txSheet(id, type, catId) {
       ">" +
       catBtns(list, F.cat) +
       "</div>";
-  h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : "", { curId: "amt-cur" });
+  h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : pre ? String(pre.amount) : "", {
+    curId: "amt-cur",
+  });
   h +=
     '<div class="lbl">' +
     (inc ? "Into" : "Paid from") +
     "</div>" +
-    accChips("f-acc", F.account, null, accChoices(F.account));
+    accChips(
+      "f-acc",
+      F.account,
+      null,
+      accChoices(F.account).filter(x => !pre || x.currency === pre.cur)
+    );
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
-    esc(t ? t.note : "") +
+    esc(t ? t.note : pre ? pre.note : "") +
     '" aria-label="Note"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
+    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today() }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
@@ -203,7 +221,17 @@ function txSheet(id, type, catId) {
 }
 /* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
 function openEntry(id) {
-  BACKTO = $("#sheet #ent-list") ? { screen: V.screen, scroll: ($("#sheet .p") || {}).scrollTop || 0 } : null;
+  const scroll = ($("#sheet .p") || {}).scrollTop || 0;
+  BACKTO = $("#sheet #ent-list")
+    ? {
+        screen: V.screen,
+        open: () => {
+          entriesSheet();
+          const p = $("#sheet .p");
+          if (p) p.scrollTop = scroll;
+        },
+      }
+    : null;
   txSheet(id);
 }
 function pickCat(id) {
@@ -239,6 +267,20 @@ function readVals() {
   };
   return { amount: g("f-amt"), note: g("f-note"), date: g("f-date"), toAmount: g("f-toamt"), fee: g("f-fee") };
 }
+/* the optional fee of a transfer or a loan payment: a field behind "Add a fee" (its label can be set later) */
+const feeField = (shown, value, label, add) =>
+  '<label class="field" id="fee-wrap"' +
+  (shown ? "" : " hidden") +
+  '><span id="fee-lbl">' +
+  esc(label) +
+  '</span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
+  esc(value) +
+  '"></label><button class="btn text" id="fee-btn" data-act="add-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
+  (shown ? " hidden" : "") +
+  ">" +
+  ic("add") +
+  esc(add) +
+  "</button>";
 /* transfer between own accounts, with optional fee */
 function trSheet(id, from) {
   const act = activeAccounts();
@@ -264,18 +306,7 @@ function trSheet(id, from) {
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
     esc(t && t.toAmount != null ? String(t.toAmount) : "") +
     '"></label>';
-  h +=
-    '<label class="field" id="fee-wrap"' +
-    (F.showFee ? "" : " hidden") +
-    '><span id="fee-lbl"></span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
-    esc(fee ? String(fee.amount) : "") +
-    '"></label>';
-  h +=
-    '<button class="btn text" id="fee-btn" data-act="tr-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
-    (F.showFee ? " hidden" : "") +
-    ">" +
-    ic("add") +
-    "Add a fee (ATM, cash-out)</button>";
+  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", "Add a fee (ATM, cash-out)");
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
@@ -682,6 +713,7 @@ function saveTx() {
   if (F.type === "income") S.settings.lastAccIn = F.account;
   else S.settings.lastAcc = F.account;
   const id = F.id,
+    pre = F.pre || {},
     nid = newId(),
     ts = Date.now();
   const mutate = id
@@ -690,13 +722,21 @@ function saveTx() {
         Object.assign(old, t);
       }
     : () => {
+        if (pre.also) pre.also();
         S.txns.push(Object.assign({ id: nid, ts }, t));
       };
   guardOverdraw(mutate, t.date, () => {
+    if (pre.back) BACKTO = null; // saved: it ends here, like a payment (back to the loan is for closing it unsaved)
     closeSheet();
     buzz("confirm");
     withUndo(
-      id ? "Saved" : (t.type === "income" ? "+" : "−") + money(amt, acc(t.account).currency) + " · " + cat(t.cat).name,
+      id
+        ? "Saved"
+        : (pre.msg || "") +
+            (t.type === "income" ? "+" : "−") +
+            money(amt, acc(t.account).currency) +
+            " · " +
+            cat(t.cat).name,
       mutate,
       { row: id || nid, cat: t.cat }
     );

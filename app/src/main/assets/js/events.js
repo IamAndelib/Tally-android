@@ -314,12 +314,12 @@ document.addEventListener("click", ev => {
       trSync();
       break;
     }
-    case "tr-fee":
+    case "add-fee":
       F.showFee = true;
       $("#fee-wrap").hidden = false;
       el.hidden = true;
       $("#f-fee").focus();
-      trPreview();
+      if (F.kind === "tr") trPreview();
       break;
     case "tr-save":
       saveTr();

@@ -15,7 +15,7 @@ function exportCsv() {
     t.type === "loan"
       ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir
       : t.feeOf
-        ? "transfer-fee"
+        ? ((S.txns.find(x => x.id === t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
         : t.type;
   const lines = [
     ["date", "type", "amount", "currency", "account", "to_account", "to_amount", "category", "note"].join(","),

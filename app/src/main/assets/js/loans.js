@@ -115,7 +115,7 @@ function deleteLoanEntry(id) {
   }
   closeSheet();
   withUndo(t.principal ? "Deleted" : "Payment deleted", () => {
-    S.txns = S.txns.filter(x => x.id !== id);
+    S.txns = S.txns.filter(x => x.id !== id && x.feeOf !== id); // a payment's fee goes with it
     relinkLoan(l.id);
   });
 }
@@ -326,6 +326,7 @@ function loanOpen(id, focusPay) {
       '<div style="margin-top:12px">' +
       dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today() }) +
       "</div>" +
+      feeField(false, "", "Fee charged (" + i.cur + ") · not counted as spending", "Add a fee (sending, cash-out)") +
       '<div class="gap"></div><button class="btn" data-act="loan-pay">' +
       ic("check") +
       "Record payment</button></div>";
@@ -335,7 +336,8 @@ function loanOpen(id, focusPay) {
     '<div class="sec">History</div><div class="list">' +
     hist
       .map(t => {
-        const a = acc(t.account);
+        const a = acc(t.account),
+          f = t.feeId && S.txns.find(x => x.id === t.feeId);
         const r = runBal()[t.id] || {},
           canDel = !t.principal || i.draws.length > 1,
           more = t.principal
@@ -349,6 +351,7 @@ function loanOpen(id, focusPay) {
               " · " +
               (lend ? "into " : "from ") +
               (a ? a.name : "?") +
+              (f ? " · " + money(f.amount, i.cur) + " fee" : "") +
               " · " +
               (r.ls === "cleared"
                 ? lend
@@ -576,10 +579,52 @@ function deleteLoan() {
   const id = F.id;
   closeSheet();
   withUndo("Deleted", () => {
+    const gone = new Set(S.txns.filter(t => t.type === "loan" && t.loan === id).map(t => t.id));
     S.loans = S.loans.filter(l => l.id !== id);
-    S.txns = S.txns.filter(t => !(t.type === "loan" && t.loan === id));
+    S.txns = S.txns.filter(t => !gone.has(t.id) && !gone.has(t.feeOf)); // the payments' fees go with them
   });
 }
+/* a payment on loan l, plus its fee when there is one: an expense linked both ways, like a transfer's (off the same
+   account, shown with the payment, never spending). Fresh objects on every call, since a change runs twice (overdraw
+   check, then for real). */
+function payTxns(l, pid, ts, amount, account, date, fee) {
+  const p = {
+    id: pid,
+    ts,
+    type: "loan",
+    dir: l.kind === "lend" ? "in" : "out",
+    loan: l.id,
+    amount,
+    account,
+    date,
+    note: "",
+  };
+  if (!(fee > 0)) return [p];
+  const f = {
+    id: pid + "f",
+    ts: ts + 1,
+    type: "expense",
+    amount: rnd(fee),
+    account,
+    cat: "fees",
+    date,
+    note: "Payment fee",
+  };
+  f.feeOf = p.id;
+  p.feeId = f.id;
+  return [p, f];
+}
+/* the payment card's fee, if one was added: a number ≥ 0, or null (already said why) */
+function readFee(v) {
+  const text = F.showFee ? String(v.fee || "").trim() : "",
+    fee = text ? evalAmt(text) : 0;
+  if (fee == null || fee < 0) {
+    snack(fee == null ? "That fee isn't a number" : "A fee can't be negative");
+    return null;
+  }
+  return fee;
+}
+const plusFee = (fee, cur) => (fee > 0 ? " + " + money(fee, cur) + " fee" : "");
 function payLoan() {
   const l = loan(F.id);
   if (!l) return;
@@ -595,8 +640,10 @@ function payLoan() {
     snack("Pick an account");
     return;
   }
+  const fee = readFee(v);
+  if (fee == null) return;
   if (amt > i.left + 0.0005) {
-    overpay(l, i, amt, F.account, v.date || today());
+    overpay(l, i, amt, F.account, v.date || today(), fee);
     return;
   }
   const id = l.id,
@@ -606,27 +653,21 @@ function payLoan() {
     pid = newId(),
     ts = Date.now();
   const mutate = () => {
-    S.txns.push({
-      id: pid,
-      ts,
-      type: "loan",
-      dir: lend ? "in" : "out",
-      loan: id,
-      amount: amt,
-      account,
-      date,
-      note: "",
-    });
+    S.txns.push(...payTxns(l, pid, ts, amt, account, date, fee));
   };
   guardOverdraw(mutate, date, () => {
     closeSheet();
-    withUndo((lend ? "Got back " : "Paid back ") + money(amt, i.cur) + (done ? " · all cleared" : ""), mutate, {
-      row: id,
-    });
+    withUndo(
+      (lend ? "Got back " : "Paid back ") + money(amt, i.cur) + plusFee(fee, i.cur) + (done ? " · all cleared" : ""),
+      mutate,
+      { row: id }
+    );
   });
 }
-/* someone paid back more than they owed (or you did): clear this one and track the extra as a loan the other way */
-function overpay(l, i, amt, account, date) {
+/* someone paid back more than they owed (or you did): the payment clears this one, and the extra is either a loan the
+   other way, or (they paid you more) income, on the income form so the category is the user's choice, or (you paid
+   them more: a sending charge, interest) that payment's fee. Tally never files it under a category by itself. */
+function overpay(l, i, amt, account, date, fee) {
   const lend = l.kind === "lend",
     who = loanWho(l),
     extra = rnd(amt - i.left),
@@ -635,26 +676,19 @@ function overpay(l, i, amt, account, date) {
     nid = newId(),
     qid = newId(),
     ts = Date.now();
-  askDialog(
-    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
-    lend
-      ? "Track the extra " + money(extra, cur) + " as a loan from " + who + " (you now owe it)?"
-      : "Track the extra " + money(extra, cur) + " as a lending to " + who + " (they owe you)?",
-    lend ? "Track as loan" : "Track as lending",
-    () => {
-      const mutate = () => {
-        if (i.left > 0)
-          S.txns.push({
-            id: pid,
-            ts,
-            type: "loan",
-            dir: lend ? "in" : "out",
-            loan: l.id,
-            amount: i.left,
-            account,
-            date,
-            note: "",
-          });
+  /* the payment that clears this loan (with the extra as its fee, when that's the choice) */
+  const clear = more => {
+    if (i.left > 0) S.txns.push(...payTxns(l, pid, ts, i.left, account, date, rnd(fee + (more || 0))));
+  };
+  const book = (mutate, msg, row) =>
+    guardOverdraw(mutate, date, () => {
+      closeSheet();
+      withUndo(msg, mutate, { row });
+    });
+  const asLoan = () =>
+    book(
+      () => {
+        clear();
         S.loans.push({
           id: nid,
           ts,
@@ -667,7 +701,7 @@ function overpay(l, i, amt, account, date) {
         });
         S.txns.push({
           id: qid,
-          ts: ts + 1,
+          ts: ts + 2,
           type: "loan",
           dir: lend ? "in" : "out",
           loan: nid,
@@ -677,19 +711,45 @@ function overpay(l, i, amt, account, date) {
           date,
           note: "",
         });
-      };
-      guardOverdraw(mutate, date, () => {
-        closeSheet();
-        withUndo(
-          lend
-            ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
-            : "Loan cleared · " + who + " owes you " + money(extra, cur),
-          mutate,
-          { row: nid }
-        );
-      });
-    },
-    { cancel: "Go back" }
+      },
+      lend
+        ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
+        : "Loan cleared · " + who + " owes you " + money(extra, cur),
+      nid
+    );
+  const asIncome = () =>
+    txSheet(null, "income", null, {
+      amount: extra,
+      cur,
+      account,
+      date,
+      note: "Extra from " + who,
+      also: clear,
+      msg: who + "’s lending cleared · ",
+      back: l.id,
+    });
+  const asFee = () => book(() => clear(extra), "Loan cleared · " + money(extra, cur) + " as its fee", l.id);
+  const left = i.left > 0;
+  askDialog(
+    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
+    lend
+      ? "What is the extra " +
+          money(extra, cur) +
+          "? A loan from " +
+          who +
+          " (you now owe it)" +
+          (left ? ", or income, such as a fee they covered." : ".")
+      : "What is the extra " +
+          money(extra, cur) +
+          "? A lending to " +
+          who +
+          " (they owe you)" +
+          (left ? ", or a fee on this payment, such as a sending charge or interest." : "."),
+    lend ? "Track as loan" : "Track as lending",
+    asLoan,
+    left
+      ? { alt: [lend ? "Track as income" : "Track as a fee", lend ? asIncome : asFee], cancel: "Go back" }
+      : { cancel: "Go back" }
   );
 }
 /* dropped on Cleared: ask how it was cleared, because one way moves money */
@@ -769,7 +829,7 @@ function reopenLoan(id) {
   withUndo(
     (lend ? who + " owes you " : "You owe " + who + " ") + money(last.amount, i.cur) + " again",
     () => {
-      S.txns = S.txns.filter(t => t.id !== last.id);
+      S.txns = S.txns.filter(t => t.id !== last.id && t.feeOf !== last.id); // with its fee
       loan(id).status = "open";
     },
     { row: id }

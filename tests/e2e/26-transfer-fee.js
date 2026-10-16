@@ -68,7 +68,7 @@ const ok = (c, m) => {
   await settle();
   await page.click('#sheet [data-act="tr-to"][data-v="b"]');
   await page.fill("#f-amt", "20000");
-  await page.click('#sheet [data-act="tr-fee"]');
+  await page.click('#sheet [data-act="add-fee"]');
   await page.fill("#f-fee", "10");
   ok((await page.textContent("#fee-lbl")).includes("not counted as spending"), "the fee field says it isn't spending");
   ok((await page.textContent("#tr-prev")).includes("20,010.00"), "preview: City Bank −20,010");

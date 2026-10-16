@@ -404,15 +404,13 @@ function closeSheet() {
   closeSheet2();
   $("#sheet").innerHTML = "";
   F = null;
-  /* came from the entries list: go back to it (after a save/delete has been applied), not to Home */
+  /* came from another sheet (the entries list, a loan): go back to it (after a save/delete has been applied), not to
+     Home */
   if (BACKTO) {
     const b = BACKTO;
     BACKTO = null;
     setTimeout(() => {
-      if ($("#sheet").innerHTML || V.screen !== b.screen) return;
-      entriesSheet();
-      const p = $("#sheet .p");
-      if (p) p.scrollTop = b.scroll;
+      if (!$("#sheet").innerHTML && V.screen === b.screen) b.open();
     }, 0);
   }
 }
@@ -588,4 +586,5 @@ function curList(q) {
   }
   box.innerHTML = h || '<div class="empty">No currency found</div>';
 }
+/* where closing the sheet goes back to, {screen, open} (see closeSheet) */
 let BACKTO = null;

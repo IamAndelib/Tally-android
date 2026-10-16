@@ -47,8 +47,9 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers (with their fees)
-and balance fixes never count as spending or income; loans and lendings move money but are never spending either.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers and loan payments
+(with their fees) and balance fixes never count as spending or income; loans and lendings move money but are never
+spending either.
 
 ## Details that are easy to break
 
@@ -93,6 +94,9 @@ and balance fixes never count as spending or income; loans and lendings move mon
   `loadState()` there needs every constant (`migrate()` uses `PALETTE`).
 - Saved data is never silently dropped: unreadable text is kept and offered as a file. `migrate()` upgrades and
   sanitises every saved state and backup without changing balances. Accounts with entries are archived, never deleted.
+- Every category keeps its id when renamed, and a built-in one can be renamed into anything, so Tally never files an
+  entry under a category by itself: fees link to their transfer or payment (`feeOf`), and anything else lets the user
+  pick (the entry form, prefilled: `txSheet(…, pre)`).
 - `S.settings.cur` is `""` until a new notebook chooses its currency: new accounts and assets go through `accForm()` /
   `assetForm()`, which ask for it first. Week start (`settings.week`) and time format (`settings.clock`) are read
   from settings only, never from the phone (only `migrate()` reads the phone's clock, for older saves).

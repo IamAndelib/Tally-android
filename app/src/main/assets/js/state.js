@@ -202,6 +202,7 @@ function migrate(o) {
         t.loan = sid(t0.loan);
         if (t0.principal) t.principal = true;
         if (t0.principal && isDay(t0.due)) t.due = day(t0.due);
+        if (!t0.principal && t0.feeId) t.feeId = sid(t0.feeId);
       } else if (t0.type === "expense" || t0.type === "income") {
         if (t0.cat === "transfer") {
           // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
@@ -224,11 +225,12 @@ function migrate(o) {
   s.txns.forEach((t, i) => {
     if (!t.ts) t.ts = parseISO(t.date).getTime() + i;
   });
-  /* a transfer and its fee point at each other; a fee whose transfer is gone is plain spending, and a transfer whose
-     fee is gone has none (balances stay as they are either way) */
-  const byId = new Map(s.txns.map(t => [t.id, t]));
+  /* a transfer or loan payment and its fee point at each other; a fee whose transfer or payment is gone is plain
+     spending, and one whose fee is gone has none (balances stay as they are either way) */
+  const byId = new Map(s.txns.map(t => [t.id, t])),
+    feeHost = x => !!x && (x.type === "transfer" || (x.type === "loan" && !x.principal));
   s.txns.forEach(t => {
-    if (t.feeOf && (byId.get(t.feeOf) || {}).type !== "transfer") delete t.feeOf;
+    if (t.feeOf && !feeHost(byId.get(t.feeOf))) delete t.feeOf;
     if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
   });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
@@ -320,9 +322,11 @@ function commit() {
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
 const activeAccounts = () => S.accounts.filter(a => !a.archived);
-/* A transfer's fee is its own entry, an expense linked to the transfer (feeOf ↔ feeId), so it comes off the paying
-   account in every version of Tally; but like the transfer it is never spending: the ring, day totals, summaries and
-   the widget count only isSpend() entries, and History shows the fee with its transfer. */
+/* A transfer's or loan payment's fee is its own entry, an expense linked to it (feeOf ↔ feeId), so it comes off the
+   paying account in every version of Tally; but like the transfer or payment it is never spending: the ring, day
+   totals, summaries and the widget count only isSpend() entries, and History shows the fee with what it was charged on.
+   Its stored category ("fees") is only for older versions: Tally never files an entry under a category by itself,
+   since a built-in one keeps its id when renamed into anything. */
 const isSpend = t => t.type === "expense" && !t.feeOf;
 const outCats = () => S.cats.filter(c => c.kind === "out" && !c.hidden);
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);

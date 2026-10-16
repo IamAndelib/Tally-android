@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A loan payment can carry a fee, such as a sending or cash-out charge: "Add a fee" on the payment card. Like a
+  transfer's fee, it comes off the account, shows with the payment in History and is never counted as spending.
+- Paid more than you owed? The extra can now also be booked as income (they paid you more: the income form opens, so
+  you pick its category) or as that payment's fee (you paid them more), besides a new loan the other way.
+
 ## [1.3.2] — 2026-10-16
 
 ### Fixed

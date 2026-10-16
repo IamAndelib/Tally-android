@@ -448,7 +448,7 @@ function inspect() {
     );
     await shot("transfer-fee", async () => {
       await page.evaluate(() => trSheet());
-      await page.click('#sheet [data-act="tr-fee"]');
+      await page.click('#sheet [data-act="add-fee"]');
     });
     await shot(
       "account",
@@ -466,6 +466,10 @@ function inspect() {
       "loan",
       ev(() => loanOpen("L1"))
     );
+    await shot("loan-fee", async () => {
+      await page.evaluate(() => loanOpen("L1"));
+      await page.click('#sheet [data-act="add-fee"]');
+    });
     await shot(
       "summary",
       ev(() => summarySheet())
@@ -512,7 +516,11 @@ function inspect() {
     );
     await shot("transfer-fee", async () => {
       await page.evaluate(() => trSheet());
-      await page.click('#sheet [data-act="tr-fee"]');
+      await page.click('#sheet [data-act="add-fee"]');
+    });
+    await shot("loan-fee", async () => {
+      await page.evaluate(() => loanOpen("L1"));
+      await page.click('#sheet [data-act="add-fee"]');
     });
     await shot(
       "draw-edit",

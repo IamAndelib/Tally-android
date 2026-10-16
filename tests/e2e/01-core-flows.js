@@ -143,7 +143,7 @@ const ok = (c, m) => {
   await sact("tr-swap");
   await sact("tr-to", S.accounts[1].id);
   ok(!(await page.isVisible("#f-toamt")), "received field hidden for CAD→CAD");
-  await sact("tr-fee");
+  await sact("add-fee");
   ok(await page.isVisible("#f-fee"), "fee field shown");
   ok(await sameSheet(), "transfer sheet not rebuilt");
   await page.fill("#f-fee", "2");

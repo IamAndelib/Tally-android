@@ -487,14 +487,22 @@ function txLine(t) {
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
-    /* a transfer's fee: shown with its transfer, not as a category's spending */
-    const tr = S.txns.find(x => x.id === t.feeOf),
-      to = tr && acc(tr.to);
-    em = { i: "swap_horiz", c: "#5f7389" };
+    /* a fee: shown with the transfer or loan payment it was charged on, not as a category's spending */
+    const host = S.txns.find(x => x.id === t.feeOf) || {},
+      l = host.type === "loan" && loan(host.loan);
     cls = "xfer";
-    d = t.note || "Transfer fee";
-    s = (a ? a.name : "?") + (to ? " → " + to.name : "");
     amt = "−" + esc(money(t.amount, cur));
+    if (l) {
+      const lend = l.kind === "lend";
+      em = LOAN_EMB[lend ? "lend" : "borrow"];
+      d = t.note || "Payment fee";
+      s = (a ? a.name : "?") + " · " + (lend ? "got back from " : "paid back ") + loanWho(l);
+    } else {
+      const to = acc(host.to);
+      em = { i: "swap_horiz", c: "#5f7389" };
+      d = t.note || "Transfer fee";
+      s = (a ? a.name : "?") + (to ? " → " + to.name : "");
+    }
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";

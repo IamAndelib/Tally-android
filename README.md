@@ -45,8 +45,9 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Loans and net worth**
 
 - **Loans and lendings** per person: money you borrowed or lent, in several draws with their own due dates, partial
-  payments (counted against the draw due soonest, so each draw shows what's left of it), "paid more than owed",
-  write-off / forgive, and reopen.
+  payments (counted against the draw due soonest, so each draw shows what's left of it), a sending or cash-out fee on
+  a payment (off the account, shown with the payment, never spending), "paid more than owed" (the extra as a new loan,
+  as income you file yourself, or as the payment's fee), write-off / forgive, and reopen.
 - **Assets and Liabilities** tabs with net worth per currency, other assets (a laptop, gold, …), cleared loans and
   archived accounts. Drag a row between sections to archive it, mark it cleared or reopen it.
 
