@@ -216,10 +216,10 @@ function calcKeepFieldVisible(inp, panel) {
   if (r.bottom > limit) scroller.scrollTop += r.bottom - limit;
   else if (r.top < 8) scroller.scrollTop -= 8 - r.top;
 }
-function calcClose(id, btn, use) {
+function calcClose(id, btn) {
   stopRepeat();
   const inp = $("#" + id);
-  if (use && CALC && CALC.id === id && CALC.inp === inp && CALC.expr) {
+  if (CALC && CALC.id === id && CALC.inp === inp && CALC.expr) {
     const val = calcEval(CALC.expr);
     if (val != null && inp) inp.value = groupDigits(String(val));
   }
@@ -252,12 +252,12 @@ function calcToggle(id, btn) {
   const panel = $("#calc-" + id);
   if (!panel) return;
   if (panel.hidden) calcOpen(id, btn);
-  else calcClose(id, btn, true);
+  else calcClose(id, btn);
 }
 const calcToggleBtn = id => document.querySelector('[data-act="calc-toggle"][data-v="' + id + '"]');
 /* the keypad's keyboard button: applies the result, closes the calculator and opens the system keyboard */
 function calcToKeyboard(id) {
-  calcClose(id, calcToggleBtn(id), true);
+  calcClose(id, calcToggleBtn(id));
   const inp = $("#" + id);
   if (!inp) return;
   inp.focus();

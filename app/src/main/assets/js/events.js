@@ -47,7 +47,6 @@ document.addEventListener("click", ev => {
     if (ev.target === el) closePop();
     return;
   }
-  if (el.tagName === "SELECT" || el.tagName === "INPUT") return;
   /* every tap clicks (the keypad's buttons already did, on touch-down; a time wheel ticks as its rows pass) */
   if (!el.closest(".calc, .wheel")) buzz("tap");
   switch (act) {
@@ -294,7 +293,8 @@ document.addEventListener("click", ev => {
       el.setAttribute("aria-expanded", row.classList.contains("open"));
       break;
     }
-    case "tx-del": {
+    case "tx-del":
+    case "tr-del": {
       const id = F.id;
       closeSheet();
       withUndo("Deleted", () => deleteEntries([id]));
@@ -328,12 +328,6 @@ document.addEventListener("click", ev => {
     case "tr-save":
       saveTr();
       break;
-    case "tr-del": {
-      const id = F.id;
-      closeSheet();
-      withUndo("Deleted", () => deleteEntries([id]));
-      break;
-    }
     case "adj-del": {
       const id = F.id;
       closeSheet();

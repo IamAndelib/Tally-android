@@ -148,8 +148,8 @@ public class BackupReceiver extends BroadcastReceiver {
     }
 
     /**
-     * Writes the backup file when the data changed since the last one (or always, with {@code force}: "Back up now",
-     * a newly picked folder). Returns null when done or when there was nothing to do, else a short reason.
+     * Writes the backup file when the data changed since the last one (or always, with {@code force}: "Back up now").
+     * Returns null when done or when there was nothing to do, else a short reason.
      */
     static synchronized String run(Context ctx, boolean force) {
         SharedPreferences p = prefs(ctx);

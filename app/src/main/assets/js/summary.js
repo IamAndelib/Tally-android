@@ -90,8 +90,6 @@ function smBuckets() {
   });
   return out;
 }
-/* "3 – 9 Aug", "31 Aug – 6 Sep" (the phone's order) */
-const wkLabel = (a, b) => rangeLabel(a, b);
 /* categories of a set of expenses, biggest first */
 function catSplit(list) {
   const m = {};
@@ -214,7 +212,7 @@ function drawSm() {
             esc(x.full + ": " + money(x.v, cur)) +
             '">' +
             '<span class="x">' +
-            esc(wkLabel(x.s, x.e)) +
+            esc(rangeLabel(x.s, x.e)) +
             '</span><span class="tr"><span class="b" style="width:' +
             (x.v ? Math.max(2, pct) : 0).toFixed(1) +
             '%"></span></span><span class="v">' +

@@ -243,7 +243,7 @@ function syncBackup() {
     Android.setBackup(JSON.stringify(Object.assign({ on: S.settings.backup.on }, hmObj(S.settings.backup.time))));
   } catch (e) {}
 }
-/* {folder, last, error} from the shell, or null in a browser */
+/* {folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
 function backupStatus() {
   if (!canBackup()) return null;
   try {
@@ -388,9 +388,8 @@ function saveOut(name, mime, text) {
   if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);
   else snack("Saving isn't available here");
 }
-/* Android back / Escape: closes the top-most layer, else returns Home. False when there is nothing left to close
-   (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
-/* Back closes the top layer first: a dialog, then the keypad of the sheet on top, then that sheet */
+/* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),
+   then a selection, then another screen goes Home. False when there is nothing left to close (then the app closes). */
 function goBack() {
   if ($("#pop").innerHTML) {
     closePop();
@@ -400,7 +399,7 @@ function goBack() {
     const top = $("#sheet2").innerHTML ? $("#sheet2") : $("#sheet");
     if (CALC.inp && CALC.inp.isConnected) {
       if (top.contains(CALC.inp)) {
-        calcClose(CALC.id, calcToggleBtn(CALC.id), true);
+        calcClose(CALC.id, calcToggleBtn(CALC.id));
         return true;
       }
     } else {

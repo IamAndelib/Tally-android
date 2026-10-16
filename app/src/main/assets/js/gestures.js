@@ -75,7 +75,6 @@ function pressStart(x, y, target) {
     LP = { x, y, cx: x, cy: y, el: hold, kind: "hold", active: false };
     LP.timer = setTimeout(() => {
       if (!LP) return;
-      LP.active = true;
       swallowNextClick();
       buzz("long");
       const el = LP.el;
@@ -181,7 +180,7 @@ function pressEnd(x, y) {
     }
   }
   smSw = null;
-  /* History: finger left → the next account chip (All → DBBL → Bkash), right → back; stops at the ends */
+  /* History: finger left → the next account chip (All → Bank → Cash), right → back; stops at the ends */
   if (hsw && x != null && !(LP && LP.active) && V.screen === "history" && !V.sel) {
     const dx = x - hsw.x,
       dy = y - hsw.y,

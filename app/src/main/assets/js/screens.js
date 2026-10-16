@@ -39,7 +39,6 @@ function drawScreen() {
   const app = $("#app");
   RBC = null;
   if (V.screen !== "history") V.sel = null;
-  if (V.screen === "accounts") V.screen = "assets";
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
@@ -387,7 +386,7 @@ function assetsView() {
   h +=
     '<div class="sec">Owed to you</div>' +
     (open.length
-      ? zoneList("lend-open", open.map(l => loanRow(l, true)).join(""))
+      ? zoneList("lend-open", open.map(l => loanRow(l)).join(""))
       : '<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>') +
     dropBox("lend-open", "Drop here to make it active again", "reset") +
     '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">' +
@@ -401,7 +400,7 @@ function assetsView() {
       " cleared (" +
       done.length +
       ")</button>";
-    if (V.showCleared) h += zoneList("lend-done", done.map(l => loanRow(l, true)).join("")) + dragTip();
+    if (V.showCleared) h += zoneList("lend-done", done.map(l => loanRow(l)).join("")) + dragTip();
   }
   h +=
     '<div class="sec">Other assets</div>' +
@@ -448,7 +447,7 @@ function liabsView() {
   h +=
     '<div class="sec">Loans</div>' +
     (open.length
-      ? zoneList("borrow-open", open.map(l => loanRow(l, true)).join(""))
+      ? zoneList("borrow-open", open.map(l => loanRow(l)).join(""))
       : '<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>') +
     dropBox("borrow-open", "Drop here to make it active again", "reset") +
     '<button class="btn text" data-act="loan-new" data-v="borrow" style="margin-top:4px">' +
@@ -462,7 +461,7 @@ function liabsView() {
       " cleared (" +
       done.length +
       ")</button>";
-    if (V.showCleared) h += zoneList("borrow-done", done.map(l => loanRow(l, true)).join("")) + dragTip();
+    if (V.showCleared) h += zoneList("borrow-done", done.map(l => loanRow(l)).join("")) + dragTip();
   }
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length

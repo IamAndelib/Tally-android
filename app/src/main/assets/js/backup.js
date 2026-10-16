@@ -182,8 +182,8 @@ function wipeAll() {
     { cancel: "Skip", no: wipeConfirm }
   );
 }
-/* the final Yes / No; keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto
-   backup (which never overwrites its file with an empty notebook) */
+/* the final Yes / No; keeps the preferences: main currency, week start, time format, theme, reminders, haptics, the
+   donut's middle and auto backup (which never overwrites its file with an empty notebook) */
 function wipeConfirm() {
   askDialog(
     "Delete all data?",

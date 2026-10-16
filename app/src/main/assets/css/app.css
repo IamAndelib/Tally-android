@@ -58,8 +58,7 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 button,
-input,
-select {
+input {
   font: inherit;
   color: inherit;
 }
@@ -227,13 +226,11 @@ a {
   margin: 0 auto;
   padding: 0 8px 0 12px;
 }
-.appbar > .icon {
-  width: 44px;
-  height: 44px;
-}
+/* app-bar icons and the period arrows: 48px to tap (WCAG / Material), the glyph as before */
+.appbar > .icon,
 .pnav .icon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
 }
 .pnav .plabel {
   font-size: clamp(1.05rem, 4.6vw, 1.25rem);
@@ -905,8 +902,7 @@ body.hist #app {
   color: var(--on-surface-variant);
   margin-bottom: 6px;
 }
-input,
-select {
+input {
   width: 100%;
   height: 52px;
   padding: 0 14px;
@@ -915,18 +911,12 @@ select {
   background: transparent;
   outline: none;
 }
-input:focus,
-select:focus {
+input:focus {
   border: 2px solid var(--primary);
   padding: 0 13px;
 }
-input:focus-visible,
-select:focus-visible {
+input:focus-visible {
   outline: 0;
-}
-select option {
-  background: var(--surface-high);
-  color: var(--on-surface);
 }
 .amtwrap {
   display: flex;
@@ -1044,8 +1034,7 @@ select option {
   animation: up 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 /* typing fields keep normal selection, caret and paste */
-input,
-textarea {
+input {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -1351,9 +1340,6 @@ textarea {
   border-radius: 24px;
   padding: 4px;
 }
-.month b {
-  font-weight: 600;
-}
 .seg {
   display: flex;
   border: 1px solid var(--outline);
@@ -1518,9 +1504,6 @@ textarea {
   width: 20px;
   height: 20px;
 }
-.btn .emb.sm {
-  margin-right: 0;
-}
 .cprevbtn {
   border-radius: 50%;
 }
@@ -1547,10 +1530,8 @@ textarea {
     0 0 0 3px var(--surface-low),
     0 0 0 5px var(--primary);
 }
-/* a 34px dot in a 48px touch target: the padding is clear, the selection ring sits at its edge */
-.dots {
-  gap: 0;
-}
+/* a 34px dot in a 48px touch target: the padding is clear (so no gap between them), the selection ring sits at its
+   edge */
 .dots .dot {
   width: 48px;
   height: 48px;
@@ -1560,11 +1541,17 @@ textarea {
 .dots .dot[aria-pressed="true"] {
   box-shadow: inset 0 0 0 2px var(--on-surface);
 }
+/* "add your own colour": 48px to tap like the swatches, its dashed ring drawn the swatches' size */
 .dots .dot.addnew {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  margin: 7px;
+  position: relative;
+  border: 0;
+}
+.dots .dot.addnew::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed var(--outline);
+  border-radius: 50%;
 }
 /* date picker header, time grid */
 .dp-h {
@@ -2176,20 +2163,12 @@ body.hasnav .snack {
 }
 .dots {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
 }
 .dot {
-  width: 32px;
-  height: 32px;
   border-radius: 50%;
 }
-.dot[aria-pressed="true"] {
-  box-shadow:
-    0 0 0 2px var(--surface-low),
-    0 0 0 4px var(--on-surface);
-}
-/* period dialog */
+/* dialogs */
 .pop.scrim {
   background: rgba(0, 0, 0, 0.32);
   display: grid;

@@ -106,8 +106,6 @@ function migrate(o) {
     checkTime: hm(r.checkTime, "08:00"),
   };
   s.settings.backup = { on: bk.on === true, time: hm(bk.time, "23:00") };
-  /* the first-open prompts now live in the shell (per install), and the battery row simply goes once allowed */
-  ["batteryOk", "notifAsked", "exactAsked", "batteryAsked"].forEach(k => delete s.settings[k]);
   /* when a backup was last saved here (ms) and when the auto-backup suggestion last showed (YYYY-MM-DD) */
   if (!(Number.isFinite(s.settings.savedBackup) && s.settings.savedBackup > 0)) delete s.settings.savedBackup;
   if (!isDay(s.settings.backupAsk)) delete s.settings.backupAsk;

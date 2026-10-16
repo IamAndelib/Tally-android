@@ -287,7 +287,7 @@ const feeField = (open, value, label, add) =>
   esc(add) +
   "</button>";
 /* transfer between own accounts, with optional fee */
-function trSheet(id, from) {
+function trSheet(id) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
     snack("Add a second account to transfer");
@@ -296,7 +296,7 @@ function trSheet(id, from) {
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
   const fee = t && t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
-  const f = t ? t.account : from || (act[0] || {}).id;
+  const f = t ? t.account : (act[0] || {}).id;
   const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
   F = { kind: "tr", id, from: f, to, showFee: !!fee };
   const list = accChoices(f, to);

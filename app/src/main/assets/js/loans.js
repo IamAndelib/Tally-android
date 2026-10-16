@@ -122,7 +122,7 @@ function deleteLoanEntry(id) {
     relinkLoan(l.id);
   });
 }
-function loanRow(l, drag) {
+function loanRow(l) {
   const i = loanInfo(l),
     lend = l.kind === "lend";
   const a = acc(l.account),
@@ -141,9 +141,9 @@ function loanRow(l, drag) {
     (FX.row === l.id ? " flash" : "") +
     '" data-act="loan-open" data-v="' +
     l.id +
-    '"' +
-    (drag ? ' data-drag="loan:' + l.id + '"' : "") +
-    ">" +
+    '" data-drag="loan:' +
+    l.id +
+    '">' +
     emblem(LOAN_EMB[l.kind], "em") +
     '<span class="mid"><div class="d" dir="auto">' +
     esc(loanWho(l)) +

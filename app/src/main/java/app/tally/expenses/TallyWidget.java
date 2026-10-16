@@ -12,15 +12,12 @@ import android.widget.RemoteViews;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
 
 /**
  * Home-screen widget: today's total balance, today's spending and a + that opens {@link QuickAddActivity}.
  * The page is the source of truth: it sends ready-formatted numbers with Android.setWidget(json)
- *   {date:"yyyy-MM-dd", balance:"BDT 60,600.00", spent:"BDT 1,041.00", zero:"BDT 0.00"}
+ *   {date:"yyyy-MM-dd", balance:"$1,250.00", spent:"$12.50", zero:"$0.00"}
  * and "spent" only counts for that date, so after midnight the widget shows zero until the app is opened.
  */
 public class TallyWidget extends AppWidgetProvider {
@@ -68,7 +65,7 @@ public class TallyWidget extends AppWidgetProvider {
             JSONObject o = new JSONObject(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("data", "{}"));
             if (o.has("balance")) {
                 balance = o.optString("balance");
-                spent = today().equals(o.optString("date")) ? o.optString("spent") : o.optString("zero");
+                spent = ReminderReceiver.today().equals(o.optString("date")) ? o.optString("spent") : o.optString("zero");
             }
         } catch (JSONException ignored) { }
         v.setTextViewText(R.id.w_balance, balance);
@@ -101,9 +98,5 @@ public class TallyWidget extends AppWidgetProvider {
         Intent i = new Intent(ctx, TallyWidget.class).setAction(A_TICK);
         am.set(AlarmManager.RTC, c.getTimeInMillis(), PendingIntent.getBroadcast(ctx, 42, i,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-    }
-
-    private static String today() {
-        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
     }
 }

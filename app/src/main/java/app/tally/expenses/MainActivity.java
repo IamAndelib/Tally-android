@@ -258,7 +258,7 @@ public class MainActivity extends Activity {
         asking = false;
         // empty: the request was interrupted (a second one while the prompt was up), not refused
         if (results.length == 0) return;
-        boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        boolean granted = results[0] == PackageManager.PERMISSION_GRANTED;
         boolean fromButton = notifFromButton;
         notifFromButton = false;
         // asked from Settings' button and Android didn't show its prompt (denied for good): open the settings page
@@ -674,7 +674,7 @@ public class MainActivity extends Activity {
             BackupReceiver.setData(MainActivity.this, json);
         }
 
-        /** {folder, last, error} for Settings. */
+        /** {folder, usable, last, error} for Settings. */
         @JavascriptInterface
         public String backupStatus() {
             return BackupReceiver.status(MainActivity.this);
@@ -775,7 +775,7 @@ public class MainActivity extends Activity {
             return MainActivity.this.getResources().getConfiguration().fontScale;
         }
 
-        /** The phone's 12 / 24-hour setting, for the time picker and time labels. */
+        /** The phone's 12 / 24-hour setting: only for saves from before Settings' time format (phoneClock()). */
         @JavascriptInterface
         public boolean is24h() {
             return DateFormat.is24HourFormat(MainActivity.this);
