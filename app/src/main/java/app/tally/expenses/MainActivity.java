@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
         if (savedInstanceState == null && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
-            open(getIntent().getStringExtra("open"));
+            open(openExtra(getIntent()));
         }
         // after the process was killed the WebView can come back empty: load the page whenever restoring fails
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
@@ -309,7 +309,16 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        open(intent.getStringExtra("open"));
+        open(openExtra(intent));
+    }
+
+    /** The "open" extra, or null; another app's intent carrying an unknown Parcelable must not crash Tally here. */
+    private static String openExtra(Intent i) {
+        try {
+            return i == null ? null : i.getStringExtra("open");
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** "loan:<id>[:pay]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
@@ -453,7 +462,7 @@ public class MainActivity extends Activity {
                 getContentResolver().takePersistableUriPermission(tree,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (SecurityException e) {
-                folderPicked(null);
+                folderPicked("Tally can't keep access to that folder. Pick another one.");
                 return;
             }
             // remembered and marked not backed up yet: the first backup comes at the set time (Back up now: at once)
@@ -469,7 +478,7 @@ public class MainActivity extends Activity {
      */
     private void restorePicked(Uri doc) {
         if (doc == null) {
-            restoreResult(null, null);
+            restoreResult("null,null");
             return;
         }
         final Context app = getApplicationContext();
@@ -477,23 +486,30 @@ public class MainActivity extends Activity {
             String text = null, err = null;
             try {
                 text = new String(BackupReceiver.readDoc(app.getContentResolver(), doc, BackupReceiver.MAX), StandardCharsets.UTF_8);
+                // a photo or a zip picked by mistake: refused here, not quoted for the page (slow, on a big file)
+                String head = text.startsWith("\uFEFF") ? text.substring(1).trim() : text.trim();
+                if (!head.startsWith("{") || head.indexOf('\u0000') >= 0) {
+                    text = null;
+                    err = "That isn't a Tally backup file";
+                }
             } catch (IOException e) {
                 err = "too big".equals(e.getMessage()) ? "That file is too big to be a Tally backup" : "Couldn't read that file";
             } catch (Throwable e) { // SecurityException, or out of memory on a small phone
                 err = "Couldn't read that file";
             }
-            final String t = text, e2 = err;
-            runOnUiThread(() -> restoreResult(t, e2));
+            // quoted on this thread too: a backup of a few MB takes a moment
+            final String arg = (text == null ? "null" : JSONObject.quote(text)) + "," + (err == null ? "null" : JSONObject.quote(err));
+            runOnUiThread(() -> restoreResult(arg));
         }).start();
     }
 
-    private void restoreResult(String text, String err) {
+    /** window.tallyRestore(text, err), both already quoted: both null = cancelled. */
+    private void restoreResult(String args) {
         if (isDestroyed()) return;
-        String a = text == null ? "null" : JSONObject.quote(text), b = err == null ? "null" : JSONObject.quote(err);
-        callPage("window.tallyRestore&&window.tallyRestore(" + a + "," + b + ")");
+        callPage("window.tallyRestore&&window.tallyRestore(" + args + ")");
     }
 
-    /** Tells the page how picking a backup folder went: null = cancelled, "" = backed up, else the problem. */
+    /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem. */
     private void folderPicked(String err) {
         if (isDestroyed()) return;
         String arg = err == null ? "null" : JSONObject.quote(err);
@@ -695,12 +711,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void pickBackupFolder() {
             runOnUiThread(() -> {
-                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 try {
-                    startActivityForResult(i, PICK_FOLDER);
+                    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER);
                 } catch (ActivityNotFoundException e) {
-                    folderPicked(null);
+                    folderPicked("This phone has no folder picker, so auto backup can't be set up.");
                 }
             });
         }

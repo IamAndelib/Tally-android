@@ -810,7 +810,7 @@ function saveTr() {
     if (diff) t.toAmount = got;
     else delete t.toAmount;
     if (fee > 0) {
-      const f = oldFee || { id: fid, ts };
+      const f = oldFee || { id: fid, ts: (t.ts || ts) + 1 }; // just after its transfer, as balances see them
       if (!oldFee) S.txns.push(f);
       Object.assign(f, {
         type: "expense",

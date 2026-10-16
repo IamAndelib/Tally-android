@@ -1,6 +1,7 @@
 package app.tally.expenses;
 
 import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -102,7 +103,14 @@ public class BackupReceiver extends BroadcastReceiver {
         }
         p.edit().putString("tree", tree.toString()).putString("label", label(ctx, tree)).putBoolean("dirty", true)
                 .remove("error").apply();
+        clearNotice(ctx);
         schedule(ctx);
+    }
+
+    /** Takes away the "Tally couldn't back up" notification. */
+    private static void clearNotice(Context ctx) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) nm.cancel(NOTE_ID);
     }
 
     /**
@@ -148,13 +156,15 @@ public class BackupReceiver extends BroadcastReceiver {
         String tree = p.getString("tree", null);
         if (tree == null) return "No folder is chosen.";
         String data = read(snapshot(ctx));
-        if (data == null || (!force && !p.getBoolean("dirty", false))) return null;
+        if (data == null) return force ? "Tally's copy of your data isn't ready yet. Try again in a moment." : null;
+        if (!force && !p.getBoolean("dirty", false)) return null;
         if (!worthKeeping(data)) return force ? "There's nothing to back up yet." : null;
         String err = write(ctx, Uri.parse(tree), data.getBytes(StandardCharsets.UTF_8));
         SharedPreferences.Editor e = p.edit();
         if (err == null) e.putBoolean("dirty", false).putLong("last", System.currentTimeMillis()).remove("error");
         else e.putString("error", err);
         e.apply();
+        if (err == null) clearNotice(ctx); // an earlier "couldn't back up" no longer applies
         return err;
     }
 

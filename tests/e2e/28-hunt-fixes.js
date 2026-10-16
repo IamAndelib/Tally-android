@@ -8,6 +8,14 @@
 //     kept, other scripts' digits and commas, currency signs dropped; rounding as shown ($1.005 → $1.01, no "−$0.00")
 //  E. a loan whose leftover shows as nothing is cleared
 //  F. dates: Gregorian months on a Persian-calendar phone; at midnight Home, History and an open form move on
+//  G. saved data: an unreadable start leaves the shell's auto backup alone and the kept copy stays offered; odd
+//     backups load the same every time (dates, duplicate ids, names that aren't text); CSV formula guard
+//  H. loans: no payment before its loan (and none shown "Cleared" while money is owed), the merge hint says what will
+//     be owed, a due day moves every draw due by then, notes on added draws show, a name typed out in full adds to
+//     its open tab, a written-off lending shows what was let go, +1 day counts from the day it was tapped
+//  I. the shell: a picked folder holding a backup asks first, an unreachable folder is said, the first-open
+//     permissions stay up when opened from the widget, the evening nudge never counts a future day, a fee sits above
+//     its transfer
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("28-hunt-fixes");
 let fails = 0;
@@ -398,6 +406,320 @@ const ok = (c, m) => {
   await page.evaluate(() => closeSheet());
   await settle();
   ok((await page.textContent("#app")).includes("Today"), "and Home redraws on today once the form closes");
+
+  // ---- G. saved data
+  const shellPage = async () => {
+    const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+    await c.addInitScript(() => {
+      const cfg = () => JSON.parse(sessionStorage.getItem("cfg") || "{}");
+      window.__calls = [];
+      const rec = (k, v) => window.__calls.push([k, v]);
+      window.Android = {
+        setWidget() {},
+        setReminders(j) {
+          window.__rem = JSON.parse(j);
+        },
+        takeActions: () => "[]",
+        getColors: () => null,
+        setBars() {},
+        setBackup(j) {
+          rec("setBackup", j);
+        },
+        setBackupData() {
+          rec("mirror");
+        },
+        pickBackupFolder() {
+          rec("pick");
+        },
+        backupStatus: () =>
+          JSON.stringify(cfg().status || { folder: "Documents/Tally", usable: true, last: 0, error: "" }),
+        readAutoBackup: () => JSON.stringify(cfg().auto || { error: "none" }),
+        saveFile(name) {
+          rec("saveFile", name);
+        },
+      };
+    });
+    const p = await c.newPage();
+    p.on("pageerror", e => errors.push(e.message));
+    await p.goto(appUrl);
+    return [c, p];
+  };
+  let [bc, bp] = await shellPage();
+  await bp.evaluate(() => {
+    localStorage.setItem("tally:v1", '{"v":6,"accounts":[{"id":"a"'); // cut short: can't be read
+  });
+  await bp.reload();
+  await bp.waitForTimeout(200);
+  ok(
+    (await bp.evaluate(() => window.__calls.filter(c => c[0] === "setBackup").length)) === 0,
+    "an unreadable start doesn't tell the shell auto backup is off (which would drop its copy)"
+  );
+  await bp.evaluate(() => closePop());
+  await bp.evaluate(() => {
+    V.screen = "settings";
+    render();
+  });
+  ok(
+    (await bp.isVisible('[data-act="kept-save"]')) && (await bp.isVisible('[data-act="kept-del"]')),
+    "Settings offers the kept copy: save it, or delete it"
+  );
+  await bp.click('[data-act="kept-del"]');
+  await bp.click('#pop [data-act="ask-ok"]');
+  ok(!(await bp.evaluate(() => keptKeys().length)) && !(await bp.$('[data-act="kept-save"]')), "and deleting it does");
+  ok(
+    await page.evaluate(() => {
+      const raw = {
+        v: 6,
+        settings: { cur: "USD" },
+        types: [{ id: "tx", name: {}, i: "", c: "#123456" }],
+        accounts: [
+          { id: "w", name: "Wallet", type: "tx", currency: "USD", opening: 10 },
+          { id: "w", name: "Bank", type: "bank", currency: "USD", opening: 20 },
+        ],
+        txns: [
+          { id: "a", ts: 1, date: "0999-06-01", type: "expense", amount: 1, account: "w", cat: "food", note: "" },
+          { id: "b", ts: 2, date: "2026-02-30", type: "expense", amount: 2, account: "w", cat: "food", note: "" },
+          { id: "b", ts: 3, date: "2026-03-02", type: "expense", amount: 3, account: "w", cat: "food", note: "" },
+        ],
+      };
+      const one = migrate(raw),
+        two = migrate(JSON.parse(JSON.stringify(one)));
+      return (
+        JSON.stringify(one) === JSON.stringify(two) &&
+        one.accounts.length === 2 &&
+        one.accounts[0].id !== one.accounts[1].id &&
+        one.txns.length === 2 &&
+        one.txns[0].id !== one.txns[1].id &&
+        one.types.length === 0
+      );
+    }),
+    "an odd backup loads the same every time: duplicate ids made unique, bad dates and nameless types left out"
+  );
+  await seed({
+    txns: [{ id: "e", ts: 1, date: t, type: "expense", amount: 1, account: "a", cat: "food", note: " =1+1" }],
+  });
+  await page.evaluate(() => {
+    window.Android.saveFile = (name, mime, text) => (window.__csv = text);
+    exportCsv();
+  });
+  ok((await page.evaluate(() => window.__csv)).includes(`"' =1+1"`), "a formula after spaces is guarded in CSV");
+
+  // ---- H. loans
+  const lseed = async (draws, pays, extra = {}) =>
+    seed(
+      Object.assign(
+        {
+          txns: draws
+            .map(([id, a, d, due]) => ({
+              id,
+              ts: 1,
+              date: d,
+              type: "loan",
+              amount: a,
+              account: "a",
+              note: "",
+              dir: "out",
+              loan: "L",
+              principal: true,
+              due,
+            }))
+            .concat(
+              pays.map(([id, a, d]) => ({
+                id,
+                ts: 2,
+                date: d,
+                type: "loan",
+                amount: a,
+                account: "a",
+                note: "",
+                dir: "in",
+                loan: "L",
+              }))
+            ),
+          loans: [{ id: "L", kind: "lend", person: "Ann", account: "a", date: draws[0][2], status: "open" }],
+        },
+        extra
+      )
+    );
+  const d10 = await page.evaluate(() => addDays(today(), -10)),
+    d7 = await page.evaluate(() => addDays(today(), -7)),
+    d2 = await page.evaluate(() => addDays(today(), -2));
+  await lseed(
+    [
+      ["d1", 100, d10],
+      ["d2", 100, d2],
+    ],
+    [["p", 30, d7]]
+  );
+  await page.evaluate(() => {
+    loanOpen("L");
+    deleteLoanEntry("d1");
+  });
+  ok(
+    (await state()).txns.some(x => x.id === "d1") && /comes before the rest/.test(await page.textContent("#snack")),
+    "deleting the first draw would put a payment before the loan: refused"
+  );
+  await page.evaluate(() => {
+    loanOpen("L");
+    loanDrawEdit("d1");
+    setDateField($("#ed-date"), addDays(today(), -3));
+    saveLoanDraw();
+  });
+  ok(
+    (await state()).txns.find(x => x.id === "d1").date === d10 &&
+      /comes before that/.test(await page.textContent("#snack")),
+    "moving it after the payment: refused"
+  );
+  await page.evaluate(() => closeSheet());
+  ok(
+    await page.evaluate(() => {
+      S.txns.find(x => x.id === "d1").date = addDays(today(), -1); // as an older version could have saved it
+      RBC = null;
+      const r = runBal().p;
+      return r.ls === "partly" && r.left === 170;
+    }),
+    "a payment before every draw (from an older version) isn't shown as Cleared"
+  );
+  await lseed([["d1", 1000, d10]], [["p", 600, d7]]);
+  await page.evaluate(() => {
+    loanForm("lend");
+    $("#f-person").value = "ann";
+    $("#f-person").dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.fill("#f-amt", "100");
+  await settle();
+  const hint = await page.textContent("#f-mergehint");
+  ok(
+    /500\.00 owed/.test(hint) && (await page.evaluate(() => F.merge === "L")),
+    "Ann typed out adds to her open tab, now $500.00 owed: " + hint
+  );
+  await page.evaluate(() => closeSheet());
+  await lseed(
+    [
+      ["d1", 300, d5, d2],
+      ["d2", 200, d5, await page.evaluate(() => addDays(today(), -1))],
+    ],
+    []
+  );
+  await page.evaluate(() => {
+    loanOpen("L");
+    datePicker($("#f-due2"));
+    dpSet(addDays(today(), 5));
+  });
+  const i5 = await page.evaluate(() => {
+    const i = loanInfo(loan("L"));
+    return { st: i.st, next: i.nextDue, amt: i.dueAmt, due: S.txns.filter(x => x.principal).map(x => x.due) };
+  });
+  ok(
+    i5.st === "active" && i5.amt === 500 && i5.due.every(d => d === i5.next),
+    "a new due day moves every draw due by then: no longer overdue " + JSON.stringify(i5)
+  );
+  ok(!/Overdue/.test(await page.textContent("#sheet .hero")), "and the open loan sheet follows");
+  await page.evaluate(() => closeSheet());
+  await lseed(
+    [
+      ["d1", 100, d10],
+      ["d2", 50, d5],
+    ],
+    [],
+    {}
+  );
+  await page.evaluate(() => {
+    S.txns.find(x => x.id === "d2").note = "school fees";
+    save();
+    V.screen = "history";
+    render();
+  });
+  ok(
+    (await page.textContent('#app [data-v="d2"]')).includes("school fees"),
+    "a note on an added draw shows in History"
+  );
+  await lseed([["d1", 1000, d10]], [["p", 600, d7]]);
+  await page.evaluate(() => {
+    loan("L").status = "writeoff";
+    save();
+    V.screen = "assets";
+    V.showCleared = true;
+    render();
+  });
+  ok(/400\.00/.test(await page.textContent('#app [data-v="L"]')), "a written-off lending shows the $400 let go");
+  await lseed([["d1", 100, d10, d5]], []);
+  await page.evaluate(d => {
+    window.__actions = [{ type: "extend", id: "L", days: 7, on: d }];
+    applyNativeActions();
+  }, d2);
+  ok(
+    (await state()).txns.find(x => x.id === "d1").due === (await page.evaluate(d => addDays(d, 7), d2)),
+    "+1 week tapped two days ago counts from that day"
+  );
+
+  // ---- I. the shell
+  await bp.evaluate(() => {
+    sessionStorage.setItem("cfg", JSON.stringify({ auto: { text: '{"v":6,"accounts":[],"txns":[]}', when: 0 } }));
+    window.__calls = [];
+    onFolderPicked("");
+  });
+  ok(
+    (await bp.textContent("#pop")).includes("already has a Tally backup") &&
+      !(await bp.evaluate(() => S.settings.backup.on)),
+    "a picked folder that holds a backup asks before writing over it"
+  );
+  await bp.click('#pop [data-act="ask-alt"]'); // Replace it
+  ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns auto backup on");
+  await bp.evaluate(() => {
+    sessionStorage.setItem("cfg", JSON.stringify({ status: { folder: "", usable: false, last: 0, error: "" } }));
+    V.screen = "settings";
+    render();
+  });
+  ok((await bp.textContent("#bk")).includes("Can't reach the folder"), "auto backup on without its folder says so");
+  await bc.close();
+  ok(
+    await page.evaluate(() => {
+      S.txns = [
+        {
+          id: "e",
+          ts: Date.now(),
+          date: addDays(today(), 3),
+          type: "expense",
+          amount: 1,
+          account: "a",
+          cat: "food",
+          note: "",
+        },
+      ];
+      syncReminders();
+      return window.__rem ? window.__rem.lastEntry === today() : true;
+    }),
+    "an entry dated ahead counts as written today for the evening nudge"
+  );
+  ok(
+    await page.evaluate(() => {
+      const tr = {
+          id: "t",
+          ts: 5,
+          date: today(),
+          type: "transfer",
+          amount: 1,
+          account: "a",
+          to: "a",
+          note: "",
+          feeId: "f",
+        },
+        fee = {
+          id: "f",
+          ts: 5,
+          date: today(),
+          type: "expense",
+          amount: 1,
+          account: "a",
+          cat: "fees",
+          note: "",
+          feeOf: "t",
+        };
+      return [tr, fee].sort(byNewest)[0].id === "f";
+    }),
+    "a fee saved with its transfer's own time lists just above it"
+  );
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

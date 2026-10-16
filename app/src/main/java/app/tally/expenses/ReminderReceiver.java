@@ -58,7 +58,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         SharedPreferences p = prefs(ctx);
         String t = today();
         if (A_DAILY.equals(a)) {
-            if (reached(config(ctx).optJSONObject("daily"), 21) && !t.equals(p.getString("lastEntry", ""))
+            JSONObject dl = config(ctx).optJSONObject("daily");
+            if (dl != null && dl.optBoolean("on") && reached(dl, 21) && !t.equals(p.getString("lastEntry", ""))
                     && !t.equals(p.getString("shown:nudge", ""))) {
                 show(ctx, CH_NUDGE, DAILY_ID, "Nothing written in Tally today",
                         "Take a minute to note what you spent.", openApp(ctx, null, DAILY_ID), null);
@@ -162,7 +163,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         JSONObject cfg = config(ctx);
         long now = System.currentTimeMillis();
 
-        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, true);
+        // nothing until the page has said what's on (a widget can arm this before Tally was ever opened)
+        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, false);
         armDaily(ctx, am, cfg.optJSONObject("check"), A_CHECK, CHECK_ID, 8, false);
 
         JSONObject at = cfg.optJSONObject("duesAt");
@@ -356,7 +358,8 @@ public class ReminderReceiver extends BroadcastReceiver {
                 d.put("date", fmt().format(c.getTime()));
             }
             JSONArray q = new JSONArray(p.getString("actions", "[]"));
-            q.put(new JSONObject().put("type", "extend").put("id", id).put("days", days));
+            // the day it was tapped: the page counts from it, not from when Tally is next opened
+            q.put(new JSONObject().put("type", "extend").put("id", id).put("days", days).put("on", today()));
             p.edit().putString("config", cfg.toString()).putString("actions", q.toString()).remove("shown:" + id).apply();
         } catch (JSONException ignored) { }
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -434,8 +437,12 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
     }
 
+    /** "Mon, Jun 15" / "Mon 15 Jun" / "6月15日(月)": weekday, day and month in the phone's own order */
     private static String pretty(String s) {
         Calendar c = parse(s);
-        return c == null ? s : new SimpleDateFormat("EEE d MMM", Locale.getDefault()).format(c.getTime());
+        if (c == null) return s;
+        Locale loc = Locale.getDefault();
+        return new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEdMMM"), loc)
+                .format(c.getTime());
     }
 }

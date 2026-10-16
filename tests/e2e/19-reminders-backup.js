@@ -54,7 +54,7 @@ const stub = () => {
       rec("data", j);
     },
     backupStatus() {
-      return JSON.stringify(window.__cfg.status || { folder: "", last: 0, error: "" });
+      return JSON.stringify(window.__cfg.status || { folder: "", usable: true, last: 0, error: "" });
     },
     backupNow() {
       rec("now");
@@ -490,7 +490,12 @@ const stub = () => {
   await act("bk-now");
   ok((await page.textContent("#snack")).includes("can't be found"), "a failed backup says why");
   await page.evaluate(() => {
-    window.__cfg.status = { folder: "Documents/Tally", last: 0, error: "The backup folder can't be found." };
+    window.__cfg.status = {
+      folder: "Documents/Tally",
+      usable: true,
+      last: 0,
+      error: "The backup folder can't be found.",
+    };
     render();
   });
   ok(

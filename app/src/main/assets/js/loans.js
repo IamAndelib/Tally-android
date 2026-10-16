@@ -87,32 +87,33 @@ function relinkLoan(id) {
   l.account = d[d.length - 1].account;
   l.date = d[0].date;
 }
-/* the first loan whose remaining draws would come to less than was already paid back once these entries are deleted
-   (null if none): the extra would silently drop out of the loan. A loan losing every draw goes as a whole. */
-function paidPast(ids) {
+/* why deleting these entries would break a loan, or "" (a loan losing every draw goes as a whole): its remaining
+   draws would come to less than was already paid back (the extra would silently drop out of it), or a payment would
+   come before its first draw */
+function loanBlock(ids) {
   ids = new Set(ids);
   const sum = list => rnd(list.reduce((s, t) => s + t.amount, 0));
-  return (
-    S.loans.find(l => {
-      const i = loanInfo(l),
-        keep = i.draws.filter(t => !ids.has(t.id));
-      if (!keep.length || keep.length === i.draws.length) return false;
-      const paid = sum(i.pays.filter(t => !ids.has(t.id)));
-      return paid - sum(keep) > Math.max(0, i.paid - i.total) + 0.0005;
-    }) || null
-  );
+  for (const l of S.loans) {
+    const i = loanInfo(l),
+      keep = i.draws.filter(t => !ids.has(t.id));
+    if (!keep.length || keep.length === i.draws.length) continue;
+    const pays = i.pays.filter(t => !ids.has(t.id)),
+      first = pays.map(t => t.date).sort()[0];
+    if (sum(pays) - sum(keep) > Math.max(0, i.paid - i.total) + 0.0005)
+      return loanWho(l) + ": already paid back " + money(i.paid, i.cur);
+    if (first && first < keep[0].date)
+      return loanWho(l) + ": a payment on " + dayLabel(first) + " comes before the rest";
+  }
+  return "";
 }
-const paidPastMsg = l => {
-  const i = loanInfo(l);
-  return loanWho(l) + ": already paid back " + money(i.paid, i.cur);
-};
 /* Delete on a row of the loan sheet (never the loan's only draw, nor one already paid back) */
 function deleteLoanEntry(id) {
   const t = S.txns.find(x => x.id === id),
     l = t && t.type === "loan" && loan(t.loan);
   if (!l || (t.principal && loanInfo(l).draws.length <= 1)) return;
-  if (paidPast([id])) {
-    snack(paidPastMsg(l));
+  const no = loanBlock([id]);
+  if (no) {
+    snack(no);
     return;
   }
   closeSheet();
@@ -150,7 +151,7 @@ function loanRow(l, drag) {
     esc(sub) +
     "</div></span>" +
     '<span class="a">' +
-    esc(money(i.open ? i.left : i.total, i.cur)) +
+    esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) + // written off: what was let go
     '<small><span class="st ' +
     i.st +
     '">' +
@@ -201,7 +202,7 @@ function mergeHint() {
   const i = loanInfo(l),
     lend = l.kind === "lend",
     add = evalAmt(($("#f-amt") || {}).value || "") || 0,
-    tot = rnd(i.total + (add > 0 ? add : 0));
+    tot = rnd(i.left + (add > 0 ? add : 0)); // what will be owed: what is still owed now, plus this
   el.hidden = false;
   el.textContent =
     "Adds to what you " +
@@ -281,10 +282,11 @@ function loanOpen(id, focusPay) {
     '<div class="hero"><div class="t">' +
     heroLine +
     '</div><div class="v">' +
-    esc(money(i.open ? i.left : i.total, i.cur)) +
+    esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) +
     "</div>" +
     '<div class="t">' +
-    (i.open ? "left of " + esc(money(i.total, i.cur)) + " · " : "") +
+    (i.open ? "left of " : i.st === "writeoff" ? "of " : "") +
+    (i.open || i.st === "writeoff" ? esc(money(i.total, i.cur)) + " · " : "") +
     '<span class="st ' +
     i.st +
     '">' +
@@ -348,7 +350,8 @@ function loanOpen(id, focusPay) {
               " on " +
               dayLabel(t.date) +
               (t.due ? " · due " + dayLabel(t.due) : "") +
-              (i.open ? (i.rem[t.id] > 0 ? " · " + money(i.rem[t.id], i.cur) + " left" : " · paid off") : "")
+              (i.open ? (i.rem[t.id] > 0 ? " · " + money(i.rem[t.id], i.cur) + " left" : " · paid off") : "") +
+              (t.note ? " · " + t.note : "")
             : dayLabel(t.date) +
               " · " +
               (lend ? "into " : "from ") +
@@ -474,9 +477,15 @@ function saveLoanDraw() {
   const txnId = F.editTxn,
     t0 = S.txns.find(x => x.id === txnId);
   if (!t0) return;
-  /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan */
+  /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan; and no payment
+     before the first draw */
   const i = loanInfo(l),
-    total = rnd(i.total + (t0.principal ? amt - t0.amount : 0)),
+    firstPay = i.pays.map(t => t.date).sort()[0];
+  if (t0.principal && firstPay && firstPay < i.draws.map(t => (t.id === txnId ? date2 : t.date)).sort()[0]) {
+    snack("A payment on " + dayLabel(firstPay) + " comes before that");
+    return;
+  }
+  const total = rnd(i.total + (t0.principal ? amt - t0.amount : 0)),
     paid = rnd(i.paid + (t0.principal ? 0 : amt - t0.amount));
   if (paid - total > Math.max(0, i.paid - i.total) + 0.0005) {
     snack(
@@ -772,17 +781,7 @@ function clearLoan(id) {
       return;
     }
     const mutate = () => {
-      S.txns.push({
-        id: pid,
-        ts,
-        type: "loan",
-        dir: lend ? "in" : "out",
-        loan: id,
-        amount: i.left,
-        account,
-        date: today(),
-        note: "",
-      });
+      S.txns.push(...payTxns(l, pid, ts, i.left, account, today(), 0));
     };
     guardOverdraw(mutate, today(), () => {
       V.showCleared = true;
@@ -801,7 +800,10 @@ function clearLoan(id) {
   };
   askDialog(
     lend ? "Clear " + who + "’s lending?" : "Clear the loan from " + who + "?",
-    (lend ? who + " still owes " : "You still owe " + who + " ") + money(i.left, i.cur) + ".",
+    (lend ? who + " still owes " : "You still owe " + who + " ") +
+      money(i.left, i.cur) +
+      "." +
+      (account ? (lend ? " Got back into " : " Paid from ") + acc(account).name + "." : ""),
     lend ? "Got it all back" : "Paid it all back",
     paid,
     { alt: [lend ? "Write it off" : "Mark as forgiven", off] }
@@ -840,11 +842,13 @@ function reopenLoan(id) {
 }
 /* the snooze (a due reminder's +1 day / +1 week): every unpaid draw due by today, else the next one, moves on from
    whichever is later, its due date or today */
-function extendLoan(l, days) {
+/* +1 day / +1 week on a due reminder, counted from the day it was tapped (on), as the shell did */
+function extendLoan(l, days, on) {
+  on = on || today();
   const i = loanInfo(l),
-    due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= today()), // what the reminder was about
+    due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= on), // what the reminder was about
     list = due.length ? due : [i.dueDraw || i.draws[i.draws.length - 1]];
   list.forEach(t => {
-    if (t) t.due = addDays(t.due && t.due > today() ? t.due : today(), days);
+    if (t) t.due = addDays(t.due && t.due > on ? t.due : on, days);
   });
 }

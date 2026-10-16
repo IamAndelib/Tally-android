@@ -24,7 +24,7 @@ function blank() {
     },
     accounts: [],
     types: [],
-    cats: CATS.map(c => ({ ...c })),
+    cats: CATS.map(c => ({ ...c, hidden: false })),
     txns: [],
     loans: [],
     assets: [],
@@ -47,8 +47,18 @@ function migrate(o) {
       const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? +v : NaN;
       return Number.isFinite(n) && n > 0 && n < 8.64e15 ? Math.round(n) : 0;
     },
-    isDay = v => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v),
+    /* a date of years 1000–9999 that stays one once read (2024-02-30 is 2024-03-01; 9999-12-32 would be year 10000) */
+    isDay = v => typeof v === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(v) && /^[1-9]\d{3}-/.test(iso(parseISO(v))),
     day = v => iso(parseISO(v)),
+    /* the first of each id keeps it, later ones (a hand-made or damaged backup) get their own */
+    uniq = list => {
+      const seen = new Set();
+      list.forEach(x => {
+        if (seen.has(x.id)) x.id = "x" + newId();
+        seen.add(x.id);
+      });
+      return list;
+    },
     hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v),
     isCur = v => /^[A-Z]{3}$/.test(v),
     curOf = v => {
@@ -119,13 +129,14 @@ function migrate(o) {
     own(TYPES, k)
   );
   s.types = (Array.isArray(o.types) ? o.types : [])
-    .filter(t => t && t.id && t.name && !own(TYPES, t.id))
+    .filter(t => t && t.id && str(t.name) && !own(TYPES, t.id))
     .map(t => ({
       id: sid(t.id),
       name: str(t.name).slice(0, 20),
       i: own(ICONS, t.i) ? t.i : "account_balance_wallet",
       c: hex(t.c) ? t.c : "#5f7389",
     }));
+  uniq(s.types);
   s.accounts = (Array.isArray(o.accounts) ? o.accounts : [])
     .filter(a => a && a.id)
     .map(a => {
@@ -143,7 +154,7 @@ function migrate(o) {
       };
     });
   if (Array.isArray(o.cats)) {
-    const valid = o.cats.filter(c => c && c.id && c.name && c.id !== "transfer");
+    const valid = o.cats.filter(c => c && c.id && str(c.name) && c.id !== "transfer");
     if (ver >= 2) {
       s.cats = valid.map(c => ({
         id: sid(c.id),
@@ -178,6 +189,8 @@ function migrate(o) {
         );
     }
   }
+  uniq(s.cats);
+  uniq(s.accounts);
   const okAcc = new Set(s.accounts.map(a => a.id));
   s.txns = (Array.isArray(o.txns) ? o.txns : [])
     .filter(t => t && t.id && isDay(t.date) && okNum(t.amount) && okAcc.has(sid(t.account)))
@@ -221,6 +234,7 @@ function migrate(o) {
       return t;
     })
     .filter(Boolean);
+  uniq(s.txns);
   /* entries without a time (1.3.1 read times as amounts and dropped them all) get one on their own day, in the order
      they were written, so the newest still comes first; balances don't depend on it */
   s.txns.forEach((t, i) => {
@@ -259,6 +273,7 @@ function migrate(o) {
       };
     })
     .filter(Boolean);
+  uniq(s.loans);
   /* v6: a loan's due date used to live on the loan itself; move it onto its (first/only) principal draw */
   if (!(ver >= 6) && Array.isArray(o.loans))
     o.loans.forEach(ol => {
@@ -277,11 +292,22 @@ function migrate(o) {
       value: num(x.value),
       currency: curOf(x.currency),
     }));
+  uniq(s.assets);
   return s;
 }
 let S = blank();
-/* raw text of saved data that couldn't be read at start-up (kept aside under LS+":unreadable" and offered as a file) */
-let unreadable = null;
+/* raw text of saved data that couldn't be read at start-up (kept aside under LS+":unreadable" and offered as a file),
+   and whether that copy could be kept (it needs as much room again) */
+let unreadable = null,
+  unreadableKept = false;
+/* the copies kept aside, until the user saves or deletes them (Settings → Your data) */
+const keptKeys = () => {
+  try {
+    return Object.keys(localStorage).filter(k => k.startsWith(LS + ":unreadable"));
+  } catch (e) {
+    return [];
+  }
+};
 /* the text save() last stored, handed as is to the backup mirror (no second JSON.stringify of the whole notebook) */
 let savedJson = "";
 /* Loads the saved notebook. Called once from the start-up code at the end, after every constant migrate() uses exists. */
@@ -302,6 +328,7 @@ function loadState() {
         had = localStorage.getItem(k);
       if (had !== raw) localStorage.setItem(had ? k + ":" + Date.now() : k, raw);
     } catch (e2) {}
+    unreadableKept = keptKeys().some(k => localStorage.getItem(k) === raw);
   }
 }
 /* a save that fails (the phone's storage for Tally is full or blocked) is said in a dialog, which the change's own
@@ -350,10 +377,15 @@ function runBal() {
   const b = openingBalances(),
     m = {},
     paid = {},
-    amt = {};
+    amt = {},
+    all = {};
   S.loans.forEach(l => {
     amt[l.id] = 0;
     paid[l.id] = 0;
+    all[l.id] = 0;
+  });
+  S.txns.forEach(t => {
+    if (t.type === "loan" && t.principal && t.loan in all) all[t.loan] += t.amount;
   });
   S.txns
     .slice()
@@ -365,7 +397,9 @@ function runBal() {
         if (t.principal) amt[t.loan] += t.amount;
         else {
           paid[t.loan] += t.amount;
-          r.left = Math.max(0, rnd(amt[t.loan] - paid[t.loan]));
+          /* a payment before what it pays (saved by an older version) is measured against the whole tab */
+          const owed = paid[t.loan] > amt[t.loan] + 0.0005 ? all[t.loan] : amt[t.loan];
+          r.left = Math.max(0, rnd(owed - paid[t.loan]));
           r.ls = r.left <= 0 ? "cleared" : "partly";
         }
       }

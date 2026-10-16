@@ -228,7 +228,7 @@ const ok = (c, m) => {
   await page.evaluate(() => exportCsv());
   const csv = await page.evaluate(() => window.__files.pop().text);
   const line = csv.split("\n").find(l => l.includes(",loan-fee,"));
-  ok(line && /,loan-fee,20,BDT,"Bank",/.test(line) && /,"","Payment fee"$/.test(line), "CSV: " + line);
+  ok(line && /,loan-fee,20,BDT,"Bank",/.test(line) && /,"","Payment fee",,""$/.test(line), "CSV: " + line);
   ok(
     await page.evaluate(() => {
       const m = migrate({

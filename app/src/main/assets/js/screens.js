@@ -483,7 +483,7 @@ function txLine(t) {
       who = l ? loanWho(l) : "?";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
     d = t.principal ? (lend ? "Lent to " : "Borrowed from ") + who : lend ? who + " paid back" : "Paid back " + who;
-    s = (lend ? "Lending" : "Loan") + " · " + (a ? a.name : "?");
+    s = (lend ? "Lending" : "Loan") + " · " + (a ? a.name : "?") + (t.note ? " · " + t.note : "");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -842,6 +842,12 @@ function settingsView() {
       : "Everything stays on this phone. Uninstalling deletes it, so keep a backup.") +
     "</p>" +
     autoBackupHtml() +
+    (keptKeys().length
+      ? '<div class="card"><h3>Unreadable data kept</h3><p class="muted small" style="margin:0">Saved data Tally ' +
+        "couldn’t open is kept on this phone. Save it as a file to keep it, or delete it.</p>" +
+        '<div class="gap"></div><div class="row"><button class="btn tonal" data-act="kept-save">Save file</button>' +
+        '<button class="btn tonal" data-act="kept-del">Delete it</button></div></div><div class="gap"></div>'
+      : "") +
     (autoOn ? "" : '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>') +
     (canRestore()
       ? '<button class="btn tonal" data-act="restore">Restore from backup</button>'
@@ -899,16 +905,19 @@ function autoBackupHtml() {
   const bs = backupStatus();
   if (!bs) return "";
   const b = S.settings.backup,
+    lost = b.on && !bs.usable, // on, but its folder isn't reachable (a new phone, a reinstall)
     sub = !b.on
       ? "Every day, to a folder you pick"
-      : bs.error
-        ? esc(bs.error)
-        : bs.last
-          ? "Last backup: " + esc(backupWhen(bs.last))
-          : "First backup at " + esc(timeLabel(b.time));
+      : lost
+        ? "Can't reach the folder: choose it again"
+        : bs.error
+          ? esc(bs.error)
+          : bs.last
+            ? "Last backup: " + esc(backupWhen(bs.last))
+            : "First backup at " + esc(timeLabel(b.time));
   return (
     '<div class="list" id="bk"><div class="setrow"><span class="mid"><div>Auto backup</div><div class="s' +
-    (b.on && bs.error ? " err" : "") +
+    (b.on && (bs.error || lost) ? " err" : "") +
     '">' +
     sub +
     "</div></span>" +

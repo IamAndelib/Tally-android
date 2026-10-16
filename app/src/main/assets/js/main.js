@@ -17,7 +17,9 @@ mirrorNow();
 if (unreadable)
   askDialog(
     "Couldn't open your saved data",
-    "A copy is kept on this phone. Save it as a file so it's safe?",
+    unreadableKept
+      ? "A copy is kept on this phone. Save it as a file so it's safe?"
+      : "There isn't room to keep a copy on this phone. Save it as a file now, or it's gone once you add anything.",
     "Save file",
     () => saveOut("tally-unreadable-" + today() + ".json", "application/json", unreadable),
     { cancel: "Not now" }

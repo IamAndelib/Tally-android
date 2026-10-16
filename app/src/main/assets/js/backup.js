@@ -4,11 +4,12 @@
 "use strict";
 
 function exportCsv() {
-  /* quoted text; a leading = + - @ gets a ' so a spreadsheet shows it instead of running it as a formula */
+  /* quoted text; a leading = + - @ (after any spaces) gets a ' so a spreadsheet shows it instead of running it as a
+     formula */
   const q = s =>
     '"' +
     String(s ?? "")
-      .replace(/^[=+\-@\t\r]/, "'$&")
+      .replace(/^\s*[=+\-@\t\r]/, "'$&")
       .replace(/"/g, '""') +
     '"';
   const kind = t =>
@@ -18,32 +19,49 @@ function exportCsv() {
         ? ((S.txns.find(x => x.id === t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
         : t.type;
   const lines = [
-    ["date", "type", "amount", "currency", "account", "to_account", "to_amount", "category", "note"].join(","),
+    [
+      "date",
+      "type",
+      "amount",
+      "currency",
+      "account",
+      "to_account",
+      "to_amount",
+      "category",
+      "note",
+      "to_currency",
+      "person",
+    ].join(","),
   ];
   [...S.txns]
     .sort((a, b) => a.date.localeCompare(b.date) || (a.ts || 0) - (b.ts || 0))
     .forEach(t => {
       const a = acc(t.account),
-        to = acc(t.to);
+        to = acc(t.to),
+        l = t.type === "loan" && loan(t.loan);
       lines.push(
         [
           t.date,
           kind(t),
-          t.amount,
+          rnd(t.amount),
           a ? a.currency : "",
           q(a ? a.name : ""),
           q(to ? to.name : ""),
-          t.type === "transfer" ? (t.toAmount != null ? t.toAmount : t.amount) : "",
+          t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
           q((t.type === "expense" && !t.feeOf) || t.type === "income" ? cat(t.cat).name : ""),
           q(t.note),
+          to ? to.currency : "",
+          q(l ? l.person : ""),
         ].join(",")
       );
     });
-  saveOut("tally-entries-" + today() + ".csv", "text/csv", lines.join("\n"));
+  /* the byte-order mark tells spreadsheets (Excel) the file is UTF-8, so names in any script read right */
+  saveOut("tally-entries-" + today() + ".csv", "text/csv", "\ufeff" + lines.join("\n"));
 }
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
    `auto` = {when, folder} for the auto backup file, whose dialog also offers "Choose another file". */
-function restoreText(t, auto) {
+/* after: what follows a restore (turning auto backup on, when it came from the folder being picked) */
+function restoreText(t, auto, after) {
   let o = null,
     n = null;
   try {
@@ -78,11 +96,13 @@ function restoreText(t, auto) {
       /* this phone's own set-up stays: its auto backup (the folder lives in the shell); Undo brings back what was here */
       const old = S,
         backup = S.settings.backup;
+      unreadable = null; // a real notebook again: auto backup may follow it
       S = n;
       S.settings.backup = backup;
       commit();
       syncBackup();
       applyTheme();
+      if (after) after();
       snack("Backup restored", () => {
         S = old;
         commit();

@@ -210,13 +210,21 @@ function dpSet(v) {
   if (!el) return;
   setDateField(el, v);
   if (id === "f-due2" && F && F.kind === "loan") {
+    /* the loan card's day: every draw still owed that's due by then (or by the day it showed, if later) moves to it,
+       as a reminder's +1 day does; without any due day, the draw it's about. The sheet is drawn again. */
     const l = loan(F.id);
     if (!l) return;
-    const t = S.txns.find(x => x.id === F.dueDraw);
-    if (!t) return;
-    t.due = v;
+    const i = loanInfo(l),
+      by = [i.nextDue > today() ? i.nextDue : today(), v].sort().pop(),
+      due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= by),
+      list = due.length ? due : S.txns.filter(x => x.id === F.dueDraw);
+    if (!list.length) return;
+    list.forEach(t => (t.due = v));
     commit();
-    $("#loan-due").textContent = dueHead(l, loanInfo(l));
+    const p = $("#sheet .p"),
+      top = p ? p.scrollTop : 0;
+    loanOpen(l.id);
+    if ($("#sheet .p")) $("#sheet .p").scrollTop = top;
   }
 }
 /* Settings → Region → Time format: "24" (the default) or "12" */

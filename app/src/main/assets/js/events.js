@@ -513,9 +513,9 @@ document.addEventListener("click", ev => {
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel],
-        l = paidPast(ids);
-      if (l) {
-        snack(paidPastMsg(l));
+        no = loanBlock(ids);
+      if (no) {
+        snack(no);
         return;
       }
       let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
@@ -584,6 +584,21 @@ document.addEventListener("click", ev => {
     case "export":
       exportCsv();
       break;
+    case "kept-save": // one file at a time (the shell saves one at a time): the oldest copy first
+      saveOut("tally-unreadable-" + today() + ".json", "application/json", localStorage.getItem(keptKeys().sort()[0]));
+      break;
+    case "kept-del":
+      askDialog(
+        "Delete the kept data?",
+        "Only do this once it's saved as a file, or you're sure you don't need it.",
+        "Delete",
+        () => {
+          keptKeys().forEach(k => localStorage.removeItem(k));
+          render();
+        },
+        { danger: true }
+      );
+      break;
     case "backup":
       saveBackup();
       break;
@@ -606,7 +621,12 @@ document.addEventListener("input", ev => {
   else if (id === "ic-q") icList(ev.target.value);
   else if (id === "hx-in") hexPreview();
   else if (id === "f-person" && F && F.kind === "loanf") {
-    F.merge = null;
+    /* a name typed out in full that has an open tab (same kind and currency) adds to it, as picking it would: the
+       hint says so, and changing the name undoes it */
+    const name = ev.target.value.trim().toLowerCase(),
+      cur = (acc(F.account) || {}).currency,
+      same = name && cur ? personCandidates(F.lk, cur, name).find(l => l.person.toLowerCase() === name) : null;
+    F.merge = same ? same.id : null;
     mergeHint();
     personSuggest(ev.target.value);
   } else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();

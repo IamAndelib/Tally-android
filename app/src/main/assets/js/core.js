@@ -449,4 +449,6 @@ function shortDay(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(DATE_LOC, o);
 }
-const byNewest = (a, b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0);
+/* newest first; a fee saved with its transfer's own time (before 1.4) comes just above it, as balances count it */
+const byNewest = (a, b) =>
+  b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);
