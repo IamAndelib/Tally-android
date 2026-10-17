@@ -145,7 +145,7 @@ content.
 
 | Permission | Why |
 | --- | --- |
-| Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on) |
+| Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on), and a notice if the daily backup fails |
 | Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
 | Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |

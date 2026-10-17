@@ -72,13 +72,13 @@ backup of that key (`tally-release.jks` + its password) safe and private: every 
 3. Google reviews it (usually 1–7 days). Then Tally is on the Play Store.
 
 ## 10. Updating later
-Each release: bump `tallyVersion` + CHANGELOG, merge to `main` (CI builds, signs and publishes the GitHub Release with
-the .aab), then in Play Console **Production → Create release** → upload the new `.aab`. Version codes increase
-automatically.
+Each release: bump `tallyVersion` and `tallyVersionCode`, add the CHANGELOG section and the fastlane changelog, merge
+to `main` (CI builds, signs and publishes the GitHub Release with the .aab), then in Play Console **Production →
+Create release** → upload the new `.aab`.
 
 ## Worth knowing
 - Test builds ("Tally Dev") and GitHub APKs are separate from the Play version. A phone with the GitHub-installed
-  release can update from Play only if Play App Signing uses the same key; to be safe, back up (Settings → Your data → Save backup),
+  release can update from Play only if Play App Signing uses the same key; to be safe, back up (Settings → Your data → Save backup, or Back up now),
   uninstall, install from Play, restore.
 - Play requires apps to target a recent Android version; each year this moves up by one. When Play Console warns
   about it, ask for a targetSdk bump.

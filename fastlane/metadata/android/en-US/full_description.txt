@@ -20,7 +20,7 @@ Keep track of money you borrowed or lent: several amounts per person, due dates,
 fees), reminders and write-offs. See your net worth on the Assets and Liabilities tabs.
 
 LOOK BACK
-History for any day, week, range or month, with each account's balance after every entry. Tap the donut for your last
+History for any day, date range or month, with each account's balance after every entry. Tap the donut for your last
 7 days, 8 weeks or a month by category.
 
 REMINDERS AND A WIDGET

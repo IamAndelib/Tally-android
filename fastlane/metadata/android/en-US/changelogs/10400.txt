@@ -1,5 +1,5 @@
 - An entry saved just before closing Tally from recent apps is no longer lost.
 - Loan payments can carry a fee; it comes off the account and never counts as spending.
 - Paid back more than owed? Book the extra as income, as the payment's fee, or as a new loan.
-- Every button is at least 48px to tap; Restore can be undone.
+- Bigger touch targets: buttons, chips and list rows are 48px; Restore can be undone.
 - Many fixes for amounts, dates, loans, backups, the widget and screen readers.

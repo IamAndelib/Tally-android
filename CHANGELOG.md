@@ -13,15 +13,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
   transfer's fee, it comes off the account, shows with the payment in History and is never counted as spending.
 - Paid more than you owed? The extra can now also be booked as income (they paid you more: the income form opens, so
   you pick its category) or as that payment's fee (you paid them more), besides a new loan the other way.
-- Restore can be undone. Picking a backup folder that already holds a Tally backup asks whether to restore it or
-  replace it, instead of writing over it.
-- CSV export: a transfer's received currency and a loan's person, as new last columns.
+- Restore can be undone. Before auto backup first writes into a folder that already holds a Tally backup (or one that
+  can't be read), it asks whether to restore it or replace it, instead of writing over it.
+- CSV export: a transfer's received currency and a loan's person, as new last columns; a loan payment's fee is
+  "loan-fee".
 
 ### Changed
 
-- Every button, chip, list row and calendar day is at least 48px to tap; account chips, segmented buttons and calendar
-  days are a little taller.
-- On a phone held sideways, the date and period pickers show the calendar beside the rest, so a whole month fits.
+- Buttons, chips and list rows are at least 48px to tap, and calendar days 48px tall; account chips, segmented buttons
+  and calendar days are a little taller.
+- On a phone held sideways, the date and period pickers show the calendar beside the rest, so a whole month fits with
+  days as tall as the screen allows.
 
 ### Fixed
 
@@ -29,12 +31,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
   - An entry saved just before Tally was swiped away from recent apps is no longer lost. Android's web view writes its
     storage a few seconds late, so Tally now also keeps its own copy of every save, written at once, and opens with
     whichever is newer.
+  - If one of those copies can't be read, the other one opens; the unreadable one is kept aside (once) to save as a
+    file, and goes once it is saved.
   - A save that fails (phone storage full) now says so, with a button to save a backup file.
   - Amounts Tally works out itself past a trillion (a balance fix in some currencies) are no longer dropped on the next
     start, and amounts up to 9 trillion can be typed.
   - Delete all data stops when its backup wasn't saved.
-  - Restore says how many accounts and entries it will really bring back, and warns about a backup from a newer
-    Tally.
+  - Restore says how many accounts and entries it will really bring back (counting what it leaves out), and warns
+    about a backup from a newer Tally. A backup file that can't be read no longer blocks Restore: the file picker
+    opens. Restore, then Undo, leaves auto backup as it was.
   - Data that couldn't be read at start-up stays offered in Settings until it is saved as a file or deleted, and no
     longer switches auto backup off.
   - Odd backups load the same every time (repeated ids, impossible years, nameless types); deleting an asset can be
@@ -46,22 +51,27 @@ and versions follow [Semantic Versioning](https://semver.org/).
     and Myanmar, Khmer and full-width digits work.
   - Money rounds as shown (1.005 → 1.01, negatives away from zero), and a balance fix that differs only below the
     currency's decimals already matches.
-  - Chart labels use the phone's short form (1.5K); a sign sits where the phone's language puts it (after the € in
-    Dutch, beside the number in Arabic) and stays on its amount's line; the ring's currency switch stays when the
-    donut shows no stats.
+  - Chart labels use the phone's short form (1.5K); every sign sits where the phone's language puts it (after the €
+    in Dutch, beside the number in Arabic) and stays on its amount's line; the ring's currency switch stays when the
+    donut shows no stats; empty amount fields show a plain "0".
 - Loans:
   - Enter in Edit payment no longer records a new payment on the loan underneath.
-  - A loan whose leftover is below the currency's smallest coin is cleared.
+  - A loan whose leftover is below the currency's smallest coin is cleared, and paying the amount shown clears it
+    (no "$0.00 more", no "Partly paid · $0.00 left").
+  - Editing a payment's account or day moves its fee with it. The Lend / Borrow form's currency follows the account
+    picked. With no account left in a loan's currency, the loan says so and offers only writing it off.
   - No payment can end up before the loan began; the merge hint says what will be owed; a name typed out in full adds
     to that person's open tab; notes on added amounts show; a written-off lending shows what was let go; clearing by
     drag names the account it uses.
   - A new due date moves every amount due by then. +1 day or +1 week on a reminder counts from the day it was tapped,
     and an Undo can't take it back.
 - Dates:
-  - Dates use the Gregorian calendar on phones set to the Persian or Hijri calendar.
-  - At midnight with the app open, Home, History and an open form move to the new day.
-  - Due reminders show dates in the phone's own order; an entry dated ahead no longer silences the evening reminder
-    until its date.
+  - Dates use the Gregorian calendar on phones set to another one (Persian, Hijri, Buddhist…), keeping the phone's
+    other choices such as Latin digits.
+  - At midnight with the app open, Home, History, an open form and an open date picker move to the new day.
+  - Due reminders show dates in the phone's own order; an entry dated ahead (after crossing time zones) counts on the
+    day it was written for the evening reminder; a one-day range of yesterday says Yesterday, and so does the last
+    backup's time.
 - Screens:
   - Undo no longer sits over a sheet opened after a change, where a tap meant for the sheet could undo it; Undo closes
     open sheets first; an entry deleted meanwhile no longer opens as an empty form; Enter in the icon search only
@@ -70,16 +80,21 @@ and versions follow [Semantic Versioning](https://semver.org/).
   - Long names stay readable in the balance check, Settings and account chips at narrow widths and large text, and
     names in right-to-left scripts keep their direction.
   - A two-finger pinch on the summary chart no longer moves it to another week or month.
+  - A fee saved with its transfer's own time lists just above it.
 - Android:
   - With auto backup on but its folder out of reach (a new phone, a reinstall), Settings says so and asks for the
     folder again. Folder problems are said instead of looking like a cancel, "Couldn't back up" goes once a backup
     succeeds, and Back up now says when there is nothing ready to save.
   - Back up now and Restore from the backup folder no longer freeze the screen while a slow folder (a cloud drive)
-    answers; Restore refuses a file that isn't a backup before reading it all, so a large wrong file can't freeze the
-    app.
-  - Two exports started at once each save their own file.
-  - The widget fits its text at large text sizes instead of cutting it off.
-  - If Tally's screen keeps stopping, it shows a message instead of restarting over and over.
+    answers, saves go on during a backup, and two backups in a row never mix up their answers; Restore refuses a file
+    that isn't a backup before handing it to the screen, so a large wrong file can't freeze the app.
+  - Two exports started at once each save their own file; an export left waiting is deleted after a day.
+  - The widget fits its text at large text sizes instead of cutting it off, and still resets at midnight on a day the
+    clocks change at midnight.
+  - If Tally's screen keeps stopping, it shows a message with Try again instead of restarting over and over (and a
+    screen Android closed while Tally was out of sight simply reopens).
+  - Answers from Android (backup, restore, saved files) reach the screen even after it was rebuilt; a malformed link
+    from another app can't crash Tally.
   - The first-open permissions dialog survives a first launch from the widget; no reminder is set before the app has
     first opened; permission answers stay out of Android's own backup.
 

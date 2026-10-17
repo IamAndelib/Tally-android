@@ -20,11 +20,13 @@ Tally is a native Android shell around a web page.
   `https://appassets.androidplatform.net/assets/` (`WebViewAssetLoader`) and exposes a small bridge, `window.Android`:
   `ready` (ends the launch screen), `haptic`, `saveFile`, `getColors` (Material You palette), `setBars`,
   `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `is24h`, `fontScale`, `reminderHealth` /
-  `openSetting` / `permsIntro` (permissions), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` /
-  `backupStatus` / `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls
-  the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`,
-  `tallyFolder`, `tallyRestore` and `tallyPerms`, which `js/main.js` installs last; answers that arrive before the
-  page is up wait in a queue (`callPage`).
+  `openSetting` / `permsIntro` (permissions), `keepState` / `keptState` (the shell's own copy of every save,
+  `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
+  `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls the page's hooks
+  `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`, `tallyFolder`,
+  `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that
+  arrive before the page is up wait in a queue (`callPage`), and background threads answer through the activity on
+  screen (`deliver`).
 - **`ReminderReceiver` / `BootReceiver`** schedule and show notifications from the reminder settings the page sends;
   **`BackupReceiver`** writes the daily backup file from the copy of the data the page mirrors to it;
   **`TallyWidget` / `QuickAddActivity` / `OpenActivity`** are the home-screen widget. The page is always the source of truth: it sends
@@ -102,7 +104,7 @@ Tally is for people who want to write things down quickly and move on:
 `tests/e2e/NN-name.js` are plain Node scripts that drive the page in headless Chromium with a stubbed `window.Android`
 and print `PASS` / `FAIL` lines; `npm test` runs them all against a throwaway local server (`npm test -- 15` runs only
 suites starting with 15). They run on a fixed date, 2026-06-17, so results don't depend on the day
-(`TALLY_TODAY=2026-10-01 npm test` runs them on another, e.g. the first of a month). Screenshots go to
+(`TALLY_TODAY=YYYY-MM-DD npm test` runs them on another; some suites assume a day in the middle of a month). Screenshots go to
 `tests/e2e/output/`. Add or extend a suite for every fix and feature.
 
 ## Pull requests
