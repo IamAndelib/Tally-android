@@ -105,6 +105,8 @@ const esc = s =>
     /[&<>"']/g,
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
+/* a name inside one of the app's own sentences, isolated: a right-to-left one can't turn the sentence around */
+const bdi = s => "<bdi>" + esc(s) + "</bdi>";
 const newId = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-5);
 const pad = n => String(n).padStart(2, "0");
 const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());

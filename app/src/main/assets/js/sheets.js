@@ -311,7 +311,7 @@ function trSheet(id) {
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
     esc(t && t.toAmount != null ? String(t.toAmount) : "") +
     '"></label>';
-  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", "Add a fee (ATM, cash-out)");
+  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", "Add a fee (ATM, cash‑out)");
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +

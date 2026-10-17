@@ -84,7 +84,8 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
 - **Confirmations** use `askDialog()`, never `confirm()`. Dates use `dateField()` / `datePicker()`, never native pickers.
 - The calculator's minus key is the Unicode minus `−` (U+2212); any regex over keys or expressions must include it.
 - No inline scripts or `on…=` attributes: the page's Content-Security-Policy blocks them.
-- Formatting is Prettier's (`npm run format`); `npm run lint` must pass.
+- Formatting is Prettier's (`npm run format`); `npm run lint` must pass (it also refuses CSS selectors newer than
+  WebView 87, such as `:is()`, which would drop the whole rule there).
 - Java: keep the bridge small; anything the page can compute, it computes.
 
 ## Design principles

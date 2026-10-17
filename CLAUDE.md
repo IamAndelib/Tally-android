@@ -74,7 +74,8 @@ spending either.
   (`configChanges`), the page re-renders on the resize.
 - The WebView's text zoom is off (`setTextZoom(100)`): the page follows the phone's text size itself
   (`Android.fontScale()` → `applyTextScale()` sets the root font size, capped at `TEXT_MAX`). So every font size in
-  CSS is in `rem`, and a box holding text grows with it (`min-height`, not `height`).
+  CSS is in `rem` (only the lines under a row's amount are in `em`, to shrink with it in `fitFigures()`), and a box
+  holding text grows with it (`min-height`, not `height`).
 
 **Reminders, widget and backup**
 - Every reminder and backup alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact (only the

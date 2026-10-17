@@ -72,8 +72,9 @@ const typeChip = (k, sel) =>
   (sel === k) +
   '">' +
   emblem({ i: typeIcon(k), c: typeCol(k) }, "sm") +
+  '<span class="chn" dir="auto">' +
   esc(typeName(k)) +
-  "</button>";
+  "</span></button>";
 /* colours: hex codes the user typed are remembered and offered in every picker */
 function normHex(v) {
   let h = String(v || "")

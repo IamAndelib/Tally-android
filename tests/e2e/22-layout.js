@@ -185,17 +185,25 @@ function inspect() {
           ">" +
           e.clientHeight
       );
-    // text past the screen edge (not inside something that scrolls sideways)
+    // text past the screen edge (not inside something that scrolls sideways), as far as no box around it clips it
     const r = document.createRange();
     r.selectNodeContents(e);
     const b = s.overflowX === "visible" ? r.getBoundingClientRect() : e.getBoundingClientRect(); // clipped: its box
     let sc = e.parentElement,
-      inScroller = false;
+      inScroller = false,
+      left = b.left,
+      right = b.right;
     while (sc && sc !== document.body) {
-      if (/auto|scroll/.test(getComputedStyle(sc).overflowX)) inScroller = true;
+      const o = getComputedStyle(sc).overflowX;
+      if (/auto|scroll/.test(o)) inScroller = true;
+      else if (o !== "visible") {
+        const c = sc.getBoundingClientRect();
+        left = Math.max(left, c.left);
+        right = Math.min(right, c.right);
+      }
       sc = sc.parentElement;
     }
-    if (!inScroller && (b.right > vw + 1 || b.left < -1))
+    if (!inScroller && (right > vw + 1 || left < -1))
       out.push("text off screen " + name(e) + " '" + e.textContent.trim().slice(0, 30) + "'");
   }
   // 7. text too small to read (the smallest size per state is reported once)
@@ -235,6 +243,8 @@ function inspect() {
       if (a.contains(b) || b.contains(a)) continue;
       // the calculator keypad slides over the form on purpose (the form scrolls above it)
       if (!!a.closest(".calc") !== !!b.closest(".calc")) continue;
+      // so do the period arrows over the label's padding (on top of it, each keeping its 48px)
+      if (a.closest(".pnav") && b.closest(".pnav")) continue;
       const x = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left),
         y = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (x > 2 && y > 2) out.push("overlap " + name(a) + " / " + name(b));
@@ -305,6 +315,10 @@ function inspect() {
     if (Math.abs(r.top - (vh - r.bottom)) > 8)
       out.push("ring off centre sideways: " + Math.round(r.top) + " above, " + Math.round(vh - r.bottom) + " below");
   }
+  // 10. Home's period label shows "Today" whole at the normal text size, even on a phone held sideways
+  const pl = layer.id === "app" && document.querySelector(".pnav .plabel > span");
+  if (pl && window.__fontScale === 1 && pl.textContent === "Today" && pl.scrollWidth > pl.clientWidth + 1)
+    out.push("period label cut: " + pl.scrollWidth + ">" + pl.clientWidth);
   // 6. a sheet or dialog fits the screen (its content scrolls inside)
   const box = layer.querySelector(".p, .dlg, [role=dialog]");
   if (box && box !== layer) {

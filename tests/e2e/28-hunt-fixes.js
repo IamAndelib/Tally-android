@@ -23,6 +23,10 @@
 //     says Yesterday; chart labels follow the phone; the currency switch stays with "No stats"
 //  K. loan amounts compared as shown, the loan form's currency, "Track as a fee" names the whole fee, no account in a
 //     loan's currency is said, signs placed one way in every History row
+//  L. screens on small, short and right-to-left setups: amounts never cut; right-to-left names keep the app's sentences
+//     in order; long names end in "…" in chips and wrap in sheet titles; the add-colour ring; a 48px currency switch;
+//     the pickers fit a short window and scroll by swipe; the range band joins up; short weekday names where long ones
+//     don't fit; focus rings drawn whole; "Partly paid" ends in "…"; "cash‑out" doesn't break
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("28-hunt-fixes");
 let fails = 0;
@@ -1269,6 +1273,365 @@ const ok = (c, m) => {
     "in Dutch every History amount has its sign after the €: " + JSON.stringify(amts)
   );
   await nl.close();
+
+  // ---- L. final QA: screens on narrow, short and right-to-left setups
+  /* a page at a given size, text scale and language, with this notebook */
+  const sized = async (o, st) => {
+    const c = await browser.newContext({
+      viewport: { width: o.w, height: o.h },
+      screen: { width: o.w, height: o.h },
+      isMobile: true,
+      hasTouch: true,
+      reducedMotion: "reduce",
+      locale: o.locale || "en-US",
+    });
+    await c.addInitScript(s => {
+      window.Android = {
+        getColors: () => null,
+        setBars() {},
+        setReminders() {},
+        setWidget() {},
+        takeActions: () => "[]",
+        requestNotifications() {},
+        saveFile() {},
+        fontScale: () => s,
+      };
+    }, o.s || 1);
+    const p = await c.newPage();
+    p.on("pageerror", e => errors.push(e.message));
+    await p.goto(appUrl);
+    await p.evaluate(st => localStorage.setItem("tally:v1", JSON.stringify(st)), st);
+    await p.reload();
+    await p.waitForTimeout(150);
+    return p;
+  };
+  const book = {
+    v: 6,
+    settings: { cur: "IDR", week: 1, clock: "24", lastCheck: t, dragTip: true },
+    accounts: [
+      { id: "b", name: "Everyday account at Bank Central Asia", type: "bank", currency: "IDR", opening: 1234567890.5 },
+      { id: "h", name: "חשבון בנק", type: "bank", currency: "IDR", opening: 5000 },
+      { id: "u", name: "Dollars", type: "bank", currency: "USD", opening: 50 },
+      { id: "i", name: "DE89370400440532013000", type: "bank", currency: "USD", opening: 0 },
+    ],
+    txns: [
+      { id: "e1", ts: 1, date: t, type: "expense", amount: 1234567.5, account: "b", cat: "food", note: "" },
+      { id: "e2", ts: 2, date: t, type: "expense", amount: 5, account: "b", cat: "groceries", note: "Weekly shop" },
+      { id: "e3", ts: 3, date: t, type: "expense", amount: 2, account: "u", cat: "food", note: "" },
+      { id: "x1", ts: 4, date: t, type: "transfer", amount: 100, account: "h", to: "u", toAmount: 6.5, note: "" },
+      {
+        id: "d1",
+        ts: 5,
+        date: t,
+        type: "loan",
+        amount: 1200,
+        account: "b",
+        note: "",
+        dir: "out",
+        loan: "L1",
+        principal: true,
+      },
+      { id: "p1", ts: 6, date: t, type: "loan", amount: 200, account: "b", note: "", dir: "in", loan: "L1" },
+      {
+        id: "d2",
+        ts: 7,
+        date: t,
+        type: "loan",
+        amount: 50,
+        account: "b",
+        note: "",
+        dir: "out",
+        loan: "L2",
+        principal: true,
+      },
+    ],
+    loans: [
+      { id: "L1", kind: "lend", person: "سارة", account: "b", date: t, status: "open" },
+      { id: "L2", kind: "lend", person: "Maria Fernanda Gonzalez de la Cruz", account: "b", date: t, status: "open" },
+    ],
+    assets: [],
+  };
+  const narrow = await sized({ w: 320, h: 640, s: 1.3 }, book);
+  /* every amount and balance line's figure lies wholly inside its row, bar or chip */
+  const cutAmounts = () =>
+    narrow.evaluate(() => {
+      const cut = [];
+      for (const el of document.querySelectorAll("#app .balbar b, #app .acc .b, #app .tx .a")) {
+        const box = el.closest(".tx, .balbar, .acc").getBoundingClientRect(),
+          w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let n;
+        while ((n = w.nextNode())) {
+          if (!n.textContent.trim() || n.parentElement.closest(".rbn")) continue;
+          const r = document.createRange();
+          r.selectNodeContents(n);
+          const b = r.getBoundingClientRect();
+          if (b.left < box.left - 0.5 || b.right > box.right + 0.5) cut.push(n.textContent.trim());
+        }
+      }
+      return cut;
+    });
+  const view = v =>
+    narrow.evaluate(v => {
+      closeSheet();
+      V.screen = v;
+      render();
+    }, v);
+  let cutL = await cutAmounts();
+  await view("history");
+  cutL = cutL.concat(await cutAmounts());
+  await view("assets");
+  cutL = cutL.concat(await cutAmounts());
+  ok(
+    cutL.length === 0,
+    "320px at large text: a billion on the balance bar, chips and every row is shown whole " + JSON.stringify(cutL)
+  );
+  await view("history");
+  const bidi = await narrow.evaluate(() => {
+    const d = $('#app [data-v="p1"] .d'),
+      b = d && d.querySelector("bdi"),
+      r = document.createRange();
+    if (!b || !b.nextSibling) return null;
+    r.selectNodeContents(b.nextSibling);
+    const rb = $('#app [data-v="x1"] .rb'),
+      arrow = rb.firstChild;
+    return {
+      sentence:
+        getComputedStyle(d).direction === "ltr" &&
+        b.getBoundingClientRect().right <= r.getBoundingClientRect().left + 1,
+      arrow: arrow.nodeType === 3 && arrow.textContent === "↓" && !rb.querySelector(".rbn").textContent.includes("↓"),
+    };
+  });
+  ok(bidi && bidi.sentence, 'a right-to-left name keeps the sentence in order: "سارة paid back", name first');
+  ok(bidi && bidi.arrow, "a transfer's arrow stays outside the account's name, on the app's side");
+  await view("home");
+  ok(
+    await narrow.evaluate(() => {
+      const n = $('.acc[data-v="h"] .n'),
+        em = n.querySelector(".emb"),
+        nm = n.querySelector("[dir=auto]");
+      return !!nm && em.getBoundingClientRect().right <= nm.getBoundingClientRect().left;
+    }),
+    "a Home chip's emblem stays before a right-to-left name"
+  );
+  /* chips holding long names: the name ends in "…", nothing past the chip's edge (its ✓ shows) */
+  const chipOk = sel =>
+    narrow.evaluate(sel => {
+      const c = document.querySelector(sel),
+        n = c && c.querySelector(".chn");
+      return (
+        !!n &&
+        getComputedStyle(n).textOverflow === "ellipsis" &&
+        n.scrollWidth > n.clientWidth &&
+        c.scrollWidth <= c.clientWidth + 1
+      );
+    }, sel);
+  await narrow.evaluate(() => {
+    V.screen = "history";
+    V.hAcc = "b";
+    render();
+  });
+  ok(
+    await chipOk('.strip [data-act="hacc"][data-v="b"]'),
+    'History\'s chip for a long account name ends in "…" and keeps its ✓'
+  );
+  await narrow.evaluate(() => {
+    V.hAcc = "";
+    V.screen = "home";
+    render();
+    loanForm("lend");
+  });
+  await narrow.waitForTimeout(150);
+  await narrow.fill("#f-person", "Ma");
+  await narrow.waitForTimeout(150);
+  ok(await chipOk('#f-person-sug [data-act="f-person-pick"]'), 'a suggested person with a long name ends in "…"');
+  await narrow.evaluate(() => {
+    closeSheet();
+    accOpen("i");
+  });
+  await narrow.waitForTimeout(150);
+  ok(
+    await narrow.evaluate(() => {
+      const x = $('#sheet [data-act="close"]').getBoundingClientRect(),
+        p = $("#sheet .p").getBoundingClientRect(),
+        h = $("#sheet .h h2");
+      return x.right <= p.right + 1 && h.scrollWidth <= h.clientWidth + 1;
+    }),
+    "a sheet titled with a long unbroken name (an IBAN) wraps it and keeps its close button"
+  );
+  await narrow.evaluate(() => {
+    closeSheet();
+    catForm("food");
+  });
+  await narrow.waitForTimeout(150);
+  ok(
+    await narrow.evaluate(() => {
+      const d = $("#sheet .dots .dot.addnew");
+      return ["::before", "::after"].some(p => {
+        const s = getComputedStyle(d, p);
+        return s.content !== "none" && s.borderTopStyle === "dashed" && +s.opacity > 0;
+      });
+    }),
+    '"Add your own colour" shows its dashed ring'
+  );
+  await narrow.evaluate(() => {
+    closeSheet();
+    trSheet();
+  });
+  await narrow.waitForTimeout(150);
+  ok(
+    await narrow.evaluate(() => $("#fee-btn").textContent.includes("cash‑out")),
+    '"cash‑out" on the fee button never breaks at its hyphen'
+  );
+  await narrow.evaluate(() => {
+    closeSheet();
+    loanOpen("L1");
+  });
+  await narrow.waitForTimeout(150);
+  ok(
+    await narrow.evaluate(() => {
+      const st = $("#sheet .tx.exp .s .st");
+      return (
+        !!st &&
+        (st.scrollWidth <= st.clientWidth + 1 || getComputedStyle(st).textOverflow === "ellipsis") &&
+        st.getBoundingClientRect().right <= st.parentElement.getBoundingClientRect().right + 0.5
+      );
+    }),
+    'a loan card\'s "Partly paid" fits or ends in "…" on a narrow screen'
+  );
+  await narrow.evaluate(() => {
+    closeSheet();
+    V.screen = "home";
+    render();
+  });
+  const pillH = await narrow.evaluate(() => {
+    const c = $(".curbtn");
+    if (!c) return 0;
+    const r = c.getBoundingClientRect(),
+      x = r.left + r.width / 2;
+    let n = 0;
+    for (let y = r.top - 30; y < r.bottom + 60; y++) {
+      const e = document.elementFromPoint(x, y);
+      if (e && e.closest(".curbtn")) n++;
+    }
+    return n;
+  });
+  ok(pillH >= 47, "the donut's currency switch is 48px tall to tap (" + pillH + "px)");
+  await narrow.context().close();
+
+  /* a 16:9 phone once its bars are taken off, large text, a six-week month */
+  const short = await sized({ w: 360, h: 568, s: 1.3 }, book);
+  const pickFits = [];
+  for (const [nm, open] of [
+    [
+      "date",
+      () => {
+        document.body.insertAdjacentHTML("beforeend", dateField("qa-x", "2026-05-12", {}));
+        datePicker(document.getElementById("qa-x"));
+        DP.month = "2026-08";
+        dpRender();
+      },
+    ],
+    [
+      "range",
+      () => {
+        periodDialog(V);
+        PD.tab = "range";
+        PD.month = "2026-08";
+        pdRender();
+      },
+    ],
+  ]) {
+    await short.evaluate(() => closePop());
+    await short.evaluate(open);
+    await short.waitForTimeout(100);
+    pickFits.push(
+      await short.evaluate(nm => {
+        const d = $("#pop .dialog");
+        return [
+          nm,
+          d.querySelectorAll(".wk").length,
+          d.scrollHeight - d.clientHeight,
+          getComputedStyle($("#pop .cal")).touchAction,
+        ];
+      }, nm)
+    );
+  }
+  ok(
+    pickFits.every(([, wk, over]) => wk === 6 && over <= 1),
+    "a short window: the date picker and the Range tab fit a six-week month without scrolling " +
+      JSON.stringify(pickFits)
+  );
+  ok(
+    pickFits[0][3] === "pan-y" && pickFits[1][3] === "none",
+    "a swipe on the date picker's calendar can scroll it; on the Range tab it picks days"
+  );
+  /* the band's days overlap a little, so no hairline shows between them */
+  ok(
+    await short.evaluate(() => {
+      PD.p = { period: "range", rs: "2026-08-04", re: "2026-08-08", anchor: "2026-08-04" };
+      pdRender();
+      const band = [...document.querySelectorAll("#pd .dd.in, #pd .dd.rs, #pd .dd.re")].map(e =>
+        e.getBoundingClientRect()
+      );
+      return band.length === 5 && band.every((r, i) => !i || band[i - 1].right > r.left + 0.5);
+    }),
+    "a range's band days overlap their neighbours, leaving no seam"
+  );
+  await short.evaluate(() => closePop());
+  await short.context().close();
+  const tiny = await sized({ w: 360, h: 440, s: 1 }, book);
+  await tiny.evaluate(() => {
+    document.body.insertAdjacentHTML("beforeend", dateField("qa-x", "2026-05-12", {}));
+    datePicker(document.getElementById("qa-x"));
+    DP.month = "2026-08";
+    dpRender();
+  });
+  await tiny.waitForTimeout(100);
+  const cdp = await tiny.context().newCDPSession(tiny);
+  const at = await tiny.evaluate(() => {
+    const c = $("#pop .cal").getBoundingClientRect();
+    return [c.left + 30, c.top + c.height / 2];
+  });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: at[0], y: at[1] }] });
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: at[0], y: at[1] - 12 * i }] });
+    await tiny.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await tiny.waitForTimeout(400);
+  ok(
+    (await tiny.evaluate(() => $("#pop .dialog").scrollTop)) > 0,
+    "a window too short even for smaller days: a swipe on the calendar scrolls the date picker"
+  );
+  await tiny.context().close();
+
+  /* Russian at 320px, large text: the long weekday names don't fit, so the short ones show (the long one read out) */
+  const ru = await sized({ w: 320, h: 640, s: 1.3, locale: "ru-RU" }, book);
+  const week = await ru.evaluate(() => {
+    V.screen = "settings";
+    render();
+    return [...document.querySelectorAll('#app [data-act="week"]')].map(b => [
+      b.textContent,
+      b.getAttribute("aria-label"),
+      b.scrollWidth <= b.clientWidth + 1,
+    ]);
+  });
+  ok(
+    week.length === 3 && week.every(([s, l, fits]) => fits && l && l.length > s.length),
+    "First day of week: short day names where the long ones don't fit, the long ones read out " + JSON.stringify(week)
+  );
+  /* a keyboard's focus ring inside a box that clips: drawn inside the control, so it shows whole */
+  await ru.evaluate(() => $('#app [data-act="clock"]').focus());
+  await ru.keyboard.press("Shift+Tab");
+  await ru.keyboard.press("Tab");
+  ok(
+    await ru.evaluate(() => {
+      const a = document.activeElement;
+      return !!a.closest(".seg") && a.matches(":focus-visible") && getComputedStyle(a).outlineOffset === "-2px";
+    }),
+    "the focus ring on a segmented button is drawn inside it"
+  );
+  await ru.context().close();
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

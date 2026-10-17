@@ -5,6 +5,15 @@
  */
 "use strict";
 
+/* a short window (a 16:9 phone, split screen): the day rows give up height, down to 36px, so the month and the
+   dialog's buttons fit without scrolling (a phone held sideways sizes them in CSS: body.land .dd) */
+function fitCal(el) {
+  if (!el || document.body.classList.contains("land")) return;
+  el.style.removeProperty("--row");
+  const over = el.scrollHeight - el.clientHeight,
+    n = el.querySelectorAll(".wk").length;
+  if (over > 0 && n) el.style.setProperty("--row", Math.max(36, 48 - Math.ceil(over / n)) + "px");
+}
 /* month grid shared by the period dialog and the date picker */
 function calGrid(m, o) {
   const t = today(),
@@ -220,6 +229,7 @@ function drawDp() {
         (tOk ? "" : " disabled") +
         ">Today</button>") +
     '<button class="btn text" data-act="pd-close">Cancel</button></div>';
+  fitCal(el);
 }
 function dpSet(v) {
   const id = DP.id,

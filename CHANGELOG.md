@@ -20,10 +20,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Buttons, chips and list rows are at least 48px to tap, and calendar days 48px tall; account chips, segmented buttons
-  and calendar days are a little taller.
+- Buttons, chips and list rows are at least 48px to tap, and calendar days 48px tall where the screen has room; account
+  chips, segmented buttons and calendar days are a little taller.
 - On a phone held sideways, the date and period pickers show the calendar beside the rest, so a whole month fits with
   days as tall as the screen allows.
+- On a short screen (a 16:9 phone, split screen), the calendar's days give up a little height so a whole month and the
+  buttons still fit; a picker still too tall for the screen scrolls with a swipe on its calendar.
 
 ### Fixed
 
@@ -79,6 +81,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
   - With every account archived, Home says so and offers to show them.
   - Long names stay readable in the balance check, Settings and account chips at narrow widths and large text, and
     names in right-to-left scripts keep their direction.
+  - Large balances show whole at large text sizes: one too long for its line moves under its label, account chips
+    widen to fit it, and a total or amount that still doesn't fit is set a little smaller.
+  - A long name wraps in a sheet's title and in dialogs instead of pushing the close button off, and ends in "…" in
+    chips with their ✓ kept; "First day of week" uses short day names where the long ones don't fit.
   - A two-finger pinch on the summary chart no longer moves it to another week or month.
   - A fee saved with its transfer's own time lists just above it.
 - Android:
@@ -105,6 +111,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The focus stays on its control when the screen, a calendar or a chart redraws, and goes to its replacement after a
   sheet closes.
 - Ring percentages redraw after a light or dark switch.
+- The donut's currency switch is 48px tall to tap, and the keyboard's focus ring shows whole in lists and segmented
+  buttons.
 
 ## [1.3.2] — 2026-10-16
 

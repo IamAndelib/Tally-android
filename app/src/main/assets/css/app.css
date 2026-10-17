@@ -136,6 +136,11 @@ button.cat {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* inside a box that clips what it holds, the ring is drawn just inside the control, so it shows whole */
+.list :focus-visible,
+.seg :focus-visible {
+  outline-offset: -2px;
+}
 .ic {
   width: 24px;
   height: 24px;
@@ -172,7 +177,6 @@ a {
 .appbar {
   display: flex;
   align-items: center;
-  gap: 4px;
   height: 64px;
   margin: 0 -8px;
 }
@@ -226,15 +230,28 @@ a {
   margin: 0 auto;
   padding: 0 8px 0 12px;
 }
-/* app-bar icons and the period arrows: 48px to tap (WCAG / Material), the glyph as before */
-.appbar > .icon,
-.pnav .icon {
-  width: 48px;
-  height: 48px;
+/* the period arrows keep their whole 48px to tap but lie over the label's padding (on top of it), so the label keeps
+   its room next to them; .appbar has no gap for the same reason (each icon's box already spaces its glyph) */
+.pnav > .icon {
+  position: relative;
+  z-index: 1;
+}
+.pnav > .icon:first-child {
+  margin-right: -10px;
+}
+.pnav > .icon:last-child {
+  margin-left: -6px;
 }
 .pnav .plabel {
   font-size: clamp(1.05rem, 4.6vw, 1.25rem);
   padding: 0 6px 0 10px;
+}
+/* a phone held sideways: the upright phone's size (vw is the long side there) */
+body.land .pnav .plabel {
+  font-size: 1.05rem;
+}
+body.land .pnav .plabel.long {
+  font-size: 0.9rem;
 }
 .pnav .plabel.long {
   font-size: clamp(0.9rem, 4vw, 1.15rem);
@@ -256,7 +273,6 @@ a {
 .acc {
   flex: none;
   min-width: 112px;
-  max-width: 180px;
   background: var(--surface-container);
   border-radius: 16px;
   padding: 10px 14px;
@@ -265,10 +281,17 @@ a {
   flex-direction: column;
   gap: 2px;
 }
+/* the emblem, then the name in its own direction (a right-to-left one cut at its own end) */
 .acc .n {
+  display: flex;
+  align-items: center;
+  max-width: 152px; /* a long name is cut; the balance below never is */
   font-size: 0.78rem;
   color: var(--on-surface-variant);
   white-space: nowrap;
+}
+.acc .n > span:last-child {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -519,6 +542,7 @@ body.hist #app {
   line-height: 1.25;
 }
 .curbtn {
+  position: relative;
   pointer-events: auto;
   margin-top: 4px;
   font-size: 0.72rem;
@@ -528,10 +552,21 @@ body.hist #app {
   background: var(--surface-high);
   color: var(--on-surface-variant);
 }
+/* 48px to tap, reaching mostly into the empty hole below it (the amount above stays the summary's) */
+.curbtn::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -4px;
+  right: -4px;
+  height: 48px;
+}
 
 /* balance bar + fabs */
+/* a balance too long for the line moves under the label, still on the right */
 .balbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -543,10 +578,11 @@ body.hist #app {
   text-align: left;
 }
 .balbar .l {
-  flex: 1;
+  flex: 1 1 auto;
   font-size: 0.9rem;
 }
 .balbar b {
+  margin-left: auto;
   font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -696,7 +732,8 @@ body.hist #app {
   font-size: 0.8rem;
   flex: none;
 }
-/* an account's name in its chip: cut with "…" when it doesn't fit, the emblem and ✓ stay whole */
+/* a name in its chip (an account, person, type or category): cut with "…" when it doesn't fit, the emblem and ✓
+   stay whole */
 .chip .chn {
   min-width: 0;
   overflow: hidden;
@@ -867,6 +904,10 @@ body.hist #app {
   margin: 0 4px 8px;
   color: var(--on-surface-variant);
   line-height: 1.45;
+}
+.dlg-t,
+.dlg-x {
+  overflow-wrap: anywhere; /* names quoted whole, however long */
 }
 .btn.text.dng {
   color: var(--spent);
@@ -1215,11 +1256,12 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* an amount and a balance are never cut: the title, then the account name in the balance line give way to them */
 .tx .a {
   font-weight: 600;
   white-space: nowrap;
   text-align: right;
-  min-width: 0;
+  min-width: min-content;
   max-width: 55%; /* the title keeps at least the rest; the balance line below gives way first */
 }
 .tx.on {
@@ -1238,28 +1280,41 @@ input {
 .tx > .ic {
   color: var(--primary);
 }
+/* the lines under an amount are sized in em, not rem: they follow the amount when fitFigures() sets it smaller */
 .tx .a small {
   display: block;
   font-weight: 400;
-  font-size: 0.75rem;
+  font-size: 0.75em;
   color: var(--on-surface-variant);
 }
+/* the balance line: [arrow] name balance. The name's column shrinks to nothing (its name cut with "…") but may grow
+   as wide as the name, so a long name never makes the amount's column wider than the amount and balance need */
 .tx .a .rb {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.3em;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) auto;
+  justify-content: end;
+  column-gap: 0.3em;
   font-weight: 500;
-  font-size: 0.72rem;
+  font-size: 0.72em;
   color: var(--on-surface-variant);
+}
+.tx .a .rb.ar {
+  grid-template-columns: auto minmax(0, max-content) auto;
 }
 .tx .a .rbn {
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .tx .s .st {
   margin-right: 2px;
   vertical-align: 1px;
+}
+/* alone on its line (a loan card's payment rows): in a narrow row it ends in "…" rather than lose letters */
+.tx.exp .s .st {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
 }
 .tx.exp {
   flex-wrap: wrap;
@@ -1439,10 +1494,13 @@ input {
   min-height: 40px;
   margin-bottom: 4px;
 }
+/* a long name (an e-mail, an IBAN) wraps rather than push the close button off the sheet */
 .sheet .h h2 {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 @keyframes up {
   from {
@@ -1560,17 +1618,19 @@ input {
 .dots .dot[aria-pressed="true"] {
   box-shadow: inset 0 0 0 2px var(--on-surface);
 }
-/* "add your own colour": 48px to tap like the swatches, its dashed ring drawn the swatches' size */
+/* "add your own colour": 48px to tap like the swatches, its dashed ring drawn the swatches' size (on ::after:
+   ::before is the pressed state layer) */
 .dots .dot.addnew {
   position: relative;
   border: 0;
 }
-.dots .dot.addnew::before {
+.dots .dot.addnew::after {
   content: "";
   position: absolute;
   inset: 7px;
   border: 2px dashed var(--outline);
   border-radius: 50%;
+  pointer-events: none;
 }
 /* date picker header, time grid */
 .dp-h {
@@ -2123,13 +2183,15 @@ body.hasnav .snack {
     transform: translateX(-50%);
   }
 }
+/* Remove animations: no transitions at all (a tiny duration instead would give every element one, for every property,
+   so a size set from script, as by fitFigures() or fitCal(), couldn't be measured at once) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition: none !important;
   }
 }
 .ghost {
@@ -2254,8 +2316,8 @@ body.lock {
 /* the cell spans its column (so a range band joins up) and is 48px tall to tap; the circle (--dd) is an ::after, and the
    band is as tall as the circle */
 .dd {
-  --dd: 40px;
-  height: 48px;
+  --dd: min(40px, var(--row, 48px));
+  height: var(--row, 48px); /* less on a short window: fitCal() */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2305,6 +2367,13 @@ body.lock {
 .dd.rs.re {
   background: none;
 }
+/* the band's days overlap by a pixel each side (circles and numbers stay put): no hairline between them where columns
+   fall between device pixels */
+.dd.in,
+.dd.rs,
+.dd.re {
+  margin: 0 -1px;
+}
 .dd.sel,
 .dd.rs,
 .dd.re {
@@ -2327,7 +2396,11 @@ body.lock {
   background: currentColor;
   opacity: 0.7;
 }
+/* a swipe on the calendar scrolls a dialog too tall for the window; not on the Range tab, where it picks days */
 .cal {
+  touch-action: pan-y;
+}
+#pd.rg .cal {
   touch-action: none;
 }
 /* a calendar in a dialog uses some of its padding: seven 48px columns in a 360px dialog (a 393px phone; 43px on a
@@ -2500,8 +2573,6 @@ body.land .sheet.calcing .p {
    circle up to 40px; the scrim gives up some of its margin for them */
 body.land .dd {
   --row: clamp(34px, (100vh - 84px) / 6, 48px);
-  --dd: min(40px, var(--row));
-  height: var(--row);
 }
 body.land .wk {
   margin: 0;
@@ -2524,22 +2595,28 @@ body.land #dp {
 body.land #pd {
   grid-template-areas: "head cal" "calh cal" "hint cal" "act cal";
 }
-body.land :is(#dp, #pd) > :is(.dp-h, .seg) {
+/* selectors written out: :is() is newer than WebView 87, which would drop these rules */
+body.land #dp > .dp-h,
+body.land #pd > .seg {
   grid-area: head;
   align-self: start;
 }
-body.land :is(#dp, #pd) > .cal-h {
+body.land #dp > .cal-h,
+body.land #pd > .cal-h {
   grid-area: calh;
   margin: 8px 0 0;
 }
-body.land :is(#dp, #pd) > :is(.cal, .mgrid) {
+body.land #dp > .cal,
+body.land #pd > .cal,
+body.land #pd > .mgrid {
   grid-area: cal;
 }
 body.land #pd > .hint {
   grid-area: hint;
   align-self: center;
 }
-body.land :is(#dp, #pd) > .dlg-act {
+body.land #dp > .dlg-act,
+body.land #pd > .dlg-act {
   grid-area: act;
   align-self: end;
 }

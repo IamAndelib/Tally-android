@@ -59,8 +59,12 @@ function drawScreen() {
   if (V.screen === "history") app.innerHTML = historyView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
-  else if (V.screen === "settings") app.innerHTML = settingsView();
-  else app.innerHTML = homeView();
+  else if (V.screen === "settings") {
+    app.innerHTML = settingsView();
+    fitWeekSeg();
+  } else app.innerHTML = homeView();
+  fitFigures(app);
+  if (document.fonts && document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
   document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
@@ -164,10 +168,11 @@ function homeView() {
           a =>
             '<button class="acc" data-act="acc-open" data-v="' +
             a.id +
-            '"><span class="n" dir="auto">' +
+            '"><span class="n">' +
             emblem(accEmb(a), "sm") +
+            '<span dir="auto">' +
             esc(a.name) +
-            '</span><span class="b">' +
+            '</span></span><span class="b">' +
             esc(money(b[a.id], a.currency)) +
             "</span></button>"
         )
@@ -296,6 +301,27 @@ function perCur(add) {
     m[c] = rnd((m[c] || 0) + v);
   });
   return m;
+}
+/* a figure too wide for its place (a long balance at a large text size on a small phone) is set smaller, a tenth at a
+   time down to 60%, rather than cut: the summary cards' totals, and a row's amount where the row can't hold it (its
+   balance lines are sized in em, so they shrink with it). Still too wide, a total wraps. Measured again once the font
+   has loaded. */
+function fitFigures(root) {
+  root.querySelectorAll(".sumcard .big[style], .tx .a[style]").forEach(el => el.removeAttribute("style"));
+  const shrink = (el, over) => {
+    if (!over()) return;
+    const f = parseFloat(getComputedStyle(el).fontSize);
+    for (let k = 0.9; k > 0.55 && over(); k -= 0.1) el.style.fontSize = f * k + "px";
+  };
+  root.querySelectorAll(".sumcard .big").forEach(el => {
+    const over = () => el.scrollWidth > el.clientWidth + 1;
+    shrink(el, over);
+    if (over()) el.style.overflowWrap = "anywhere";
+  });
+  root.querySelectorAll(".tx .a").forEach(el => {
+    const row = el.closest(".tx");
+    shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+  });
 }
 const curLines = m =>
   Object.keys(m).length
@@ -463,8 +489,8 @@ function txLine(t) {
     const to = acc(t.to);
     em = { i: "swap_horiz", c: "#5f7389" };
     cls = "xfer";
-    d = t.note || "Transfer";
-    s = (a ? a.name : "?") + " → " + (to ? to.name : "?");
+    d = esc(t.note || "Transfer");
+    s = bdi(a ? a.name : "?") + " → " + bdi(to ? to.name : "?");
     amt =
       esc(money(t.amount, cur)) +
       (t.toAmount != null && to && to.currency !== cur
@@ -472,8 +498,8 @@ function txLine(t) {
         : "");
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = t.note || "Balance fix";
-    s = "Balance fix · " + (a ? a.name : "?");
+    d = esc(t.note || "Balance fix");
+    s = "Balance fix · " + bdi(a ? a.name : "?");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -481,8 +507,12 @@ function txLine(t) {
       lend = l && l.kind === "lend",
       who = l ? loanWho(l) : "?";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
-    d = t.principal ? (lend ? "Lent to " : "Borrowed from ") + who : lend ? who + " paid back" : "Paid back " + who;
-    s = (lend ? "Lending" : "Loan") + " · " + (a ? a.name : "?") + (t.note ? " · " + t.note : "");
+    d = t.principal
+      ? (lend ? "Lent to " : "Borrowed from ") + bdi(who)
+      : lend
+        ? bdi(who) + " paid back"
+        : "Paid back " + bdi(who);
+    s = (lend ? "Lending" : "Loan") + " · " + bdi(a ? a.name : "?") + (t.note ? " · " + bdi(t.note) : "");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -494,20 +524,20 @@ function txLine(t) {
     if (l) {
       const lend = l.kind === "lend";
       em = LOAN_EMB[lend ? "lend" : "borrow"];
-      d = t.note || "Payment fee";
-      s = (a ? a.name : "?") + " · " + (lend ? "got back from " : "paid back ") + loanWho(l);
+      d = esc(t.note || "Payment fee");
+      s = bdi(a ? a.name : "?") + " · " + (lend ? "got back from " : "paid back ") + bdi(loanWho(l));
     } else {
       const to = acc(host.to);
       em = { i: "swap_horiz", c: "#5f7389" };
-      d = t.note || "Transfer fee";
-      s = (a ? a.name : "?") + (to ? " → " + to.name : "");
+      d = esc(t.note || "Transfer fee");
+      s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
     }
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    d = t.note || k.name;
-    s = k.name + " · " + (a ? a.name : "?");
+    d = esc(t.note || k.name);
+    s = bdi(k.name) + " · " + bdi(a ? a.name : "?");
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
@@ -526,10 +556,10 @@ function txLine(t) {
     ">" +
     (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
     '<span class="mid"><div class="d" dir="auto">' +
-    esc(d) +
+    d +
     '</div><div class="s">' +
     loanPill(t) +
-    esc(s) +
+    s +
     '</div></span><span class="a ' +
     cls +
     '">' +
@@ -546,15 +576,22 @@ function rbLines(t) {
   if (t.type === "transfer") {
     const to = acc(t.to);
     return (
-      rbLine("↓ " + (a ? a.name : "?"), money(r.a, a ? a.currency : "")) +
-      (to && r.t != null ? rbLine("↑ " + to.name, money(r.t, to.currency)) : "")
+      rbLine(a ? a.name : "?", money(r.a, a ? a.currency : ""), "↓") +
+      (to && r.t != null ? rbLine(to.name, money(r.t, to.currency), "↑") : "")
     );
   }
   return a ? rbLine(a.name, money(r.a, a.currency)) : "";
 }
-/* on a narrow screen the account name gives way (ellipsis), never the balance */
-const rbLine = (name, bal) =>
-  '<span class="rb"><span class="rbn" dir="auto">' + esc(name) + "</span> " + esc(bal) + "</span>";
+/* on a narrow screen the account name gives way (ellipsis), never the balance; a transfer's arrow stays outside the
+   name, on the app's side of it */
+const rbLine = (name, bal, arrow) =>
+  '<span class="rb' +
+  (arrow ? ' ar">' + arrow : '">') +
+  '<span class="rbn" dir="auto">' +
+  esc(name) +
+  "</span> " +
+  esc(bal) +
+  "</span>";
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
@@ -660,9 +697,9 @@ function historyView() {
             a.id +
             '" aria-pressed="' +
             (V.hAcc === a.id) +
-            '">' +
+            '"><span class="chn" dir="auto">' +
             esc(a.name) +
-            "</button>"
+            "</span></button>"
         )
         .join("") +
       "</div>";
@@ -728,6 +765,15 @@ function sliderShow(el, n) {
     d.classList.toggle("on", i < n - 1);
     d.classList.toggle("cur", i === n - 1);
   });
+}
+/* Settings → First day of week: the days' long names where they fit, else the short ones (the long one still read out) */
+function fitWeekSeg() {
+  const b = [...document.querySelectorAll('#app [data-act="week"]')];
+  if (b.some(x => x.scrollWidth > x.clientWidth + 1))
+    b.forEach(x => {
+      x.setAttribute("aria-label", x.textContent);
+      x.textContent = weekdayName(+x.dataset.v, "short");
+    });
 }
 function settingsView() {
   let h = subBar("Settings");
@@ -828,8 +874,9 @@ function settingsView() {
             esc(c.id) +
             '">' +
             emblem(c, "sm") +
+            '<span class="chn" dir="auto">' +
             esc(c.name) +
-            "</button>"
+            "</span></button>"
         )
         .join("") +
       "</div>";

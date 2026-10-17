@@ -185,6 +185,8 @@ function drawPd() {
   h +=
     '<div class="dlg-act"><button class="btn text" data-act="pd-today">Today</button><button class="btn text" data-act="pd-close">Cancel</button></div>';
   el.innerHTML = h;
+  el.classList.toggle("rg", PD.tab === "range"); // dragging across days: the calendar doesn't scroll
+  fitCal(el);
 }
 function calendar() {
   const rg = PD.tab === "range",

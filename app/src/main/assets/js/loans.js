@@ -192,7 +192,14 @@ function personSuggest(q) {
     list = cur ? personCandidates(F.lk, cur, q || "") : [];
   el.hidden = !list.length;
   el.innerHTML = list
-    .map(l => '<button class="chip" data-act="f-person-pick" data-v="' + esc(l.id) + '">' + esc(l.person) + "</button>")
+    .map(
+      l =>
+        '<button class="chip" data-act="f-person-pick" data-v="' +
+        esc(l.id) +
+        '"><span class="chn" dir="auto">' +
+        esc(l.person) +
+        "</span></button>"
+    )
     .join("");
 }
 /* one-line feedback once a suggestion is picked: what the tab will total once this amount is added */
@@ -336,7 +343,7 @@ function loanOpen(id, focusPay) {
       '<div style="margin-top:12px">' +
       dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today(), now: true }) +
       "</div>" +
-      feeField(false, "", "Fee charged (" + i.cur + ") · not counted as spending", "Add a fee (sending, cash-out)") +
+      feeField(false, "", "Fee charged (" + i.cur + ") · not counted as spending", "Add a fee (sending, cash‑out)") +
       '<div class="gap"></div><button class="btn" data-act="loan-pay">' +
       ic("check") +
       "Record payment</button></div>";
