@@ -21,6 +21,8 @@
 //     archived isn't a new notebook; focus stays on the control after a redraw; screen readers hear values (donut
 //     totals, ring %, currency, dialog text, chart bars pressed); the ring redraws on a theme switch; a one-day range
 //     says Yesterday; chart labels follow the phone; the currency switch stays with "No stats"
+//  K. loan amounts compared as shown, the loan form's currency, "Track as a fee" names the whole fee, no account in a
+//     loan's currency is said, signs placed one way in every History row
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("28-hunt-fixes");
 let fails = 0;
@@ -1055,6 +1057,152 @@ const ok = (c, m) => {
     ],
   });
   ok(!!(await page.$('[data-act="cur-next"]')), 'two currencies with "No stats": the currency switch is still there');
+
+  // ---- K. final QA: loan amounts as shown, the loan form's currency, signs placed one way everywhere
+  await seed({
+    accounts: [
+      { id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1000 },
+      { id: "e", name: "Euro", type: "bank", currency: "EUR", opening: 50 },
+    ],
+    txns: [
+      {
+        id: "d",
+        ts: 1,
+        date: d5,
+        type: "loan",
+        amount: 66.667,
+        account: "a",
+        note: "",
+        dir: "out",
+        loan: "L",
+        principal: true,
+      },
+    ],
+    loans: [{ id: "L", kind: "lend", person: "Rina", account: "a", date: d5, status: "open" }],
+  });
+  await page.evaluate(() => loanOpen("L"));
+  await settle();
+  await page.fill("#f-amt", "66.67");
+  await page.click('#sheet [data-act="loan-pay"]');
+  await settle();
+  S = await state();
+  const pill = await page.evaluate(() => {
+    const p = S.txns.find(x => x.loan === "L" && !x.principal);
+    return p ? (runBal()[p.id] || {}).ls : null;
+  });
+  ok(
+    !((await page.textContent("#pop")) || "").includes("more") &&
+      (await page.evaluate(() => !loanInfo(loan("L")).open)) &&
+      pill === "cleared",
+    'paying the $66.67 shown on a $66.667 lending clears it: no "$0.00 more", History says Cleared (' + pill + ")"
+  );
+  await page.evaluate(() => {
+    closePop();
+    closeSheet();
+    loanForm("lend");
+  });
+  await settle();
+  await page.click('#sheet [data-act="f-acc"][data-v="e"]');
+  ok((await page.textContent("#amt-cur")) === "EUR", "the loan form's currency follows the account picked");
+  await page.evaluate(() => closeSheet());
+  await seed({
+    txns: [
+      {
+        id: "d",
+        ts: 1,
+        date: d5,
+        type: "loan",
+        amount: 100,
+        account: "a",
+        note: "",
+        dir: "in",
+        loan: "B",
+        principal: true,
+      },
+    ],
+    loans: [{ id: "B", kind: "borrow", person: "Sam", account: "a", date: d5, status: "open" }],
+  });
+  await page.evaluate(() => loanOpen("B"));
+  await settle();
+  await page.fill("#f-amt", "110");
+  await page.click('#sheet [data-act="add-fee"]');
+  await page.fill("#f-fee", "2");
+  await page.click('#sheet [data-act="loan-pay"]');
+  await settle();
+  await page.click('#pop [data-act="ask-alt"]'); // Track as a fee
+  await settle();
+  ok(
+    (await page.textContent("#snack")).includes("$12.00 as its fee"),
+    "Track as a fee names the whole fee: " + (await page.textContent("#snack"))
+  );
+  await page.evaluate(() => closeSheet());
+  await seed({
+    accounts: [
+      { id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1000 },
+      { id: "e", name: "Euro", type: "bank", currency: "EUR", opening: 50, archived: true },
+    ],
+    txns: [
+      {
+        id: "d",
+        ts: 1,
+        date: d5,
+        type: "loan",
+        amount: 20,
+        account: "e",
+        note: "",
+        dir: "out",
+        loan: "E",
+        principal: true,
+      },
+    ],
+    loans: [{ id: "E", kind: "lend", person: "Ana", account: "e", date: d5, status: "open" }],
+  });
+  await page.evaluate(() => loanOpen("E"));
+  await settle();
+  const card = await page.textContent("#sheet");
+  await page.evaluate(() => {
+    closeSheet();
+    clearLoan("E");
+  });
+  await settle();
+  ok(
+    card.includes("No account in EUR to record it") &&
+      (await page.textContent("#pop")).includes("no account in EUR") &&
+      (await page.textContent('#pop [data-act="ask-ok"]')).includes("Write it off"),
+    "no account left in a loan's currency: the card says so, and clearing offers only Write it off"
+  );
+  await page.evaluate(() => closePop());
+  const nl = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "nl-NL" });
+  const np = await nl.newPage();
+  np.on("pageerror", e => errors.push(e.message));
+  await np.goto(appUrl);
+  await np.evaluate(t => {
+    localStorage.setItem(
+      "tally:v1",
+      JSON.stringify({
+        v: 6,
+        settings: { cur: "EUR", clock: "24", lastCheck: t, dragTip: true },
+        accounts: [{ id: "a", name: "Bank", type: "bank", currency: "EUR", opening: 100 }],
+        txns: [
+          { id: "o", ts: 1, date: t, type: "expense", amount: 12.5, account: "a", cat: "food", note: "" },
+          { id: "i", ts: 2, date: t, type: "income", amount: 40, account: "a", cat: "salary", note: "" },
+          { id: "f", ts: 3, date: t, type: "adjust", amount: -3.25, account: "a", note: "" },
+        ],
+      })
+    );
+  }, t);
+  await np.reload();
+  await np.waitForTimeout(200);
+  await np.evaluate(() => {
+    V.screen = "history";
+    render();
+  });
+  const amts = await np.$$eval("#app .tx .a", a => a.map(x => x.textContent.trim()));
+  ok(
+    amts.length === 3 && amts.every(x => /^€\u00a0[−+]\u2060\d/.test(x)),
+    "in Dutch every History amount has its sign after the €: " + JSON.stringify(amts)
+  );
+  await nl.close();
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

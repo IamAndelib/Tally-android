@@ -490,7 +490,7 @@ function txLine(t) {
     const host = S.txns.find(x => x.id === t.feeOf) || {},
       l = host.type === "loan" && loan(host.loan);
     cls = "xfer";
-    amt = "−" + esc(money(t.amount, cur));
+    amt = esc(signed(-t.amount, cur));
     if (l) {
       const lend = l.kind === "lend";
       em = LOAN_EMB[lend ? "lend" : "borrow"];
@@ -508,7 +508,7 @@ function txLine(t) {
     em = k;
     d = t.note || k.name;
     s = k.name + " · " + (a ? a.name : "?");
-    amt = (out ? "−" : "+") + esc(money(t.amount, cur));
+    amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
   const selMode = !!V.sel && V.screen === "history",

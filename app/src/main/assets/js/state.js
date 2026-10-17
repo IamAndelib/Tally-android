@@ -460,6 +460,7 @@ function runBal() {
           /* a payment before what it pays (saved by an older version) is measured against the whole tab */
           const owed = paid[t.loan] > amt[t.loan] + 0.0005 ? all[t.loan] : amt[t.loan];
           r.left = Math.max(0, rnd(owed - paid[t.loan]));
+          if (shown(r.left, (acc(t.account) || {}).currency) <= 0) r.left = 0; // as loanInfo: nothing that shows
           r.ls = r.left <= 0 ? "cleared" : "partly";
         }
       }

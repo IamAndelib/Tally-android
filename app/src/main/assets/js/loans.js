@@ -233,7 +233,7 @@ function loanForm(kind) {
     (lend ? "Lent to" : "Borrowed from") +
     '</span><input id="f-person" placeholder="Name" maxlength="40" autocomplete="off"></label>';
   h += '<div class="chips" id="f-person-sug" hidden></div>';
-  h += amtField("f-amt", acc(def).currency, "");
+  h += amtField("f-amt", acc(def).currency, "", { curId: "amt-cur" });
   h += '<p class="hint" id="f-mergehint" hidden></p>';
   h += '<div class="lbl">' + (lend ? "From account" : "Into account") + "</div>" + accChips("f-acc", F.account);
   h +=
@@ -328,7 +328,11 @@ function loanOpen(id, focusPay) {
       '<div class="lbl">' +
       (lend ? "Into" : "From") +
       "</div>" +
-      accChips("f-acc", F.account, null, payAccs) +
+      (payAccs.length
+        ? accChips("f-acc", F.account, null, payAccs)
+        : '<p class="hint">No account in ' +
+          esc(i.cur) +
+          " to record it: add one, or show an archived one again.</p>") +
       '<div style="margin-top:12px">' +
       dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today(), now: true }) +
       "</div>" +
@@ -656,19 +660,20 @@ function payLoan() {
     return;
   }
   if (!acc(F.account)) {
-    snack("Pick an account");
+    snack(activeAccounts().some(a => a.currency === i.cur) ? "Pick an account" : "No account in " + i.cur);
     return;
   }
   const fee = readFee(v);
   if (fee == null) return;
-  if (amt > i.left + 0.0005) {
+  /* compared as shown: paying the $66.67 shown on a $66.667 tab clears it, with no "$0.00 more" */
+  if (shown(amt, i.cur) > shown(i.left, i.cur)) {
     overpay(l, i, amt, F.account, v.date || today(), fee);
     return;
   }
   const id = l.id,
     account = F.account,
     date = v.date || today(),
-    done = rnd(i.left - amt) <= 0,
+    done = shown(amt, i.cur) >= shown(i.left, i.cur),
     pid = newId(),
     ts = Date.now();
   const mutate = () => {
@@ -747,7 +752,7 @@ function overpay(l, i, amt, account, date, fee) {
       msg: who + "’s lending cleared · ",
       back: l.id,
     });
-  const asFee = () => book(() => clear(extra), "Loan cleared · " + money(extra, cur) + " as its fee", l.id);
+  const asFee = () => book(() => clear(extra), "Loan cleared · " + money(rnd(fee + extra), cur) + " as its fee", l.id);
   const left = i.left > 0;
   askDialog(
     lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
@@ -805,15 +810,18 @@ function clearLoan(id) {
       { row: id }
     );
   };
+  /* with no account in the loan's currency, a payment can't be recorded: only writing it off is offered */
   askDialog(
     lend ? "Clear " + who + "’s lending?" : "Clear the loan from " + who + "?",
     (lend ? who + " still owes " : "You still owe " + who + " ") +
       money(i.left, i.cur) +
       "." +
-      (account ? (lend ? " Got back into " : " Paid from ") + acc(account).name + "." : ""),
-    lend ? "Got it all back" : "Paid it all back",
-    paid,
-    { alt: [lend ? "Write it off" : "Mark as forgiven", off] }
+      (account
+        ? (lend ? " Got back into " : " Paid from ") + acc(account).name + "."
+        : " There's no account in " + i.cur + " to record a payment."),
+    account ? (lend ? "Got it all back" : "Paid it all back") : lend ? "Write it off" : "Mark as forgiven",
+    account ? paid : off,
+    account ? { alt: [lend ? "Write it off" : "Mark as forgiven", off] } : undefined
   );
 }
 /* back to open: a written-off one just reopens; a fully paid one drops its latest payment (the user's choice) */

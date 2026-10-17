@@ -373,12 +373,12 @@ function trPreview() {
     got = diff ? evalAmt(v.toAmount) : amt;
   let s =
     fa.name +
-    " −" +
-    money(amt + (fee > 0 ? fee : 0), fa.currency) +
+    " " +
+    signed(-(amt + (fee > 0 ? fee : 0)), fa.currency) +
     "  →  " +
     ta.name +
     " " +
-    (got > 0 ? "+" + money(got, ta.currency) : "+ ?");
+    (got > 0 ? signed(got, ta.currency) : "+ ?");
   if (fee > 0) s += "  (incl. " + money(fee, fa.currency) + " fee)";
   el.textContent = s;
 }
@@ -742,11 +742,7 @@ function saveTx() {
     withUndo(
       id
         ? "Saved"
-        : (pre.msg || "") +
-            (t.type === "income" ? "+" : "−") +
-            money(amt, acc(t.account).currency) +
-            " · " +
-            cat(t.cat).name,
+        : (pre.msg || "") + signed(t.type === "income" ? amt : -amt, acc(t.account).currency) + " · " + cat(t.cat).name,
       mutate,
       { row: id || nid, cat: t.cat }
     );
