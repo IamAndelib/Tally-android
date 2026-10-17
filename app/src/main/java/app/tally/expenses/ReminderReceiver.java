@@ -87,7 +87,7 @@ public class ReminderReceiver extends BroadcastReceiver {
      * say "Nothing written today" about a day that has just begun; it only re-arms.
      */
     private static boolean reached(JSONObject o, int defH) {
-        Calendar c = todayAt(o == null ? defH : o.optInt("h", defH), o == null ? 0 : o.optInt("m", 0));
+        Calendar c = dayAt(0, o == null ? defH : o.optInt("h", defH), o == null ? 0 : o.optInt("m", 0));
         return System.currentTimeMillis() >= c.getTimeInMillis() - 60_000; // a minute's slack for clock drift
     }
 
@@ -142,9 +142,10 @@ public class ReminderReceiver extends BroadcastReceiver {
         return am != null && canExact(am);
     }
 
-    /** Today at h:m:00, local time; out-of-range values are clamped, never rolled over. */
-    static Calendar todayAt(int h, int m) {
+    /** h:m:00 local time, {@code days} after today; out-of-range values are clamped, never rolled over. */
+    static Calendar dayAt(int days, int h, int m) {
         Calendar c = Calendar.getInstance();
+        c.add(Calendar.DAY_OF_MONTH, days); // the day first: a time set on a day that skips it (DST) isn't carried over
         c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, h)));
         c.set(Calendar.MINUTE, Math.max(0, Math.min(59, m)));
         c.set(Calendar.SECOND, 0);
@@ -154,9 +155,8 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     /** The next h:m from now: today if still ahead, else tomorrow. */
     static long nextAt(int h, int m) {
-        Calendar c = todayAt(h, m);
-        if (c.getTimeInMillis() <= System.currentTimeMillis() + 1000) c.add(Calendar.DAY_OF_MONTH, 1);
-        return c.getTimeInMillis();
+        long at = dayAt(0, h, m).getTimeInMillis();
+        return at > System.currentTimeMillis() + 1000 ? at : dayAt(1, h, m).getTimeInMillis();
     }
 
     static void schedule(Context ctx) {

@@ -61,6 +61,7 @@ function exportCsv() {
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
    `auto` = {when, folder} for the auto backup file, whose dialog also offers "Choose another file". */
 /* after: what follows a restore (turning auto backup on, when it came from the folder being picked) */
+/* false when the text isn't a backup that can be read */
 function restoreText(t, auto, after) {
   let o = null,
     n = null;
@@ -69,17 +70,19 @@ function restoreText(t, auto, after) {
   } catch (e) {}
   if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
     snack("That isn't a Tally backup file");
-    return;
+    return false;
   }
   try {
     n = migrate(o);
   } catch (e) {
     snack("That backup couldn't be read");
-    return;
+    return false;
   }
-  /* what will really be restored: an entry that can't be read (or on a missing account) is left out, and said so */
+  /* what will really be restored: an entry, account, loan or asset that can't be read (or on a missing account) is
+     left out, and said so */
   const count = (k, one, many) => n[k].length + " " + (n[k].length === 1 ? one : many),
-    lost = o.txns.length - n.txns.length + (o.accounts.length - n.accounts.length),
+    had = k => (Array.isArray(o[k]) ? o[k].length - n[k].length : 0),
+    lost = had("txns") + had("accounts") + had("loans") + had("assets"),
     newer = typeof o.v === "number" && o.v > blank().v;
   askDialog(
     auto ? "Restore Tally backup.json?" : "Restore this backup?",
@@ -93,12 +96,12 @@ function restoreText(t, auto, after) {
       (newer ? " It was made by a newer version of Tally: update Tally first so nothing is left out." : ""),
     "Restore",
     () => {
-      /* this phone's own set-up stays: its auto backup (the folder lives in the shell); Undo brings back what was here */
-      const old = S,
-        backup = S.settings.backup;
+      /* this phone's own set-up stays: its auto backup (the folder lives in the shell), a copy so Undo gets back what
+         was here; while the saved data couldn't be read, the stand-in's setting means nothing: the backup's own is kept */
+      const old = S;
+      if (!unreadable) n.settings.backup = { ...S.settings.backup };
       unreadable = null; // a real notebook again: auto backup may follow it
       S = n;
-      S.settings.backup = backup;
       commit();
       syncBackup();
       applyTheme();
@@ -129,7 +132,10 @@ function restoreFile(input) {
 const canRestore = () => !!(window.Android && Android.pickRestoreFile);
 function restoreStart() {
   if (!(S.settings.backup.on && Android.readAutoBackup)) return pickRestoreFile();
-  readAutoBackup(r => (typeof r.text === "string" ? restoreText(r.text, r) : pickRestoreFile()));
+  /* the auto backup's file first; with none that can be read, the picker */
+  readAutoBackup(r => {
+    if (typeof r.text !== "string" || restoreText(r.text, r) === false) pickRestoreFile();
+  });
 }
 function pickRestoreFile() {
   try {
@@ -152,8 +158,7 @@ let AFTER_SAVE = null,
 function saveBackup(then) {
   const bridged = !!(window.Android && Android.saveFile); // else there's no save dialog to wait for
   SAVING_BACKUP = bridged;
-  AFTER_SAVE = bridged ? then || null : null;
-  saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+  saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S), then);
   if (!bridged && then) then();
 }
 /* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (Save backup /
@@ -171,7 +176,13 @@ function wipeAll() {
     "Save backup",
     () => {
       if (!auto) return saveBackup(wipeConfirm);
-      backupNow(err => (err ? saveBackup(wipeConfirm) : wipeConfirm())); // a failed Back up now: a file instead
+      /* a failed Back up now: a file instead. If the user has moved on meanwhile (a slow folder), the answer is only
+         said: the final question never pops up over something else */
+      backupNow(err => {
+        if (V.screen !== "settings" || $("#pop").innerHTML || $("#sheet").innerHTML) return;
+        if (err) saveBackup(wipeConfirm);
+        else wipeConfirm();
+      });
     },
     { cancel: "Skip", no: wipeConfirm }
   );

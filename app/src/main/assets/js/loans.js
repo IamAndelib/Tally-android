@@ -504,6 +504,12 @@ function saveLoanDraw() {
     t.account = acc2;
     t.date = date2;
     if (setDue) t.due = due2;
+    /* a payment's fee goes with it: same account, same day */
+    const fee = t.feeId && S.txns.find(x => x.id === t.feeId);
+    if (fee) {
+      fee.account = acc2;
+      fee.date = date2;
+    }
     relinkLoan(l.id);
   };
   guardOverdraw(mutate, date2, () => {

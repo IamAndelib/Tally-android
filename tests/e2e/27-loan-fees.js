@@ -229,6 +229,34 @@ const ok = (c, m) => {
   const csv = await page.evaluate(() => window.__files.pop().text);
   const line = csv.split("\n").find(l => l.includes(",loan-fee,"));
   ok(line && /,loan-fee,20,BDT,"Bank",/.test(line) && /,"","Payment fee",,""$/.test(line), "CSV: " + line);
+  /* editing the payment (another account, a day earlier) takes its fee along */
+  await page.evaluate(id => {
+    loanOpen("B");
+    loanDrawEdit(id);
+  }, p1.id);
+  await settle();
+  const day = await page.evaluate(() => {
+    const d = $("#ed-date"),
+      v = addDays(d.dataset.v, -1);
+    F.editAcc = "c";
+    setDateField(d, v);
+    saveLoanDraw();
+    return v;
+  });
+  await settle();
+  if (await page.isVisible('#pop [data-act="ask-ok"]')) await click('#pop [data-act="ask-ok"]'); // not enough in Cash: go on
+  S = await state();
+  ok(
+    JSON.stringify(
+      [p1.id, f1.id].map(id => [S.txns.find(x => x.id === id).account, S.txns.find(x => x.id === id).date])
+    ) ===
+      JSON.stringify([
+        ["c", day],
+        ["c", day],
+      ]),
+    "editing a payment's account and day moves its fee with it"
+  );
+  await page.evaluate(() => (closeSheet2(), closeSheet()));
   ok(
     await page.evaluate(() => {
       const m = migrate({

@@ -1,10 +1,10 @@
 package app.tally.expenses;
 
 import android.content.Context;
+import android.os.SystemClock;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -31,30 +31,37 @@ final class SavedCopy {
             if (writing) return;
             writing = true;
         }
-        new Thread(() -> {
-            while (true) {
-                String j;
-                int s;
-                synchronized (LOCK) {
-                    if (next == null) {
-                        writing = false;
-                        LOCK.notifyAll();
-                        return;
+        try {
+            new Thread(() -> {
+                while (true) {
+                    String j;
+                    int s;
+                    synchronized (LOCK) {
+                        if (next == null) {
+                            writing = false;
+                            LOCK.notifyAll();
+                            return;
+                        }
+                        j = next;
+                        s = nextSeq;
+                        next = null;
                     }
-                    j = next;
-                    s = nextSeq;
-                    next = null;
+                    write(f, s, j);
                 }
-                write(f, s, j);
+            }, "tally-saved-copy").start();
+        } catch (Throwable e) { // no thread to be had (out of memory): the next save tries again
+            synchronized (LOCK) {
+                writing = false;
+                LOCK.notifyAll();
             }
-        }, "tally-saved-copy").start();
+        }
     }
 
-    /** The copy, once any write under way has finished; null when there is none. */
+    /** The copy, once any write under way has finished (2 s at most); null when there is none. */
     static String read(Context ctx) {
         synchronized (LOCK) {
-            long until = System.currentTimeMillis() + 2000;
-            while (writing && System.currentTimeMillis() < until) {
+            long until = SystemClock.uptimeMillis() + 2000;
+            while (writing && SystemClock.uptimeMillis() < until) {
                 try {
                     LOCK.wait(200);
                 } catch (InterruptedException e) {
@@ -69,9 +76,10 @@ final class SavedCopy {
     private static void write(File f, int seq, String json) {
         File tmp = new File(f.getPath() + ".tmp");
         try (FileOutputStream os = new FileOutputStream(tmp)) {
-            os.write((seq + "\n" + json).getBytes(StandardCharsets.UTF_8));
+            os.write((seq + "\n").getBytes(StandardCharsets.UTF_8));
+            os.write(json.getBytes(StandardCharsets.UTF_8));
             os.getFD().sync();
-        } catch (IOException e) {
+        } catch (Throwable e) { // a full disk, or out of memory: the old copy stays, its lower number loses to localStorage
             tmp.delete();
             return;
         }

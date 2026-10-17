@@ -57,16 +57,16 @@ const stub = () => {
       return JSON.stringify(window.__cfg.status || { folder: "", usable: true, last: 0, error: "" });
     },
     /* both answer later, through the page's hook, like the shell's own threads */
-    backupNow() {
+    backupNow(id) {
       rec("now");
-      setTimeout(() => window.tallyBackedUp(window.__cfg.nowErr || ""));
+      setTimeout(() => window.tallyBackedUp(window.__cfg.nowErr || "", id));
     },
     pickBackupFolder() {
       rec("pick");
     },
-    readAutoBackup() {
+    readAutoBackup(id) {
       rec("readAuto");
-      setTimeout(() => window.tallyAutoBackup(window.__cfg.auto || { error: "No folder is chosen." }));
+      setTimeout(() => window.tallyAutoBackup(window.__cfg.auto || { none: true, error: "No backup there." }, id));
     },
     pickRestoreFile() {
       rec("pickRestore");

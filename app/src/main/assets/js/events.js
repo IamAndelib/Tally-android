@@ -583,9 +583,18 @@ document.addEventListener("click", ev => {
     case "export":
       exportCsv();
       break;
-    case "kept-save": // one file at a time (the shell saves one at a time): the oldest copy first
-      saveOut("tally-unreadable-" + today() + ".json", "application/json", localStorage.getItem(keptKeys().sort()[0]));
+    case "kept-save": {
+      /* one file at a time (the shell saves one at a time): the oldest copy first, gone once saved (the next one is
+         offered then) */
+      const k = keptKeys().sort()[0];
+      saveOut("tally-unreadable-" + today() + ".json", "application/json", localStorage.getItem(k), () => {
+        try {
+          localStorage.removeItem(k);
+        } catch (e) {}
+        render();
+      });
       break;
+    }
     case "kept-del":
       askDialog(
         "Delete the kept data?",

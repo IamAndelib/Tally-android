@@ -260,6 +260,7 @@ function toggleAutoBackup() {
   }
   const bs = backupStatus();
   if (!bs || !bs.folder || !bs.usable) return pickBackupFolder();
+  if (!bs.last) return folderCheck(); // nothing of this install's in that folder yet: what's there is asked about
   backupOn();
 }
 function backupOn() {
@@ -278,53 +279,75 @@ function pickBackupFolder() {
 function onFolderPicked(err) {
   if (err == null) return;
   if (err) return snack(err);
-  /* the folder already holds a Tally backup (after a reinstall, from another phone, or Tally Dev's): never written
-     over unasked */
+  folderCheck();
+}
+/* Before auto backup first writes into a folder: a Tally backup already there (after a reinstall, from another phone,
+   or Tally Dev's) is never written over unasked, nor one that can't be read; only an empty folder goes straight on */
+function folderCheck() {
   readAutoBackup(r => {
-    if (typeof r.text !== "string" || !r.text.trim()) return backupOn();
+    if (r.none) return backupOn();
+    if (typeof r.text === "string" && r.text.trim())
+      return askDialog(
+        "This folder already has a Tally backup",
+        "Restore it on this phone, or replace it with this phone's data from now on?",
+        "Restore it",
+        () => restoreText(r.text, null, backupOn),
+        { alt: ["Replace it", backupOn], cancel: "Not now" }
+      );
     askDialog(
-      "This folder already has a Tally backup",
-      "Restore it on this phone, or replace it with this phone's data from now on?",
-      "Restore it",
-      () => restoreText(r.text, null, backupOn),
-      { alt: ["Replace it", backupOn], cancel: "Not now" }
+      "Couldn't read this folder's backup",
+      (r.error || "The backup file can't be read.") + " Replace it with this phone's data from now on?",
+      "Replace it",
+      backupOn,
+      { cancel: "Not now" }
     );
   });
 }
-/* The auto backup's file, which the shell reads on a thread of its own (a slow folder can't freeze the page) and hands
-   to window.tallyAutoBackup: `then` gets {text, when, folder}, or {error} */
-let autoReadThen = null;
-function readAutoBackup(then) {
-  autoReadThen = then;
+/* Answers from the shell's own threads (a slow folder can't freeze the page), each matched to its request by number,
+   so two in a row never trade answers */
+let shellAsks = 0;
+const shellThen = {};
+function askShell(call, then, fail) {
+  const id = ++shellAsks;
+  shellThen[id] = then;
   try {
-    Android.readAutoBackup();
+    call(id);
   } catch (e) {
-    onAutoBackup({ error: "Backup isn't available here" });
+    fail(id);
   }
 }
-function onAutoBackup(r) {
-  const then = autoReadThen;
-  autoReadThen = null;
-  if (then) then(r && typeof r === "object" ? r : {});
+function shellAnswer(id, v) {
+  const then = shellThen[id];
+  delete shellThen[id];
+  if (then) then(v);
 }
-/* "Back up now": the shell writes the latest save into the auto backup's folder on a thread of its own and answers
-   through window.tallyBackedUp; `then` gets the problem, "" when done */
-let backedUpThen = null;
+/* the auto backup's file (window.tallyAutoBackup): `then` gets {text, when, folder}, or {error}, with none: true when
+   the folder holds no backup */
+function readAutoBackup(then) {
+  askShell(
+    id => Android.readAutoBackup(id),
+    then,
+    id => onAutoBackup({ error: "Backup isn't available here" }, id)
+  );
+}
+function onAutoBackup(r, id) {
+  shellAnswer(id, r && typeof r === "object" ? r : {});
+}
+/* "Back up now": the shell writes the latest save into the auto backup's folder (window.tallyBackedUp); `then` gets
+   the problem, "" when done */
 function backupNow(then) {
   mirrorNow();
-  backedUpThen = then || null;
-  try {
-    Android.backupNow();
-  } catch (e) {
-    onBackedUp("Backup isn't available here");
-  }
+  snack("Backing up…");
+  askShell(
+    id => Android.backupNow(id),
+    then,
+    id => onBackedUp("Backup isn't available here", id)
+  );
 }
-function onBackedUp(err) {
+function onBackedUp(err, id) {
   if (V.screen === "settings") render();
   snack(err || "Backed up");
-  const then = backedUpThen;
-  backedUpThen = null;
-  if (then) then(err || "");
+  shellAnswer(id, err || "");
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
 function reminderHealth() {
@@ -400,8 +423,11 @@ function onAppResume() {
     render();
   backupNudge();
 }
-function saveOut(name, mime, text) {
-  if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);
+/* a file through Android's save dialog; `then` runs once it is saved (onFileSaved) */
+function saveOut(name, mime, text, then) {
+  const bridged = !!(window.Android && Android.saveFile);
+  AFTER_SAVE = bridged ? then || null : null;
+  if (bridged) Android.saveFile(name, mime, text);
   else snack("Saving isn't available here");
 }
 /* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),

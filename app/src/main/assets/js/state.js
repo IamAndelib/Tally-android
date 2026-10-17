@@ -312,42 +312,68 @@ let savedJson = "";
    writes localStorage to disk a few seconds late, so a save made just before the phone ends Tally (swiped away) can be
    missing from it, but not from the shell's copy: start-up takes whichever has the higher number. */
 let saveSeq = 0;
+/* a save number as stored: a whole number the shell's int can carry, else 0 */
+const seqOf = v => {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 && n < 2 ** 31 ? n : 0;
+};
 /* the shell's copy: {seq, text}, or null (none yet, or no shell) */
 function shellCopy() {
   try {
     const t = window.Android && Android.keptState ? Android.keptState() : "",
-      i = t ? t.indexOf("\n") : -1;
-    return i > 0 ? { seq: +t.slice(0, i) || 0, text: t.slice(i + 1) } : null;
+      i = typeof t === "string" ? t.indexOf("\n") : -1;
+    return i > 0 ? { seq: seqOf(t.slice(0, i)), text: t.slice(i + 1) } : null;
   } catch (e) {
     return null;
   }
 }
-/* Loads the saved notebook. Called once from the start-up code at the end, after every constant migrate() uses exists. */
+/* a saved notebook's text read through migrate(), or null when it isn't one (not JSON, or not an object) */
+function readNotebook(t) {
+  try {
+    const o = JSON.parse(t);
+    return o && typeof o === "object" && !Array.isArray(o) ? migrate(o) : null;
+  } catch (e) {
+    return null;
+  }
+}
+/* keeps text that couldn't be read aside (Settings offers it as a file), once; whether it is kept */
+function keepAside(t) {
+  try {
+    const keys = keptKeys(),
+      k = LS + ":unreadable";
+    if (!keys.some(x => localStorage.getItem(x) === t))
+      localStorage.setItem(keys.includes(k) ? k + ":" + Date.now() : k, t);
+    return keptKeys().some(x => localStorage.getItem(x) === t);
+  } catch (e) {
+    return false;
+  }
+}
+/* Loads the saved notebook. Called once from the start-up code at the end, after every constant migrate() uses exists.
+   Both copies are read, localStorage's and the shell's: the newer first (a tie: localStorage's), and the other when
+   that one can't be read. Text that can't be read is kept aside, never dropped; with no readable copy at all the
+   notebook in use is a blank stand-in (`unreadable`) until the user decides. */
 function loadState() {
-  let raw = null;
+  let local = null;
   try {
-    raw = localStorage.getItem(LS);
-    saveSeq = +localStorage.getItem(LS + ":seq") || 0;
-  } catch (e) {
-    return;
+    local = localStorage.getItem(LS);
+    saveSeq = seqOf(localStorage.getItem(LS + ":seq"));
+  } catch (e) {} // storage blocked: the shell's copy may still have it all
+  const kept = shellCopy(),
+    newer = kept && kept.seq > saveSeq,
+    texts = [...new Set(newer ? [kept.text, local] : [local, kept && kept.text])].filter(t => t);
+  if (kept) saveSeq = Math.max(saveSeq, kept.seq);
+  for (const t of texts) {
+    const n = readNotebook(t);
+    if (n) {
+      S = n;
+      texts.slice(0, texts.indexOf(t)).forEach(keepAside); // a newer copy that couldn't be read: offered in Settings
+      return;
+    }
   }
-  const kept = shellCopy();
-  if (kept && kept.seq > saveSeq) {
-    raw = kept.text;
-    saveSeq = kept.seq;
-  }
-  if (!raw) return;
-  try {
-    S = migrate(JSON.parse(raw));
-  } catch (e) {
-    unreadable = raw;
-    try {
-      const k = LS + ":unreadable",
-        had = localStorage.getItem(k);
-      if (had !== raw) localStorage.setItem(had ? k + ":" + Date.now() : k, raw);
-    } catch (e2) {}
-    unreadableKept = keptKeys().some(k => localStorage.getItem(k) === raw);
-  }
+  if (!texts.length) return;
+  texts.slice(1).forEach(keepAside);
+  unreadable = texts[0];
+  unreadableKept = keepAside(texts[0]);
 }
 /* a save that fails (the phone's storage for Tally is full or blocked) is said in a dialog, which the change's own
    message can't cover, every time: the change may be lost when Tally closes unless it's saved as a file */

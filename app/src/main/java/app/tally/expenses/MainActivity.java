@@ -29,7 +29,9 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
@@ -79,6 +81,14 @@ public class MainActivity extends Activity {
     /** Renderer losses (onRenderProcessGone) in the minute since goneSince; static, since each loss recreates this. */
     private static long goneSince;
     private static int goneCount;
+    /** Between onStart and onStop; relaunch: the renderer went while out of sight, so the page restarts on return. */
+    private boolean started, relaunch;
+    /**
+     * The activity on screen: background threads answer the page through it (deliver), not through one recreated
+     * meanwhile. Answers that find none, or a page that went away, wait in orphans for the next one.
+     */
+    private static MainActivity live;
+    private static final ArrayList<String> orphans = new ArrayList<>();
 
     /**
      * How the widget, its quick add and reminders open the app: dressed like the launcher's own intent (MAIN +
@@ -99,6 +109,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        live = this;
+        queued.addAll(orphans);
+        orphans.clear();
+        dropOldSaves();
         try {
             web = new WebView(this);
         } catch (RuntimeException e) { // Android System WebView missing, disabled or being updated
@@ -169,14 +183,23 @@ public class MainActivity extends Activity {
                 web.destroy();
                 web = null;
                 pageUp = false;
+                orphans.addAll(queued); // answers the page hadn't taken yet go to the next one
                 queued.clear();
-                long now = SystemClock.elapsedRealtime();
-                if (now - goneSince > 60_000) {
-                    goneSince = now;
-                    goneCount = 0;
+                // a crash, or a loss on screen, counts; a renderer Android ended for memory while Tally was out of
+                // sight is restarted when it comes back (restarting it at once would be ended again, and counted)
+                if (detail.didCrash() || started) {
+                    long now = SystemClock.elapsedRealtime();
+                    if (now - goneSince > 60_000) {
+                        goneSince = now;
+                        goneCount = 0;
+                    }
+                    if (++goneCount >= 3) {
+                        showMessage(R.string.page_stopped);
+                        return true;
+                    }
                 }
-                if (++goneCount >= 3) showMessage(R.string.page_stopped);
-                else recreate();
+                if (started) recreate();
+                else relaunch = true;
                 return true;
             }
 
@@ -244,8 +267,19 @@ public class MainActivity extends Activity {
 
     /** Before Android 10 a visible app in split screen is paused too: there it only sleeps once out of sight. */
     @Override
+    protected void onStart() {
+        super.onStart();
+        started = true;
+        if (relaunch) {
+            relaunch = false;
+            recreate();
+        }
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
+        started = false;
         if (Build.VERSION.SDK_INT < 29) sleep();
     }
 
@@ -341,14 +375,54 @@ public class MainActivity extends Activity {
         else queued.add(js);
     }
 
-    /** A message instead of the page (no WebView, or a page that keeps stopping); it ends the launch screen. */
+    /**
+     * A message instead of the page (no WebView, or a page that keeps stopping), on the page's colour and with Try
+     * again (the launcher icon only brings this same screen back); it ends the launch screen.
+     */
     private void showMessage(int text) {
         ready = true;
+        int pad = Math.round(24 * getResources().getDisplayMetrics().density);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(android.view.Gravity.CENTER);
+        box.setPadding(pad, pad, pad, pad);
+        box.setBackgroundColor(pageColor != null ? pageColor : getColor(R.color.surface));
         TextView msg = new TextView(this);
         msg.setText(text);
         msg.setGravity(android.view.Gravity.CENTER);
-        msg.setPadding(64, 64, 64, 64);
-        setContentView(msg);
+        msg.setTextSize(16);
+        box.addView(msg);
+        Button again = new Button(this);
+        again.setText(R.string.try_again);
+        again.setOnClickListener(v -> {
+            goneCount = 0;
+            recreate();
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = pad;
+        box.addView(again, lp);
+        setContentView(box);
+    }
+
+    /**
+     * Hands a window.tally* call to the page of the activity on screen, from any thread: a background thread's answer
+     * then reaches the page even if the activity was recreated meanwhile (renderer lost, text size changed).
+     */
+    static void deliver(String js) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            MainActivity a = live;
+            if (a != null && !a.isDestroyed()) a.callPage(js);
+            else orphans.add(js);
+        });
+    }
+
+    /** Exports whose save dialog never answered (the whole notebook, waiting in plain text): gone after a day. */
+    private void dropOldSaves() {
+        File[] old = getCacheDir().listFiles((dir, name) -> name.startsWith("pending-save"));
+        if (old == null) return;
+        long day = System.currentTimeMillis() - 24L * 60 * 60 * 1000;
+        for (File f : old) if (f.lastModified() < day) f.delete();
     }
 
     /** Ends the launch screen: called by the page (Android.ready) once it has rendered, or by the 3 s fallback. */
@@ -421,6 +495,9 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         if (web != null) web.destroy();
+        web = null;
+        if (live == this) live = null;
+        if (isChangingConfigurations()) orphans.addAll(queued); // recreated: the next page takes what this one didn't
         super.onDestroy();
     }
 
@@ -455,10 +532,7 @@ public class MainActivity extends Activity {
                     catch (Throwable ignored) { }
                 }
                 f.delete();
-                final boolean saved = ok;
-                runOnUiThread(() -> {
-                    if (!isDestroyed()) callPage("window.tallySaved&&window.tallySaved(" + saved + ")");
-                });
+                deliver("window.tallySaved&&window.tallySaved(" + ok + ")");
             }).start();
         } else if (requestCode == PICK_RESTORE) {
             restorePicked(resultCode == RESULT_OK && data != null ? data.getData() : null);
@@ -509,14 +583,13 @@ public class MainActivity extends Activity {
             }
             // quoted on this thread too: a backup of a few MB takes a moment
             final String arg = (text == null ? "null" : JSONObject.quote(text)) + "," + (err == null ? "null" : JSONObject.quote(err));
-            runOnUiThread(() -> restoreResult(arg));
+            restoreResult(arg);
         }).start();
     }
 
     /** window.tallyRestore(text, err), both already quoted: both null = cancelled. */
     private void restoreResult(String args) {
-        if (isDestroyed()) return;
-        callPage("window.tallyRestore&&window.tallyRestore(" + args + ")");
+        deliver("window.tallyRestore&&window.tallyRestore(" + args + ")");
     }
 
     /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem. */
@@ -704,29 +777,40 @@ public class MainActivity extends Activity {
         }
 
         /**
-         * "Back up now", on a thread of its own so a slow folder (a cloud drive) can't freeze the page: "" when done,
-         * else the problem, comes back through window.tallyBackedUp.
+         * "Back up now" (request {@code id}), on a thread of its own so a slow folder (a cloud drive) can't freeze the
+         * page: "" when done, else the problem, comes back through window.tallyBackedUp(err, id).
          */
         @JavascriptInterface
-        public void backupNow() {
+        public void backupNow(final int id) {
             final Context app = getApplicationContext();
             new Thread(() -> {
-                String err = BackupReceiver.run(app, true);
-                String js = "tallyBackedUp(" + JSONObject.quote(err == null ? "" : err) + ")";
-                runOnUiThread(() -> callPage(js));
+                String err;
+                try {
+                    err = BackupReceiver.run(app, true);
+                } catch (Throwable e) { // out of memory on a small phone: still an answer
+                    err = "The backup couldn't be written.";
+                }
+                deliver("window.tallyBackedUp&&window.tallyBackedUp(" + JSONObject.quote(err == null ? "" : err) + ","
+                        + id + ")");
             }).start();
         }
 
         /**
-         * The auto backup's file, for Settings → Restore and a newly picked folder: {text, when, folder} or {error},
-         * read on a thread of its own and handed to window.tallyAutoBackup (as an object: it is JSON).
+         * The auto backup's file (request {@code id}), for Settings → Restore and a newly picked folder: {text, when,
+         * folder} or {error}, read on a thread of its own and handed to window.tallyAutoBackup(it, id) (as an object:
+         * it is JSON).
          */
         @JavascriptInterface
-        public void readAutoBackup() {
+        public void readAutoBackup(final int id) {
             final Context app = getApplicationContext();
             new Thread(() -> {
-                String js = "tallyAutoBackup(" + BackupReceiver.readAuto(app) + ")";
-                runOnUiThread(() -> callPage(js));
+                String json;
+                try {
+                    json = BackupReceiver.readAuto(app);
+                } catch (Throwable e) {
+                    json = "{\"error\":\"The backup file can't be read.\"}";
+                }
+                deliver("window.tallyAutoBackup&&window.tallyAutoBackup(" + json + "," + id + ")");
             }).start();
         }
 
@@ -874,7 +958,7 @@ public class MainActivity extends Activity {
                 parked = false;
             }
             if (!parked) {
-                runOnUiThread(() -> callPage("window.tallySaved&&window.tallySaved(false)"));
+                deliver("window.tallySaved&&window.tallySaved(false)");
                 return;
             }
             runOnUiThread(() -> {

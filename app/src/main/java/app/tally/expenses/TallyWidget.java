@@ -7,10 +7,10 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.ArrayMap;
+import android.util.DisplayMetrics;
 import android.util.SizeF;
 import android.util.TypedValue;
 import android.view.View;
@@ -61,6 +61,11 @@ public class TallyWidget extends AppWidgetProvider {
         BackupReceiver.schedule(ctx);
     }
 
+    /** A text size (sp) as the phone shows it, in dp: Android 14+ scales large text less than in proportion. */
+    private static float dp(DisplayMetrics dm, float sp) {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, dm) / dm.density;
+    }
+
     /** Resized: the text is fitted to the new height. */
     @Override
     public void onAppWidgetOptionsChanged(Context ctx, AppWidgetManager m, int id, Bundle options) {
@@ -77,8 +82,8 @@ public class TallyWidget extends AppWidgetProvider {
     }
 
     /**
-     * The widget for each size the home screen may show it at (Android 12+ picks among them itself), else for its
-     * height in the current orientation.
+     * The widget for each size the home screen may show it at (Android 12+ picks among them itself), else one for its
+     * landscape height and one for its portrait height (the home screen picks by its own orientation, not Tally's).
      */
     @SuppressWarnings("deprecation") // getParcelableArrayList(String): its typed form needs Android 13
     private static RemoteViews build(Context ctx, AppWidgetManager m, int id) {
@@ -91,9 +96,8 @@ public class TallyWidget extends AppWidgetProvider {
                 return new RemoteViews(each);
             }
         }
-        boolean land = ctx.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
-        return build(ctx, o.getInt(land ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
-                : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT));
+        return new RemoteViews(build(ctx, o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)),
+                build(ctx, o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)));
     }
 
     /**
@@ -104,15 +108,15 @@ public class TallyWidget extends AppWidgetProvider {
     private static RemoteViews build(Context ctx, float height) {
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_tally);
         if (height > 0) {
-            float fs = ctx.getResources().getConfiguration().fontScale, room = height - PAD;
-            boolean title = LINE * (T_TITLE + T_BALANCE + T_SPENT) * fs <= room;
-            float lines = LINE * ((title ? T_TITLE : 0) + T_BALANCE + T_SPENT);
-            float k = Math.max(0.85f, Math.min(fs, room / lines));
-            v.setViewVisibility(R.id.w_title, title ? View.VISIBLE : View.GONE);
-            v.setTextViewTextSize(R.id.w_title, TypedValue.COMPLEX_UNIT_DIP, T_TITLE * k);
-            v.setTextViewTextSize(R.id.w_balance, TypedValue.COMPLEX_UNIT_DIP, T_BALANCE * k);
-            v.setTextViewTextSize(R.id.w_spent_label, TypedValue.COMPLEX_UNIT_DIP, T_SPENT * k);
-            v.setTextViewTextSize(R.id.w_spent, TypedValue.COMPLEX_UNIT_DIP, T_SPENT * k);
+            DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+            float title = dp(dm, T_TITLE), bal = dp(dm, T_BALANCE), spent = dp(dm, T_SPENT), room = height - PAD;
+            boolean withTitle = LINE * (title + bal + spent) <= room;
+            float k = Math.min(1, room / (LINE * ((withTitle ? title : 0) + bal + spent)));
+            v.setViewVisibility(R.id.w_title, withTitle ? View.VISIBLE : View.GONE);
+            v.setTextViewTextSize(R.id.w_title, TypedValue.COMPLEX_UNIT_DIP, Math.max(0.85f * T_TITLE, title * k));
+            v.setTextViewTextSize(R.id.w_balance, TypedValue.COMPLEX_UNIT_DIP, Math.max(0.85f * T_BALANCE, bal * k));
+            v.setTextViewTextSize(R.id.w_spent_label, TypedValue.COMPLEX_UNIT_DIP, Math.max(0.85f * T_SPENT, spent * k));
+            v.setTextViewTextSize(R.id.w_spent, TypedValue.COMPLEX_UNIT_DIP, Math.max(0.85f * T_SPENT, spent * k));
         }
         String balance = ctx.getString(R.string.w_open), spent = "";
         try {
@@ -143,8 +147,7 @@ public class TallyWidget extends AppWidgetProvider {
     private static void scheduleMidnight(Context ctx) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
-        Calendar c = ReminderReceiver.todayAt(0, 0);
-        c.add(Calendar.DAY_OF_MONTH, 1);
+        Calendar c = ReminderReceiver.dayAt(1, 0, 0);
         c.add(Calendar.SECOND, 5);
         Intent i = new Intent(ctx, TallyWidget.class).setAction(A_TICK);
         am.set(AlarmManager.RTC, c.getTimeInMillis(), PendingIntent.getBroadcast(ctx, 42, i,

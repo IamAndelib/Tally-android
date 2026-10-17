@@ -438,7 +438,13 @@ const ok = (c, m) => {
         },
         backupStatus: () =>
           JSON.stringify(cfg().status || { folder: "Documents/Tally", usable: true, last: 0, error: "" }),
-        readAutoBackup: () => setTimeout(() => window.tallyAutoBackup(cfg().auto || { error: "none" })),
+        readAutoBackup: id => setTimeout(() => window.tallyAutoBackup(cfg().auto || { none: true, error: "none" }, id)),
+        backupNow(id) {
+          rec("now", id); // the test answers it: tallyBackedUp(err, id)
+        },
+        pickRestoreFile() {
+          rec("pickRestore");
+        },
         saveFile(name) {
           rec("saveFile", name);
         },
@@ -677,6 +683,135 @@ const ok = (c, m) => {
     render();
   });
   ok((await bp.textContent("#bk")).includes("Can't reach the folder"), "auto backup on without its folder says so");
+  // the folder check whenever this install hasn't written to the folder yet; Restore's and Delete all's backup steps
+  const bpop = async () => (await bp.textContent("#pop")) || "",
+    bset = c => bp.evaluate(c => sessionStorage.setItem("cfg", JSON.stringify(c)), c),
+    bnow = () => bp.evaluate(() => window.__calls.filter(c => c[0] === "now").map(c => c[1])),
+    other = '{"v":6,"accounts":[{"id":"o","name":"Other phone","type":"bank","currency":"USD","opening":5}],"txns":[]}';
+  await bp.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.removeItem("cfg");
+    localStorage.setItem(
+      "tally:v1",
+      JSON.stringify({
+        v: 6,
+        settings: { cur: "USD", clock: "24", lastCheck: today(), dragTip: true },
+        accounts: [{ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 100 }],
+        txns: [],
+      })
+    );
+  });
+  await bp.reload();
+  await bp.waitForTimeout(200);
+  await bset({ status: { folder: "Docs", usable: true, last: 0, error: "" }, auto: { text: other, when: 0 } });
+  await bp.evaluate(() => toggleAutoBackup());
+  await bp.waitForTimeout(100);
+  ok(
+    (await bpop()).includes("already has a Tally backup") && !(await bp.evaluate(() => S.settings.backup.on)),
+    "turning auto backup on asks first while this phone hasn't written to that folder (after Not now)"
+  );
+  await bp.evaluate(() => closePop());
+  await bset({ status: { folder: "Docs", usable: true, last: 1, error: "" } });
+  await bp.evaluate(() => toggleAutoBackup());
+  await bp.waitForTimeout(100);
+  ok(
+    (await bp.evaluate(() => S.settings.backup.on)) && !(await bpop()),
+    "once this phone has written there, the switch just turns it on"
+  );
+  await bp.evaluate(() => (S.settings.backup.on = false));
+  await bset({
+    status: { folder: "Docs", usable: true, last: 0, error: "" },
+    auto: { error: "The file can't be read." },
+  });
+  await bp.evaluate(() => onFolderPicked(""));
+  await bp.waitForTimeout(100);
+  ok(
+    (await bpop()).includes("Couldn't read this folder's backup") && !(await bp.evaluate(() => S.settings.backup.on)),
+    "a backup there that can't be read is asked about, not written over"
+  );
+  await bp.evaluate(() => closePop());
+  await bset({ status: { folder: "Docs", usable: true, last: 0, error: "" }, auto: { text: other, when: 0 } });
+  await bp.evaluate(() => onFolderPicked(""));
+  await bp.waitForTimeout(100);
+  await bp.click('#pop [data-act="ask-ok"]'); // Restore it
+  await bp.waitForTimeout(100);
+  await bp.click('#pop [data-act="ask-ok"]'); // Restore
+  await bp.waitForTimeout(100);
+  const restored = await bp.evaluate(() => [S.accounts.map(a => a.name).join(), S.settings.backup.on]);
+  await bp.click('#snack [data-act="undo"]');
+  await bp.waitForTimeout(100);
+  const undone = await bp.evaluate(() => [S.accounts.map(a => a.name).join(), S.settings.backup.on]);
+  ok(
+    JSON.stringify([restored, undone]) === '[["Other phone",true],["Bank",false]]',
+    "Restore it, then Undo: this phone's notebook back, with auto backup off again " +
+      JSON.stringify([restored, undone])
+  );
+  await bset({ auto: { text: "{broken", when: 0 } });
+  await bp.evaluate(() => {
+    S.settings.backup.on = true;
+    window.__calls = [];
+    restoreStart();
+  });
+  await bp.waitForTimeout(100);
+  ok(
+    (await bp.evaluate(() => window.__calls.filter(c => c[0] === "pickRestore").length)) === 1,
+    "a broken auto backup file doesn't block Restore: the file picker opens"
+  );
+  await bp.evaluate(() =>
+    restoreText(
+      '{"v":6,"accounts":[{"id":"b","name":"B","type":"bank","currency":"USD","opening":1}],"txns":[],' +
+        '"loans":[{"id":"L","kind":"Borrow"}],"assets":[{"name":"no id"}]}'
+    )
+  );
+  ok((await bpop()).includes("2 items in it can't be read"), "Restore counts the loans and assets it leaves out");
+  await bp.evaluate(() => closePop());
+  await bset({ status: { folder: "Docs", usable: true, last: 5, error: "" } });
+  await bp.evaluate(() => {
+    S.settings.backup.on = true;
+    V.screen = "settings";
+    render();
+    window.__calls = [];
+    wipeAll();
+  });
+  await bp.click('#pop [data-act="ask-ok"]'); // Save backup: Back up now
+  await bp.evaluate(() => {
+    V.screen = "home";
+    render();
+    txSheet(null, "expense");
+  });
+  await bp.evaluate(id => window.tallyBackedUp("", id), (await bnow())[0]);
+  await bp.waitForTimeout(100);
+  ok(
+    !(await bpop()).includes("Delete all data?") && (await bp.evaluate(() => S.accounts.length)) === 1,
+    "Delete all's backup answering after the user moved on asks nothing over the form"
+  );
+  await bp.evaluate(() => {
+    closeSheet();
+    V.screen = "settings";
+    render();
+    window.__calls = [];
+    backupNow();
+    wipeAll();
+  });
+  await bp.click('#pop [data-act="ask-ok"]');
+  const ids = await bnow();
+  await bp.evaluate(id => window.tallyBackedUp("", id), ids[0]);
+  await bp.waitForTimeout(100);
+  const first = await bpop();
+  await bp.evaluate(id => window.tallyBackedUp("", id), ids[1]);
+  await bp.waitForTimeout(100);
+  ok(
+    ids.length === 2 && !first.includes("Delete all data?") && (await bpop()).includes("Delete all data?"),
+    "two Back up nows in a row: only Delete all's own answer goes on to its question"
+  );
+  await bp.evaluate(() => {
+    closePop();
+    localStorage.setItem("tally:v1:unreadable", "{x");
+    render();
+  });
+  await bp.click('[data-act="kept-save"]');
+  await bp.evaluate(() => window.tallySaved(true));
+  ok(await bp.evaluate(() => keptKeys().length === 0), "a kept copy goes once it is saved as a file");
   await bc.close();
   ok(
     await page.evaluate(() => {

@@ -4,7 +4,8 @@
 //  - every save goes to the shell with its number, and the number is stored with the data
 //  - a save the WebView lost comes back from the shell's copy, and numbering carries on from it
 //  - the WebView's copy wins when it is as new or newer
-//  - a newer shell copy that can't be read is kept aside and offered, like unreadable saved data
+//  - a copy that can't be read never hides one that can (either way round, or an empty one, or localStorage blocked);
+//    it is kept aside once and offered, like unreadable saved data; with none readable, start-up says so
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("29-saved-copy");
 let fails = 0;
@@ -41,6 +42,14 @@ const ok = (c, m) => {
         return sessionStorage.getItem("kept") || "";
       },
     };
+    /* localStorage blocked (a test sets "blockLS"): reading it throws, as on a phone whose WebView storage is broken */
+    if (sessionStorage.getItem("blockLS")) {
+      const get = Storage.prototype.getItem;
+      Storage.prototype.getItem = function (k) {
+        if (this === localStorage) throw new Error("blocked");
+        return get.call(this, k);
+      };
+    }
   });
   const page = await ctx.newPage();
   const errors = [];
@@ -134,17 +143,59 @@ const ok = (c, m) => {
   await reload();
   ok((await page.evaluate(() => S.accounts[0].name)) === "Bank", "on a tie the WebView's copy is used");
 
-  // ---- a newer shell copy that can't be read is never dropped silently
+  // ---- a copy that can't be read never hides one that can, and is kept aside (once) to save as a file
+  const pop = async () => (await page.textContent("#pop")) || "",
+    name = () => page.evaluate(() => S.accounts[0] && S.accounts[0].name),
+    keptHas = x => page.evaluate(x => keptKeys().some(k => localStorage.getItem(k) === x), x);
   await page.evaluate(() => sessionStorage.setItem("kept", "99\n{not json"));
   await reload();
   ok(
-    ((await page.textContent("#pop")) || "").includes("Couldn't open your saved data"),
-    "an unreadable newer copy is said at start-up"
+    (await name()) === "Bank" && !(await pop()).includes("Couldn't open"),
+    "a newer shell copy that can't be read: the WebView's readable one opens"
   );
+  ok(await keptHas("{not json"), "and the unreadable copy is kept aside to save as a file");
+  await reload();
+  ok((await page.evaluate(() => keptKeys().length)) === 1, "kept once, however many starts");
+  await page.evaluate(() => commit());
+  await settle();
+  ok((await kept()).startsWith("100\n"), "numbering carries on past the unreadable copy's number");
+  await page.evaluate(() => {
+    const good = localStorage.getItem("tally:v1");
+    sessionStorage.setItem("kept", localStorage.getItem("tally:v1:seq") + "\n" + good);
+    localStorage.setItem("tally:v1", "{cut short");
+    keptKeys().forEach(k => localStorage.removeItem(k));
+  });
+  await reload();
   ok(
-    await page.evaluate(() => keptKeys().some(k => localStorage.getItem(k) === "{not json")),
-    "and kept aside to save as a file"
+    (await name()) === "Bank" && !(await pop()).includes("Couldn't open") && (await keptHas("{cut short")),
+    "a tie where the WebView's copy can't be read: the shell's opens, the other is kept aside"
   );
+  await page.evaluate(() => commit()); // the WebView's copy readable again
+  await settle();
+  await page.evaluate(() => sessionStorage.setItem("kept", "500\n"));
+  await reload();
+  ok((await name()) === "Bank", "an empty newer copy doesn't blank the notebook");
+  await page.evaluate(() => {
+    const good = localStorage.getItem("tally:v1");
+    sessionStorage.setItem("kept", "700\n" + good);
+    sessionStorage.setItem("blockLS", "1");
+  });
+  await reload();
+  ok((await name()) === "Bank", "localStorage blocked: the shell's copy still opens");
+  await page.evaluate(() => {
+    sessionStorage.removeItem("blockLS");
+    keptKeys().forEach(k => localStorage.removeItem(k));
+    localStorage.setItem("tally:v1", "{a");
+    sessionStorage.setItem("kept", "800\n{b");
+  });
+  await reload();
+  ok(
+    (await pop()).includes("Couldn't open your saved data") && (await keptHas("{a")) && (await keptHas("{b")),
+    "no copy readable: start-up says so, and both are kept aside"
+  );
+  await page.evaluate(() => closePop());
+  await page.evaluate(() => sessionStorage.setItem("kept", "1e400\n{}"));
+  ok((await page.evaluate(() => shellCopy().seq)) === 0, "a save number past what the shell can carry counts as none");
 
   // ---- no shell (a browser): saving and loading work as before
   const plain = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });

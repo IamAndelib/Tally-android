@@ -10,6 +10,7 @@
     <string name="qa_out">Spent</string>
     <string name="qa_in">Received</string>
     <string name="qa_tr">Transfer</string>
-    <string name="page_stopped">Tally\'s screen keeps stopping. Please close Tally and open it again; everything you saved is kept.</string>
+    <string name="page_stopped">Tally\'s screen keeps stopping. Everything you saved is kept.</string>
+    <string name="try_again">Try again</string>
     <string name="no_webview">Tally needs Android System WebView, which is missing or being updated right now. Please try again in a moment.</string>
 </resources>
