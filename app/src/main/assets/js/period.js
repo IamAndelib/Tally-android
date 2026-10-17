@@ -78,11 +78,23 @@ function catchUpToday() {
     V.rs = addDays(V.rs, daysBetween(was, t));
     V.re = t;
   }
+  /* History likewise: its month, its day, or a range that ended today */
   if (HP.period === "month" && HP.anchor.slice(0, 7) === was.slice(0, 7)) HP.anchor = t;
+  else if (HP.period === "day" && HP.anchor === was) HP.anchor = t;
+  else if (HP.period === "range" && HP.re === was) {
+    HP.rs = addDays(HP.rs, daysBetween(was, t));
+    HP.re = t;
+  }
   document.querySelectorAll(".datefld").forEach(el => {
     if (el.dataset.max === was) el.dataset.max = t;
     if (el.dataset.now) setDateField(el, t, true);
   });
+  /* an open date or period picker: today's ring, its Today button and the latest day it allows */
+  if (DP && $("#dp")) {
+    if (DP.max === was) DP.max = t;
+    dpRender();
+  }
+  if (PD && $("#pd")) pdRender();
   syncWidget();
   syncReminders();
   if ($("#sheet").innerHTML) dayPending = true;

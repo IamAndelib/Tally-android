@@ -855,9 +855,8 @@ function reopenLoan(id) {
   );
   buzz("confirm");
 }
-/* the snooze (a due reminder's +1 day / +1 week): every unpaid draw due by today, else the next one, moves on from
-   whichever is later, its due date or today */
-/* +1 day / +1 week on a due reminder, counted from the day it was tapped (on), as the shell did */
+/* the snooze, +1 day / +1 week on a due reminder, tapped on day `on` (default today): every unpaid draw due by then,
+   else the next one, moves on from whichever is later, its due date or that day */
 function extendLoan(l, days, on) {
   on = on || today();
   const i = loanInfo(l),

@@ -316,6 +316,55 @@ const ok = (c, m) => {
     ok(bad.length === 0, "48px to tap: " + name + (bad.length ? " " + bad.join(", ") : ""));
   }
   await small.close();
+  /* a phone held sideways: a whole month fits, days as tall as that allows (44px or more on a 360px-high screen) */
+  const side = await browser.newContext({ viewport: { width: 740, height: 360 }, locale: "en-US" });
+  await side.addInitScript(() => {
+    window.Android = {
+      setReminders() {},
+      takeActions: () => "[]",
+      getColors: () => null,
+      setBars() {},
+      requestNotifications() {},
+      screenLand: () => true,
+    };
+  });
+  const lp = await side.newPage();
+  lp.on("pageerror", e => errors.push(e.message));
+  await lp.goto(appUrl);
+  await lp.evaluate(() =>
+    localStorage.setItem(
+      "tally:v1",
+      JSON.stringify({
+        v: 6,
+        settings: { cur: "USD", clock: "24", lastCheck: today(), dragTip: true },
+        accounts: [{ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1 }],
+        txns: [],
+      })
+    )
+  );
+  await lp.reload();
+  await lp.waitForTimeout(200);
+  for (const [name, open, id] of [
+    ["the date picker", () => (txSheet(null, "expense", "food"), $("#sheet .datefld").click()), "dp"],
+    ["the period picker", () => (closePop(), closeSheet(), $(".plabel").click()), "pd"],
+  ]) {
+    await lp.evaluate(open);
+    await lp.waitForTimeout(350);
+    const m = await lp.evaluate(id => {
+      const d = $("#" + id);
+      if (id === "dp")
+        ((DP.month = "2026-08"), dpRender()); // six weeks
+      else ((PD.month = "2026-08"), pdRender());
+      const days = [...d.querySelectorAll(".dd")];
+      return {
+        weeks: d.querySelectorAll(".wk").length,
+        tall: Math.min(...days.map(x => x.offsetHeight)),
+        fits: d.scrollHeight <= d.clientHeight + 1,
+      };
+    }, id);
+    ok(m.weeks === 6 && m.tall >= 44 && m.fits, "sideways, " + name + ": six weeks fit, days " + m.tall + "px tall");
+  }
+  await side.close();
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

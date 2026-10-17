@@ -899,7 +899,7 @@ function healthCard() {
 function backupWhen(ms) {
   const d = new Date(ms),
     day = iso(d);
-  return (day === today() ? "Today" : dayLabel(day)) + ", " + timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes()));
+  return dayName(day) + ", " + timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes()));
 }
 /* Settings → Your data: the daily automatic backup into one file in a folder the user picked (Android only) */
 function autoBackupHtml() {

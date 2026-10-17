@@ -2330,7 +2330,8 @@ body.lock {
 .cal {
   touch-action: none;
 }
-/* a calendar in a dialog uses some of its padding: seven 48px columns in a 360px dialog */
+/* a calendar in a dialog uses some of its padding: seven 48px columns in a 360px dialog (a 393px phone; 43px on a
+   360px one) */
 .dialog .cal {
   margin: 0 -4px;
 }
@@ -2495,10 +2496,18 @@ body.land .sheet.calcing .p {
   max-width: calc(100% - min(46%, 380px));
   border-radius: 0 28px 0 0;
 }
-/* a month of days in less height (as Material's own landscape calendar) */
+/* a month of days in the height a sideways phone has: rows as tall as six fit (48px at most, 34px at least), the
+   circle up to 40px; the scrim gives up some of its margin for them */
 body.land .dd {
-  --dd: 34px;
-  height: 34px;
+  --row: clamp(34px, (100vh - 84px) / 6, 48px);
+  --dd: min(40px, var(--row));
+  height: var(--row);
+}
+body.land .wk {
+  margin: 0;
+}
+body.land .pop.scrim {
+  padding-block: 8px;
 }
 /* the date and period pickers: the calendar beside the rest, so a month fits the height without scrolling */
 body.land #dp,
@@ -2506,14 +2515,14 @@ body.land #pd {
   max-width: 640px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   column-gap: 24px;
 }
 body.land #dp {
-  grid-template-areas: "head calh" "head cal" "act cal";
+  grid-template-areas: "head cal" "calh cal" ". cal" "act cal";
 }
 body.land #pd {
-  grid-template-areas: "head calh" "hint cal" "act cal";
+  grid-template-areas: "head cal" "calh cal" "hint cal" "act cal";
 }
 body.land :is(#dp, #pd) > :is(.dp-h, .seg) {
   grid-area: head;
@@ -2521,7 +2530,7 @@ body.land :is(#dp, #pd) > :is(.dp-h, .seg) {
 }
 body.land :is(#dp, #pd) > .cal-h {
   grid-area: calh;
-  margin-top: 0;
+  margin: 8px 0 0;
 }
 body.land :is(#dp, #pd) > :is(.cal, .mgrid) {
   grid-area: cal;

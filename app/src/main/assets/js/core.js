@@ -209,11 +209,19 @@ const signed = (n, cur) => {
     .map(p => (p.type === "minusSign" ? sign : p.value))
     .join("");
 };
-/* the phone's language for dates, on the Gregorian calendar Tally counts in (a phone set to the Persian or Hijri
-   calendar would otherwise name a Gregorian month after one of its own) */
+/* the phone's language for dates, on the Gregorian calendar Tally counts in (a phone set to another calendar, such as
+   the Persian, Hijri or Buddhist one, would otherwise name a Gregorian month after one of its own), keeping the rest of
+   its choices (such as Latin digits in Arabic) */
+const gregorian = loc => {
+  try {
+    return new Intl.Locale(loc, { calendar: "gregory" }).toString();
+  } catch (e) {
+    return loc.replace(/-u-.*$/, "") + "-u-ca-gregory";
+  }
+};
 const DATE_LOC = (() => {
   try {
-    return new Intl.DateTimeFormat().resolvedOptions().locale.replace(/-u-.*$/, "") + "-u-ca-gregory";
+    return gregorian(new Intl.DateTimeFormat().resolvedOptions().locale);
   } catch (e) {
     return undefined;
   }
@@ -456,7 +464,7 @@ const buzz = kind => {
     else if (navigator.vibrate) navigator.vibrate(PULSE_MS[Math.min(5, level + (kind === "long" ? 1 : 0)) - 1]);
   } catch (e) {}
 };
-/* short label for date fields: Today / Yesterday / 22 Sep (year only if not this year) */
+/* short label for date fields: Today / Yesterday / Tomorrow / 22 Sep (year only if not this year) */
 function shortDay(d) {
   const t = today();
   if (d === t) return "Today";

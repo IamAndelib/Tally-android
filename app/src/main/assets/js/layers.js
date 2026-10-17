@@ -269,10 +269,11 @@ const timeLabel = hm => {
     hourCycle: h24 ? "h23" : "h12",
   });
 };
-/* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM on a 12-hour phone), the
-   centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above and below, so
-   row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times and quietly
-   moved back to the middle copy once scrolling settles. Every row passed ticks (buzz). OK hands "HH:MM" to onPick. */
+/* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM with Settings → Region's
+   12-hour time), the centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above
+   and below, so row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times
+   and quietly moved back to the middle copy once scrolling settles. Every row passed ticks (buzz). OK hands "HH:MM"
+   to onPick. */
 const W_ROW = 56;
 let TP = null;
 function timePicker(title, cur, onPick) {

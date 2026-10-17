@@ -1172,6 +1172,72 @@ const ok = (c, m) => {
     "no account left in a loan's currency: the card says so, and clearing offers only Write it off"
   );
   await page.evaluate(() => closePop());
+  // past midnight with History on a day or a range, and a date picker open: they move to the new day too
+  await seed();
+  await page.evaluate(() => {
+    HP.period = "day";
+    HP.anchor = today();
+    txSheet(null, "expense", "food");
+  });
+  await settle();
+  await page.click("#sheet .datefld");
+  await settle();
+  const mid2 = await page.evaluate(() => {
+    const R = Date,
+      day = 864e5;
+    window.Date = class extends R {
+      constructor(...a) {
+        if (a.length) super(...a);
+        else super(R.now() + day);
+      }
+      static now() {
+        return R.now() + day;
+      }
+    };
+    catchUpToday();
+    const tb = $('#dp [data-act="dp-set"]');
+    return { t: today(), hp: HP.anchor, max: DP.max, todayBtn: tb && tb.dataset.v };
+  });
+  ok(
+    mid2.hp === mid2.t && mid2.max === mid2.t && mid2.todayBtn === mid2.t,
+    "past midnight: History's day and an open date picker (its Today, its latest day) move too " + JSON.stringify(mid2)
+  );
+  await seed();
+  const last = await page.evaluate(() => {
+    let sent = null;
+    Android.setReminders = j => (sent = JSON.parse(j));
+    S.txns = [
+      {
+        id: "x",
+        ts: Date.now() - 2 * 864e5,
+        date: addDays(today(), 2),
+        type: "expense",
+        amount: 1,
+        account: "a",
+        cat: "food",
+        note: "",
+      },
+    ];
+    syncReminders();
+    return sent ? [sent.lastEntry, addDays(today(), -2)] : null;
+  });
+  ok(
+    last && last[0] === last[1],
+    "an entry written two days ago but dated ahead counts on the day it was written: tonight's nudge still comes " +
+      JSON.stringify(last)
+  );
+  ok(
+    await page.evaluate(
+      () =>
+        gregorian("ar-EG-u-nu-latn") === "ar-EG-u-ca-gregory-nu-latn" &&
+        gregorian("fa-IR-u-ca-persian") === "fa-IR-u-ca-gregory"
+    ),
+    "dates use the Gregorian calendar and keep the phone's other choices, such as Latin digits"
+  );
+  ok(
+    await page.evaluate(() => backupWhen(Date.now() - 864e5).startsWith("Yesterday, ")),
+    "the last backup's time says Yesterday too"
+  );
   const nl = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "nl-NL" });
   const np = await nl.newPage();
   np.on("pageerror", e => errors.push(e.message));

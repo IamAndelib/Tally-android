@@ -46,10 +46,11 @@ function syncReminders() {
   applyNativeActions();
   const r = S.settings.remind,
     now = today();
-  /* the last day something was written (an entry dated ahead, after a flight west, counts as written today) */
+  /* the last day something was written: the day of its writing (an entry dated ahead counts on that day, never past
+     today; an old one without a time on its date) */
   const last = S.txns.reduce((m, t) => {
     const c = t.ts ? iso(new Date(t.ts)) : t.date,
-      d = [c, t.date, now].sort()[1];
+      d = c < now ? c : now;
     return d > m ? d : m;
   }, "");
   const dues =
