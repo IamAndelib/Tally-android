@@ -16,7 +16,8 @@
 //  I. the shell: a picked folder holding a backup asks first, an unreachable folder is said, the first-open
 //     permissions stay up when opened from the widget, the evening nudge never counts a future day, a fee sits above
 //     its transfer
-//  J. screens: long account names keep their words on the balance check, in Settings and in chips; every account
+//  J. screens: long account names keep their words on the balance check (its balance and Fix together on the right,
+//     beside a name that fits), in Settings and in chips; every account
 //     archived isn't a new notebook; focus stays on the control after a redraw; screen readers hear values (donut
 //     totals, ring %, currency, dialog text, chart bars pressed); the ring redraws on a theme switch; a one-day range
 //     says Yesterday; chart labels follow the phone; the currency switch stays with "No stats"
@@ -745,8 +746,11 @@ const ok = (c, m) => {
         "tally:v1",
         JSON.stringify({
           v: 6,
-          settings: { cur: "IDR", clock: "24", lastCheck: y, dragTip: true },
-          accounts: [{ id: "a", name: "Everyday account", type: "bank", currency: "IDR", opening: 125500000 }],
+          settings: { cur: "IDR", clock: "24", lastCheck: y, dragTip: true, remind: { checkTime: "00:00" } }, // shown at any hour
+          accounts: [
+            { id: "a", name: "Everyday account", type: "bank", currency: "IDR", opening: 125500000 },
+            { id: "b", name: "Savings for the new house", type: "savings", currency: "IDR", opening: 9500000 },
+          ],
           txns: [],
           loans: [],
           assets: [],
@@ -762,6 +766,73 @@ const ok = (c, m) => {
     return n ? n.getBoundingClientRect().width : -1;
   });
   ok(nm > 60, "the balance check keeps a long name readable at 320px and large text (" + Math.round(nm) + "px)");
+  /* each balance check row: the balance and Fix on the name's line, Fix at the row's right edge and after the balance */
+  const ckRows = pg =>
+    pg.evaluate(() =>
+      [...document.querySelectorAll(".ckrow")].map(r => {
+        const R = r.getBoundingClientRect(),
+          box = q => r.querySelector(q).getBoundingClientRect(),
+          mid = x => (x.top + x.bottom) / 2,
+          e = box(".emb"),
+          n = box(".nm"),
+          b = box("b"),
+          f = box(".fx");
+        return {
+          name: r.querySelector(".nm").textContent,
+          beside: n.left >= e.right && n.top < e.bottom,
+          inline: Math.abs(mid(b) - mid(n)) < 6 && Math.abs(mid(f) - mid(b)) < 6,
+          right: Math.abs(R.right - parseFloat(getComputedStyle(r).paddingRight) - f.right) < 1.5,
+          after: b.right <= f.left + 1 || b.bottom <= f.top + 1,
+        };
+      })
+    );
+  let rows = await ckRows(sp);
+  ok(
+    rows.length === 2 && rows.every(x => x.beside && x.right && x.after),
+    "where a long name pushes them below, the balance and Fix stay on the right; a name stays beside its icon " +
+      JSON.stringify(rows)
+  );
+  const ck = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+  await ck.addInitScript(() => {
+    window.Android = {
+      setReminders() {},
+      takeActions: () => "[]",
+      getColors: () => null,
+      setBars() {},
+      fontScale: () => 1.1,
+    };
+  });
+  const mp = await ck.newPage();
+  mp.on("pageerror", e => errors.push(e.message));
+  await mp.goto(appUrl);
+  await mp.evaluate(
+    y =>
+      localStorage.setItem(
+        "tally:v1",
+        JSON.stringify({
+          v: 6,
+          settings: { cur: "BDT", clock: "24", lastCheck: y, dragTip: true, remind: { checkTime: "00:00" } },
+          accounts: [
+            ["City Bank", 99259],
+            ["Bkash", 2910],
+            ["Wallet", 910],
+            ["Brac Joint", 64177],
+          ].map(([name, opening], i) => ({ id: "a" + i, name, type: "bank", currency: "BDT", opening })),
+          txns: [],
+          loans: [],
+          assets: [],
+        })
+      ),
+    await page.evaluate(() => addDays(today(), -1))
+  );
+  await mp.reload();
+  await mp.waitForTimeout(200);
+  rows = await ckRows(mp);
+  ok(
+    rows.length === 4 && rows.every(x => x.beside && x.inline && x.right && x.after),
+    "names that fit keep their balance and Fix on their own line, Fix at the right " + JSON.stringify(rows)
+  );
+  await ck.close();
   await sp.evaluate(() => {
     V.screen = "settings";
     render();

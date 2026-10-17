@@ -266,13 +266,13 @@ function checkCard(b, cur) {
         a =>
           '<button class="ckrow" data-act="acc-open" data-v="' +
           a.id +
-          '">' +
+          '"><span class="ckn">' +
           emblem(accEmb(a), "sm") +
           '<span class="nm" dir="auto">' +
           esc(a.name) +
-          "</span><b>" +
+          '</span></span><span class="ckv"><b>' +
           esc(money(b[a.id], a.currency)) +
-          '</b><span class="fx">Fix</span></button>'
+          '</b><span class="fx">Fix</span></span></button>'
       )
       .join("") +
     '<button class="btn" data-act="check-ok">' +

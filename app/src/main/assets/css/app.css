@@ -304,24 +304,42 @@ a {
   font-size: 0.9rem;
   opacity: 0.85;
 }
+/* a balance check row: the icon with the name, then the balance with Fix, each pair moving as one. A name too long to
+   sit beside the balance gets the whole line (keeping its words, beside its icon), and the balance and Fix go below it,
+   on the right */
 .ckrow {
   display: flex;
-  flex-wrap: wrap; /* a long name keeps its words: the amount and Fix go below it, on the right */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   width: 100%;
   padding: 10px 8px;
   border-radius: 12px;
   text-align: left;
 }
+.ckrow .ckn {
+  flex: 1 1 auto; /* its own width: a row breaks only when the name really doesn't fit */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .ckrow .nm {
-  flex: 1 1 6em;
-  min-width: 6em;
+  min-width: 0;
   overflow-wrap: anywhere; /* the whole name, on two lines if need be: this is where balances are checked */
 }
-.ckrow b {
+/* the balance and Fix move as one; if even they don't fit on one line, Fix goes under the balance, still on the right */
+.ckrow .ckv {
   flex: none;
+  max-width: 100%;
   margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 10px;
+}
+.ckrow b {
   font-weight: 600;
   white-space: nowrap;
 }
