@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -28,7 +29,9 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
@@ -43,17 +46,17 @@ import androidx.webkit.WebViewAssetLoader;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
-    private static final int SAVE_FILE = 2;
+    /** Save dialogs use SAVE_FILE + 0…SAVE_SLOTS-1: each request's waiting file goes with its own code. */
+    private static final int SAVE_FILE = 1000, SAVE_SLOTS = 100;
+    private static int saveSlot;
     private static final int PICK_FOLDER = 4;
     private static final int PICK_RESTORE = 5;
     private static final int NOTIF_REQ = 3;
@@ -75,6 +78,17 @@ public class MainActivity extends Activity {
     /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
     private Integer pageColor;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** Renderer losses (onRenderProcessGone) in the minute since goneSince; static, since each loss recreates this. */
+    private static long goneSince;
+    private static int goneCount;
+    /** Between onStart and onStop; relaunch: the renderer went while out of sight, so the page restarts on return. */
+    private boolean started, relaunch;
+    /**
+     * The activity on screen: background threads answer the page through it (deliver), not through one recreated
+     * meanwhile. Answers that find none, or a page that went away, wait in orphans for the next one.
+     */
+    private static MainActivity live;
+    private static final ArrayList<String> orphans = new ArrayList<>();
 
     /**
      * How the widget, its quick add and reminders open the app: dressed like the launcher's own intent (MAIN +
@@ -95,15 +109,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        live = this;
+        queued.addAll(orphans);
+        orphans.clear();
+        dropOldSaves();
         try {
             web = new WebView(this);
         } catch (RuntimeException e) { // Android System WebView missing, disabled or being updated
-            ready = true;
-            TextView msg = new TextView(this);
-            msg.setText(R.string.no_webview);
-            msg.setGravity(android.view.Gravity.CENTER);
-            msg.setPadding(64, 64, 64, 64);
-            setContentView(msg);
+            showMessage(R.string.no_webview);
             return;
         }
         root = new FrameLayout(this);
@@ -159,7 +172,8 @@ public class MainActivity extends Activity {
 
             /**
              * The WebView's renderer crashed or was killed for memory (low-RAM phones, WebView updates). Unhandled, it
-             * takes the whole app down; instead the page starts afresh (everything is saved as it happens).
+             * takes the whole app down; instead the page starts afresh (everything is saved as it happens). The third
+             * time within a minute it stays down with a message: a page that stops as it loads would restart forever.
              */
             @Override
             @TargetApi(26)
@@ -169,8 +183,23 @@ public class MainActivity extends Activity {
                 web.destroy();
                 web = null;
                 pageUp = false;
+                orphans.addAll(queued); // answers the page hadn't taken yet go to the next one
                 queued.clear();
-                recreate();
+                // a crash, or a loss on screen, counts; a renderer Android ended for memory while Tally was out of
+                // sight is restarted when it comes back (restarting it at once would be ended again, and counted)
+                if (detail.didCrash() || started) {
+                    long now = SystemClock.elapsedRealtime();
+                    if (now - goneSince > 60_000) {
+                        goneSince = now;
+                        goneCount = 0;
+                    }
+                    if (++goneCount >= 3) {
+                        showMessage(R.string.page_stopped);
+                        return true;
+                    }
+                }
+                if (started) recreate();
+                else relaunch = true;
                 return true;
             }
 
@@ -196,7 +225,7 @@ public class MainActivity extends Activity {
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
         if (savedInstanceState == null && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) {
-            open(getIntent().getStringExtra("open"));
+            open(openExtra(getIntent()));
         }
         // after the process was killed the WebView can come back empty: load the page whenever restoring fails
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
@@ -238,8 +267,19 @@ public class MainActivity extends Activity {
 
     /** Before Android 10 a visible app in split screen is paused too: there it only sleeps once out of sight. */
     @Override
+    protected void onStart() {
+        super.onStart();
+        started = true;
+        if (relaunch) {
+            relaunch = false;
+            recreate();
+        }
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
+        started = false;
         if (Build.VERSION.SDK_INT < 29) sleep();
     }
 
@@ -258,7 +298,7 @@ public class MainActivity extends Activity {
         asking = false;
         // empty: the request was interrupted (a second one while the prompt was up), not refused
         if (results.length == 0) return;
-        boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        boolean granted = results[0] == PackageManager.PERMISSION_GRANTED;
         boolean fromButton = notifFromButton;
         notifFromButton = false;
         // asked from Settings' button and Android didn't show its prompt (denied for good): open the settings page
@@ -309,7 +349,16 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        open(intent.getStringExtra("open"));
+        open(openExtra(intent));
+    }
+
+    /** The "open" extra, or null; another app's intent carrying an unknown Parcelable must not crash Tally here. */
+    private static String openExtra(Intent i) {
+        try {
+            return i == null ? null : i.getStringExtra("open");
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** "loan:<id>[:pay]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
@@ -324,6 +373,56 @@ public class MainActivity extends Activity {
     private void callPage(String js) {
         if (pageUp && web != null && !isDestroyed()) web.evaluateJavascript(js, null);
         else queued.add(js);
+    }
+
+    /**
+     * A message instead of the page (no WebView, or a page that keeps stopping), on the page's colour and with Try
+     * again (the launcher icon only brings this same screen back); it ends the launch screen.
+     */
+    private void showMessage(int text) {
+        ready = true;
+        int pad = Math.round(24 * getResources().getDisplayMetrics().density);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(android.view.Gravity.CENTER);
+        box.setPadding(pad, pad, pad, pad);
+        box.setBackgroundColor(pageColor != null ? pageColor : getColor(R.color.surface));
+        TextView msg = new TextView(this);
+        msg.setText(text);
+        msg.setGravity(android.view.Gravity.CENTER);
+        msg.setTextSize(16);
+        box.addView(msg);
+        Button again = new Button(this);
+        again.setText(R.string.try_again);
+        again.setOnClickListener(v -> {
+            goneCount = 0;
+            recreate();
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = pad;
+        box.addView(again, lp);
+        setContentView(box);
+    }
+
+    /**
+     * Hands a window.tally* call to the page of the activity on screen, from any thread: a background thread's answer
+     * then reaches the page even if the activity was recreated meanwhile (renderer lost, text size changed).
+     */
+    static void deliver(String js) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            MainActivity a = live;
+            if (a != null && !a.isDestroyed()) a.callPage(js);
+            else orphans.add(js);
+        });
+    }
+
+    /** Exports whose save dialog never answered (the whole notebook, waiting in plain text): gone after a day. */
+    private void dropOldSaves() {
+        File[] old = getCacheDir().listFiles((dir, name) -> name.startsWith("pending-save"));
+        if (old == null) return;
+        long day = System.currentTimeMillis() - 24L * 60 * 60 * 1000;
+        for (File f : old) if (f.lastModified() < day) f.delete();
     }
 
     /** Ends the launch screen: called by the page (Android.ready) once it has rendered, or by the 3 s fallback. */
@@ -396,6 +495,9 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         if (web != null) web.destroy();
+        web = null;
+        if (live == this) live = null;
+        if (isChangingConfigurations()) orphans.addAll(queued); // recreated: the next page takes what this one didn't
         super.onDestroy();
     }
 
@@ -405,25 +507,19 @@ public class MainActivity extends Activity {
         if (web != null) web.saveState(out);
     }
 
-    /** An export waiting for Android's save dialog: on disk, so it survives Tally's process being reclaimed meanwhile. */
-    private File pendingSave() {
-        return new File(getCacheDir(), "pending-save");
-    }
-
-    private static byte[] readFile(File f) throws IOException {
-        try (InputStream in = new FileInputStream(f)) {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-            byte[] buf = new byte[16384];
-            for (int r; (r = in.read(buf)) > 0; ) out.write(buf, 0, r);
-            return out.toByteArray();
-        }
+    /**
+     * An export waiting for Android's save dialog: on disk, so it survives Tally's process being reclaimed meanwhile,
+     * one file per request (two saves started together each keep their own text).
+     */
+    private File pendingSave(int slot) {
+        return new File(getCacheDir(), "pending-save-" + slot);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == SAVE_FILE) {
-            final File f = pendingSave();
+        if (requestCode >= SAVE_FILE && requestCode < SAVE_FILE + SAVE_SLOTS) {
+            final File f = pendingSave(requestCode - SAVE_FILE);
             final Uri doc = resultCode == RESULT_OK && data != null ? data.getData() : null;
             final Context app = getApplicationContext();
             // written off the UI thread (a slow cloud folder must not freeze the app) and read back like the auto
@@ -432,14 +528,11 @@ public class MainActivity extends Activity {
             new Thread(() -> {
                 boolean ok = false;
                 if (doc != null && f.exists()) {
-                    try { ok = BackupReceiver.put(app.getContentResolver(), doc, readFile(f)); }
+                    try { ok = BackupReceiver.put(app.getContentResolver(), doc, BackupReceiver.readFile(f)); }
                     catch (Throwable ignored) { }
                 }
                 f.delete();
-                final boolean saved = ok;
-                runOnUiThread(() -> {
-                    if (!isDestroyed()) callPage("window.tallySaved&&window.tallySaved(" + saved + ")");
-                });
+                deliver("window.tallySaved&&window.tallySaved(" + ok + ")");
             }).start();
         } else if (requestCode == PICK_RESTORE) {
             restorePicked(resultCode == RESULT_OK && data != null ? data.getData() : null);
@@ -453,7 +546,7 @@ public class MainActivity extends Activity {
                 getContentResolver().takePersistableUriPermission(tree,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (SecurityException e) {
-                folderPicked(null);
+                folderPicked("Tally can't keep access to that folder. Pick another one.");
                 return;
             }
             // remembered and marked not backed up yet: the first backup comes at the set time (Back up now: at once)
@@ -469,7 +562,7 @@ public class MainActivity extends Activity {
      */
     private void restorePicked(Uri doc) {
         if (doc == null) {
-            restoreResult(null, null);
+            restoreResult("null,null");
             return;
         }
         final Context app = getApplicationContext();
@@ -477,23 +570,29 @@ public class MainActivity extends Activity {
             String text = null, err = null;
             try {
                 text = new String(BackupReceiver.readDoc(app.getContentResolver(), doc, BackupReceiver.MAX), StandardCharsets.UTF_8);
+                // a photo or a zip picked by mistake: refused here, not quoted for the page (slow, on a big file)
+                String head = text.startsWith("\uFEFF") ? text.substring(1).trim() : text.trim();
+                if (!head.startsWith("{") || head.indexOf('\u0000') >= 0) {
+                    text = null;
+                    err = "That isn't a Tally backup file";
+                }
             } catch (IOException e) {
                 err = "too big".equals(e.getMessage()) ? "That file is too big to be a Tally backup" : "Couldn't read that file";
             } catch (Throwable e) { // SecurityException, or out of memory on a small phone
                 err = "Couldn't read that file";
             }
-            final String t = text, e2 = err;
-            runOnUiThread(() -> restoreResult(t, e2));
+            // quoted on this thread too: a backup of a few MB takes a moment
+            final String arg = (text == null ? "null" : JSONObject.quote(text)) + "," + (err == null ? "null" : JSONObject.quote(err));
+            restoreResult(arg);
         }).start();
     }
 
-    private void restoreResult(String text, String err) {
-        if (isDestroyed()) return;
-        String a = text == null ? "null" : JSONObject.quote(text), b = err == null ? "null" : JSONObject.quote(err);
-        callPage("window.tallyRestore&&window.tallyRestore(" + a + "," + b + ")");
+    /** window.tallyRestore(text, err), both already quoted: both null = cancelled. */
+    private void restoreResult(String args) {
+        deliver("window.tallyRestore&&window.tallyRestore(" + args + ")");
     }
 
-    /** Tells the page how picking a backup folder went: null = cancelled, "" = backed up, else the problem. */
+    /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem. */
     private void folderPicked(String err) {
         if (isDestroyed()) return;
         String arg = err == null ? "null" : JSONObject.quote(err);
@@ -652,29 +751,67 @@ public class MainActivity extends Activity {
             BackupReceiver.setConfig(MainActivity.this, json);
         }
 
+        /** Every save (state.js save()): the shell's own copy, on disk at once (see SavedCopy). */
+        @JavascriptInterface
+        public void keepState(int seq, String json) {
+            SavedCopy.keep(MainActivity.this, seq, json);
+        }
+
+        /** That copy, for the page's start-up: the save number, a line break and the data; "" when there is none. */
+        @JavascriptInterface
+        public String keptState() {
+            String s = SavedCopy.read(MainActivity.this);
+            return s == null ? "" : s;
+        }
+
         /** The page's data, mirrored after every save while auto backup is on (see BackupReceiver). */
         @JavascriptInterface
         public void setBackupData(String json) {
             BackupReceiver.setData(MainActivity.this, json);
         }
 
-        /** {folder, last, error} for Settings. */
+        /** {folder, usable, last, error} for Settings. */
         @JavascriptInterface
         public String backupStatus() {
             return BackupReceiver.status(MainActivity.this);
         }
 
-        /** "Back up now": runs on the bridge's own thread (not the UI thread); "" when done, else the problem. */
+        /**
+         * "Back up now" (request {@code id}), on a thread of its own so a slow folder (a cloud drive) can't freeze the
+         * page: "" when done, else the problem, comes back through window.tallyBackedUp(err, id).
+         */
         @JavascriptInterface
-        public String backupNow() {
-            String err = BackupReceiver.run(getApplicationContext(), true);
-            return err == null ? "" : err;
+        public void backupNow(final int id) {
+            final Context app = getApplicationContext();
+            new Thread(() -> {
+                String err;
+                try {
+                    err = BackupReceiver.run(app, true);
+                } catch (Throwable e) { // out of memory on a small phone: still an answer
+                    err = "The backup couldn't be written.";
+                }
+                deliver("window.tallyBackedUp&&window.tallyBackedUp(" + JSONObject.quote(err == null ? "" : err) + ","
+                        + id + ")");
+            }).start();
         }
 
-        /** Settings → Restore, from the auto backup: {text, when, folder} or {error}. On the bridge's own thread. */
+        /**
+         * The auto backup's file (request {@code id}), for Settings → Restore and a newly picked folder: {text, when,
+         * folder} or {error}, read on a thread of its own and handed to window.tallyAutoBackup(it, id) (as an object:
+         * it is JSON).
+         */
         @JavascriptInterface
-        public String readAutoBackup() {
-            return BackupReceiver.readAuto(getApplicationContext());
+        public void readAutoBackup(final int id) {
+            final Context app = getApplicationContext();
+            new Thread(() -> {
+                String json;
+                try {
+                    json = BackupReceiver.readAuto(app);
+                } catch (Throwable e) {
+                    json = "{\"error\":\"The backup file can't be read.\"}";
+                }
+                deliver("window.tallyAutoBackup&&window.tallyAutoBackup(" + json + "," + id + ")");
+            }).start();
         }
 
         /** Settings → Restore, any file: Android's document picker; the text comes back through window.tallyRestore. */
@@ -686,7 +823,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(i, PICK_RESTORE);
                 } catch (ActivityNotFoundException e) {
-                    restoreResult(null, "No file picker on this phone");
+                    restoreResult("null," + JSONObject.quote("No file picker on this phone"));
                 }
             });
         }
@@ -695,12 +832,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void pickBackupFolder() {
             runOnUiThread(() -> {
-                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 try {
-                    startActivityForResult(i, PICK_FOLDER);
+                    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER);
                 } catch (ActivityNotFoundException e) {
-                    folderPicked(null);
+                    folderPicked("This phone has no folder picker, so auto backup can't be set up.");
                 }
             });
         }
@@ -761,7 +896,7 @@ public class MainActivity extends Activity {
             return MainActivity.this.getResources().getConfiguration().fontScale;
         }
 
-        /** The phone's 12 / 24-hour setting, for the time picker and time labels. */
+        /** The phone's 12 / 24-hour setting: only for saves from before Settings' time format (phoneClock()). */
         @JavascriptInterface
         public boolean is24h() {
             return DateFormat.is24HourFormat(MainActivity.this);
@@ -810,15 +945,20 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void saveFile(final String name, final String mime, final String content) {
             // written here, on the bridge's own thread: the text waits on disk while Android's save dialog is open
+            final int slot;
+            synchronized (MainActivity.class) {
+                slot = saveSlot;
+                saveSlot = (saveSlot + 1) % SAVE_SLOTS;
+            }
             boolean parked;
-            try (OutputStream os = new FileOutputStream(pendingSave())) {
+            try (OutputStream os = new FileOutputStream(pendingSave(slot))) {
                 os.write(content.getBytes(StandardCharsets.UTF_8));
                 parked = true;
             } catch (IOException | RuntimeException e) {
                 parked = false;
             }
             if (!parked) {
-                runOnUiThread(() -> callPage("window.tallySaved&&window.tallySaved(false)"));
+                deliver("window.tallySaved&&window.tallySaved(false)");
                 return;
             }
             runOnUiThread(() -> {
@@ -827,9 +967,9 @@ public class MainActivity extends Activity {
                 i.setType(mime);
                 i.putExtra(Intent.EXTRA_TITLE, name);
                 try {
-                    startActivityForResult(i, SAVE_FILE);
+                    startActivityForResult(i, SAVE_FILE + slot);
                 } catch (ActivityNotFoundException e) {
-                    pendingSave().delete();
+                    pendingSave(slot).delete();
                     callPage("window.tallySaved&&window.tallySaved(false)");
                 }
             });

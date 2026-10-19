@@ -5,13 +5,15 @@
 "use strict";
 
 let SM = null;
+/* a bar's short label in the phone's own way ("1.5K", "1,5 k", "١٫٥ ألف"), small amounts with their decimals */
+let COMPACT = null;
 const compact = n => {
-  n = Math.round(n);
-  const a = Math.abs(n);
-  if (a < 1000) return String(n);
-  if (a < 1e4) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k";
-  if (a < 1e6) return Math.round(n / 1e3) + "k";
-  return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+  try {
+    COMPACT = COMPACT || new Intl.NumberFormat(undefined, { notation: "compact", maximumSignificantDigits: 3 });
+    return COMPACT.format(n);
+  } catch (e) {
+    return String(Math.round(n));
+  }
 };
 /* weeks start on the day chosen in Settings → Region */
 const weekStart = d => addDays(d, -((parseISO(d).getDay() - S.settings.week + 7) % 7));
@@ -47,8 +49,8 @@ function smBuckets() {
       out.push({
         s: d,
         e: d,
-        x: parseISO(d).toLocaleDateString(undefined, { weekday: "short" }),
-        full: d === t ? "Today" : d === addDays(t, -1) ? "Yesterday" : dayLabel(d),
+        x: parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" }),
+        full: dayName(d),
       });
     }
   else if (SM.mode === "w") {
@@ -58,38 +60,31 @@ function smBuckets() {
       out.push({
         s,
         e: addDays(s, 6),
-        x: parseISO(s).toLocaleDateString(undefined, { day: "numeric", month: "short" }),
-        full: "Week of " + parseISO(s).toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+        x: parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
+        full: "Week of " + parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
       });
     }
   } else {
     const m0 = e.slice(0, 7);
     for (let i = 6; i >= 0; i--) {
-      const m = shiftMonth(m0, -i),
-        [y, mo] = m.split("-").map(Number);
+      const m = shiftMonth(m0, -i);
       out.push({
         s: m + "-01",
-        e: m + "-" + pad(new Date(y, mo, 0).getDate()),
-        x: parseISO(m + "-01").toLocaleDateString(undefined, { month: "short" }),
+        e: monthEnd(m),
+        x: parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }),
         full: monthLabel(m),
       });
     }
   }
-  const inCur = x => {
-    const a = acc(x.account);
-    return a && a.currency === SM.cur;
-  };
-  const sp = S.txns.filter(x => isSpend(x) && inCur(x));
+  const sp = S.txns.filter(x => isSpend(x) && inCur(x, SM.cur));
   out.forEach(b => {
     b.list = sp.filter(x => x.date >= b.s && x.date <= b.e);
     b.v = rnd(b.list.reduce((q, x) => q + x.amount, 0));
     const last = b.e < t ? b.e : t;
-    b.days = last < b.s ? 0 : Math.round((parseISO(last) - parseISO(b.s)) / 864e5) + 1;
+    b.days = last < b.s ? 0 : daysBetween(b.s, last) + 1;
   });
   return out;
 }
-/* "3 – 9 Aug", "31 Aug – 6 Sep" (the phone's order) */
-const wkLabel = (a, b) => rangeLabel(a, b);
 /* categories of a set of expenses, biggest first */
 function catSplit(list) {
   const m = {};
@@ -137,6 +132,9 @@ function smDonut(split, total) {
   );
 }
 function smRender() {
+  keepFocus($("#sm"), drawSm);
+}
+function drawSm() {
   const el = $("#sm");
   if (!el || !SM) return;
   const all = smBuckets(),
@@ -164,7 +162,7 @@ function smRender() {
   const split = catSplit(b.list);
   if (SM.mode === "d")
     h +=
-      '<div class="smchart smc" role="list">' +
+      '<div class="smchart smc">' +
       bars
         .map((x, k) => {
           const pct = max ? (x.v / max) * 100 : 0,
@@ -172,7 +170,9 @@ function smRender() {
           return (
             '<button class="smcol' +
             (k === i ? " on" : "") +
-            '" role="listitem" data-act="sm-pick" data-v="' +
+            '" aria-pressed="' +
+            (k === i) +
+            '" data-act="sm-pick" data-v="' +
             k +
             '"' +
             (future ? " disabled" : "") +
@@ -192,20 +192,22 @@ function smRender() {
       "</div>";
   else if (SM.mode === "w")
     h +=
-      '<div class="smchart smrows" role="list">' +
+      '<div class="smchart smrows">' +
       bars
         .map((x, k) => {
           const pct = max ? (x.v / max) * 100 : 0;
           return (
             '<button class="smrow' +
             (k === i ? " on" : "") +
-            '" role="listitem" data-act="sm-pick" data-v="' +
+            '" aria-pressed="' +
+            (k === i) +
+            '" data-act="sm-pick" data-v="' +
             k +
             '" aria-label="' +
             esc(x.full + ": " + money(x.v, cur)) +
             '">' +
             '<span class="x">' +
-            esc(wkLabel(x.s, x.e)) +
+            esc(rangeLabel(x.s, x.e)) +
             '</span><span class="tr"><span class="b" style="width:' +
             (x.v ? Math.max(2, pct) : 0).toFixed(1) +
             '%"></span></span><span class="v">' +
@@ -219,7 +221,7 @@ function smRender() {
   /* details for the chosen bar */
   const unit = { d: "the day before", w: "last week", m: "last month" }[SM.mode];
   /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
-  const len = x => Math.round((parseISO(x.e) - parseISO(x.s)) / 864e5) + 1,
+  const len = x => daysBetween(x.s, x.e) + 1,
     part = SM.mode !== "d" && b.days < len(b);
   let cmp = "";
   if (prev && prev.v > 0 && b.days > 0) {
@@ -246,7 +248,7 @@ function smRender() {
           return (
             '<div class="tx">' +
             emblem(c, "em") +
-            '<span class="mid"><div class="d">' +
+            '<span class="mid"><div class="d" dir="auto">' +
             esc(c.name) +
             (M ? ' <span class="muted small">' + (p < 1 ? "<1" : Math.round(p)) + "%</span>" : "") +
             '</div><span class="pbar"><span style="width:' +
@@ -278,11 +280,7 @@ function smNav(d) {
   let e = SM.end;
   if (SM.mode === "d") e = addDays(e, 7 * d);
   else if (SM.mode === "w") e = addDays(e, 56 * d);
-  else {
-    const m = shiftMonth(e.slice(0, 7), d),
-      [y, mo] = m.split("-").map(Number);
-    e = m + "-" + pad(new Date(y, mo, 0).getDate());
-  }
+  else e = monthEnd(shiftMonth(e.slice(0, 7), d));
   SM.end = e > t ? t : e;
   SM.sel = null;
   smRender();

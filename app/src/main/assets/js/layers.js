@@ -5,14 +5,22 @@
  */
 "use strict";
 
+/* a short window (a 16:9 phone, split screen): the day rows give up height, down to 36px, so the month and the
+   dialog's buttons fit without scrolling (a phone held sideways sizes them in CSS: body.land .dd) */
+function fitCal(el) {
+  if (!el || document.body.classList.contains("land")) return;
+  el.style.removeProperty("--row");
+  const over = el.scrollHeight - el.clientHeight,
+    n = el.querySelectorAll(".wk").length;
+  if (over > 0 && n) el.style.setProperty("--row", Math.max(36, 48 - Math.ceil(over / n)) + "px");
+}
 /* month grid shared by the period dialog and the date picker */
 function calGrid(m, o) {
   const t = today(),
-    [y, mo] = m.split("-").map(Number),
     first = m + "-01";
   const w = S.settings.week,
     off = (parseISO(first).getDay() - w + 7) % 7,
-    rows = Math.ceil((off + new Date(y, mo, 0).getDate()) / 7);
+    rows = Math.ceil((off + monthDays(m)) / 7);
   const has = new Set(S.txns.map(x => x.date)),
     minM = o.min ? o.min.slice(0, 7) : "",
     maxM = o.max ? o.max.slice(0, 7) : "";
@@ -34,13 +42,7 @@ function calGrid(m, o) {
     "</button></div>";
   h +=
     '<div class="cal"><div class="cal-wd">' +
-    Array.from(
-      { length: 7 },
-      (_, i) =>
-        "<span>" +
-        esc(parseISO(addDays("2024-01-07", w + i)).toLocaleDateString(undefined, { weekday: "narrow" })) +
-        "</span>"
-    ).join("") +
+    Array.from({ length: 7 }, (_, i) => "<span>" + esc(weekdayName(w + i, "narrow")) + "</span>").join("") +
     "</div>";
   let d = addDays(first, -off);
   for (let r = 0; r < rows; r++) {
@@ -66,7 +68,7 @@ function calGrid(m, o) {
         /* read out as the whole date, with today and the chosen day marked */
         '" aria-label="' +
         esc(
-          parseISO(d).toLocaleDateString(undefined, {
+          parseISO(d).toLocaleDateString(DATE_LOC, {
             weekday: "long",
             day: "numeric",
             month: "long",
@@ -97,10 +99,12 @@ function askDialog(title, text, okText, onOk, o) {
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-label="' +
     esc(title) +
-    '"><h3 class="dlg-t">' +
+    '"' +
+    (text ? ' aria-describedby="dlg-x"' : "") +
+    '><h3 class="dlg-t">' +
     esc(title) +
     "</h3>" +
-    (text ? '<p class="dlg-x">' + esc(text) + "</p>" : "") +
+    (text ? '<p class="dlg-x" id="dlg-x">' + esc(text) + "</p>" : "") +
     (o.alt
       ? '<div class="dlg-act stack"><button class="btn text" data-act="ask-ok">' +
         esc(okText) +
@@ -134,8 +138,12 @@ const miniDialog = (label, body, okAct, okText) => {
     esc(okText) +
     "</button></div></div></div>";
 };
+/* a date button; o.now: a new entry's "today", which moves to the new day at midnight until a date is picked
+   (catchUpToday). Screen readers hear its label and the date. */
 function dateField(id, val, o) {
   o = o || {};
+  const shownAs = val ? shortDay(val) : o.none || "No date",
+    label = o.label || "Date";
   return (
     '<button class="fieldbtn datefld" id="' +
     id +
@@ -145,22 +153,46 @@ function dateField(id, val, o) {
     (o.min ? ' data-min="' + o.min + '"' : "") +
     (o.max ? ' data-max="' + o.max + '"' : "") +
     (o.opt ? ' data-opt="1"' : "") +
+    (o.now && val === today() ? ' data-now="1"' : "") +
     ' data-none="' +
     esc(o.none || "No date") +
+    '" data-label="' +
+    esc(label) +
     '" aria-label="' +
-    esc(o.label || "Date") +
-    '"' +
-    (o.style ? ' style="' + o.style + '"' : "") +
-    "><span>" +
-    esc(val ? shortDay(val) : o.none || "No date") +
+    esc(label + ": " + shownAs) +
+    '"><span>' +
+    esc(shownAs) +
     "</span>" +
     ic("event") +
     "</button>"
   );
 }
-function setDateField(el, v) {
+/* Part of the page drawn anew (a screen, a calendar, a chart) keeps the keyboard's and screen reader's place: the
+   control that had the focus gets it back, found again by its id or by what it does (data-act, data-v). */
+function keepFocus(root, draw) {
+  const a = document.activeElement,
+    k = root && a && a !== root && root.contains(a) ? focusKey(a) : null;
+  draw();
+  const now = document.activeElement;
+  if (k && !(now && now !== document.body && now.isConnected)) refocus(root, k);
+}
+const focusKey = el => ({ id: el.id, act: el.dataset && el.dataset.act, v: el.dataset && el.dataset.v });
+function refocus(root, k) {
+  const sel = k.id
+      ? "#" + CSS.escape(k.id)
+      : k.act
+        ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
+        : "",
+    el = sel && root.querySelector(sel);
+  if (el) el.focus({ preventScroll: true });
+  return !!el;
+}
+function setDateField(el, v, keepNow) {
+  const shownAs = v ? shortDay(v) : el.dataset.none;
   el.dataset.v = v || "";
-  el.firstChild.textContent = v ? shortDay(v) : el.dataset.none;
+  el.firstChild.textContent = shownAs;
+  el.setAttribute("aria-label", el.dataset.label + ": " + shownAs);
+  if (!keepNow) delete el.dataset.now;
 }
 let DP = null;
 function datePicker(el) {
@@ -176,6 +208,9 @@ function datePicker(el) {
   dpRender();
 }
 function dpRender() {
+  keepFocus($("#dp"), drawDp);
+}
+function drawDp() {
   const el = $("#dp");
   if (!el || !DP) return;
   const t = today(),
@@ -194,6 +229,7 @@ function dpRender() {
         (tOk ? "" : " disabled") +
         ">Today</button>") +
     '<button class="btn text" data-act="pd-close">Cancel</button></div>';
+  fitCal(el);
 }
 function dpSet(v) {
   const id = DP.id,
@@ -202,13 +238,21 @@ function dpSet(v) {
   if (!el) return;
   setDateField(el, v);
   if (id === "f-due2" && F && F.kind === "loan") {
+    /* the loan card's day: every draw still owed that's due by then (or by the day it showed, if later) moves to it,
+       as a reminder's +1 day does; without any due day, the draw it's about. The sheet is drawn again. */
     const l = loan(F.id);
     if (!l) return;
-    const t = S.txns.find(x => x.id === F.dueDraw);
-    if (!t) return;
-    t.due = v;
+    const i = loanInfo(l),
+      by = [i.nextDue > today() ? i.nextDue : today(), v].sort().pop(),
+      due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= by),
+      list = due.length ? due : S.txns.filter(x => x.id === F.dueDraw);
+    if (!list.length) return;
+    list.forEach(t => (t.due = v));
     commit();
-    $("#loan-due").textContent = dueHead(l, loanInfo(l));
+    const p = $("#sheet .p"),
+      top = p ? p.scrollTop : 0;
+    loanOpen(l.id);
+    if ($("#sheet .p")) $("#sheet .p").scrollTop = top;
   }
 }
 /* Settings → Region → Time format: "24" (the default) or "12" */
@@ -235,10 +279,11 @@ const timeLabel = hm => {
     hourCycle: h24 ? "h23" : "h12",
   });
 };
-/* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM on a 12-hour phone), the
-   centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above and below, so
-   row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times and quietly
-   moved back to the middle copy once scrolling settles. Every row passed ticks (buzz). OK hands "HH:MM" to onPick. */
+/* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM with Settings → Region's
+   12-hour time), the centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above
+   and below, so row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times
+   and quietly moved back to the middle copy once scrolling settles. Every row passed ticks (buzz). OK hands "HH:MM"
+   to onPick. */
 const W_ROW = 56;
 let TP = null;
 function timePicker(title, cur, onPick) {
@@ -404,15 +449,17 @@ function closeSheet() {
   closeSheet2();
   $("#sheet").innerHTML = "";
   F = null;
-  /* came from the entries list: go back to it (after a save/delete has been applied), not to Home */
+  if (dayPending) {
+    dayPending = false; // the day changed under the sheet: Home catches up now
+    setTimeout(render, 0);
+  }
+  /* came from another sheet (the entries list, a loan): go back to it (after a save/delete has been applied), not to
+     Home */
   if (BACKTO) {
     const b = BACKTO;
     BACKTO = null;
     setTimeout(() => {
-      if ($("#sheet").innerHTML || V.screen !== b.screen) return;
-      entriesSheet();
-      const p = $("#sheet .p");
-      if (p) p.scrollTop = b.scroll;
+      if (!$("#sheet").innerHTML && V.screen === b.screen) b.open();
     }, 0);
   }
 }
@@ -559,7 +606,7 @@ function curList(q) {
     esc(c) +
     '"><span class="code">' +
     esc(c) +
-    '</span><span class="mid"><div class="d">' +
+    '</span><span class="mid"><div class="d" dir="auto">' +
     esc(curName(c) || c) +
     '</div></span><span class="a muted">' +
     esc(curSym(c)) +
@@ -588,4 +635,5 @@ function curList(q) {
   }
   box.innerHTML = h || '<div class="empty">No currency found</div>';
 }
+/* where closing the sheet goes back to, {screen, open} (see closeSheet) */
 let BACKTO = null;

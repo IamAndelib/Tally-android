@@ -58,7 +58,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         SharedPreferences p = prefs(ctx);
         String t = today();
         if (A_DAILY.equals(a)) {
-            if (reached(config(ctx).optJSONObject("daily"), 21) && !t.equals(p.getString("lastEntry", ""))
+            JSONObject dl = config(ctx).optJSONObject("daily");
+            if (dl != null && dl.optBoolean("on") && reached(dl, 21) && !t.equals(p.getString("lastEntry", ""))
                     && !t.equals(p.getString("shown:nudge", ""))) {
                 show(ctx, CH_NUDGE, DAILY_ID, "Nothing written in Tally today",
                         "Take a minute to note what you spent.", openApp(ctx, null, DAILY_ID), null);
@@ -74,7 +75,7 @@ public class ReminderReceiver extends BroadcastReceiver {
             }
         } else if (A_DUE.equals(a)) {
             JSONObject d = findDue(ctx, in.getStringExtra("id"));
-            if (d != null) showDue(ctx, d);
+            if (d != null) showDue(ctx, d, false);
         } else if (A_EXTEND.equals(a)) {
             extend(ctx, in.getStringExtra("id"), in.getIntExtra("days", 1));
         }
@@ -86,11 +87,7 @@ public class ReminderReceiver extends BroadcastReceiver {
      * say "Nothing written today" about a day that has just begun; it only re-arms.
      */
     private static boolean reached(JSONObject o, int defH) {
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, o == null ? defH : o.optInt("h", defH))));
-        c.set(Calendar.MINUTE, Math.max(0, Math.min(59, o == null ? 0 : o.optInt("m", 0))));
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
+        Calendar c = dayAt(0, o == null ? defH : o.optInt("h", defH), o == null ? 0 : o.optInt("m", 0));
         return System.currentTimeMillis() >= c.getTimeInMillis() - 60_000; // a minute's slack for clock drift
     }
 
@@ -145,15 +142,21 @@ public class ReminderReceiver extends BroadcastReceiver {
         return am != null && canExact(am);
     }
 
-    /** The next h:m from now (today if still ahead, else tomorrow); out-of-range values are clamped, never rolled over. */
-    static long nextAt(int h, int m) {
+    /** h:m:00 local time, {@code days} after today; out-of-range values are clamped, never rolled over. */
+    static Calendar dayAt(int days, int h, int m) {
         Calendar c = Calendar.getInstance();
+        c.add(Calendar.DAY_OF_MONTH, days); // the day first: a time set on a day that skips it (DST) isn't carried over
         c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, h)));
         c.set(Calendar.MINUTE, Math.max(0, Math.min(59, m)));
         c.set(Calendar.SECOND, 0);
         c.set(Calendar.MILLISECOND, 0);
-        if (c.getTimeInMillis() <= System.currentTimeMillis() + 1000) c.add(Calendar.DAY_OF_MONTH, 1);
-        return c.getTimeInMillis();
+        return c;
+    }
+
+    /** The next h:m from now: today if still ahead, else tomorrow. */
+    static long nextAt(int h, int m) {
+        long at = dayAt(0, h, m).getTimeInMillis();
+        return at > System.currentTimeMillis() + 1000 ? at : dayAt(1, h, m).getTimeInMillis();
     }
 
     static void schedule(Context ctx) {
@@ -162,7 +165,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         JSONObject cfg = config(ctx);
         long now = System.currentTimeMillis();
 
-        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, true);
+        // nothing until the page has said what's on (a widget can arm this before Tally was ever opened)
+        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, false);
         armDaily(ctx, am, cfg.optJSONObject("check"), A_CHECK, CHECK_ID, 8, false);
 
         JSONObject at = cfg.optJSONObject("duesAt");
@@ -225,10 +229,6 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     // ---------- notifications ----------
-
-    private static void showDue(Context ctx, JSONObject d) {
-        showDue(ctx, d, false);
-    }
 
     /** quiet: re-writes one already on screen (new amount, total or date), without a sound or a "shown" mark. */
     private static void showDue(Context ctx, JSONObject d, boolean quiet) {
@@ -356,7 +356,8 @@ public class ReminderReceiver extends BroadcastReceiver {
                 d.put("date", fmt().format(c.getTime()));
             }
             JSONArray q = new JSONArray(p.getString("actions", "[]"));
-            q.put(new JSONObject().put("type", "extend").put("id", id).put("days", days));
+            // the day it was tapped: the page counts from it, not from when Tally is next opened
+            q.put(new JSONObject().put("type", "extend").put("id", id).put("days", days).put("on", today()));
             p.edit().putString("config", cfg.toString()).putString("actions", q.toString()).remove("shown:" + id).apply();
         } catch (JSONException ignored) { }
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -434,8 +435,12 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
     }
 
+    /** "Mon, Jun 15" / "Mon 15 Jun" / "6月15日(月)": weekday, day and month in the phone's own order */
     private static String pretty(String s) {
         Calendar c = parse(s);
-        return c == null ? s : new SimpleDateFormat("EEE d MMM", Locale.getDefault()).format(c.getTime());
+        if (c == null) return s;
+        Locale loc = Locale.getDefault();
+        return new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEdMMM"), loc)
+                .format(c.getTime());
     }
 }

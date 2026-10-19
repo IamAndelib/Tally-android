@@ -68,7 +68,7 @@ const ago = n => {
 
   // ---- 1. evalAmt: calculator expressions and limits
   const ev = await page.evaluate(() =>
-    ["12−3", "12×3", "100÷4", "1,234.5", "12,5", "5+2", "9".repeat(400), "1000000000000", "abc", "12×3abc", "12+"].map(
+    ["12−3", "12×3", "100÷4", "1,234.5", "12,5", "5+2", "9".repeat(400), "9000000000000", "abc", "12×3abc", "12+"].map(
       evalAmt
     )
   );
@@ -302,8 +302,8 @@ const ago = n => {
   await act("tr-new");
   await settle();
   await page.fill("#f-amt", "20");
-  await act("tr-fee");
-  await page.fill("#f-fee", "abc");
+  await act("add-fee");
+  await page.fill("#f-fee", "5+");
   await act("tr-save");
   await settle();
   S = await state();

@@ -16,11 +16,11 @@ FIX A BALANCE IN SECONDS
 If an account doesn't match what you really have, type the real amount and Tally records the difference.
 
 LOANS AND LENDINGS
-Keep track of money you borrowed or lent: several amounts per person, due dates, partial payments, reminders and
-write-offs. See your net worth on the Assets and Liabilities tabs.
+Keep track of money you borrowed or lent: several amounts per person, due dates, partial payments (with any
+fees), reminders and write-offs. See your net worth on the Assets and Liabilities tabs.
 
 LOOK BACK
-History for any day, week, range or month, with each account's balance after every entry. Tap the donut for your last
+History for any day, date range or month, with each account's balance after every entry. Tap the donut for your last
 7 days, 8 weeks or a month by category.
 
 REMINDERS AND A WIDGET

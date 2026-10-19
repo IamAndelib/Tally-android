@@ -156,7 +156,8 @@ jobs:
         run: .github/fdroid-check.sh
 
   # Publishes a GitHub Release, signed with the private release key, whenever main (or a pushed tag vX.Y.Z) carries a
-  # version that has no release yet. So releasing is: bump tallyVersion + CHANGELOG.md in a PR and merge it.
+  # version that has no release yet. So releasing is: bump tallyVersion + tallyVersionCode, add the CHANGELOG.md section
+  # and the fastlane changelog in a PR, and merge it.
   # On any other branch carrying such a version (the release PR's), it makes a preview instead, for the maintainer to
   # install over the current release before merging: the same APK, signed with the release key, as a draft release
   # (seen only by people with write access; a draft has no tag, so F-Droid never sees it). Its versionCode is one below

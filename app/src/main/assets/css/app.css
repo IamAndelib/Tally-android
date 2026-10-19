@@ -58,8 +58,7 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 button,
-input,
-select {
+input {
   font: inherit;
   color: inherit;
 }
@@ -137,6 +136,11 @@ button.cat {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* inside a box that clips what it holds, the ring is drawn just inside the control, so it shows whole */
+.list :focus-visible,
+.seg :focus-visible {
+  outline-offset: -2px;
+}
 .ic {
   width: 24px;
   height: 24px;
@@ -173,7 +177,6 @@ a {
 .appbar {
   display: flex;
   align-items: center;
-  gap: 4px;
   height: 64px;
   margin: 0 -8px;
 }
@@ -200,10 +203,10 @@ a {
   min-width: 0;
 }
 .plabel {
-  height: 40px;
+  min-height: 48px;
   min-width: 0;
   padding: 0 12px 0 16px;
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 1.25rem;
   font-weight: 600;
   display: flex;
@@ -227,17 +230,28 @@ a {
   margin: 0 auto;
   padding: 0 8px 0 12px;
 }
-.appbar > .icon {
-  width: 44px;
-  height: 44px;
+/* the period arrows keep their whole 48px to tap but lie over the label's padding (on top of it), so the label keeps
+   its room next to them; .appbar has no gap for the same reason (each icon's box already spaces its glyph) */
+.pnav > .icon {
+  position: relative;
+  z-index: 1;
 }
-.pnav .icon {
-  width: 40px;
-  height: 40px;
+.pnav > .icon:first-child {
+  margin-right: -10px;
+}
+.pnav > .icon:last-child {
+  margin-left: -6px;
 }
 .pnav .plabel {
   font-size: clamp(1.05rem, 4.6vw, 1.25rem);
   padding: 0 6px 0 10px;
+}
+/* a phone held sideways: the upright phone's size (vw is the long side there) */
+body.land .pnav .plabel {
+  font-size: 1.05rem;
+}
+body.land .pnav .plabel.long {
+  font-size: 0.9rem;
 }
 .pnav .plabel.long {
   font-size: clamp(0.9rem, 4vw, 1.15rem);
@@ -259,7 +273,6 @@ a {
 .acc {
   flex: none;
   min-width: 112px;
-  max-width: 180px;
   background: var(--surface-container);
   border-radius: 16px;
   padding: 10px 14px;
@@ -268,10 +281,17 @@ a {
   flex-direction: column;
   gap: 2px;
 }
+/* the emblem, then the name in its own direction (a right-to-left one cut at its own end) */
 .acc .n {
+  display: flex;
+  align-items: center;
+  max-width: 152px; /* a long name is cut; the balance below never is */
   font-size: 0.78rem;
   color: var(--on-surface-variant);
   white-space: nowrap;
+}
+.acc .n > span:last-child {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -307,22 +327,42 @@ a {
   font-size: 0.9rem;
   opacity: 0.85;
 }
+/* a balance check row: the icon with the name, then the balance with Fix, each pair moving as one. A name too long to
+   sit beside the balance gets the whole line (keeping its words, beside its icon), and the balance and Fix go below it,
+   on the right */
 .ckrow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   width: 100%;
   padding: 10px 8px;
   border-radius: 12px;
   text-align: left;
 }
+.ckrow .ckn {
+  flex: 1 1 auto; /* its own width: a row breaks only when the name really doesn't fit */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .ckrow .nm {
-  flex: 1;
   min-width: 0;
   overflow-wrap: anywhere; /* the whole name, on two lines if need be: this is where balances are checked */
 }
-.ckrow b {
+/* the balance and Fix move as one; if even they don't fit on one line, Fix goes under the balance, still on the right */
+.ckrow .ckv {
   flex: none;
+  max-width: 100%;
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 10px;
+}
+.ckrow b {
   font-weight: 600;
   white-space: nowrap;
 }
@@ -502,6 +542,7 @@ body.hist #app {
   line-height: 1.25;
 }
 .curbtn {
+  position: relative;
   pointer-events: auto;
   margin-top: 4px;
   font-size: 0.72rem;
@@ -511,10 +552,21 @@ body.hist #app {
   background: var(--surface-high);
   color: var(--on-surface-variant);
 }
+/* 48px to tap, reaching mostly into the empty hole below it (the amount above stays the summary's) */
+.curbtn::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -4px;
+  right: -4px;
+  height: 48px;
+}
 
 /* balance bar + fabs */
+/* a balance too long for the line moves under the label, still on the right */
 .balbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -526,10 +578,11 @@ body.hist #app {
   text-align: left;
 }
 .balbar .l {
-  flex: 1;
+  flex: 1 1 auto;
   font-size: 0.9rem;
 }
 .balbar b {
+  margin-left: auto;
   font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -653,7 +706,8 @@ body.hist #app {
   margin-top: 8px;
 }
 .chip {
-  height: 40px;
+  min-height: 48px;
+  max-width: 100%;
   padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--outline-variant);
@@ -676,6 +730,17 @@ body.hist #app {
 .chip[aria-pressed="true"]::after {
   content: "✓";
   font-size: 0.8rem;
+  flex: none;
+}
+/* a name in its chip (an account, person, type or category): cut with "…" when it doesn't fit, the emblem and ✓
+   stay whole */
+.chip .chn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip > .emb {
+  flex: none;
 }
 .smc {
   display: flex;
@@ -840,6 +905,10 @@ body.hist #app {
   color: var(--on-surface-variant);
   line-height: 1.45;
 }
+.dlg-t,
+.dlg-x {
+  overflow-wrap: anywhere; /* names quoted whole, however long */
+}
 .btn.text.dng {
   color: var(--spent);
 }
@@ -892,8 +961,7 @@ body.hist #app {
   color: var(--on-surface-variant);
   margin-bottom: 6px;
 }
-input,
-select {
+input {
   width: 100%;
   height: 52px;
   padding: 0 14px;
@@ -902,18 +970,12 @@ select {
   background: transparent;
   outline: none;
 }
-input:focus,
-select:focus {
+input:focus {
   border: 2px solid var(--primary);
   padding: 0 13px;
 }
-input:focus-visible,
-select:focus-visible {
+input:focus-visible {
   outline: 0;
-}
-select option {
-  background: var(--surface-high);
-  color: var(--on-surface);
 }
 .amtwrap {
   display: flex;
@@ -949,10 +1011,10 @@ select option {
   margin-bottom: -1px;
 }
 .amtwrap .calcbtn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex: none;
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--primary-container);
   color: var(--on-primary-container);
 }
@@ -1031,8 +1093,7 @@ select option {
   animation: up 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 /* typing fields keep normal selection, caret and paste */
-input,
-textarea {
+input {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -1161,6 +1222,7 @@ textarea {
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 48px;
   padding: 12px 14px;
   text-align: left;
   border-radius: 0;
@@ -1194,11 +1256,12 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* an amount and a balance are never cut: the title, then the account name in the balance line give way to them */
 .tx .a {
   font-weight: 600;
   white-space: nowrap;
   text-align: right;
-  min-width: 0;
+  min-width: min-content;
   max-width: 55%; /* the title keeps at least the rest; the balance line below gives way first */
 }
 .tx.on {
@@ -1217,28 +1280,41 @@ textarea {
 .tx > .ic {
   color: var(--primary);
 }
+/* the lines under an amount are sized in em, not rem: they follow the amount when fitFigures() sets it smaller */
 .tx .a small {
   display: block;
   font-weight: 400;
-  font-size: 0.75rem;
+  font-size: 0.75em;
   color: var(--on-surface-variant);
 }
+/* the balance line: [arrow] name balance. The name's column shrinks to nothing (its name cut with "…") but may grow
+   as wide as the name, so a long name never makes the amount's column wider than the amount and balance need */
 .tx .a .rb {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.3em;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) auto;
+  justify-content: end;
+  column-gap: 0.3em;
   font-weight: 500;
-  font-size: 0.72rem;
+  font-size: 0.72em;
   color: var(--on-surface-variant);
+}
+.tx .a .rb.ar {
+  grid-template-columns: auto minmax(0, max-content) auto;
 }
 .tx .a .rbn {
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .tx .s .st {
   margin-right: 2px;
   vertical-align: 1px;
+}
+/* alone on its line (a loan card's payment rows): in a narrow row it ends in "…" rather than lose letters */
+.tx.exp .s .st {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
 }
 .tx.exp {
   flex-wrap: wrap;
@@ -1338,18 +1414,15 @@ textarea {
   border-radius: 24px;
   padding: 4px;
 }
-.month b {
-  font-weight: 600;
-}
 .seg {
   display: flex;
   border: 1px solid var(--outline);
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
 }
 .seg button {
   flex: 1;
-  height: 40px;
+  min-height: 48px;
   font-weight: 500;
   font-size: 0.9rem;
   border-radius: 0;
@@ -1421,10 +1494,13 @@ textarea {
   min-height: 40px;
   margin-bottom: 4px;
 }
+/* a long name (an e-mail, an IBAN) wraps rather than push the close button off the sheet */
 .sheet .h h2 {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 @keyframes up {
   from {
@@ -1505,9 +1581,6 @@ textarea {
   width: 20px;
   height: 20px;
 }
-.btn .emb.sm {
-  margin-right: 0;
-}
 .cprevbtn {
   border-radius: 50%;
 }
@@ -1534,10 +1607,8 @@ textarea {
     0 0 0 3px var(--surface-low),
     0 0 0 5px var(--primary);
 }
-/* a 34px dot in a 48px touch target: the padding is clear, the selection ring sits at its edge */
-.dots {
-  gap: 0;
-}
+/* a 34px dot in a 48px touch target: the padding is clear (so no gap between them), the selection ring sits at its
+   edge */
 .dots .dot {
   width: 48px;
   height: 48px;
@@ -1547,11 +1618,19 @@ textarea {
 .dots .dot[aria-pressed="true"] {
   box-shadow: inset 0 0 0 2px var(--on-surface);
 }
+/* "add your own colour": 48px to tap like the swatches, its dashed ring drawn the swatches' size (on ::after:
+   ::before is the pressed state layer) */
 .dots .dot.addnew {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  margin: 7px;
+  position: relative;
+  border: 0;
+}
+.dots .dot.addnew::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed var(--outline);
+  border-radius: 50%;
+  pointer-events: none;
 }
 /* date picker header, time grid */
 .dp-h {
@@ -1797,6 +1876,7 @@ body.hasnav .snack {
 /* settings rows + switch */
 .setrow {
   display: flex;
+  flex-wrap: wrap; /* narrow and large text: the time and switch go below the title rather than break its words */
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
@@ -1805,8 +1885,11 @@ body.hasnav .snack {
   border-top: 1px solid var(--outline-variant);
 }
 .setrow .mid {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 8em;
+  min-width: 8em;
+}
+.setrow .mid + * {
+  margin-left: auto;
 }
 .setrow .s {
   font-size: 0.8rem;
@@ -1825,7 +1908,7 @@ body.hasnav .snack {
 /* a reminder's time in Settings */
 .fieldbtn.tbtn {
   width: auto;
-  height: 44px;
+  min-height: 48px;
   gap: 6px;
   flex: none;
 }
@@ -2100,13 +2183,15 @@ body.hasnav .snack {
     transform: translateX(-50%);
   }
 }
+/* Remove animations: no transitions at all (a tiny duration instead would give every element one, for every property,
+   so a size set from script, as by fitFigures() or fitCal(), couldn't be measured at once) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition: none !important;
   }
 }
 .ghost {
@@ -2159,20 +2244,12 @@ body.hasnav .snack {
 }
 .dots {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
 }
 .dot {
-  width: 32px;
-  height: 32px;
   border-radius: 50%;
 }
-.dot[aria-pressed="true"] {
-  box-shadow:
-    0 0 0 2px var(--surface-low),
-    0 0 0 4px var(--on-surface);
-}
-/* period dialog */
+/* dialogs */
 .pop.scrim {
   background: rgba(0, 0, 0, 0.32);
   display: grid;
@@ -2236,9 +2313,11 @@ body.lock {
 .wk {
   margin: 2px 0;
 }
-/* the cell spans its column (so a range band joins up); the circle is a fixed 40x40 ::after */
+/* the cell spans its column (so a range band joins up) and is 48px tall to tap; the circle (--dd) is an ::after, and the
+   band is as tall as the circle */
 .dd {
-  height: 40px;
+  --dd: min(40px, var(--row, 48px));
+  height: var(--row, 48px); /* less on a short window: fitCal() */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2251,8 +2330,8 @@ body.lock {
 .dd::before {
   inset: 0;
   margin: auto;
-  width: 40px;
-  height: 40px;
+  width: var(--dd);
+  height: var(--dd);
   border-radius: 50%;
 }
 .dd::after {
@@ -2260,8 +2339,8 @@ body.lock {
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 40px;
-  height: 40px;
+  width: var(--dd);
+  height: var(--dd);
   border-radius: 50%;
   z-index: -1;
 }
@@ -2276,17 +2355,24 @@ body.lock {
   box-shadow: inset 0 0 0 1px var(--primary);
 }
 .dd.in {
-  background: var(--secondary-container);
+  background: linear-gradient(var(--secondary-container), var(--secondary-container)) center / 100% var(--dd) no-repeat;
   color: var(--on-secondary-container);
 }
 .dd.rs {
-  background: linear-gradient(90deg, transparent 50%, var(--secondary-container) 50%);
+  background: linear-gradient(90deg, transparent 50%, var(--secondary-container) 50%) center / 100% var(--dd) no-repeat;
 }
 .dd.re {
-  background: linear-gradient(90deg, var(--secondary-container) 50%, transparent 50%);
+  background: linear-gradient(90deg, var(--secondary-container) 50%, transparent 50%) center / 100% var(--dd) no-repeat;
 }
 .dd.rs.re {
   background: none;
+}
+/* the band's days overlap by a pixel each side (circles and numbers stay put): no hairline between them where columns
+   fall between device pixels */
+.dd.in,
+.dd.rs,
+.dd.re {
+  margin: 0 -1px;
 }
 .dd.sel,
 .dd.rs,
@@ -2310,8 +2396,17 @@ body.lock {
   background: currentColor;
   opacity: 0.7;
 }
+/* a swipe on the calendar scrolls a dialog too tall for the window; not on the Range tab, where it picks days */
 .cal {
+  touch-action: pan-y;
+}
+#pd.rg .cal {
   touch-action: none;
+}
+/* a calendar in a dialog uses some of its padding: seven 48px columns in a 360px dialog (a 393px phone; 43px on a
+   360px one) */
+.dialog .cal {
+  margin: 0 -4px;
 }
 .mgrid {
   display: grid;
@@ -2474,14 +2569,56 @@ body.land .sheet.calcing .p {
   max-width: calc(100% - min(46%, 380px));
   border-radius: 0 28px 0 0;
 }
-/* a month of days in less height */
+/* a month of days in the height a sideways phone has: rows as tall as six fit (48px at most, 34px at least), the
+   circle up to 40px; the scrim gives up some of its margin for them */
 body.land .dd {
-  height: 34px;
+  --row: clamp(34px, (100vh - 84px) / 6, 48px);
 }
-body.land .dd::before,
-body.land .dd::after {
-  width: 34px;
-  height: 34px;
+body.land .wk {
+  margin: 0;
+}
+body.land .pop.scrim {
+  padding-block: 8px;
+}
+/* the date and period pickers: the calendar beside the rest, so a month fits the height without scrolling */
+body.land #dp,
+body.land #pd {
+  max-width: 640px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-rows: auto auto 1fr auto;
+  column-gap: 24px;
+}
+body.land #dp {
+  grid-template-areas: "head cal" "calh cal" ". cal" "act cal";
+}
+body.land #pd {
+  grid-template-areas: "head cal" "calh cal" "hint cal" "act cal";
+}
+/* selectors written out: :is() is newer than WebView 87, which would drop these rules */
+body.land #dp > .dp-h,
+body.land #pd > .seg {
+  grid-area: head;
+  align-self: start;
+}
+body.land #dp > .cal-h,
+body.land #pd > .cal-h {
+  grid-area: calh;
+  margin: 8px 0 0;
+}
+body.land #dp > .cal,
+body.land #pd > .cal,
+body.land #pd > .mgrid {
+  grid-area: cal;
+}
+body.land #pd > .hint {
+  grid-area: hint;
+  align-self: center;
+}
+body.land #dp > .dlg-act,
+body.land #pd > .dlg-act {
+  grid-area: act;
+  align-self: end;
 }
 
 /* the snackbar rises above an open calculator keypad (--calc-h from calcKeepFieldVisible); on a sideways phone the

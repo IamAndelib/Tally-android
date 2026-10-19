@@ -194,6 +194,29 @@ const ok = (c, m) => {
   );
   ok((await page.textContent(".welcome .fieldbtn")).includes("CAD"), "welcome shows the kept currency");
 
+  // the sign goes where the phone's language puts it, as a true minus or a plus kept on the amount's line
+  for (const [locale, cur, check, what] of [
+    ["en-US", "USD", (m, p) => m === "−\u2060$5.00" && p === "+\u2060$5.00", "before the symbol in English"],
+    ["nl-NL", "EUR", (m, p) => m === "€\u00a0−\u20605,00" && p === "€\u00a0+\u20605,00", "after the € in Dutch"],
+    [
+      "ar-EG",
+      "EGP",
+      m => /−\u2060\u200f?٥/.test(m) && m.indexOf("−") < m.indexOf("ج"),
+      "beside the number, not the currency, in Arabic",
+    ],
+  ]) {
+    const c = await browser.newContext({ viewport: { width: 360, height: 800 }, locale });
+    const p = await c.newPage();
+    p.on("pageerror", e => errors.push(e.message));
+    await p.goto(appUrl);
+    const [m, pl, zero] = await p.evaluate(cur => [signed(-5, cur), signed(5, cur), signed(0.001, cur)], cur);
+    ok(
+      check(m, pl) && zero === (await p.evaluate(cur => money(0, cur), cur)),
+      "the sign sits " + what + ": " + [m, pl]
+    );
+    await c.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

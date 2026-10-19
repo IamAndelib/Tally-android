@@ -1,6 +1,7 @@
 package app.tally.expenses;
 
 import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -41,6 +42,12 @@ public class BackupReceiver extends BroadcastReceiver {
     private static final int REQ = 3, NOTE_ID = 3;
     /** The largest backup read back (Restore, checks): far above any real one (a few hundred KB after years). */
     static final int MAX = 10 * 1024 * 1024; // a Tally backup is well under 1 MB; more is not one
+    /** snapshot.json and its "dirty" mark: held only for quick file work, so a save never waits on a slow folder */
+    private static final Object DATA = new Object();
+    /** one write (and read-back) of the backup file, or read of it, at a time */
+    private static final Object RUN = new Object();
+    /** bumped by every setData that changed the snapshot: a save during a backup's write stays "not backed up" */
+    private static int gen;
 
     @Override
     public void onReceive(Context ctx, Intent in) {
@@ -59,6 +66,7 @@ public class BackupReceiver extends BroadcastReceiver {
                             err + (folder ? " Tap to choose the folder again." : " Tap to open Settings."),
                             ReminderReceiver.openApp(app, "backup", NOTE_ID), null);
                 }
+            } catch (Throwable ignored) { // out of memory on a small phone: never a crash; tomorrow's is armed
             } finally {
                 pr.finish();
             }
@@ -72,22 +80,31 @@ public class BackupReceiver extends BroadcastReceiver {
         try {
             JSONObject o = new JSONObject(json);
             prefs(ctx).edit().putBoolean("on", o.optBoolean("on")).putInt("h", o.optInt("h", 23)).putInt("m", o.optInt("m", 0)).apply();
-            if (!o.optBoolean("on")) snapshot(ctx).delete();
+            if (!o.optBoolean("on")) {
+                synchronized (DATA) {
+                    snapshot(ctx).delete();
+                }
+            }
         } catch (JSONException ignored) { }
         schedule(ctx);
     }
 
     /** The page's latest data (JSON.stringify(S)): written atomically, and marked as not backed up yet. */
-    static synchronized void setData(Context ctx, String json) {
+    static void setData(Context ctx, String json) {
         if (json == null || json.length() > MAX) return; // never a real notebook: a backup couldn't be read back anyway
-        File f = snapshot(ctx), tmp = new File(f.getPath() + ".tmp");
-        if (json.equals(read(f))) return; // unchanged (e.g. every app start): nothing new to back up, no write
-        try (OutputStream os = new FileOutputStream(tmp)) {
-            os.write(json.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            return;
+        synchronized (DATA) {
+            File f = snapshot(ctx), tmp = new File(f.getPath() + ".tmp");
+            if (json.equals(read(f))) return; // unchanged (e.g. every app start): nothing new to back up, no write
+            try (OutputStream os = new FileOutputStream(tmp)) {
+                os.write(json.getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                return;
+            }
+            if (tmp.renameTo(f)) {
+                gen++;
+                prefs(ctx).edit().putBoolean("dirty", true).apply();
+            }
         }
-        if (tmp.renameTo(f)) prefs(ctx).edit().putBoolean("dirty", true).apply();
     }
 
     /** A folder picked with ACTION_OPEN_DOCUMENT_TREE (its permission already taken): remembered, and the old one released. */
@@ -100,9 +117,19 @@ public class BackupReceiver extends BroadcastReceiver {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (SecurityException ignored) { }
         }
-        p.edit().putString("tree", tree.toString()).putString("label", label(ctx, tree)).putBoolean("dirty", true)
-                .remove("error").apply();
+        SharedPreferences.Editor e = p.edit().putString("tree", tree.toString()).putString("label", label(ctx, tree))
+                .putBoolean("dirty", true).remove("error");
+        // another folder: nothing of this install's is in it yet (the page asks before writing over what is there)
+        if (old == null || !old.equals(tree.toString())) e.remove("last");
+        e.apply();
+        clearNotice(ctx);
         schedule(ctx);
+    }
+
+    /** Takes away the "Tally couldn't back up" notification. */
+    private static void clearNotice(Context ctx) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) nm.cancel(NOTE_ID);
     }
 
     /**
@@ -140,22 +167,35 @@ public class BackupReceiver extends BroadcastReceiver {
     }
 
     /**
-     * Writes the backup file when the data changed since the last one (or always, with {@code force}: "Back up now",
-     * a newly picked folder). Returns null when done or when there was nothing to do, else a short reason.
+     * Writes the backup file when the data changed since the last one (or always, with {@code force}: "Back up now").
+     * Returns null when done or when there was nothing to do, else a short reason.
      */
-    static synchronized String run(Context ctx, boolean force) {
-        SharedPreferences p = prefs(ctx);
-        String tree = p.getString("tree", null);
-        if (tree == null) return "No folder is chosen.";
-        String data = read(snapshot(ctx));
-        if (data == null || (!force && !p.getBoolean("dirty", false))) return null;
-        if (!worthKeeping(data)) return force ? "There's nothing to back up yet." : null;
-        String err = write(ctx, Uri.parse(tree), data.getBytes(StandardCharsets.UTF_8));
-        SharedPreferences.Editor e = p.edit();
-        if (err == null) e.putBoolean("dirty", false).putLong("last", System.currentTimeMillis()).remove("error");
-        else e.putString("error", err);
-        e.apply();
-        return err;
+    static String run(Context ctx, boolean force) {
+        synchronized (RUN) {
+            SharedPreferences p = prefs(ctx);
+            String tree = p.getString("tree", null);
+            if (tree == null) return "No folder is chosen.";
+            String data;
+            int g;
+            synchronized (DATA) {
+                data = read(snapshot(ctx));
+                g = gen;
+            }
+            if (data == null) return force ? "Tally's copy of your data isn't ready yet. Try again in a moment." : null;
+            if (!force && !p.getBoolean("dirty", false)) return null;
+            if (!worthKeeping(data)) return force ? "There's nothing to back up yet." : null;
+            String err = write(ctx, Uri.parse(tree), data.getBytes(StandardCharsets.UTF_8));
+            synchronized (DATA) {
+                SharedPreferences.Editor e = p.edit();
+                if (err == null) {
+                    e.putLong("last", System.currentTimeMillis()).remove("error");
+                    if (gen == g) e.putBoolean("dirty", false); // saved again meanwhile: still to back up
+                } else e.putString("error", err);
+                e.apply();
+            }
+            if (err == null) clearNotice(ctx); // an earlier "couldn't back up" no longer applies
+            return err;
+        }
     }
 
     /**
@@ -223,22 +263,31 @@ public class BackupReceiver extends BroadcastReceiver {
     static byte[] readDoc(ContentResolver cr, Uri doc, int max) throws IOException {
         try (InputStream in = cr.openInputStream(doc)) {
             if (in == null) throw new IOException("no stream");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[16384];
-            int r;
-            while ((r = in.read(buf)) > 0) {
-                out.write(buf, 0, r);
-                if (out.size() > max) throw new IOException("too big");
-            }
-            return out.toByteArray();
+            return readAll(in, max);
         }
     }
 
+    private static byte[] readAll(InputStream in, int max) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[16384];
+        for (int r; (r = in.read(buf)) != -1; ) {
+            out.write(buf, 0, r);
+            if (out.size() > max) throw new IOException("too big");
+        }
+        return out.toByteArray();
+    }
+
     /**
-     * The auto backup file's text for Settings → Restore, read straight from the picked folder:
-     * {text, when (ms, the last backup), folder} or {error}.
+     * The auto backup file's text for Settings → Restore and a newly picked folder, read straight from the folder:
+     * {text, when (ms, the last backup), folder} or {error}, with none: true when the folder holds no backup file.
      */
     static String readAuto(Context ctx) {
+        synchronized (RUN) { // never half-way through a backup's rewrite of the file
+            return readAutoNow(ctx);
+        }
+    }
+
+    private static String readAutoNow(Context ctx) {
         SharedPreferences p = prefs(ctx);
         String tree = p.getString("tree", null);
         JSONObject o = new JSONObject();
@@ -246,7 +295,9 @@ public class BackupReceiver extends BroadcastReceiver {
             try {
                 if (tree == null) return o.put("error", "No folder is chosen.").toString();
                 Uri doc = find(ctx.getContentResolver(), Uri.parse(tree), NAME);
-                if (doc == null) return o.put("error", "There's no \"" + NAME + "\" in the backup folder.").toString();
+                if (doc == null) {
+                    return o.put("none", true).put("error", "There's no \"" + NAME + "\" in the backup folder.").toString();
+                }
                 byte[] b = readDoc(ctx.getContentResolver(), doc, MAX);
                 return o.put("text", new String(b, StandardCharsets.UTF_8)).put("when", p.getLong("last", 0))
                         .put("folder", p.getString("label", "")).toString();
@@ -309,13 +360,18 @@ public class BackupReceiver extends BroadcastReceiver {
         }
     }
 
-    private static String read(File f) {
-        if (!f.exists()) return null;
+    /** A file's bytes. */
+    static byte[] readFile(File f) throws IOException {
         try (InputStream in = new FileInputStream(f)) {
-            byte[] b = new byte[(int) f.length()];
-            int n = 0, r;
-            while (n < b.length && (r = in.read(b, n, b.length - n)) > 0) n += r;
-            return new String(b, 0, n, StandardCharsets.UTF_8);
+            return readAll(in, Integer.MAX_VALUE);
+        }
+    }
+
+    /** A file's text, or null when there is none or it can't be read. */
+    static String read(File f) {
+        if (!f.exists()) return null;
+        try {
+            return new String(readFile(f), StandardCharsets.UTF_8);
         } catch (IOException e) {
             return null;
         }

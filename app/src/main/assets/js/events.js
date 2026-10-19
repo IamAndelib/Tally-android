@@ -47,7 +47,6 @@ document.addEventListener("click", ev => {
     if (ev.target === el) closePop();
     return;
   }
-  if (el.tagName === "SELECT" || el.tagName === "INPUT") return;
   /* every tap clicks (the keypad's buttons already did, on touch-down; a time wheel ticks as its rows pass) */
   if (!el.closest(".calc, .wheel")) buzz("tap");
   switch (act) {
@@ -227,6 +226,10 @@ document.addEventListener("click", ev => {
       if (undoFn) {
         const f = undoFn;
         undoFn = null;
+        /* what an open layer shows may be what Undo takes away: back to the screen first */
+        closePop();
+        BACKTO = null;
+        closeSheet();
         f();
       }
       break;
@@ -290,7 +293,8 @@ document.addEventListener("click", ev => {
       el.setAttribute("aria-expanded", row.classList.contains("open"));
       break;
     }
-    case "tx-del": {
+    case "tx-del":
+    case "tr-del": {
       const id = F.id;
       closeSheet();
       withUndo("Deleted", () => deleteEntries([id]));
@@ -314,22 +318,16 @@ document.addEventListener("click", ev => {
       trSync();
       break;
     }
-    case "tr-fee":
+    case "add-fee":
       F.showFee = true;
       $("#fee-wrap").hidden = false;
       el.hidden = true;
       $("#f-fee").focus();
-      trPreview();
+      if (F.kind === "tr") trPreview();
       break;
     case "tr-save":
       saveTr();
       break;
-    case "tr-del": {
-      const id = F.id;
-      closeSheet();
-      withUndo("Deleted", () => deleteEntries([id]));
-      break;
-    }
     case "adj-del": {
       const id = F.id;
       closeSheet();
@@ -476,6 +474,11 @@ document.addEventListener("click", ev => {
       V.showArchived = !V.showArchived;
       render();
       break;
+    case "show-arch": // Home with every account archived
+      V.screen = "assets";
+      V.showArchived = true;
+      render();
+      break;
     case "hmon":
       if (+v < 0 || canNext(HP)) {
         shiftPeriod(+v, HP);
@@ -509,9 +512,9 @@ document.addEventListener("click", ev => {
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel],
-        l = paidPast(ids);
-      if (l) {
-        snack(paidPastMsg(l));
+        no = loanBlock(ids);
+      if (no) {
+        snack(no);
         return;
       }
       let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
@@ -580,6 +583,30 @@ document.addEventListener("click", ev => {
     case "export":
       exportCsv();
       break;
+    case "kept-save": {
+      /* one file at a time (the shell saves one at a time): the oldest copy first, gone once saved (the next one is
+         offered then) */
+      const k = keptKeys().sort()[0];
+      saveOut("tally-unreadable-" + today() + ".json", "application/json", localStorage.getItem(k), () => {
+        try {
+          localStorage.removeItem(k);
+        } catch (e) {}
+        render();
+      });
+      break;
+    }
+    case "kept-del":
+      askDialog(
+        "Delete the kept data?",
+        "Only do this once it's saved as a file, or you're sure you don't need it.",
+        "Delete",
+        () => {
+          keptKeys().forEach(k => localStorage.removeItem(k));
+          render();
+        },
+        { danger: true }
+      );
+      break;
     case "backup":
       saveBackup();
       break;
@@ -602,7 +629,12 @@ document.addEventListener("input", ev => {
   else if (id === "ic-q") icList(ev.target.value);
   else if (id === "hx-in") hexPreview();
   else if (id === "f-person" && F && F.kind === "loanf") {
-    F.merge = null;
+    /* a name typed out in full that has an open tab (same kind and currency) adds to it, as picking it would: the
+       hint says so, and changing the name undoes it */
+    const name = ev.target.value.trim().toLowerCase(),
+      cur = (acc(F.account) || {}).currency,
+      same = name && cur ? personCandidates(F.lk, cur, name).find(l => l.person.toLowerCase() === name) : null;
+    F.merge = same ? same.id : null;
     mergeHint();
     personSuggest(ev.target.value);
   } else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
@@ -628,7 +660,13 @@ document.addEventListener("keydown", e => {
       e.preventDefault();
       b.click();
     }
+  } else if (e.key === "Enter" && e.target.id === "ic-emo") {
+    e.preventDefault();
+    $('#sheet2 [data-act="ic-emo-ok"]').click();
   } else if (e.key === "Enter" && F && e.target.tagName === "INPUT") {
+    /* Enter saves the layer the field is in: in the second sheet (editing a loan entry, an emblem search) it never
+       saves, or records a payment on, the sheet underneath */
+    const two = !!e.target.closest("#sheet2");
     const map = {
       tx: "tx-save",
       tr: "tr-save",
@@ -639,7 +677,8 @@ document.addEventListener("keydown", e => {
       loan: "loan-pay",
       assetf: "asset-save",
     };
-    const b = map[F.kind] && document.querySelector('[data-act="' + map[F.kind] + '"]');
+    const act = two ? (F.kind === "loan" ? "loandraw-save" : "") : map[F.kind],
+      b = act && $((two ? "#sheet2" : "#sheet") + ' [data-act="' + act + '"]');
     if (b) {
       e.preventDefault();
       b.click();
@@ -669,7 +708,11 @@ function layerFocus() {
     if (on) top = i;
     if (on && !el.dataset.up) {
       el.dataset.up = "1";
-      focusBack[id] = document.activeElement;
+      const a = document.activeElement;
+      focusBack[id] = a && a !== document.body ? { el: a, k: focusKey(a) } : null;
+      /* a layer opened later covers the message bar: its Undo goes with it, so a tap meant for the layer can't undo
+         the last change (a layer opened by that same change, like the list a saved entry came from, keeps it) */
+      if (undoFn && Date.now() - SNACK_AT > 300) hideSnack();
     } else if (!on && el.dataset.up) {
       delete el.dataset.up;
       back = focusBack[id] || back;
@@ -684,7 +727,9 @@ function layerFocus() {
     el.inert = below;
   });
   /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
-  if (back && back.isConnected && back !== document.body) back.focus({ preventScroll: true });
+  /* (or to the control that replaced it: saving redraws the screen) */
+  if (back && back.el.isConnected) back.el.focus({ preventScroll: true });
+  else if (back) refocus(document, back.k);
   if (top < 0) return;
   const t = $(LAYERS[top]);
   if (t.contains(document.activeElement)) return;
@@ -712,6 +757,7 @@ addEventListener("resize", () => {
   if (LP) return;
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
+  fitCal($("#dp") || $("#pd"));
   /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */
   if (CALC && CALC.inp && CALC.inp.isConnected)
     setTimeout(() => {

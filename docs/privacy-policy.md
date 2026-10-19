@@ -1,6 +1,6 @@
 # Tally — Privacy Policy
 
-_Last updated: 24 September 2026_
+_Last updated: 17 October 2026_
 
 Tally is a personal expense tracker made by IamAndelib. This policy explains what happens to your information.
 
@@ -22,11 +22,11 @@ Tally is a personal expense tracker made by IamAndelib. This policy explains wha
 
 | Permission | Used for |
 | --- | --- |
-| Notifications | the evening reminder, the balance check and loan due-date reminders, if you keep them on |
+| Notifications | the evening reminder, the balance check and loan due-date reminders, if you keep them on, and a notice if the daily backup fails |
 | Alarms & reminders | running reminders and the daily backup at the exact time you chose (comes with unrestricted battery) |
 | Run in background (battery) | keeping reminders and the daily backup on time on phones that put apps to sleep; asked on first open |
 | Run at startup | re-arming those reminders and the daily backup after the phone restarts |
-| Vibrate | a short vibration when you save |
+| Vibrate | short vibrations as you tap, drag and save (Settings → Feel turns them off) |
 
 **Children:** Tally is not directed at children and collects no data from anyone.
 

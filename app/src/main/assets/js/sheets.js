@@ -82,9 +82,9 @@ function saveAsset() {
 function deleteAsset() {
   const id = F.id;
   closeSheet();
-  S.assets = S.assets.filter(x => x.id !== id);
-  commit();
-  snack("Asset deleted");
+  withUndo("Asset deleted", () => {
+    S.assets = S.assets.filter(x => x.id !== id);
+  });
 }
 const accChips = (act, sel, disabled, list) =>
   '<div class="chips">' +
@@ -101,8 +101,9 @@ const accChips = (act, sel, disabled, list) =>
         (a.id === disabled ? " disabled" : "") +
         ">" +
         emblem(accEmb(a), "sm") +
+        '<span class="chn" dir="auto">' +
         esc(a.name) +
-        "</button>"
+        "</span></button>"
     )
     .join("") +
   "</div>";
@@ -125,19 +126,25 @@ const catBtns = (list, sel) =>
         (c.id === sel) +
         '">' +
         emblem(c, "ci") +
-        '<span class="cn">' +
+        '<span class="cn" dir="auto">' +
         esc(c.name) +
         "</span></button>"
     )
     .join("");
 const catChipInner = k => emblem(k, "ci") + esc(k.name) + ic("down");
-function txSheet(id, type, catId) {
+/* pre (a new entry made for something else, e.g. an over-repaid lending's extra): {amount, cur, account, date, note,
+   also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
+function txSheet(id, type, catId, pre) {
   if (!id && !activeAccounts().length) {
     snack("Add an account first");
     accForm();
     return;
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
+  if (id && !t) {
+    snack("That entry was deleted");
+    return;
+  }
   if (t && t.type === "transfer") {
     trSheet(id);
     return;
@@ -150,15 +157,24 @@ function txSheet(id, type, catId) {
     loanOpen(t.loan);
     return;
   }
+  /* a fee opens what it was charged on: its transfer or its loan */
   if (t && t.feeOf && S.txns.some(x => x.id === t.feeOf)) {
-    trSheet(t.feeOf);
+    txSheet(t.feeOf);
     return;
   }
   type = t ? t.type : type;
   const inc = type === "income";
   const last = inc ? S.settings.lastAccIn : S.settings.lastAcc;
   const def = acc(last) && !acc(last).archived ? last : (activeAccounts()[0] || {}).id;
-  F = { kind: "tx", id, type, cat: t ? t.cat : catId || (inc ? "income" : null), account: t ? t.account : def };
+  F = {
+    kind: "tx",
+    id,
+    type,
+    cat: t ? t.cat : catId || (inc && !pre ? "income" : null),
+    account: t ? t.account : pre ? pre.account : def,
+    pre,
+  };
+  if (pre && pre.back) BACKTO = { screen: V.screen, open: () => loanOpen(pre.back) };
   const k = F.cat ? cat(F.cat) : null,
     a = acc(F.account);
   let list = inc ? inCats() : outCats();
@@ -180,17 +196,24 @@ function txSheet(id, type, catId) {
       ">" +
       catBtns(list, F.cat) +
       "</div>";
-  h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : "", { curId: "amt-cur" });
+  h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : pre ? String(pre.amount) : "", {
+    curId: "amt-cur",
+  });
   h +=
     '<div class="lbl">' +
     (inc ? "Into" : "Paid from") +
     "</div>" +
-    accChips("f-acc", F.account, null, accChoices(F.account));
+    accChips(
+      "f-acc",
+      F.account,
+      null,
+      accChoices(F.account).filter(x => !pre || x.currency === pre.cur)
+    );
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
-    esc(t ? t.note : "") +
+    esc(t ? t.note : pre ? pre.note : "") +
     '" aria-label="Note"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
+    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
@@ -203,7 +226,17 @@ function txSheet(id, type, catId) {
 }
 /* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
 function openEntry(id) {
-  BACKTO = $("#sheet #ent-list") ? { screen: V.screen, scroll: ($("#sheet .p") || {}).scrollTop || 0 } : null;
+  const scroll = ($("#sheet .p") || {}).scrollTop || 0;
+  BACKTO = $("#sheet #ent-list")
+    ? {
+        screen: V.screen,
+        open: () => {
+          entriesSheet();
+          const p = $("#sheet .p");
+          if (p) p.scrollTop = scroll;
+        },
+      }
+    : null;
   txSheet(id);
 }
 function pickCat(id) {
@@ -239,8 +272,22 @@ function readVals() {
   };
   return { amount: g("f-amt"), note: g("f-note"), date: g("f-date"), toAmount: g("f-toamt"), fee: g("f-fee") };
 }
+/* the optional fee of a transfer or a loan payment: a field behind "Add a fee" (its label can be set later) */
+const feeField = (open, value, label, add) =>
+  '<label class="field" id="fee-wrap"' +
+  (open ? "" : " hidden") +
+  '><span id="fee-lbl">' +
+  esc(label) +
+  '</span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
+  esc(value) +
+  '"></label><button class="btn text" id="fee-btn" data-act="add-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
+  (open ? " hidden" : "") +
+  ">" +
+  ic("add") +
+  esc(add) +
+  "</button>";
 /* transfer between own accounts, with optional fee */
-function trSheet(id, from) {
+function trSheet(id) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
     snack("Add a second account to transfer");
@@ -249,7 +296,7 @@ function trSheet(id, from) {
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
   const fee = t && t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
-  const f = t ? t.account : from || (act[0] || {}).id;
+  const f = t ? t.account : (act[0] || {}).id;
   const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
   F = { kind: "tr", id, from: f, to, showFee: !!fee };
   const list = accChoices(f, to);
@@ -264,24 +311,13 @@ function trSheet(id, from) {
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
     esc(t && t.toAmount != null ? String(t.toAmount) : "") +
     '"></label>';
-  h +=
-    '<label class="field" id="fee-wrap"' +
-    (F.showFee ? "" : " hidden") +
-    '><span id="fee-lbl"></span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
-    esc(fee ? String(fee.amount) : "") +
-    '"></label>';
-  h +=
-    '<button class="btn text" id="fee-btn" data-act="tr-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
-    (F.showFee ? " hidden" : "") +
-    ">" +
-    ic("add") +
-    "Add a fee (ATM, cash-out)</button>";
+  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", "Add a fee (ATM, cash‑out)");
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
     esc(t ? t.note : "") +
     '" aria-label="Note"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : entryDate(), { max: today() }) +
+    dateField("f-date", t ? t.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tr-save">' +
@@ -337,12 +373,12 @@ function trPreview() {
     got = diff ? evalAmt(v.toAmount) : amt;
   let s =
     fa.name +
-    " −" +
-    money(amt + (fee > 0 ? fee : 0), fa.currency) +
+    " " +
+    signed(-(amt + (fee > 0 ? fee : 0)), fa.currency) +
     "  →  " +
     ta.name +
     " " +
-    (got > 0 ? "+" + money(got, ta.currency) : "+ ?");
+    (got > 0 ? signed(got, ta.currency) : "+ ?");
   if (fee > 0) s += "  (incl. " + money(fee, fa.currency) + " fee)";
   el.textContent = s;
 }
@@ -414,7 +450,7 @@ function saveFix() {
     return;
   }
   const d = rnd(val - balances()[F.id]);
-  if (d === 0) {
+  if (shown(d, a.currency) === 0) {
     snack("Already matches");
     return;
   }
@@ -440,7 +476,7 @@ function fixPreview() {
   }
   const d = rnd(v - balances()[F.id]);
   el.textContent =
-    d === 0
+    shown(d, a.currency) === 0
       ? "Already matches."
       : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
 }
@@ -499,7 +535,7 @@ function accForm(id) {
     (id ? "Starting balance" : "Balance right now") +
     '</span><input id="f-open" inputmode="decimal" autocomplete="off" value="' +
     esc(a.opening === "" ? "" : a.opening) +
-    '" placeholder="0.00"></label></div>';
+    '" placeholder="0"></label></div>';
   h +=
     '<p class="hint">' +
     (id
@@ -678,10 +714,16 @@ function saveTx() {
     snack("Pick a date");
     return;
   }
+  if (F.id && !S.txns.some(x => x.id === F.id)) {
+    closeSheet();
+    snack("That entry was deleted");
+    return;
+  }
   const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() };
   if (F.type === "income") S.settings.lastAccIn = F.account;
   else S.settings.lastAcc = F.account;
   const id = F.id,
+    pre = F.pre || {},
     nid = newId(),
     ts = Date.now();
   const mutate = id
@@ -690,13 +732,17 @@ function saveTx() {
         Object.assign(old, t);
       }
     : () => {
+        if (pre.also) pre.also();
         S.txns.push(Object.assign({ id: nid, ts }, t));
       };
   guardOverdraw(mutate, t.date, () => {
+    if (pre.back) BACKTO = null; // saved: it ends here, like a payment (back to the loan is for closing it unsaved)
     closeSheet();
     buzz("confirm");
     withUndo(
-      id ? "Saved" : (t.type === "income" ? "+" : "−") + money(amt, acc(t.account).currency) + " · " + cat(t.cat).name,
+      id
+        ? "Saved"
+        : (pre.msg || "") + signed(t.type === "income" ? amt : -amt, acc(t.account).currency) + " · " + cat(t.cat).name,
       mutate,
       { row: id || nid, cat: t.cat }
     );
@@ -761,7 +807,7 @@ function saveTr() {
     if (diff) t.toAmount = got;
     else delete t.toAmount;
     if (fee > 0) {
-      const f = oldFee || { id: fid, ts };
+      const f = oldFee || { id: fid, ts: (t.ts || ts) + 1 }; // just after its transfer, as balances see them
       if (!oldFee) S.txns.push(f);
       Object.assign(f, {
         type: "expense",

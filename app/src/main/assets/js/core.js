@@ -105,6 +105,8 @@ const esc = s =>
     /[&<>"']/g,
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
+/* a name inside one of the app's own sentences, isolated: a right-to-left one can't turn the sentence around */
+const bdi = s => "<bdi>" + esc(s) + "</bdi>";
 const newId = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-5);
 const pad = n => String(n).padStart(2, "0");
 const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
@@ -118,6 +120,13 @@ const addDays = (s, n) => {
   d.setDate(d.getDate() + n);
   return iso(d);
 };
+/* whole days from date a to date b (rounded: a daylight-saving day is still one) */
+const daysBetween = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 864e5);
+/* how many days month m ("2026-02") has, and its last date */
+const monthDays = m => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+const monthEnd = m => m + "-" + pad(monthDays(m));
+/* a weekday's name in the phone's language, 0 = Sunday (2024-01-07 was one); style "narrow" (M) or "long" (Monday) */
+const weekdayName = (d, style) => parseISO(addDays("2024-01-07", d)).toLocaleDateString(DATE_LOC, { weekday: style });
 /* amounts are kept to 3 decimals, the most any currency uses (dinars); "+ 0" turns −0 into 0 */
 const rnd = n => Math.round(n * 1000) / 1000 + 0;
 /* whether the phone has a font for every non-ASCII character of s. A missing glyph ("tofu") draws exactly like a code
@@ -179,9 +188,46 @@ function money(n, cur, short) {
     f.dp = 10 ** f.resolvedOptions().maximumFractionDigits;
     NF.set(k, f);
   }
-  return f.format(Math.round(n * f.dp) / f.dp + 0); // −0.001 would show as "−$0.00"
+  return f.format(toDp(n, f.dp));
 }
-const signed = (n, cur) => (n > 0 ? "+" : n < 0 ? "−" : "") + money(Math.abs(n), cur);
+/* n rounded to 1/dp the way Intl shows it: halves away from zero, past float error (1.005 → 1.01), and −0 as 0 */
+const toDp = (n, dp) => (Math.sign(n) * Math.round(Math.abs(n) * dp + 1e-7)) / dp + 0;
+/* n as money() shows it in that currency: ¥666.667 is 667, $0.004 is 0 */
+function shown(n, cur) {
+  money(0, cur);
+  const f = NF.get(cur || S.settings.cur);
+  return f ? toDp(n, f.dp) : rnd(n);
+}
+/* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none, where the phone's language puts it
+   (€ −5,00 in Dutch, beside the number in Arabic), as a true minus or a plus, kept on the amount's line (a word joiner) */
+const signed = (n, cur) => {
+  const v = shown(n, cur);
+  if (!v) return money(0, cur);
+  const f = NF.get(cur || S.settings.cur),
+    sign = (v > 0 ? "+" : "−") + "\u2060";
+  if (!f) return sign + money(Math.abs(v), cur); // a currency this phone doesn't know
+  return f
+    .formatToParts(-Math.abs(v))
+    .map(p => (p.type === "minusSign" ? sign : p.value))
+    .join("");
+};
+/* the phone's language for dates, on the Gregorian calendar Tally counts in (a phone set to another calendar, such as
+   the Persian, Hijri or Buddhist one, would otherwise name a Gregorian month after one of its own), keeping the rest of
+   its choices (such as Latin digits in Arabic) */
+const gregorian = loc => {
+  try {
+    return new Intl.Locale(loc, { calendar: "gregory" }).toString();
+  } catch (e) {
+    return loc.replace(/-u-.*$/, "") + "-u-ca-gregory";
+  }
+};
+const DATE_LOC = (() => {
+  try {
+    return gregorian(new Intl.DateTimeFormat().resolvedOptions().locale);
+  } catch (e) {
+    return undefined;
+  }
+})();
 function shiftMonth(m, d) {
   let [y, mo] = m.split("-").map(Number);
   mo += d;
@@ -199,14 +245,16 @@ function monthLabel(m, always) {
   const [y, mo] = m.split("-").map(Number);
   const o = { month: "long" };
   if (always || y !== new Date().getFullYear()) o.year = "numeric";
-  return new Date(y, mo - 1, 1).toLocaleDateString(undefined, o);
+  return new Date(y, mo - 1, 1).toLocaleDateString(DATE_LOC, o);
 }
 function dayLabel(d) {
   const x = parseISO(d);
   const o = { weekday: "short", day: "numeric", month: "short" };
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
-  return x.toLocaleDateString(undefined, o);
+  return x.toLocaleDateString(DATE_LOC, o);
 }
+/* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
+const dayName = d => (d === today() ? "Today" : d === addDays(today(), -1) ? "Yesterday" : dayLabel(d));
 /* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
    months: whole months ("Apr – Sep") */
 function rangeLabel(a, b, months) {
@@ -216,9 +264,9 @@ function rangeLabel(a, b, months) {
     o = months ? { month: "short" } : { day: "numeric", month: "short" };
   if (s.getFullYear() !== y || e.getFullYear() !== y) o.year = "numeric";
   try {
-    return new Intl.DateTimeFormat(undefined, o).formatRange(s, e);
+    return new Intl.DateTimeFormat(DATE_LOC, o).formatRange(s, e);
   } catch (x) {
-    return s.toLocaleDateString(undefined, o) + " – " + e.toLocaleDateString(undefined, o);
+    return s.toLocaleDateString(DATE_LOC, o) + " – " + e.toLocaleDateString(DATE_LOC, o);
   }
 }
 /* Amount fields write numbers the phone's way: "1,234.5" (en), "1.234,5" (de), "1 234,5" (fr), "1’234.5" (de-CH),
@@ -232,7 +280,7 @@ const NUMSEP = (() => {
   const get = t => (p.find(x => x.type === t) || {}).value;
   const dec = get("decimal") || ".",
     grp = get("group") || "";
-  return { dec, grp, intFmt: new Intl.NumberFormat("en-US-u-nu-latn", { useGrouping: false }) };
+  return { dec, grp };
 })();
 /* a group separator as the phone writes it, or one typed like it (any space for a space, ' for ’) */
 const isGrp = ch =>
@@ -252,9 +300,11 @@ function groupInt(n) {
     return n;
   }
 }
-/* other scripts' digits (Arabic-Indic, Devanagari, Bengali…) as 0–9 */
+/* other scripts' digits (Arabic-Indic, Devanagari, Bengali, Thai, Tibetan, Myanmar, Khmer, Mongolian, full-width…)
+   as 0–9 */
 const DIGIT0 = [
-  0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66, 0xde6, 0xe50, 0xed0,
+  0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66, 0xde6, 0xe50, 0xed0, 0xf20,
+  0x1040, 0x17e0, 0x1810, 0xff10,
 ];
 const latinDigits = s =>
   String(s ?? "").replace(/[^\x00-\x7f]/g, ch => {
@@ -266,9 +316,11 @@ const latinDigits = s =>
         ? ","
         : c === 0x66b
           ? NUMSEP.dec
-          : c === 0x66c
-            ? NUMSEP.grp
-            : ch;
+          : c === 0xff0e
+            ? "."
+            : c === 0x66c
+              ? NUMSEP.grp
+              : ch;
   });
 /* field text → canonical: group separators out, the decimal separator as "." */
 function amtCanon(s) {
@@ -292,8 +344,14 @@ function formatAmountInput(inp, ev) {
   let v = latinDigits(inp.value),
     caret = inp.selectionStart ?? v.length;
   const dec = NUMSEP.dec,
-    numCh = ch => /\d/.test(ch) || ch === dec || isGrp(ch);
-  if (ev && ev.inputType === "insertText" && /^[.,]$/.test(ev.data || "") && caret > 0 && v[caret - 1] === ev.data) {
+    numCh = ch => /\d/.test(ch) || ch === dec || isGrp(ch),
+    typed = latinDigits(ev && ev.data), // "،" or "，" from the keyboard is a comma like ","
+    /* text that didn't come key by key: pasted, dropped, or a keyboard's clipboard chip or voice typing at once */
+    inserted =
+      ev &&
+      (/^insertFrom|^insertReplacement/.test(ev.inputType || "") ||
+        (ev.inputType === "insertText" && typed.length > 1));
+  if (ev && ev.inputType === "insertText" && /^[.,]$/.test(typed) && caret > 0 && v[caret - 1] === typed) {
     const before = v.slice(0, caret - 1),
       after = v.slice(caret);
     let a = before.length,
@@ -303,17 +361,25 @@ function formatAmountInput(inp, ev) {
     const put = (before.slice(a) + after.slice(0, b)).includes(dec) ? "" : dec;
     v = before + put + after;
     caret = before.length + put.length;
-  } else if (ev && /^insertFrom|^insertReplacement/.test(ev.inputType || "")) {
-    /* pasted or dropped from elsewhere: a separator before the last one or two digits is the decimal point
-       ("12,50", "1.234,56", "1,234.56"), any other ones group thousands */
-    const p = v.replace(/\d[\d.,'’\s]*\d|\d/g, n => {
-      const seps = n.match(/[.,'’\s]/g) || [],
-        last = Math.max(n.lastIndexOf("."), n.lastIndexOf(",")),
-        tail = last < 0 ? "" : n.slice(last + 1),
-        frac = /^\d{1,2}$/.test(tail) || (seps.length === 1 && n[last] === dec);
-      if (!seps.length) return n;
-      return frac ? groupDigits(n.slice(0, last).replace(/\D/g, "") + "." + tail) : groupDigits(n.replace(/\D/g, ""));
-    });
+  } else if (inserted) {
+    /* written elsewhere: the last "." or "," is the decimal point when both appear ("1,234.567", "1.234,56"), when it
+       follows a 0 ("0,250") or doesn't stand before exactly 3 digits ("12,50"), or is the only separator and the
+       phone's decimal point; otherwise they group thousands ("1,234,567"). A currency sign or code around one amount
+       ("$12.50", "12,50 €") goes. */
+    const p = v
+      .replace(/\d[\d.,'’\s]*\d|\d/g, n => {
+        const last = Math.max(n.lastIndexOf("."), n.lastIndexOf(",")),
+          head = n.slice(0, Math.max(last, 0)),
+          tail = last < 0 ? "" : n.slice(last + 1),
+          once = n.split(n[last]).length === 2,
+          frac =
+            last >= 0 &&
+            (/\./.test(n) && /,/.test(n) ? once : /^0+$/.test(head) || tail.length !== 3 || (once && n[last] === dec));
+        if (!/[.,'’\s]/.test(n)) return n;
+        return frac ? groupDigits(head.replace(/\D/g, "") + "." + tail) : groupDigits(n.replace(/\D/g, ""));
+      })
+      .replace(/[^\d.,'’\s+\-−×÷]/g, "")
+      .trim();
     if (p !== v) {
       caret += p.length - v.length;
       v = p;
@@ -330,8 +396,9 @@ function formatAmountInput(inp, ev) {
     inp.setSelectionRange(i, i);
   } catch (e) {}
 }
-/* an amount is a finite number below a trillion (a pasted run of digits would otherwise save as Infinity) */
-const amtOk = n => (n != null && isFinite(n) && Math.abs(n) < 1e12 ? n : null);
+/* an amount is a finite number below 9 trillion, where doubles still keep its 3 decimals exactly (room for a flat
+   priced in Iranian rial; a pasted run of digits would otherwise save as Infinity) */
+const amtOk = n => (n != null && isFinite(n) && Math.abs(n) < 9e12 ? n : null);
 /* amount field: accepts the field's own text ("1,250.50", or "1.250,50" on a German phone), "12,50" and "12.50" alike,
    quick sums like "12+3.5", and the calculator's own expression ("12×3", "50−5") when Save is tapped with the keypad
    still open */
@@ -351,7 +418,8 @@ function evalAmt(v) {
   return amtOk(rnd(tot));
 }
 let snackT = null,
-  undoFn = null;
+  undoFn = null,
+  SNACK_AT = 0;
 /* a newer change makes the Undo on screen stale: it goes, the message stays */
 function dropUndo() {
   if (!undoFn) return;
@@ -361,6 +429,7 @@ function dropUndo() {
 }
 function snack(msg, undo) {
   undoFn = undo || null;
+  SNACK_AT = Date.now();
   $("#snack").innerHTML =
     '<div class="snack" role="status"><span>' +
     esc(msg) +
@@ -375,6 +444,12 @@ function snack(msg, undo) {
     },
     undo ? 5000 : 2600
   );
+}
+/* the message bar goes now, with its Undo */
+function hideSnack() {
+  clearTimeout(snackT);
+  $("#snack").innerHTML = "";
+  undoFn = null;
 }
 /* FX: one-shot feedback for the next render (FX.row flashes a row, FX.cat pops that category's Home ring tile) */
 let FX = {};
@@ -391,7 +466,7 @@ const buzz = kind => {
     else if (navigator.vibrate) navigator.vibrate(PULSE_MS[Math.min(5, level + (kind === "long" ? 1 : 0)) - 1]);
   } catch (e) {}
 };
-/* short label for date fields: Today / Yesterday / 22 Sep (year only if not this year) */
+/* short label for date fields: Today / Yesterday / Tomorrow / 22 Sep (year only if not this year) */
 function shortDay(d) {
   const t = today();
   if (d === t) return "Today";
@@ -400,6 +475,8 @@ function shortDay(d) {
   const x = parseISO(d),
     o = { day: "numeric", month: "short" };
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
-  return x.toLocaleDateString(undefined, o);
+  return x.toLocaleDateString(DATE_LOC, o);
 }
-const byNewest = (a, b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0);
+/* newest first; a fee saved with its transfer's own time (before 1.4) comes just above it, as balances count it */
+const byNewest = (a, b) =>
+  b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);

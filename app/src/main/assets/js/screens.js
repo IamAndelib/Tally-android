@@ -31,12 +31,15 @@ const panes = (left, right, cls) =>
       "</div>";
 /* the ring's width: its pane on a wide screen (measured on an empty pane pair), else the column */
 let RINGW = 0;
+/* the screen, drawn anew; the control that had the focus gets it back (keepFocus) */
 function render() {
+  keepFocus($("#app"), drawScreen);
+}
+function drawScreen() {
   const app = $("#app");
   RBC = null;
   if (V.screen !== "history") V.sel = null;
-  if (V.screen === "accounts") V.screen = "assets";
-  const tabs = ["home", "assets", "liabs"].includes(V.screen) && activeAccounts().length > 0;
+  const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
   document.body.classList.toggle("land", land);
@@ -56,8 +59,12 @@ function render() {
   if (V.screen === "history") app.innerHTML = historyView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
-  else if (V.screen === "settings") app.innerHTML = settingsView();
-  else app.innerHTML = homeView();
+  else if (V.screen === "settings") {
+    app.innerHTML = settingsView();
+    fitWeekSeg();
+  } else app.innerHTML = homeView();
+  fitFigures(app);
+  if (document.fonts && document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
   document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
@@ -94,12 +101,26 @@ function subBar(title) {
 }
 function homeView() {
   const act = activeAccounts();
+  /* every account archived: not a new notebook, so a way back to them */
+  if (!act.length && S.accounts.length)
+    return (
+      '<header class="appbar"><h1>Tally</h1>' +
+      topIcons() +
+      "</header>" +
+      '<div class="welcome"><div class="big">🗄️</div><h2>Every account is archived</h2><p>Bring one back from ' +
+      'Assets, or add a new one.</p><button class="btn tonal" data-act="show-arch">Show archived accounts</button>' +
+      '<div class="gap"></div><button class="btn" data-act="acc-form">' +
+      ic("add") +
+      "Add an account</button></div>"
+    );
   if (!act.length) {
     return (
       '<header class="appbar"><h1>Tally</h1>' +
       topIcons() +
       "</header>" +
-      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="Currency"><span>' +
+      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
+      esc("Currency: " + (S.settings.cur ? curLabel(S.settings.cur) : "not chosen yet")) +
+      '"><span>' +
       esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose your currency") +
       "</span>" +
       ic("down") +
@@ -149,8 +170,9 @@ function homeView() {
             a.id +
             '"><span class="n">' +
             emblem(accEmb(a), "sm") +
+            '<span dir="auto">' +
             esc(a.name) +
-            '</span><span class="b">' +
+            '</span></span><span class="b">' +
             esc(money(b[a.id], a.currency)) +
             "</span></button>"
         )
@@ -171,11 +193,7 @@ function homeView() {
   const top = h;
   h = "";
 
-  const inCur = t => {
-    const a = acc(t.account);
-    return a && a.currency === cur;
-  };
-  const pt = periodTxns().filter(inCur);
+  const pt = periodTxns().filter(t => inCur(t, cur));
   let spent = 0,
     got = 0;
   const by = {};
@@ -189,7 +207,7 @@ function homeView() {
   got = rnd(got);
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
-  const total = rnd(act.filter(a => a.currency === cur).reduce((s, a) => s + b[a.id], 0));
+  const total = balanceIn(cur, b);
   const n = periodTxns().length;
   if (!(V.period === "day" && V.anchor === today()))
     h +=
@@ -241,11 +259,7 @@ function checkCard(b, cur) {
   const hr = new Date().getHours();
   const hello = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
   const y = addDays(today(), -1);
-  const ySpent = rnd(
-    S.txns
-      .filter(t => t.date === y && isSpend(t) && acc(t.account) && acc(t.account).currency === cur)
-      .reduce((s, t) => s + t.amount, 0)
-  );
+  const ySpent = spentOn(y, cur);
   return (
     '<section class="check"><h2>' +
     hello +
@@ -257,13 +271,13 @@ function checkCard(b, cur) {
         a =>
           '<button class="ckrow" data-act="acc-open" data-v="' +
           a.id +
-          '">' +
+          '"><span class="ckn">' +
           emblem(accEmb(a), "sm") +
-          '<span class="nm">' +
+          '<span class="nm" dir="auto">' +
           esc(a.name) +
-          "</span><b>" +
+          '</span></span><span class="ckv"><b>' +
           esc(money(b[a.id], a.currency)) +
-          '</b><span class="fx">Fix</span></button>'
+          '</b><span class="fx">Fix</span></span></button>'
       )
       .join("") +
     '<button class="btn" data-act="check-ok">' +
@@ -287,6 +301,27 @@ function perCur(add) {
     m[c] = rnd((m[c] || 0) + v);
   });
   return m;
+}
+/* a figure too wide for its place (a long balance at a large text size on a small phone) is set smaller, a tenth at a
+   time down to 60%, rather than cut: the summary cards' totals, and a row's amount where the row can't hold it (its
+   balance lines are sized in em, so they shrink with it). Still too wide, a total wraps. Measured again once the font
+   has loaded. */
+function fitFigures(root) {
+  root.querySelectorAll(".sumcard .big[style], .tx .a[style]").forEach(el => el.removeAttribute("style"));
+  const shrink = (el, over) => {
+    if (!over()) return;
+    const f = parseFloat(getComputedStyle(el).fontSize);
+    for (let k = 0.9; k > 0.55 && over(); k -= 0.1) el.style.fontSize = f * k + "px";
+  };
+  root.querySelectorAll(".sumcard .big").forEach(el => {
+    const over = () => el.scrollWidth > el.clientWidth + 1;
+    shrink(el, over);
+    if (over()) el.style.overflowWrap = "anywhere";
+  });
+  root.querySelectorAll(".tx .a").forEach(el => {
+    const row = el.closest(".tx");
+    shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+  });
 }
 const curLines = m =>
   Object.keys(m).length
@@ -315,7 +350,7 @@ function accRow(a, b, drag) {
     (drag ? ' data-drag="acc:' + a.id + '"' : "") +
     ">" +
     emblem(accEmb(a), "em") +
-    '<span class="mid"><div class="d">' +
+    '<span class="mid"><div class="d" dir="auto">' +
     esc(a.name) +
     '</div><div class="s">' +
     esc(typeName(a.type) + " · " + a.currency) +
@@ -362,29 +397,7 @@ function assetsView() {
     dropBox("arch", "Drop here to archive") +
     (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
   const left = h; // two panes: net worth and accounts | what you're owed and other assets
-  h = "";
-  const lends = S.loans.filter(l => l.kind === "lend"),
-    open = lends.filter(l => loanInfo(l).open),
-    done = lends.filter(l => !loanInfo(l).open);
-  h +=
-    '<div class="sec">Owed to you</div>' +
-    (open.length
-      ? zoneList("lend-open", open.map(l => loanRow(l, true)).join(""))
-      : '<p class="hint" style="margin:0 4px">Money you lend shows here until it comes back.</p>') +
-    dropBox("lend-open", "Drop here to make it active again", "reset") +
-    '<button class="btn text" data-act="loan-new" data-v="lend" style="margin-top:4px">' +
-    ic("add") +
-    "Lend money</button>";
-  h += dropBox("lend-done", "Drop here to mark it cleared", "check");
-  if (done.length) {
-    h +=
-      '<button class="btn text" data-act="toggle-cleared">' +
-      (V.showCleared ? "Hide" : "Show") +
-      " cleared (" +
-      done.length +
-      ")</button>";
-    if (V.showCleared) h += zoneList("lend-done", done.map(l => loanRow(l, true)).join("")) + dragTip();
-  }
+  h = loanSection("lend", "Owed to you", "Money you lend shows here until it comes back.", "Lend money");
   h +=
     '<div class="sec">Other assets</div>' +
     (S.assets.length
@@ -396,7 +409,7 @@ function assetsView() {
               x.id +
               '">' +
               emblem(x, "em") +
-              '<span class="mid"><div class="d">' +
+              '<span class="mid"><div class="d" dir="auto">' +
               esc(x.name) +
               '</div></span><span class="a">' +
               esc(money(x.value, x.currency)) +
@@ -410,12 +423,42 @@ function assetsView() {
     "Add asset</button>";
   return tabBar("Assets") + panes(left, h);
 }
+/* one kind of loan on Assets (lend) or Liabilities (borrow): the open ones (or a hint) and a button for a new one, then
+   the cleared ones behind "Show cleared"; open and cleared are drop zones, to drag a loan between them */
+function loanSection(kind, title, none, add) {
+  const mine = S.loans.filter(l => l.kind === kind),
+    open = mine.filter(l => loanInfo(l).open),
+    done = mine.filter(l => !loanInfo(l).open);
+  let h =
+    '<div class="sec">' +
+    title +
+    "</div>" +
+    (open.length
+      ? zoneList(kind + "-open", open.map(l => loanRow(l)).join(""))
+      : '<p class="hint" style="margin:0 4px">' + none + "</p>") +
+    dropBox(kind + "-open", "Drop here to make it active again", "reset") +
+    '<button class="btn text" data-act="loan-new" data-v="' +
+    kind +
+    '" style="margin-top:4px">' +
+    ic("add") +
+    add +
+    "</button>" +
+    dropBox(kind + "-done", "Drop here to mark it cleared", "check");
+  if (done.length) {
+    h +=
+      '<button class="btn text" data-act="toggle-cleared">' +
+      (V.showCleared ? "Hide" : "Show") +
+      " cleared (" +
+      done.length +
+      ")</button>";
+    if (V.showCleared) h += zoneList(kind + "-done", done.map(l => loanRow(l)).join("")) + dragTip();
+  }
+  return h;
+}
 function liabsView() {
   const b = balances();
   let h = "";
-  const borrows = S.loans.filter(l => l.kind === "borrow"),
-    open = borrows.filter(l => loanInfo(l).open),
-    done = borrows.filter(l => !loanInfo(l).open);
+  const open = S.loans.filter(l => l.kind === "borrow" && loanInfo(l).open);
   const cards = activeAccounts().filter(a => a.type === "card");
   const owed = perCur(add => {
     open.forEach(l => {
@@ -427,25 +470,7 @@ function liabsView() {
     });
   });
   h += '<div class="sumcard owe"><div class="t">You owe</div>' + curLines(owed) + "</div>";
-  h +=
-    '<div class="sec">Loans</div>' +
-    (open.length
-      ? zoneList("borrow-open", open.map(l => loanRow(l, true)).join(""))
-      : '<p class="hint" style="margin:0 4px">Money you borrow shows here until it’s paid back.</p>') +
-    dropBox("borrow-open", "Drop here to make it active again", "reset") +
-    '<button class="btn text" data-act="loan-new" data-v="borrow" style="margin-top:4px">' +
-    ic("add") +
-    "Record a loan</button>";
-  h += dropBox("borrow-done", "Drop here to mark it cleared", "check");
-  if (done.length) {
-    h +=
-      '<button class="btn text" data-act="toggle-cleared">' +
-      (V.showCleared ? "Hide" : "Show") +
-      " cleared (" +
-      done.length +
-      ")</button>";
-    if (V.showCleared) h += zoneList("borrow-done", done.map(l => loanRow(l, true)).join("")) + dragTip();
-  }
+  h += loanSection("borrow", "Loans", "Money you borrow shows here until it’s paid back.", "Record a loan");
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length
     ? '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>"
@@ -464,8 +489,8 @@ function txLine(t) {
     const to = acc(t.to);
     em = { i: "swap_horiz", c: "#5f7389" };
     cls = "xfer";
-    d = t.note || "Transfer";
-    s = (a ? a.name : "?") + " → " + (to ? to.name : "?");
+    d = esc(t.note || "Transfer");
+    s = bdi(a ? a.name : "?") + " → " + bdi(to ? to.name : "?");
     amt =
       esc(money(t.amount, cur)) +
       (t.toAmount != null && to && to.currency !== cur
@@ -473,8 +498,8 @@ function txLine(t) {
         : "");
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = t.note || "Balance fix";
-    s = "Balance fix · " + (a ? a.name : "?");
+    d = esc(t.note || "Balance fix");
+    s = "Balance fix · " + bdi(a ? a.name : "?");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -482,26 +507,38 @@ function txLine(t) {
       lend = l && l.kind === "lend",
       who = l ? loanWho(l) : "?";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
-    d = t.principal ? (lend ? "Lent to " : "Borrowed from ") + who : lend ? who + " paid back" : "Paid back " + who;
-    s = (lend ? "Lending" : "Loan") + " · " + (a ? a.name : "?");
+    d = t.principal
+      ? (lend ? "Lent to " : "Borrowed from ") + bdi(who)
+      : lend
+        ? bdi(who) + " paid back"
+        : "Paid back " + bdi(who);
+    s = (lend ? "Lending" : "Loan") + " · " + bdi(a ? a.name : "?") + (t.note ? " · " + bdi(t.note) : "");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
-    /* a transfer's fee: shown with its transfer, not as a category's spending */
-    const tr = S.txns.find(x => x.id === t.feeOf),
-      to = tr && acc(tr.to);
-    em = { i: "swap_horiz", c: "#5f7389" };
+    /* a fee: shown with the transfer or loan payment it was charged on, not as a category's spending */
+    const host = S.txns.find(x => x.id === t.feeOf) || {},
+      l = host.type === "loan" && loan(host.loan);
     cls = "xfer";
-    d = t.note || "Transfer fee";
-    s = (a ? a.name : "?") + (to ? " → " + to.name : "");
-    amt = "−" + esc(money(t.amount, cur));
+    amt = esc(signed(-t.amount, cur));
+    if (l) {
+      const lend = l.kind === "lend";
+      em = LOAN_EMB[lend ? "lend" : "borrow"];
+      d = esc(t.note || "Payment fee");
+      s = bdi(a ? a.name : "?") + " · " + (lend ? "got back from " : "paid back ") + bdi(loanWho(l));
+    } else {
+      const to = acc(host.to);
+      em = { i: "swap_horiz", c: "#5f7389" };
+      d = esc(t.note || "Transfer fee");
+      s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
+    }
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    d = t.note || k.name;
-    s = k.name + " · " + (a ? a.name : "?");
-    amt = (out ? "−" : "+") + esc(money(t.amount, cur));
+    d = esc(t.note || k.name);
+    s = bdi(k.name) + " · " + bdi(a ? a.name : "?");
+    amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
   const selMode = !!V.sel && V.screen === "history",
@@ -518,11 +555,11 @@ function txLine(t) {
     (selMode ? ' aria-pressed="' + on + '"' : "") +
     ">" +
     (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
-    '<span class="mid"><div class="d">' +
-    esc(d) +
+    '<span class="mid"><div class="d" dir="auto">' +
+    d +
     '</div><div class="s">' +
     loanPill(t) +
-    esc(s) +
+    s +
     '</div></span><span class="a ' +
     cls +
     '">' +
@@ -539,14 +576,22 @@ function rbLines(t) {
   if (t.type === "transfer") {
     const to = acc(t.to);
     return (
-      rbLine("↓ " + (a ? a.name : "?"), money(r.a, a ? a.currency : "")) +
-      (to && r.t != null ? rbLine("↑ " + to.name, money(r.t, to.currency)) : "")
+      rbLine(a ? a.name : "?", money(r.a, a ? a.currency : ""), "↓") +
+      (to && r.t != null ? rbLine(to.name, money(r.t, to.currency), "↑") : "")
     );
   }
   return a ? rbLine(a.name, money(r.a, a.currency)) : "";
 }
-/* on a narrow screen the account name gives way (ellipsis), never the balance */
-const rbLine = (name, bal) => '<span class="rb"><span class="rbn">' + esc(name) + "</span> " + esc(bal) + "</span>";
+/* on a narrow screen the account name gives way (ellipsis), never the balance; a transfer's arrow stays outside the
+   name, on the app's side of it */
+const rbLine = (name, bal, arrow) =>
+  '<span class="rb' +
+  (arrow ? ' ar">' + arrow : '">') +
+  '<span class="rbn" dir="auto">' +
+  esc(name) +
+  "</span> " +
+  esc(bal) +
+  "</span>";
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
@@ -555,19 +600,21 @@ function loanPill(t) {
 function dayGroups(list) {
   let h = "",
     cur = "";
+  /* each day's spending per currency, in one pass (a year of History is thousands of rows) */
+  const days = new Map();
+  list.forEach(x => {
+    if (!isSpend(x)) return;
+    const c = (acc(x.account) || {}).currency,
+      sp = days.get(x.date) || {};
+    sp[c] = (sp[c] || 0) + x.amount;
+    days.set(x.date, sp);
+  });
   list.forEach(t => {
     if (t.date !== cur) {
       if (cur) h += "</div>";
       cur = t.date;
-      const sp = {};
-      list.forEach(x => {
-        if (x.date === cur && isSpend(x)) {
-          const c = (acc(x.account) || {}).currency;
-          sp[c] = (sp[c] || 0) + x.amount;
-        }
-      });
-      const tot = Object.entries(sp)
-        .map(([c, v]) => "−" + money(rnd(v), c))
+      const tot = Object.entries(days.get(cur) || {})
+        .map(([c, v]) => signed(-v, c))
         .join(" · ");
       h +=
         '<div class="day"><span>' +
@@ -650,9 +697,9 @@ function historyView() {
             a.id +
             '" aria-pressed="' +
             (V.hAcc === a.id) +
-            '">' +
+            '"><span class="chn" dir="auto">' +
             esc(a.name) +
-            "</button>"
+            "</span></button>"
         )
         .join("") +
       "</div>";
@@ -675,7 +722,7 @@ function catGrid(kind) {
         esc(c.id) +
         '">' +
         emblem(c, "ci") +
-        '<span class="cn">' +
+        '<span class="cn" dir="auto">' +
         esc(c.name) +
         "</span></button>";
     });
@@ -719,6 +766,15 @@ function sliderShow(el, n) {
     d.classList.toggle("cur", i === n - 1);
   });
 }
+/* Settings → First day of week: the days' long names where they fit, else the short ones (the long one still read out) */
+function fitWeekSeg() {
+  const b = [...document.querySelectorAll('#app [data-act="week"]')];
+  if (b.some(x => x.scrollWidth > x.clientWidth + 1))
+    b.forEach(x => {
+      x.setAttribute("aria-label", x.textContent);
+      x.textContent = weekdayName(+x.dataset.v, "short");
+    });
+}
 function settingsView() {
   let h = subBar("Settings");
   const th = S.settings.theme || "system";
@@ -754,7 +810,9 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="Main currency"><span>' +
+    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
+    esc("Main currency: " + (S.settings.cur ? curLabel(S.settings.cur) : "not chosen yet")) +
+    '"><span>' +
     esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose") +
     "</span>" +
     ic("down") +
@@ -762,10 +820,7 @@ function settingsView() {
     seg(
       "week",
       String(S.settings.week),
-      [1, 0, 6].map(d => [
-        String(d),
-        parseISO(addDays("2024-01-07", d)).toLocaleDateString(undefined, { weekday: "long" }),
-      ])
+      [1, 0, 6].map(d => [String(d), weekdayName(d, "long")])
     ) +
     '<div class="lbl set">Time format</div>' +
     seg("clock", S.settings.clock, [
@@ -819,8 +874,9 @@ function settingsView() {
             esc(c.id) +
             '">' +
             emblem(c, "sm") +
+            '<span class="chn" dir="auto">' +
             esc(c.name) +
-            "</button>"
+            "</span></button>"
         )
         .join("") +
       "</div>";
@@ -834,6 +890,12 @@ function settingsView() {
       : "Everything stays on this phone. Uninstalling deletes it, so keep a backup.") +
     "</p>" +
     autoBackupHtml() +
+    (keptKeys().length
+      ? '<div class="card"><h3>Unreadable data kept</h3><p class="muted small" style="margin:0">Saved data Tally ' +
+        "couldn’t open is kept on this phone. Save it as a file to keep it, or delete it.</p>" +
+        '<div class="gap"></div><div class="row"><button class="btn tonal" data-act="kept-save">Save file</button>' +
+        '<button class="btn tonal" data-act="kept-del">Delete it</button></div></div><div class="gap"></div>'
+      : "") +
     (autoOn ? "" : '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>') +
     (canRestore()
       ? '<button class="btn tonal" data-act="restore">Restore from backup</button>'
@@ -884,23 +946,26 @@ function healthCard() {
 function backupWhen(ms) {
   const d = new Date(ms),
     day = iso(d);
-  return (day === today() ? "Today" : dayLabel(day)) + ", " + timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes()));
+  return dayName(day) + ", " + timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes()));
 }
 /* Settings → Your data: the daily automatic backup into one file in a folder the user picked (Android only) */
 function autoBackupHtml() {
   const bs = backupStatus();
   if (!bs) return "";
   const b = S.settings.backup,
+    lost = b.on && !bs.usable, // on, but its folder isn't reachable (a new phone, a reinstall)
     sub = !b.on
       ? "Every day, to a folder you pick"
-      : bs.error
-        ? esc(bs.error)
-        : bs.last
-          ? "Last backup: " + esc(backupWhen(bs.last))
-          : "First backup at " + esc(timeLabel(b.time));
+      : lost
+        ? "Can't reach the folder: choose it again"
+        : bs.error
+          ? esc(bs.error)
+          : bs.last
+            ? "Last backup: " + esc(backupWhen(bs.last))
+            : "First backup at " + esc(timeLabel(b.time));
   return (
     '<div class="list" id="bk"><div class="setrow"><span class="mid"><div>Auto backup</div><div class="s' +
-    (b.on && bs.error ? " err" : "") +
+    (b.on && (bs.error || lost) ? " err" : "") +
     '">' +
     sub +
     "</div></span>" +

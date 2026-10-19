@@ -14,17 +14,19 @@ function loanInfo(l) {
     .filter(t => t.type === "loan" && t.loan === l.id && t.principal)
     .sort((x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0));
   const pays = S.txns.filter(t => t.type === "loan" && t.loan === l.id && !t.principal);
-  const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
-    paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
-    left = rnd(Math.max(0, total - paid));
   const newest = draws[draws.length - 1],
     a = acc(newest ? newest.account : l.account),
-    cur = a ? a.currency : S.settings.cur;
+    cur = a ? a.currency : S.settings.cur,
+    /* what's left, none when it shows as nothing (a third of a cent, after paying the $33.33 shown of $33.333) */
+    owed = n => (shown(n, cur) > 0 ? rnd(n) : 0);
+  const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
+    paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
+    left = owed(total - paid);
   const order = draws.slice().sort((x, y) => (x.due ? (y.due ? x.due.localeCompare(y.due) : -1) : y.due ? 1 : 0)),
     rem = {};
   let pool = paid;
   order.forEach(t => {
-    const r = rnd(Math.max(0, t.amount - pool));
+    const r = owed(t.amount - pool);
     pool = rnd(Math.max(0, pool - t.amount));
     rem[t.id] = r;
   });
@@ -77,6 +79,11 @@ function stLabel(l, st) {
   }[st];
 }
 const loanWho = l => l.person || "Someone";
+/* where a payment goes by default: the loan's account, or (archived) the first active account in its currency */
+const payAccount = (l, i) => {
+  const a = acc(l.account);
+  return a && !a.archived ? l.account : (activeAccounts().find(x => x.currency === i.cur) || {}).id;
+};
 /* after a draw is added, edited or deleted: the loan's account is its newest draw's, its date the oldest draw's */
 function relinkLoan(id) {
   const l = loan(id),
@@ -85,41 +92,42 @@ function relinkLoan(id) {
   l.account = d[d.length - 1].account;
   l.date = d[0].date;
 }
-/* the first loan whose remaining draws would come to less than was already paid back once these entries are deleted
-   (null if none): the extra would silently drop out of the loan. A loan losing every draw goes as a whole. */
-function paidPast(ids) {
+/* why deleting these entries would break a loan, or "" (a loan losing every draw goes as a whole): its remaining
+   draws would come to less than was already paid back (the extra would silently drop out of it), or a payment would
+   come before its first draw */
+function loanBlock(ids) {
   ids = new Set(ids);
   const sum = list => rnd(list.reduce((s, t) => s + t.amount, 0));
-  return (
-    S.loans.find(l => {
-      const i = loanInfo(l),
-        keep = i.draws.filter(t => !ids.has(t.id));
-      if (!keep.length || keep.length === i.draws.length) return false;
-      const paid = sum(i.pays.filter(t => !ids.has(t.id)));
-      return paid - sum(keep) > Math.max(0, i.paid - i.total) + 0.0005;
-    }) || null
-  );
+  for (const l of S.loans) {
+    const i = loanInfo(l),
+      keep = i.draws.filter(t => !ids.has(t.id));
+    if (!keep.length || keep.length === i.draws.length) continue;
+    const pays = i.pays.filter(t => !ids.has(t.id)),
+      first = pays.map(t => t.date).sort()[0];
+    if (sum(pays) - sum(keep) > Math.max(0, i.paid - i.total) + 0.0005)
+      return loanWho(l) + ": already paid back " + money(i.paid, i.cur);
+    if (first && first < keep[0].date)
+      return loanWho(l) + ": a payment on " + dayLabel(first) + " comes before the rest";
+  }
+  return "";
 }
-const paidPastMsg = l => {
-  const i = loanInfo(l);
-  return loanWho(l) + ": already paid back " + money(i.paid, i.cur);
-};
 /* Delete on a row of the loan sheet (never the loan's only draw, nor one already paid back) */
 function deleteLoanEntry(id) {
   const t = S.txns.find(x => x.id === id),
     l = t && t.type === "loan" && loan(t.loan);
   if (!l || (t.principal && loanInfo(l).draws.length <= 1)) return;
-  if (paidPast([id])) {
-    snack(paidPastMsg(l));
+  const no = loanBlock([id]);
+  if (no) {
+    snack(no);
     return;
   }
   closeSheet();
   withUndo(t.principal ? "Deleted" : "Payment deleted", () => {
-    S.txns = S.txns.filter(x => x.id !== id);
+    S.txns = S.txns.filter(x => x.id !== id && x.feeOf !== id); // a payment's fee goes with it
     relinkLoan(l.id);
   });
 }
-function loanRow(l, drag) {
+function loanRow(l) {
   const i = loanInfo(l),
     lend = l.kind === "lend";
   const a = acc(l.account),
@@ -138,17 +146,17 @@ function loanRow(l, drag) {
     (FX.row === l.id ? " flash" : "") +
     '" data-act="loan-open" data-v="' +
     l.id +
-    '"' +
-    (drag ? ' data-drag="loan:' + l.id + '"' : "") +
-    ">" +
+    '" data-drag="loan:' +
+    l.id +
+    '">' +
     emblem(LOAN_EMB[l.kind], "em") +
-    '<span class="mid"><div class="d">' +
+    '<span class="mid"><div class="d" dir="auto">' +
     esc(loanWho(l)) +
     '</div><div class="s">' +
     esc(sub) +
     "</div></span>" +
     '<span class="a">' +
-    esc(money(i.open ? i.left : i.total, i.cur)) +
+    esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) + // written off: what was let go
     '<small><span class="st ' +
     i.st +
     '">' +
@@ -184,7 +192,14 @@ function personSuggest(q) {
     list = cur ? personCandidates(F.lk, cur, q || "") : [];
   el.hidden = !list.length;
   el.innerHTML = list
-    .map(l => '<button class="chip" data-act="f-person-pick" data-v="' + esc(l.id) + '">' + esc(l.person) + "</button>")
+    .map(
+      l =>
+        '<button class="chip" data-act="f-person-pick" data-v="' +
+        esc(l.id) +
+        '"><span class="chn" dir="auto">' +
+        esc(l.person) +
+        "</span></button>"
+    )
     .join("");
 }
 /* one-line feedback once a suggestion is picked: what the tab will total once this amount is added */
@@ -199,7 +214,7 @@ function mergeHint() {
   const i = loanInfo(l),
     lend = l.kind === "lend",
     add = evalAmt(($("#f-amt") || {}).value || "") || 0,
-    tot = rnd(i.total + (add > 0 ? add : 0));
+    tot = rnd(i.left + (add > 0 ? add : 0)); // what will be owed: what is still owed now, plus this
   el.hidden = false;
   el.textContent =
     "Adds to what you " +
@@ -225,12 +240,12 @@ function loanForm(kind) {
     (lend ? "Lent to" : "Borrowed from") +
     '</span><input id="f-person" placeholder="Name" maxlength="40" autocomplete="off"></label>';
   h += '<div class="chips" id="f-person-sug" hidden></div>';
-  h += amtField("f-amt", acc(def).currency, "");
+  h += amtField("f-amt", acc(def).currency, "", { curId: "amt-cur" });
   h += '<p class="hint" id="f-mergehint" hidden></p>';
   h += '<div class="lbl">' + (lend ? "From account" : "Into account") + "</div>" + accChips("f-acc", F.account);
   h +=
     '<div class="row" style="margin-top:4px"><div class="field"><span>Date</span>' +
-    dateField("f-date", entryDate(), { max: today() }) +
+    dateField("f-date", entryDate(), { max: today(), now: true }) +
     "</div>" +
     '<div class="field"><span>' +
     (lend ? "Payback day" : "Return by") +
@@ -263,10 +278,7 @@ function loanOpen(id, focusPay) {
   F = {
     kind: "loan",
     id,
-    account:
-      acc(l.account) && !acc(l.account).archived
-        ? l.account
-        : (activeAccounts().find(a => a.currency === i.cur) || {}).id,
+    account: payAccount(l, i),
   };
   const heroLine =
     i.draws.length <= 1
@@ -279,10 +291,11 @@ function loanOpen(id, focusPay) {
     '<div class="hero"><div class="t">' +
     heroLine +
     '</div><div class="v">' +
-    esc(money(i.open ? i.left : i.total, i.cur)) +
+    esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) +
     "</div>" +
     '<div class="t">' +
-    (i.open ? "left of " + esc(money(i.total, i.cur)) + " · " : "") +
+    (i.open ? "left of " : i.st === "writeoff" ? "of " : "") +
+    (i.open || i.st === "writeoff" ? esc(money(i.total, i.cur)) + " · " : "") +
     '<span class="st ' +
     i.st +
     '">' +
@@ -322,10 +335,15 @@ function loanOpen(id, focusPay) {
       '<div class="lbl">' +
       (lend ? "Into" : "From") +
       "</div>" +
-      accChips("f-acc", F.account, null, payAccs) +
+      (payAccs.length
+        ? accChips("f-acc", F.account, null, payAccs)
+        : '<p class="hint">No account in ' +
+          esc(i.cur) +
+          " to record it: add one, or show an archived one again.</p>") +
       '<div style="margin-top:12px">' +
-      dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today() }) +
+      dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today(), now: true }) +
       "</div>" +
+      feeField(false, "", "Fee charged (" + i.cur + ") · not counted as spending", "Add a fee (sending, cash‑out)") +
       '<div class="gap"></div><button class="btn" data-act="loan-pay">' +
       ic("check") +
       "Record payment</button></div>";
@@ -335,7 +353,8 @@ function loanOpen(id, focusPay) {
     '<div class="sec">History</div><div class="list">' +
     hist
       .map(t => {
-        const a = acc(t.account);
+        const a = acc(t.account),
+          f = t.feeId && S.txns.find(x => x.id === t.feeId);
         const r = runBal()[t.id] || {},
           canDel = !t.principal || i.draws.length > 1,
           more = t.principal
@@ -344,11 +363,13 @@ function loanOpen(id, focusPay) {
               " on " +
               dayLabel(t.date) +
               (t.due ? " · due " + dayLabel(t.due) : "") +
-              (i.open ? (i.rem[t.id] > 0 ? " · " + money(i.rem[t.id], i.cur) + " left" : " · paid off") : "")
+              (i.open ? (i.rem[t.id] > 0 ? " · " + money(i.rem[t.id], i.cur) + " left" : " · paid off") : "") +
+              (t.note ? " · " + t.note : "")
             : dayLabel(t.date) +
               " · " +
               (lend ? "into " : "from ") +
               (a ? a.name : "?") +
+              (f ? " · " + money(f.amount, i.cur) + " fee" : "") +
               " · " +
               (r.ls === "cleared"
                 ? lend
@@ -359,7 +380,7 @@ function loanOpen(id, focusPay) {
           /* the row's head is the button that opens its details (they hold buttons of their own) */
           '<div class="tx exp"><button class="txh" data-act="row-exp" aria-expanded="false">' +
           emblem(t.principal ? LOAN_EMB[l.kind] : { i: "paid", c: "#15a06f" }, "em") +
-          '<span class="mid"><div class="d">' +
+          '<span class="mid"><div class="d" dir="auto">' +
           esc(t.principal ? (lend ? "Lent" : "Borrowed") : lend ? "Got back" : "Paid back") +
           "</div>" +
           (t.principal ? "" : '<div class="s">' + loanPill(t) + "</div>") +
@@ -469,9 +490,15 @@ function saveLoanDraw() {
   const txnId = F.editTxn,
     t0 = S.txns.find(x => x.id === txnId);
   if (!t0) return;
-  /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan */
+  /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan; and no payment
+     before the first draw */
   const i = loanInfo(l),
-    total = rnd(i.total + (t0.principal ? amt - t0.amount : 0)),
+    firstPay = i.pays.map(t => t.date).sort()[0];
+  if (t0.principal && firstPay && firstPay < i.draws.map(t => (t.id === txnId ? date2 : t.date)).sort()[0]) {
+    snack("A payment on " + dayLabel(firstPay) + " comes before that");
+    return;
+  }
+  const total = rnd(i.total + (t0.principal ? amt - t0.amount : 0)),
     paid = rnd(i.paid + (t0.principal ? 0 : amt - t0.amount));
   if (paid - total > Math.max(0, i.paid - i.total) + 0.0005) {
     snack(
@@ -488,6 +515,12 @@ function saveLoanDraw() {
     t.account = acc2;
     t.date = date2;
     if (setDue) t.due = due2;
+    /* a payment's fee goes with it: same account, same day */
+    const fee = t.feeId && S.txns.find(x => x.id === t.feeId);
+    if (fee) {
+      fee.account = acc2;
+      fee.date = date2;
+    }
     relinkLoan(l.id);
   };
   guardOverdraw(mutate, date2, () => {
@@ -576,10 +609,52 @@ function deleteLoan() {
   const id = F.id;
   closeSheet();
   withUndo("Deleted", () => {
+    const gone = new Set(S.txns.filter(t => t.type === "loan" && t.loan === id).map(t => t.id));
     S.loans = S.loans.filter(l => l.id !== id);
-    S.txns = S.txns.filter(t => !(t.type === "loan" && t.loan === id));
+    S.txns = S.txns.filter(t => !gone.has(t.id) && !gone.has(t.feeOf)); // the payments' fees go with them
   });
 }
+/* a payment on loan l, plus its fee when there is one: an expense linked both ways, like a transfer's (off the same
+   account, shown with the payment, never spending). Fresh objects on every call, since a change runs twice (overdraw
+   check, then for real). */
+function payTxns(l, pid, ts, amount, account, date, fee) {
+  const p = {
+    id: pid,
+    ts,
+    type: "loan",
+    dir: l.kind === "lend" ? "in" : "out",
+    loan: l.id,
+    amount,
+    account,
+    date,
+    note: "",
+  };
+  if (!(fee > 0)) return [p];
+  const f = {
+    id: pid + "f",
+    ts: ts + 1,
+    type: "expense",
+    amount: rnd(fee),
+    account,
+    cat: "fees",
+    date,
+    note: "Payment fee",
+  };
+  f.feeOf = p.id;
+  p.feeId = f.id;
+  return [p, f];
+}
+/* the payment card's fee, if one was added: a number ≥ 0, or null (already said why) */
+function readFee(v) {
+  const text = F.showFee ? String(v.fee || "").trim() : "",
+    fee = text ? evalAmt(text) : 0;
+  if (fee == null || fee < 0) {
+    snack(fee == null ? "That fee isn't a number" : "A fee can't be negative");
+    return null;
+  }
+  return fee;
+}
+const plusFee = (fee, cur) => (fee > 0 ? " + " + money(fee, cur) + " fee" : "");
 function payLoan() {
   const l = loan(F.id);
   if (!l) return;
@@ -592,41 +667,38 @@ function payLoan() {
     return;
   }
   if (!acc(F.account)) {
-    snack("Pick an account");
+    snack(activeAccounts().some(a => a.currency === i.cur) ? "Pick an account" : "No account in " + i.cur);
     return;
   }
-  if (amt > i.left + 0.0005) {
-    overpay(l, i, amt, F.account, v.date || today());
+  const fee = readFee(v);
+  if (fee == null) return;
+  /* compared as shown: paying the $66.67 shown on a $66.667 tab clears it, with no "$0.00 more" */
+  if (shown(amt, i.cur) > shown(i.left, i.cur)) {
+    overpay(l, i, amt, F.account, v.date || today(), fee);
     return;
   }
   const id = l.id,
     account = F.account,
     date = v.date || today(),
-    done = rnd(i.left - amt) <= 0,
+    done = shown(amt, i.cur) >= shown(i.left, i.cur),
     pid = newId(),
     ts = Date.now();
   const mutate = () => {
-    S.txns.push({
-      id: pid,
-      ts,
-      type: "loan",
-      dir: lend ? "in" : "out",
-      loan: id,
-      amount: amt,
-      account,
-      date,
-      note: "",
-    });
+    S.txns.push(...payTxns(l, pid, ts, amt, account, date, fee));
   };
   guardOverdraw(mutate, date, () => {
     closeSheet();
-    withUndo((lend ? "Got back " : "Paid back ") + money(amt, i.cur) + (done ? " · all cleared" : ""), mutate, {
-      row: id,
-    });
+    withUndo(
+      (lend ? "Got back " : "Paid back ") + money(amt, i.cur) + plusFee(fee, i.cur) + (done ? " · all cleared" : ""),
+      mutate,
+      { row: id }
+    );
   });
 }
-/* someone paid back more than they owed (or you did): clear this one and track the extra as a loan the other way */
-function overpay(l, i, amt, account, date) {
+/* someone paid back more than they owed (or you did): the payment clears this one, and the extra is either a loan the
+   other way, or (they paid you more) income, on the income form so the category is the user's choice, or (you paid
+   them more: a sending charge, interest) that payment's fee. Tally never files it under a category by itself. */
+function overpay(l, i, amt, account, date, fee) {
   const lend = l.kind === "lend",
     who = loanWho(l),
     extra = rnd(amt - i.left),
@@ -635,26 +707,19 @@ function overpay(l, i, amt, account, date) {
     nid = newId(),
     qid = newId(),
     ts = Date.now();
-  askDialog(
-    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
-    lend
-      ? "Track the extra " + money(extra, cur) + " as a loan from " + who + " (you now owe it)?"
-      : "Track the extra " + money(extra, cur) + " as a lending to " + who + " (they owe you)?",
-    lend ? "Track as loan" : "Track as lending",
-    () => {
-      const mutate = () => {
-        if (i.left > 0)
-          S.txns.push({
-            id: pid,
-            ts,
-            type: "loan",
-            dir: lend ? "in" : "out",
-            loan: l.id,
-            amount: i.left,
-            account,
-            date,
-            note: "",
-          });
+  /* the payment that clears this loan (with the extra as its fee, when that's the choice) */
+  const clear = more => {
+    if (i.left > 0) S.txns.push(...payTxns(l, pid, ts, i.left, account, date, rnd(fee + (more || 0))));
+  };
+  const book = (mutate, msg, row) =>
+    guardOverdraw(mutate, date, () => {
+      closeSheet();
+      withUndo(msg, mutate, { row });
+    });
+  const asLoan = () =>
+    book(
+      () => {
+        clear();
         S.loans.push({
           id: nid,
           ts,
@@ -667,7 +732,7 @@ function overpay(l, i, amt, account, date) {
         });
         S.txns.push({
           id: qid,
-          ts: ts + 1,
+          ts: ts + 2,
           type: "loan",
           dir: lend ? "in" : "out",
           loan: nid,
@@ -677,19 +742,45 @@ function overpay(l, i, amt, account, date) {
           date,
           note: "",
         });
-      };
-      guardOverdraw(mutate, date, () => {
-        closeSheet();
-        withUndo(
-          lend
-            ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
-            : "Loan cleared · " + who + " owes you " + money(extra, cur),
-          mutate,
-          { row: nid }
-        );
-      });
-    },
-    { cancel: "Go back" }
+      },
+      lend
+        ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
+        : "Loan cleared · " + who + " owes you " + money(extra, cur),
+      nid
+    );
+  const asIncome = () =>
+    txSheet(null, "income", null, {
+      amount: extra,
+      cur,
+      account,
+      date,
+      note: "Extra from " + who,
+      also: clear,
+      msg: who + "’s lending cleared · ",
+      back: l.id,
+    });
+  const asFee = () => book(() => clear(extra), "Loan cleared · " + money(rnd(fee + extra), cur) + " as its fee", l.id);
+  const left = i.left > 0;
+  askDialog(
+    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
+    lend
+      ? "What is the extra " +
+          money(extra, cur) +
+          "? A loan from " +
+          who +
+          " (you now owe it)" +
+          (left ? ", or income, such as a fee they covered." : ".")
+      : "What is the extra " +
+          money(extra, cur) +
+          "? A lending to " +
+          who +
+          " (they owe you)" +
+          (left ? ", or a fee on this payment, such as a sending charge or interest." : "."),
+    lend ? "Track as loan" : "Track as lending",
+    asLoan,
+    left
+      ? { alt: [lend ? "Track as income" : "Track as a fee", lend ? asIncome : asFee], cancel: "Go back" }
+      : { cancel: "Go back" }
   );
 }
 /* dropped on Cleared: ask how it was cleared, because one way moves money */
@@ -700,8 +791,7 @@ function clearLoan(id) {
     lend = l.kind === "lend",
     who = loanWho(l);
   if (!i.open) return;
-  const la = acc(l.account),
-    account = la && !la.archived ? l.account : (activeAccounts().find(a => a.currency === i.cur) || {}).id,
+  const account = payAccount(l, i),
     pid = newId(),
     ts = Date.now();
   const paid = () => {
@@ -710,17 +800,7 @@ function clearLoan(id) {
       return;
     }
     const mutate = () => {
-      S.txns.push({
-        id: pid,
-        ts,
-        type: "loan",
-        dir: lend ? "in" : "out",
-        loan: id,
-        amount: i.left,
-        account,
-        date: today(),
-        note: "",
-      });
+      S.txns.push(...payTxns(l, pid, ts, i.left, account, today(), 0));
     };
     guardOverdraw(mutate, today(), () => {
       V.showCleared = true;
@@ -737,12 +817,18 @@ function clearLoan(id) {
       { row: id }
     );
   };
+  /* with no account in the loan's currency, a payment can't be recorded: only writing it off is offered */
   askDialog(
     lend ? "Clear " + who + "’s lending?" : "Clear the loan from " + who + "?",
-    (lend ? who + " still owes " : "You still owe " + who + " ") + money(i.left, i.cur) + ".",
-    lend ? "Got it all back" : "Paid it all back",
-    paid,
-    { alt: [lend ? "Write it off" : "Mark as forgiven", off] }
+    (lend ? who + " still owes " : "You still owe " + who + " ") +
+      money(i.left, i.cur) +
+      "." +
+      (account
+        ? (lend ? " Got back into " : " Paid from ") + acc(account).name + "."
+        : " There's no account in " + i.cur + " to record a payment."),
+    account ? (lend ? "Got it all back" : "Paid it all back") : lend ? "Write it off" : "Mark as forgiven",
+    account ? paid : off,
+    account ? { alt: [lend ? "Write it off" : "Mark as forgiven", off] } : undefined
   );
 }
 /* back to open: a written-off one just reopens; a fully paid one drops its latest payment (the user's choice) */
@@ -769,20 +855,21 @@ function reopenLoan(id) {
   withUndo(
     (lend ? who + " owes you " : "You owe " + who + " ") + money(last.amount, i.cur) + " again",
     () => {
-      S.txns = S.txns.filter(t => t.id !== last.id);
+      S.txns = S.txns.filter(t => t.id !== last.id && t.feeOf !== last.id); // with its fee
       loan(id).status = "open";
     },
     { row: id }
   );
   buzz("confirm");
 }
-/* the snooze (a due reminder's +1 day / +1 week): every unpaid draw due by today, else the next one, moves on from
-   whichever is later, its due date or today */
-function extendLoan(l, days) {
+/* the snooze, +1 day / +1 week on a due reminder, tapped on day `on` (default today): every unpaid draw due by then,
+   else the next one, moves on from whichever is later, its due date or that day */
+function extendLoan(l, days, on) {
+  on = on || today();
   const i = loanInfo(l),
-    due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= today()), // what the reminder was about
+    due = i.draws.filter(t => i.rem[t.id] > 0 && t.due && t.due <= on), // what the reminder was about
     list = due.length ? due : [i.dueDraw || i.draws[i.draws.length - 1]];
   list.forEach(t => {
-    if (t) t.due = addDays(t.due && t.due > today() ? t.due : today(), days);
+    if (t) t.due = addDays(t.due && t.due > on ? t.due : on, days);
   });
 }

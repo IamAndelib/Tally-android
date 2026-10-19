@@ -54,18 +54,19 @@ const stub = () => {
       rec("data", j);
     },
     backupStatus() {
-      return JSON.stringify(window.__cfg.status || { folder: "", last: 0, error: "" });
+      return JSON.stringify(window.__cfg.status || { folder: "", usable: true, last: 0, error: "" });
     },
-    backupNow() {
+    /* both answer later, through the page's hook, like the shell's own threads */
+    backupNow(id) {
       rec("now");
-      return window.__cfg.nowErr || "";
+      setTimeout(() => window.tallyBackedUp(window.__cfg.nowErr || "", id));
     },
     pickBackupFolder() {
       rec("pick");
     },
-    readAutoBackup() {
+    readAutoBackup(id) {
       rec("readAuto");
-      return JSON.stringify(window.__cfg.auto || { error: "No folder is chosen." });
+      setTimeout(() => window.tallyAutoBackup(window.__cfg.auto || { none: true, error: "No backup there." }, id));
     },
     pickRestoreFile() {
       rec("pickRestore");
@@ -485,12 +486,19 @@ const stub = () => {
   bk = await page.evaluate(() => window.__backup);
   ok(bk.on && bk.h === 22 && bk.m === 15, "backup time 22:15 re-arms it");
   await act("bk-now");
+  await settle();
   ok((await page.textContent("#snack")).includes("Backed up") && (await calls("now")).length === 1, "Back up now");
   await page.evaluate(() => (window.__cfg.nowErr = "The backup folder can't be found."));
   await act("bk-now");
+  await settle();
   ok((await page.textContent("#snack")).includes("can't be found"), "a failed backup says why");
   await page.evaluate(() => {
-    window.__cfg.status = { folder: "Documents/Tally", last: 0, error: "The backup folder can't be found." };
+    window.__cfg.status = {
+      folder: "Documents/Tally",
+      usable: true,
+      last: 0,
+      error: "The backup folder can't be found.",
+    };
     render();
   });
   ok(
@@ -658,7 +666,7 @@ const stub = () => {
   const dlg = await page.textContent("#pop");
   ok(
     dlg.includes("Restore Tally backup.json?") &&
-      dlg.includes("2 accounts and 1 entries") &&
+      dlg.includes("2 accounts and 1 entry") &&
       dlg.includes("saved Today") &&
       dlg.includes("Choose another file"),
     "Restore offers the auto backup with its counts and date: " + dlg

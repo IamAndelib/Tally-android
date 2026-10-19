@@ -20,11 +20,13 @@ Tally is a native Android shell around a web page.
   `https://appassets.androidplatform.net/assets/` (`WebViewAssetLoader`) and exposes a small bridge, `window.Android`:
   `ready` (ends the launch screen), `haptic`, `saveFile`, `getColors` (Material You palette), `setBars`,
   `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `is24h`, `fontScale`, `reminderHealth` /
-  `openSetting` / `permsIntro` (permissions), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` /
-  `backupStatus` / `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls
-  the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`,
-  `tallyFolder`, `tallyRestore` and `tallyPerms`, which `js/main.js` installs last; answers that arrive before the
-  page is up wait in a queue (`callPage`).
+  `openSetting` / `permsIntro` (permissions), `keepState` / `keptState` (the shell's own copy of every save,
+  `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
+  `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls the page's hooks
+  `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`, `tallyFolder`,
+  `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that
+  arrive before the page is up wait in a queue (`callPage`), and background threads answer through the activity on
+  screen (`deliver`).
 - **`ReminderReceiver` / `BootReceiver`** schedule and show notifications from the reminder settings the page sends;
   **`BackupReceiver`** writes the daily backup file from the copy of the data the page mirrors to it;
   **`TallyWidget` / `QuickAddActivity` / `OpenActivity`** are the home-screen widget. The page is always the source of truth: it sends
@@ -56,14 +58,15 @@ Tally is a native Android shell around a web page.
 ### The data
 
 All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
-`{v, settings, accounts, types, cats, txns, loans, assets}`.
+`{v, settings, accounts, types, cats, txns, loans, assets}`. Each save is numbered (`tally:v1:seq`) and also kept by
+the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (see `save()` in `js/state.js`).
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
   `income` (with `cat`), `transfer` (with `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
   `loan` (money moving for a loan: `dir`, `loan`, and `principal` + optional `due` for a draw). `ts` is when it was
   written (`Date.now()`, so not an amount: `migrate()` reads it with `stamp()`) and orders a day's entries, newest
-  first. A transfer's fee is an `expense` linked both ways (`feeOf` on the fee, `feeId` on the transfer) that is never
-  counted as spending (`isSpend()`).
+  first. A transfer's or loan payment's fee is an `expense` linked both ways (`feeOf` on the fee, `feeId` on the
+  transfer or payment) that is never counted as spending (`isSpend()`).
 - A **loan** is a person tab, `{id, kind: "borrow" | "lend", person, account, date, note, status}`. Its amounts, what's
   left and its status are always derived from its entries by `loanInfo()`, never stored.
 - Balances are never stored either: `balances()` adds every entry to each account's opening balance.
@@ -81,7 +84,8 @@ All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
 - **Confirmations** use `askDialog()`, never `confirm()`. Dates use `dateField()` / `datePicker()`, never native pickers.
 - The calculator's minus key is the Unicode minus `−` (U+2212); any regex over keys or expressions must include it.
 - No inline scripts or `on…=` attributes: the page's Content-Security-Policy blocks them.
-- Formatting is Prettier's (`npm run format`); `npm run lint` must pass.
+- Formatting is Prettier's (`npm run format`); `npm run lint` must pass (it also refuses CSS selectors newer than
+  WebView 87, such as `:is()`, which would drop the whole rule there).
 - Java: keep the bridge small; anything the page can compute, it computes.
 
 ## Design principles
@@ -101,7 +105,7 @@ Tally is for people who want to write things down quickly and move on:
 `tests/e2e/NN-name.js` are plain Node scripts that drive the page in headless Chromium with a stubbed `window.Android`
 and print `PASS` / `FAIL` lines; `npm test` runs them all against a throwaway local server (`npm test -- 15` runs only
 suites starting with 15). They run on a fixed date, 2026-06-17, so results don't depend on the day
-(`TALLY_TODAY=2026-10-01 npm test` runs them on another, e.g. the first of a month). Screenshots go to
+(`TALLY_TODAY=YYYY-MM-DD npm test` runs them on another; some suites assume a day in the middle of a month). Screenshots go to
 `tests/e2e/output/`. Add or extend a suite for every fix and feature.
 
 ## Pull requests

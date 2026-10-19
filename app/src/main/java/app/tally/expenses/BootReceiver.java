@@ -5,9 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 
 /**
- * Alarms don't survive a reboot or an app update, and are set in absolute time: re-arm the saved reminders and the
- * daily backup after those, after the clock or time zone changes (so 21:00 stays 21:00 local time), and once exact
- * alarms are allowed ("Alarms & reminders", Android 12+), so the next ones are on time.
+ * Alarms don't survive a reboot, and are set in absolute time: re-arm the saved reminders and the daily backup after
+ * one, after an app update (harmless, to be safe), after the clock or time zone changes (so 21:00 stays 21:00 local
+ * time), and once exact alarms are allowed ("Alarms & reminders", Android 12+), so the next ones are on time.
  */
 public class BootReceiver extends BroadcastReceiver {
     @Override

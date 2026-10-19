@@ -4,80 +4,115 @@
 "use strict";
 
 function exportCsv() {
-  /* quoted text; a leading = + - @ gets a ' so a spreadsheet shows it instead of running it as a formula */
+  /* quoted text; a leading = + - @ (after any spaces) gets a ' so a spreadsheet shows it instead of running it as a
+     formula */
   const q = s =>
     '"' +
     String(s ?? "")
-      .replace(/^[=+\-@\t\r]/, "'$&")
+      .replace(/^\s*[=+\-@\t\r]/, "'$&")
       .replace(/"/g, '""') +
     '"';
   const kind = t =>
     t.type === "loan"
       ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir
       : t.feeOf
-        ? "transfer-fee"
+        ? ((S.txns.find(x => x.id === t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
         : t.type;
   const lines = [
-    ["date", "type", "amount", "currency", "account", "to_account", "to_amount", "category", "note"].join(","),
+    [
+      "date",
+      "type",
+      "amount",
+      "currency",
+      "account",
+      "to_account",
+      "to_amount",
+      "category",
+      "note",
+      "to_currency",
+      "person",
+    ].join(","),
   ];
   [...S.txns]
     .sort((a, b) => a.date.localeCompare(b.date) || (a.ts || 0) - (b.ts || 0))
     .forEach(t => {
       const a = acc(t.account),
-        to = acc(t.to);
+        to = acc(t.to),
+        l = t.type === "loan" && loan(t.loan);
       lines.push(
         [
           t.date,
           kind(t),
-          t.amount,
+          rnd(t.amount),
           a ? a.currency : "",
           q(a ? a.name : ""),
           q(to ? to.name : ""),
-          t.type === "transfer" ? (t.toAmount != null ? t.toAmount : t.amount) : "",
+          t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
           q((t.type === "expense" && !t.feeOf) || t.type === "income" ? cat(t.cat).name : ""),
           q(t.note),
+          to ? to.currency : "",
+          q(l ? l.person : ""),
         ].join(",")
       );
     });
-  saveOut("tally-entries-" + today() + ".csv", "text/csv", lines.join("\n"));
+  /* the byte-order mark tells spreadsheets (Excel) the file is UTF-8, so names in any script read right */
+  saveOut("tally-entries-" + today() + ".csv", "text/csv", "\ufeff" + lines.join("\n"));
 }
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
    `auto` = {when, folder} for the auto backup file, whose dialog also offers "Choose another file". */
-function restoreText(t, auto) {
-  let o = null;
+/* after: what follows a restore (turning auto backup on, when it came from the folder being picked) */
+/* false when the text isn't a backup that can be read */
+function restoreText(t, auto, after) {
+  let o = null,
+    n = null;
   try {
     o = JSON.parse(t);
   } catch (e) {}
   if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
     snack("That isn't a Tally backup file");
-    return;
+    return false;
   }
+  try {
+    n = migrate(o);
+  } catch (e) {
+    snack("That backup couldn't be read");
+    return false;
+  }
+  /* what will really be restored: an entry, account, loan or asset that can't be read (or on a missing account) is
+     left out, and said so */
+  const count = (k, one, many) => n[k].length + " " + (n[k].length === 1 ? one : many),
+    had = k => (Array.isArray(o[k]) ? o[k].length - n[k].length : 0),
+    lost = had("txns") + had("accounts") + had("loans") + had("assets"),
+    newer = typeof o.v === "number" && o.v > blank().v;
   askDialog(
     auto ? "Restore Tally backup.json?" : "Restore this backup?",
     "Replaces everything on this phone with " +
-      o.accounts.length +
-      " accounts and " +
-      o.txns.length +
-      " entries" +
+      count("accounts", "account", "accounts") +
+      " and " +
+      count("txns", "entry", "entries") +
       (auto && auto.when ? " · saved " + backupWhen(auto.when) : "") +
-      ".",
+      "." +
+      (lost > 0 ? " " + lost + (lost === 1 ? " item" : " items") + " in it can't be read and will be left out." : "") +
+      (newer ? " It was made by a newer version of Tally: update Tally first so nothing is left out." : ""),
     "Restore",
     () => {
-      let n;
-      try {
-        n = migrate(o);
-      } catch (e) {
-        snack("That backup couldn't be read");
-        return;
-      }
-      /* this phone's own set-up stays: its auto backup (the folder lives in the shell) */
-      const backup = S.settings.backup;
+      /* this phone's own set-up stays: its auto backup (the folder lives in the shell), a copy so Undo gets back what
+         was here; while the saved data couldn't be read, the stand-in's setting means nothing: the backup's own is kept */
+      const old = S;
+      if (!unreadable) n.settings.backup = { ...S.settings.backup };
+      unreadable = null; // a real notebook again: auto backup may follow it
       S = n;
-      S.settings.backup = backup;
       commit();
       syncBackup();
       applyTheme();
-      snack("Backup restored");
+      if (after) after();
+      snack("Backup restored", () => {
+        S = old;
+        commit();
+        syncBackup();
+        applyTheme();
+        snack("Undone");
+      });
     },
     auto ? { alt: ["Choose another file", pickRestoreFile] } : undefined
   );
@@ -96,14 +131,11 @@ function restoreFile(input) {
    picker reports wrongly). With auto backup on, its file first, with "Choose another file" beside it. */
 const canRestore = () => !!(window.Android && Android.pickRestoreFile);
 function restoreStart() {
-  if (S.settings.backup.on && Android.readAutoBackup) {
-    let r = {};
-    try {
-      r = JSON.parse(Android.readAutoBackup() || "{}");
-    } catch (e) {}
-    if (typeof r.text === "string") return restoreText(r.text, r);
-  }
-  pickRestoreFile();
+  if (!(S.settings.backup.on && Android.readAutoBackup)) return pickRestoreFile();
+  /* the auto backup's file first; with none that can be read, the picker */
+  readAutoBackup(r => {
+    if (typeof r.text !== "string" || restoreText(r.text, r) === false) pickRestoreFile();
+  });
 }
 function pickRestoreFile() {
   try {
@@ -126,8 +158,7 @@ let AFTER_SAVE = null,
 function saveBackup(then) {
   const bridged = !!(window.Android && Android.saveFile); // else there's no save dialog to wait for
   SAVING_BACKUP = bridged;
-  AFTER_SAVE = bridged ? then || null : null;
-  saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S));
+  saveOut("tally-backup-" + today() + ".json", "application/json", JSON.stringify(S), then);
   if (!bridged && then) then();
 }
 /* Delete all data: always offers a backup first, since even an existing one may miss the latest entries (Save backup /
@@ -144,14 +175,20 @@ function wipeAll() {
       : "Save a backup of your data before deleting it?",
     "Save backup",
     () => {
-      if (!auto || backupNow()) return saveBackup(wipeConfirm); // a failed Back up now: a file instead
-      wipeConfirm();
+      if (!auto) return saveBackup(wipeConfirm);
+      /* a failed Back up now: a file instead. If the user has moved on meanwhile (a slow folder), the answer is only
+         said: the final question never pops up over something else */
+      backupNow(err => {
+        if (V.screen !== "settings" || $("#pop").innerHTML || $("#sheet").innerHTML) return;
+        if (err) saveBackup(wipeConfirm);
+        else wipeConfirm();
+      });
     },
     { cancel: "Skip", no: wipeConfirm }
   );
 }
-/* the final Yes / No; keeps the preferences: main currency, theme, reminders, haptics, the donut's middle and auto
-   backup (which never overwrites its file with an empty notebook) */
+/* the final Yes / No; keeps the preferences: main currency, week start, time format, theme, reminders, haptics, the
+   donut's middle and auto backup (which never overwrites its file with an empty notebook) */
 function wipeConfirm() {
   askDialog(
     "Delete all data?",

@@ -15,13 +15,7 @@ function syncWidget() {
   if (act.length) {
     const cur = cs.includes(S.settings.cur) ? S.settings.cur : cs[0],
       b = balances();
-    const total = rnd(act.filter(a => a.currency === cur).reduce((q, a) => q + b[a.id], 0));
-    const spent = rnd(
-      S.txns
-        .filter(x => isSpend(x) && x.date === t && (acc(x.account) || {}).currency === cur)
-        .reduce((q, x) => q + x.amount, 0)
-    );
-    o = { date: t, balance: money(total, cur), spent: money(spent, cur), zero: money(0, cur) };
+    o = { date: t, balance: money(balanceIn(cur, b), cur), spent: money(spentOn(t, cur), cur), zero: money(0, cur) };
   }
   const j = JSON.stringify(o);
   if (j === lastWidget) return;
@@ -50,10 +44,13 @@ function syncReminders() {
   /* a +1 day tapped on a notification while the page was in the background: apply it first, or the old due date
      sent below would bring the reminder back */
   applyNativeActions();
-  const r = S.settings.remind;
+  const r = S.settings.remind,
+    now = today();
+  /* the last day something was written: the day of its writing (an entry dated ahead counts on that day, never past
+     today; an old one without a time on its date) */
   const last = S.txns.reduce((m, t) => {
     const c = t.ts ? iso(new Date(t.ts)) : t.date,
-      d = c > t.date ? c : t.date;
+      d = c < now ? c : now;
     return d > m ? d : m;
   }, "");
   const dues =
@@ -202,11 +199,12 @@ function applyNativeActions() {
   list.forEach(x => {
     const l = x && loan(x.id);
     if (x.type === "extend" && l && loanInfo(l).open) {
-      extendLoan(l, +x.days || 1);
+      extendLoan(l, +x.days || 1, /^\d{4}-\d{2}-\d{2}$/.test(x.on) && x.on <= today() ? x.on : "");
       changed = true;
     }
   });
   if (changed) {
+    dropUndo(); // its snapshot is from before: Undo would take the new due date back
     save();
     render();
   }
@@ -227,19 +225,20 @@ function flushMirror() {
 function mirrorNow() {
   clearTimeout(mirrorT);
   mirrorT = 0;
-  if (!S.settings.backup.on || !canBackup()) return;
+  if (!S.settings.backup.on || !canBackup() || unreadable) return;
   try {
     Android.setBackupData(savedJson || JSON.stringify(S)); // what save() just stored (stringified once)
   } catch (e) {}
 }
-/* the daily alarm: on/off and its time */
+/* the daily alarm: on/off and its time; not while the saved data couldn't be read (the notebook in use is a blank
+   stand-in, whose "off" would make the shell drop its copy of the real one) */
 function syncBackup() {
-  if (!canBackup()) return;
+  if (!canBackup() || unreadable) return;
   try {
     Android.setBackup(JSON.stringify(Object.assign({ on: S.settings.backup.on }, hmObj(S.settings.backup.time))));
   } catch (e) {}
 }
-/* {folder, last, error} from the shell, or null in a browser */
+/* {folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
 function backupStatus() {
   if (!canBackup()) return null;
   try {
@@ -262,6 +261,7 @@ function toggleAutoBackup() {
   }
   const bs = backupStatus();
   if (!bs || !bs.folder || !bs.usable) return pickBackupFolder();
+  if (!bs.last) return folderCheck(); // nothing of this install's in that folder yet: what's there is asked about
   backupOn();
 }
 function backupOn() {
@@ -279,19 +279,76 @@ function pickBackupFolder() {
 /* window.tallyFolder: null = cancelled (nothing changes), "" = folder saved, else what went wrong */
 function onFolderPicked(err) {
   if (err == null) return;
-  if (err) snack(err);
-  else backupOn();
+  if (err) return snack(err);
+  folderCheck();
 }
-/* "Back up now": writes the latest save into the auto backup's folder at once; returns the problem, "" when done */
-function backupNow() {
-  mirrorNow();
-  let err = "Backup isn't available here";
+/* Before auto backup first writes into a folder: a Tally backup already there (after a reinstall, from another phone,
+   or Tally Dev's) is never written over unasked, nor one that can't be read; only an empty folder goes straight on */
+function folderCheck() {
+  readAutoBackup(r => {
+    if (r.none) return backupOn();
+    if (typeof r.text === "string" && r.text.trim())
+      return askDialog(
+        "This folder already has a Tally backup",
+        "Restore it on this phone, or replace it with this phone's data from now on?",
+        "Restore it",
+        () => restoreText(r.text, null, backupOn),
+        { alt: ["Replace it", backupOn], cancel: "Not now" }
+      );
+    askDialog(
+      "Couldn't read this folder's backup",
+      (r.error || "The backup file can't be read.") + " Replace it with this phone's data from now on?",
+      "Replace it",
+      backupOn,
+      { cancel: "Not now" }
+    );
+  });
+}
+/* Answers from the shell's own threads (a slow folder can't freeze the page), each matched to its request by number,
+   so two in a row never trade answers */
+let shellAsks = 0;
+const shellThen = {};
+function askShell(call, then, fail) {
+  const id = ++shellAsks;
+  shellThen[id] = then;
   try {
-    err = Android.backupNow();
-  } catch (e) {}
+    call(id);
+  } catch (e) {
+    fail(id);
+  }
+}
+function shellAnswer(id, v) {
+  const then = shellThen[id];
+  delete shellThen[id];
+  if (then) then(v);
+}
+/* the auto backup's file (window.tallyAutoBackup): `then` gets {text, when, folder}, or {error}, with none: true when
+   the folder holds no backup */
+function readAutoBackup(then) {
+  askShell(
+    id => Android.readAutoBackup(id),
+    then,
+    id => onAutoBackup({ error: "Backup isn't available here" }, id)
+  );
+}
+function onAutoBackup(r, id) {
+  shellAnswer(id, r && typeof r === "object" ? r : {});
+}
+/* "Back up now": the shell writes the latest save into the auto backup's folder (window.tallyBackedUp); `then` gets
+   the problem, "" when done */
+function backupNow(then) {
+  mirrorNow();
+  snack("Backing up…");
+  askShell(
+    id => Android.backupNow(id),
+    then,
+    id => onBackedUp("Backup isn't available here", id)
+  );
+}
+function onBackedUp(err, id) {
   if (V.screen === "settings") render();
   snack(err || "Backed up");
-  return err || "";
+  shellAnswer(id, err || "");
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
 function reminderHealth() {
@@ -311,12 +368,16 @@ function fixReminders(kind) {
 }
 /* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
    "backup" from a failed auto backup (window.tallyOpen) */
+/* the first-open permissions dialog stays up when Tally was first opened from the widget (it shows once per install) */
+const keepPermsUp = () => {
+  if (!$("#pp-rows")) closePop();
+};
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
   if (k === "add") {
     /* from the widget's quick add: today, on Home */
     applyNativeActions();
-    closePop();
+    keepPermsUp();
     BACKTO = null;
     closeSheet();
     V.screen = "home";
@@ -331,7 +392,7 @@ function openFromNative(s) {
   }
   if (k === "check" || k === "backup") {
     applyNativeActions();
-    closePop();
+    keepPermsUp();
     BACKTO = null;
     closeSheet();
     if (k === "check") {
@@ -347,7 +408,7 @@ function openFromNative(s) {
   }
   if (k !== "loan" || !loan(id)) return;
   applyNativeActions();
-  closePop();
+  keepPermsUp();
   closeSheet();
   loanOpen(id, pay === "pay");
 }
@@ -363,13 +424,15 @@ function onAppResume() {
     render();
   backupNudge();
 }
-function saveOut(name, mime, text) {
-  if (window.Android && Android.saveFile) Android.saveFile(name, mime, text);
+/* a file through Android's save dialog; `then` runs once it is saved (onFileSaved) */
+function saveOut(name, mime, text, then) {
+  const bridged = !!(window.Android && Android.saveFile);
+  AFTER_SAVE = bridged ? then || null : null;
+  if (bridged) Android.saveFile(name, mime, text);
   else snack("Saving isn't available here");
 }
-/* Android back / Escape: closes the top-most layer, else returns Home. False when there is nothing left to close
-   (then the app itself closes). Order: calculator, dialog, picker sheet, sheet, selection, other screen. */
-/* Back closes the top layer first: a dialog, then the keypad of the sheet on top, then that sheet */
+/* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),
+   then a selection, then another screen goes Home. False when there is nothing left to close (then the app closes). */
 function goBack() {
   if ($("#pop").innerHTML) {
     closePop();
@@ -379,7 +442,7 @@ function goBack() {
     const top = $("#sheet2").innerHTML ? $("#sheet2") : $("#sheet");
     if (CALC.inp && CALC.inp.isConnected) {
       if (top.contains(CALC.inp)) {
-        calcClose(CALC.id, calcToggleBtn(CALC.id), true);
+        calcClose(CALC.id, calcToggleBtn(CALC.id));
         return true;
       }
     } else {
@@ -414,24 +477,36 @@ function onFileSaved(ok) {
     save();
   }
   SAVING_BACKUP = false;
-  snack(ok ? "Saved" : "Not saved");
   const then = AFTER_SAVE;
   AFTER_SAVE = null;
-  if (then) then();
+  /* what waited on the file (Delete all data) goes on only once it landed */
+  snack(ok ? "Saved" : then ? "Not saved, so nothing was deleted" : "Not saved");
+  if (then && ok) then();
 }
 /* Auto backup is off but there's something worth keeping (3+ entries): now and then (at start or on return, at most
    once a week, never over another dialog or sheet) suggest turning it on. "Turn on" is the Settings switch. */
 function backupNudge() {
-  const s = S.settings;
-  if (!canBackup() || s.backup.on || S.txns.length < 3 || $("#pop").innerHTML || $("#sheet").innerHTML) return;
-  if (s.backupAsk && s.backupAsk > addDays(today(), -7)) return;
+  const s = S.settings,
+    bs = canBackup() && s.backup.on ? backupStatus() : null,
+    lost = !!bs && !bs.usable; // on, but the folder isn't reachable (moved to a new phone, reinstalled)
+  if (!canBackup() || (s.backup.on && !lost) || (!lost && S.txns.length < 3)) return;
+  if ($("#pop").innerHTML || $("#sheet").innerHTML || (s.backupAsk && s.backupAsk > addDays(today(), -7))) return;
   s.backupAsk = today();
   save();
-  askDialog(
-    "Keep your data safe?",
-    "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
-    "Turn on",
-    toggleAutoBackup,
-    { cancel: "Not now" }
-  );
+  if (lost)
+    askDialog(
+      "Auto backup can't reach its folder",
+      "On a new phone, or after reinstalling, Tally needs the backup folder picked again. Until then nothing is backed up.",
+      "Choose folder",
+      pickBackupFolder,
+      { cancel: "Not now" }
+    );
+  else
+    askDialog(
+      "Keep your data safe?",
+      "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
+      "Turn on",
+      toggleAutoBackup,
+      { cancel: "Not now" }
+    );
 }

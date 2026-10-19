@@ -240,11 +240,11 @@ const daysFromNow = n => {
   ok(
     csv &&
       csv.mime === "text/csv" &&
-      lines[0] === "date,type,amount,currency,account,to_account,to_amount,category,note",
-    "export writes a CSV with the header row"
+      lines[0] === "\ufeffdate,type,amount,currency,account,to_account,to_amount,category,note,to_currency,person",
+    "export writes a CSV with the header row (after a UTF-8 byte-order mark)"
   );
   ok(
-    lines.some(l => l.includes('expense,250,BDT,"Wallet"') && l.endsWith('"Tea, ""strong"""')),
+    lines.some(l => l.includes('expense,250,BDT,"Wallet"') && l.endsWith('"Tea, ""strong""",,""')),
     "quotes inside notes are escaped: " + lines[1]
   );
 

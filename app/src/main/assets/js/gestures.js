@@ -75,7 +75,6 @@ function pressStart(x, y, target) {
     LP = { x, y, cx: x, cy: y, el: hold, kind: "hold", active: false };
     LP.timer = setTimeout(() => {
       if (!LP) return;
-      LP.active = true;
       swallowNextClick();
       buzz("long");
       const el = LP.el;
@@ -181,7 +180,7 @@ function pressEnd(x, y) {
     }
   }
   smSw = null;
-  /* History: finger left → the next account chip (All → DBBL → Bkash), right → back; stops at the ends */
+  /* History: finger left → the next account chip (All → Bank → Cash), right → back; stops at the ends */
   if (hsw && x != null && !(LP && LP.active) && V.screen === "history" && !V.sel) {
     const dx = x - hsw.x,
       dy = y - hsw.y,
@@ -433,7 +432,9 @@ document.addEventListener(
     else pressOff(true);
     if (e.touches.length === 1) pressStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
     else {
+      /* a second finger (a pinch) ends every swipe */
       sw = null;
+      smSw = null;
       hsw = null;
       if (LP) {
         clearTimeout(LP.timer);

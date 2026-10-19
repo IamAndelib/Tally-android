@@ -233,6 +233,80 @@ const ok = (c, m) => {
   );
   await tap('[data-act="undo"]');
 
+  // ---- 4b. the extra as income: the income form, where the user picks the category (none is assumed)
+  await tap('[data-act="tab"][data-v="assets"]');
+  await tap('.list [data-v="L1"]');
+  await page.fill("#f-amt", "800");
+  await tap('#sheet [data-act="f-acc"][data-v="k"]');
+  await tap('#sheet [data-act="loan-pay"]');
+  ok((await txt('#pop [data-act="ask-alt"]')).includes("Track as income"), "the lending's extra: Track as income");
+  await tap('#pop [data-act="ask-alt"]');
+  const form = await page.evaluate(() => ({
+    title: document.querySelector("#sheet h2").textContent,
+    amt: document.querySelector("#f-amt").value,
+    note: document.querySelector("#f-note").value,
+    picked: document.querySelectorAll('#sheet [data-act="f-cat"][aria-pressed="true"]').length,
+    acc: (document.querySelector('#sheet [data-act="f-acc"][aria-pressed="true"]') || {}).dataset.v,
+  }));
+  ok(
+    form.title === "Money in" && /^300(\.00)?$/.test(form.amt) && form.note === "Extra from Swarna" && !form.picked,
+    "the income form: 300, its note, no category picked for the user " + JSON.stringify(form)
+  );
+  ok(form.acc === "k", "into the account the payment went to");
+  await tap('#sheet [data-act="tx-save"]');
+  ok((await txt("#snack")).includes("Pick a category") && (await state()).txns.length === 6, "it asks for one");
+  await tap('#sheet [data-act="close"]');
+  await page.waitForTimeout(150);
+  ok(
+    (await state()).txns.length === 6 && (await txt("#sheet h2")) === "Swarna",
+    "closing the form saves nothing and goes back to the lending"
+  );
+  await page.fill("#f-amt", "800");
+  await tap('#sheet [data-act="f-acc"][data-v="k"]');
+  await tap('#sheet [data-act="loan-pay"]');
+  await tap('#pop [data-act="ask-alt"]');
+  await tap('#sheet [data-act="f-cat"][data-v="gift"]');
+  await tap('#sheet [data-act="tx-save"]');
+  S = await state();
+  const inc = S.txns.filter(t => t.type === "income");
+  ok(
+    inc.length === 1 &&
+      inc[0].amount === 300 &&
+      inc[0].cat === "gift" &&
+      inc[0].account === "k" &&
+      S.txns.some(t => t.loan === "L1" && !t.principal && t.amount === 500) &&
+      !S.loans.some(l => l.kind === "borrow" && l.person === "Swarna"),
+    "saved together: the 500 that clears the lending, and 300 income under the chosen category (no new loan)"
+  );
+  ok((await bal("k")) === kb + 800, "Bkash got the full 800");
+  ok((await txt("#snack")).includes("lending cleared"), "one message: " + (await txt("#snack")));
+  await tap('[data-act="undo"]');
+  ok((await state()).txns.length === 6, "one Undo removes both");
+
+  // ---- 4c. you paid more: the extra as that payment's fee (never spending)
+  await tap('[data-act="tab"][data-v="liabs"]');
+  await tap('.list [data-v="B1"]');
+  const wb = await bal("w");
+  await page.fill("#f-amt", "1200");
+  await tap('#sheet [data-act="f-acc"][data-v="w"]');
+  await tap('#sheet [data-act="loan-pay"]');
+  ok((await txt('#pop [data-act="ask-alt"]')).includes("Track as a fee"), "the loan's extra: Track as a fee");
+  await tap('#pop [data-act="ask-alt"]');
+  S = await state();
+  const fp = S.txns.find(t => t.loan === "B1" && !t.principal && t.feeId);
+  const ff = fp && S.txns.find(t => t.id === fp.feeId);
+  ok(
+    fp && fp.amount === 1000 && ff && ff.amount === 200 && ff.feeOf === fp.id && ff.account === "w",
+    "the 1000 clears the loan, the 200 is its fee " + JSON.stringify([fp, ff])
+  );
+  ok(
+    (await bal("w")) === wb - 1200 && !S.loans.some(l => l.kind === "lend" && l.person === "Mimi"),
+    "Wallet paid 1200, no new lending"
+  );
+  ok(await page.evaluate(id => !isSpend(S.txns.find(t => t.id === id)), ff.id), "the fee is not spending");
+  await tap('[data-act="undo"]');
+  ok(!(await state()).txns.some(t => t.feeOf), "Undo removes the payment and its fee");
+
   // ---- 7. drag open → cleared
   await tap('[data-act="tab"][data-v="assets"]');
   const box = async sel => await (await page.$(sel)).boundingBox();

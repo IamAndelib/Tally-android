@@ -143,6 +143,29 @@ const ok = (c, m) => {
   const span0 = await txt("#sm .cal-h b");
   await swipe(c.x + 60, c.y + c.height / 2, c.x + c.width - 30, c.y + c.height / 2);
   ok((await txt("#sm .cal-h b")) !== span0, "swiping the chart moves the summary window");
+  /* a pinch: a second finger lands, the first slides away and lifts; nothing moves */
+  const span1 = await txt("#sm .cal-h b");
+  await page.evaluate(
+    ([x0, x1, y]) => {
+      const el = document.querySelector("#sm .smchart"),
+        T = (id, x) => new Touch({ identifier: id, target: el, clientX: x, clientY: y }),
+        fire = (type, touches, changedTouches) =>
+          el.dispatchEvent(
+            new TouchEvent(type, { bubbles: true, cancelable: true, touches, targetTouches: touches, changedTouches })
+          );
+      const a = T(1, x0),
+        b = T(2, x0 + 40),
+        a2 = T(1, x1);
+      fire("touchstart", [a], [a]);
+      fire("touchstart", [a, b], [b]);
+      fire("touchmove", [a2, b], [a2]);
+      fire("touchend", [b], [a2]);
+      fire("touchend", [], [b]);
+    },
+    [c.x + 60, c.x + c.width - 30, c.y + c.height / 2]
+  );
+  await page.waitForTimeout(200);
+  ok((await txt("#sm .cal-h b")) === span1, "a pinch (two fingers) on the chart doesn't move it");
   const sheetP = await (await page.$("#sheet .p")).boundingBox();
   await swipe(sheetP.x + 40, sheetP.y + 120, sheetP.x + sheetP.width - 20, sheetP.y + 130);
   ok(

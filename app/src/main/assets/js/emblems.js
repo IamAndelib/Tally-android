@@ -4,7 +4,6 @@
  */
 "use strict";
 
-/* category icon circle: tinted, but opaque so leader lines pass underneath cleanly */
 /* default colours: validated with a colour-blind-safe check (OKLab ΔE) in ring order on the light and dark surfaces;
    the last six are extra choices for the user */
 const PALETTE = [
@@ -35,17 +34,10 @@ const TYPE_ICON = {
   savings: "savings",
 };
 const TYPE_COL = { bank: "#2a78d6", wallet: "#e0578c", cash: "#15a06f", card: "#4b5fd6", savings: "#c98500" };
-const lum = h => {
-  const c = hexRgb(h).map(v => {
-    v /= 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-};
-/* white or near-black glyph, whichever reads better on the circle */
+/* white or near-black glyph, whichever reads better on the circle (lumOf: theme.js) */
 const glyphOn = bg => {
-  const L = lum(bg);
-  return 1.05 / (L + 0.05) >= (L + 0.05) / (lum("#1b1b1f") + 0.05) ? "#ffffff" : "#1b1b1f";
+  const L = lumOf(bg);
+  return 1.05 / (L + 0.05) >= (L + 0.05) / (lumOf("#1b1b1f") + 0.05) ? "#ffffff" : "#1b1b1f";
 };
 function emblem(o, cls) {
   const c = (o && o.c) || "#7a8190",
@@ -80,8 +72,9 @@ const typeChip = (k, sel) =>
   (sel === k) +
   '">' +
   emblem({ i: typeIcon(k), c: typeCol(k) }, "sm") +
+  '<span class="chn" dir="auto">' +
   esc(typeName(k)) +
-  "</button>";
+  "</span></button>";
 /* colours: hex codes the user typed are remembered and offered in every picker */
 function normHex(v) {
   let h = String(v || "")

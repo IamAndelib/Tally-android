@@ -47,8 +47,9 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers (with their fees)
-and balance fixes never count as spending or income; loans and lendings move money but are never spending either.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers and loan payments
+(with their fees) and balance fixes never count as spending or income; loans and lendings move money but are never
+spending either.
 
 ## Details that are easy to break
 
@@ -56,7 +57,8 @@ and balance fixes never count as spending or income; loans and lendings move mon
 - Only `https://appassets.androidplatform.net/…` stays in the WebView; other http(s) links open the browser, every
   other scheme is dropped. File and content access stay off; the WebView never reads files itself (Restore and file
   saving go through native pickers).
-- Shell → page answers (`tallySaved`, `tallyRestore`, `tallyFolder`, `tallyOpen`) go through `callPage()`, queued until
+- Shell → page answers (`tallySaved`, `tallyRestore`, `tallyFolder`, `tallyOpen`, `tallyBackedUp`, `tallyAutoBackup`) go
+  through `callPage()`, queued until
   the page calls `Android.ready()` at the end of `js/main.js` (not from rAF: a hidden WebView may never run it). The
   page installs its `window.tally*` hooks last, in `js/main.js`.
 - `onRenderProcessGone` recreates the activity, so every `web` use is null-guarded.
@@ -72,17 +74,18 @@ and balance fixes never count as spending or income; loans and lendings move mon
   (`configChanges`), the page re-renders on the resize.
 - The WebView's text zoom is off (`setTextZoom(100)`): the page follows the phone's text size itself
   (`Android.fontScale()` → `applyTextScale()` sets the root font size, capped at `TEXT_MAX`). So every font size in
-  CSS is in `rem`, and a box holding text grows with it (`min-height`, not `height`).
+  CSS is in `rem` (only the lines under a row's amount are in `em`, to shrink with it in `fitFigures()`), and a box
+  holding text grows with it (`min-height`, not `height`).
 
 **Reminders, widget and backup**
-- Every alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact. Never `USE_EXACT_ALARM` (Play
-  reserves it for clock and calendar apps). `BootReceiver` and `TallyWidget.onUpdate` re-arm; receivers never re-arm
-  each other.
+- Every reminder and backup alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact (only the
+  widget's midnight refresh is a plain inexact `set`). Never `USE_EXACT_ALARM` (Play reserves it for clock and calendar
+  apps). `BootReceiver` and `TallyWidget.onUpdate` re-arm; receivers never re-arm each other.
 - A changed reminder sync updates notifications still on screen (`refreshShown()`) quietly, or removes them once they
   no longer apply; a dismissed one never comes back.
-- Permissions: the page offers two (notifications, unrestricted battery, which also allows exact alarms). The
-  first-open dialog shows once per install (`Android.permsIntro()`), and each Allow opens exactly one Android prompt.
-  No automatic chain of prompts.
+- Permissions: the page offers two (notifications, unrestricted battery, which also allows exact alarms), plus Alarms
+  & reminders only while the battery is unrestricted but exact alarms are still off. The first-open dialog shows once
+  per install (`Android.permsIntro()`), and each Allow opens exactly one Android prompt. No automatic chain of prompts.
 - The widget has no periodic updates; the page pushes ready-formatted numbers (`syncWidget()`).
 - Auto backup (`BackupReceiver.java`) rewrites the **same** "Tally backup.json" document in place (never delete +
   rename: the new file's stale indexed size broke Restore), verifies every write, and never writes an empty or
@@ -91,8 +94,14 @@ and balance fixes never count as spending or income; loans and lendings move mon
 **Page (`app/src/main/assets`)**
 - Classic scripts in one global scope, loaded in the order in `index.html`. Start-up code lives in `js/main.js` only:
   `loadState()` there needs every constant (`migrate()` uses `PALETTE`).
+- Saved data is written only by `save()`: to localStorage and, numbered (`saveSeq`), to the shell's copy
+  (`Android.keepState`, `SavedCopy.java`), because WebView stores localStorage seconds late and a swipe from Recents
+  lost the last save; `loadState()` takes the copy with the higher number (a tie: localStorage).
 - Saved data is never silently dropped: unreadable text is kept and offered as a file. `migrate()` upgrades and
   sanitises every saved state and backup without changing balances. Accounts with entries are archived, never deleted.
+- Every category keeps its id when renamed, and a built-in one can be renamed into anything, so Tally never files an
+  entry under a category by itself: fees link to their transfer or payment (`feeOf`), and anything else lets the user
+  pick (the entry form, prefilled: `txSheet(…, pre)`).
 - `S.settings.cur` is `""` until a new notebook chooses its currency: new accounts and assets go through `accForm()` /
   `assetForm()`, which ask for it first. Week start (`settings.week`) and time format (`settings.clock`) are read
   from settings only, never from the phone (only `migrate()` reads the phone's clock, for older saves).

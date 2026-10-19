@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Lints the app's scripts the way the page loads them: every <script src> of index.html, in order, sharing one
 // global scope. So a name defined in one file and used in another is fine, but a typo or a leftover is not.
-// Problems are reported as file:line. Exits 1 on any error.
+// The stylesheets are checked for selectors the oldest supported WebView can't read. Problems are reported as
+// file:line. Exits 1 on any error.
 
 const fs = require("fs");
 const path = require("path");
@@ -55,7 +56,17 @@ const where = line => {
   });
   const [result] = await eslint.lintText(text);
   for (const m of result.messages) console.log(`${where(m.line)}:${m.column}  ${m.message}  (${m.ruleId})`);
-  const errors = result.messages.length;
+  let errors = result.messages.length;
+  // selectors newer than the oldest supported WebView (87): it drops a whole rule over one it can't read
+  for (const m of html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)) {
+    const css = fs
+      .readFileSync(path.join(ASSETS, m[1]), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, c => c.replace(/[^\n]/g, " ")); // comments out, lines kept
+    css.split("\n").forEach((l, i) => {
+      const s = l.match(/:(is|where|has)\(/);
+      if (s && ++errors) console.log(`app/src/main/assets/${m[1]}:${i + 1}  ${s[0]}) needs WebView 88 or later`);
+    });
+  }
   console.log(errors ? `\n${errors} problem(s)` : `lint: ${files.length} scripts, no problems`);
   process.exit(errors ? 1 : 0);
 })();

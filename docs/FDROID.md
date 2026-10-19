@@ -3,7 +3,7 @@
 [F-Droid](https://f-droid.org) is the app store for free and open-source Android apps. It **builds each app itself from
 the public source code**. Tally is in F-Droid's catalogue as `app.tally.expenses`: it was accepted on 2026-10-08
 ([fdroid/fdroiddata!50680](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/50680)), starting with 1.3.1. Its
-page, once F-Droid has published the first build, is <https://f-droid.org/packages/app.tally.expenses/>.
+page is <https://f-droid.org/packages/app.tally.expenses/>.
 
 Tally qualifies because it has:
 - an MIT licence;
