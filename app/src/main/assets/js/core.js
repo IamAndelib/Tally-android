@@ -160,6 +160,31 @@ function canDraw(s) {
   DRAWN.set(s, ok);
   return ok;
 }
+/* currency signs the phone's data leaves out (Android's web view ships a trimmed copy): the sign each currency has in
+   its home country's own locale data (B/. in Panama, S/ in Peru), used only where the phone would show the bare code.
+   Only signs no other currency uses, so two accounts never look alike. */
+const LOCAL_SYM = {
+  ANG: "NAf.",
+  AWG: "Afl.",
+  BIF: "FBu",
+  KES: "Ksh",
+  MOP: "MOP$",
+  MWK: "MK",
+  PAB: "B/.",
+  PEN: "S/",
+  SCR: "SR",
+  TZS: "TSh",
+  UGX: "USh",
+  VES: "Bs.S",
+};
+/* f's text for v, with LOCAL_SYM's sign in place of a bare code (f.sym, set in money()) */
+const fmtSym = (f, v) =>
+  f.sym
+    ? f
+        .formatToParts(v)
+        .map(p => (p.type === "currency" ? f.sym : p.value))
+        .join("")
+    : f.format(v);
 /* formatters are slow to build and money() runs for every row, so each kind is built once */
 const NF = new Map();
 function money(n, cur, short) {
@@ -181,6 +206,7 @@ function money(n, cur, short) {
       /* a currency sign this phone has no font for (e.g. the Kyrgyz som ⃀) would show as a box: use the code */
       const sym = (f.formatToParts(0).find(p => p.type === "currency") || {}).value;
       if (sym && !canDraw(sym)) f = new Intl.NumberFormat(undefined, Object.assign(o, { currencyDisplay: "code" }));
+      else if (sym === cur && LOCAL_SYM[cur]) f.sym = LOCAL_SYM[cur];
     } catch (e) {
       /* no currency chosen yet (a new notebook), or one this phone doesn't know */
       return (cur ? cur + " " : "") + rnd(n).toLocaleString();
@@ -188,7 +214,7 @@ function money(n, cur, short) {
     f.dp = 10 ** f.resolvedOptions().maximumFractionDigits;
     NF.set(k, f);
   }
-  return f.format(toDp(n, f.dp));
+  return fmtSym(f, toDp(n, f.dp));
 }
 /* n rounded to 1/dp the way Intl shows it: halves away from zero, past float error (1.005 → 1.01), and −0 as 0 */
 const toDp = (n, dp) => (Math.sign(n) * Math.round(Math.abs(n) * dp + 1e-7)) / dp + 0;
@@ -208,7 +234,7 @@ const signed = (n, cur) => {
   if (!f) return sign + money(Math.abs(v), cur); // a currency this phone doesn't know
   return f
     .formatToParts(-Math.abs(v))
-    .map(p => (p.type === "minusSign" ? sign : p.value))
+    .map(p => (p.type === "minusSign" ? sign : p.type === "currency" && f.sym ? f.sym : p.value))
     .join("");
 };
 /* the phone's language for dates, on the Gregorian calendar Tally counts in (a phone set to another calendar, such as

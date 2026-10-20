@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.1] — 2026-10-20
+
+### Fixed
+
+- Currencies:
+  - Phones with an older Android System WebView (before version 99) list every currency again, not only the popular
+    ones, so the Guatemalan quetzal, the Panamanian balboa and the rest can be chosen there too.
+  - The currency search finds a currency by its name in the phone's language or in English, without accents and with
+    other endings ("quetzales", "panameno", "balboas"), and by its sign ("B/.", "Q").
+  - Currencies the phone has no sign for show the one used at home: B/. for the Panamanian balboa, S/ for the Peruvian
+    sol, Ksh, TSh and USh for the Kenyan, Tanzanian and Ugandan shillings, and a few more.
+
 ## [1.4.0] — 2026-10-19
 
 ### Added
@@ -409,6 +421,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.1
 [1.4.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.0
 [1.3.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.2
 [1.3.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.1

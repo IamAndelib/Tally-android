@@ -546,8 +546,18 @@ const MAJOR = [
   "QAR",
   "KWD",
 ];
+/* the currencies a current web view lists (Intl.supportedValuesOf, from Chrome 99), for the older ones that can't */
+const ISO4217 = (
+  "AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF " +
+  "CLP CNY COP CRC CUC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL " +
+  "HRK HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD " +
+  "MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR " +
+  "RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLL SOS SRD SSP STN SVC SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS " +
+  "UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XDR XOF XPF XSU YER ZAR ZMW ZWL"
+).split(" ");
 let CURPICK = null,
   curDN,
+  curEN,
   curAll = null;
 const curSyms = {};
 function curName(c) {
@@ -566,9 +576,20 @@ function curSym(c) {
     const p = new Intl.NumberFormat(undefined, { style: "currency", currency: c, currencyDisplay: "narrowSymbol" })
       .formatToParts(0)
       .find(x => x.type === "currency");
-    if (p && p.value !== c && canDraw(p.value)) s = p.value; // no symbol rather than a tofu box
+    if (p && p.value === c) s = LOCAL_SYM[c] || "";
+    else if (p && canDraw(p.value)) s = p.value; // no symbol rather than a tofu box
   } catch (e) {}
   return (curSyms[c] = s);
+}
+/* the English name too, so a search finds a currency by either */
+function curNameEn(c) {
+  try {
+    curEN = curEN || new Intl.DisplayNames("en", { type: "currency" });
+    const n = curEN.of(c);
+    return n && n !== c ? n : "";
+  } catch (e) {
+    return "";
+  }
 }
 const curLabel = c => {
   const n = curName(c);
@@ -576,7 +597,7 @@ const curLabel = c => {
 };
 function allCurs() {
   if (!curAll) {
-    let l = [];
+    let l = ISO4217;
     try {
       if (Intl.supportedValuesOf) l = Intl.supportedValuesOf("currency");
     } catch (e) {}
@@ -584,6 +605,23 @@ function allCurs() {
     curAll = MAJOR.concat(rest);
   }
   return curAll;
+}
+/* lower case, without accents: "Panameño" → "panameno" */
+const fold = t =>
+  String(t)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+/* whether currency c answers the search q: by code, symbol, or its name in the phone's language or English. Each word
+   typed must start a word of the name, or start with one (of 4 letters or more), so plurals and other endings match:
+   "quetzales" finds the Guatemalan quetzal, "balboas" the Panamanian balboa. */
+function curMatch(c, q) {
+  q = fold(q).trim();
+  if (!q) return true;
+  const names = [c, curSym(c), curName(c), curNameEn(c)].map(fold);
+  if (names.some(n => n.includes(q))) return true;
+  const words = names.join(" ").split(/[^\p{L}\p{N}]+/u);
+  return q.split(/\s+/).every(w => words.some(n => n && (n.startsWith(w) || (n.length >= 4 && w.startsWith(n)))));
 }
 function curPicker(current, onPick, title) {
   openSheet2(
@@ -599,8 +637,7 @@ function curList(q) {
   const box = $("#curlist");
   if (!box) return;
   const cur = box.dataset.cur;
-  q = q.trim().toLowerCase();
-  const match = c => !q || c.toLowerCase().includes(q) || curName(c).toLowerCase().includes(q);
+  const match = c => curMatch(c, q);
   const row = c =>
     '<button class="tx" data-act="cur-pick" data-v="' +
     esc(c) +
@@ -621,7 +658,7 @@ function curList(q) {
   };
   const inUse = [...new Set([cur, S.settings.cur].concat(S.accounts.map(a => a.currency)))].filter(Boolean),
     all = allCurs();
-  if (q) sec("Results", [...new Set(inUse.concat(all))]);
+  if (q.trim()) sec("Results", [...new Set(inUse.concat(all))]);
   else {
     sec("In use", inUse);
     sec(

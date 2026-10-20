@@ -223,7 +223,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how the pieces fit together and how t
 ## Releasing
 
 1. In a pull request, bump `tallyVersion` and `tallyVersionCode` in `gradle.properties`, add the version's section to
-   `CHANGELOG.md` and its short notes to `fastlane/metadata/android/en-US/changelogs/<tallyVersionCode>.txt`.
+   `CHANGELOG.md` and its short notes to `fastlane/metadata/android/en-US/changelogs/<tallyVersionCode>.txt`. A small
+   release (fixes and small touches) bumps the patch number (1.4.0 → 1.4.1); only a feature update bumps the minor
+   (→ 1.5.0), and a major change the major.
 2. Try it as users will get it. On the pull request's branch, CI makes a **preview**: a draft release
    `preview-X.Y.Z` (only people with write access see drafts) whose APK, signed with the release key, installs over
    the current release and keeps its data. The release itself updates over it later.
