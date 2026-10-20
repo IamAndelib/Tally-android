@@ -5,6 +5,29 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.1] — 2026-10-20
+
+### Fixed
+
+- Currencies:
+  - Every currency is listed with its name, also on phones whose Android System WebView leaves most currency names out
+    or can't list currencies at all (before version 99), so the Guatemalan quetzal, the Panamanian balboa and the rest
+    can be found and chosen everywhere. Newer currencies (Zimbabwean Gold, the new Sierra Leonean leone, the Caribbean
+    guilder) can be chosen too.
+  - The currency search finds a currency by a country that uses it ("Germany" finds the euro, "Ecuador" the US dollar,
+    "Panama" the balboa, then the US dollar), by its name in the phone's language or in English, without accents and
+    with other endings ("quetzales", "balboas"), by its code and by its sign ("B/.", "Q"). The best match comes first,
+    so Enter picks it: the code typed in full, then a name, then a country, and a retired currency after the one that
+    replaced it ("Croatia" lists the euro before the kuna). Names with "&" or "St." can be typed with "and" or
+    "Saint", and letters such as ı, ł, ø or full-width ＵＳＤ match their plain forms.
+  - Currencies the phone has no sign for show the one used at home: B/. for the Panamanian balboa, S/ for the Peruvian
+    sol, Ksh, TSh and USh for the Kenyan, Tanzanian and Ugandan shillings, Cg. for the Caribbean guilder, and a few
+    more.
+  - The picker lists the currencies of assets under "In use" too.
+- Auto backup: changing its folder to one that already holds a Tally backup no longer writes over that backup when
+  the question "Restore it or replace it?" is answered "Not now" or closed. Auto backup stays off until Restore it or
+  Replace it.
+
 ## [1.4.0] — 2026-10-19
 
 ### Added
@@ -409,6 +432,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.1
 [1.4.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.0
 [1.3.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.2
 [1.3.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.1

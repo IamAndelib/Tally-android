@@ -287,6 +287,13 @@ function onFolderPicked(err) {
 function folderCheck() {
   readAutoBackup(r => {
     if (r.none) return backupOn();
+    // the shell already writes to the new folder on schedule: until Restore it or Replace it, auto backup is off
+    if (S.settings.backup.on) {
+      S.settings.backup.on = false;
+      save();
+      syncBackup();
+      if (V.screen === "settings") render();
+    }
     if (typeof r.text === "string" && r.text.trim())
       return askDialog(
         "This folder already has a Tally backup",

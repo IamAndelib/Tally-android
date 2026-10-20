@@ -144,7 +144,8 @@ spending either.
     verifies it and publishes the release and tag. On another branch with such a version, it makes the preview instead
     (versionCode one below the release's, versionName `X.Y.Z-preview.<run>`, a draft with no tag) and keeps only the
     newest preview.
-- Releasing: in a PR, bump `tallyVersion` + `tallyVersionCode`, add the `CHANGELOG.md` section and
+- Releasing: in a PR, bump `tallyVersion` + `tallyVersionCode` (the patch for a small release, the minor only for a
+  feature update: README → Releasing), add the `CHANGELOG.md` section and
   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, then merge into `main`; CI creates the tag (this
   environment can't push tags). F-Droid picks up new tags by itself (see [docs/FDROID.md](docs/FDROID.md)).
 
