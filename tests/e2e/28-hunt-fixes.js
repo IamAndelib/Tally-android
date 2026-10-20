@@ -683,6 +683,19 @@ const ok = (c, m) => {
   );
   await bp.click('#pop [data-act="ask-alt"]'); // Replace it
   ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns auto backup on");
+  // Change to another folder that holds a backup, auto backup on: nothing is written there unless the answer says so
+  await bp.evaluate(() => onFolderPicked(""));
+  ok(
+    (await bp.textContent("#pop")).includes("already has a Tally backup") &&
+      !(await bp.evaluate(() => S.settings.backup.on)),
+    "changing to a folder that holds a backup turns auto backup off until answered"
+  );
+  await bp.evaluate(() => closePop()); // Not now
+  ok(!(await bp.evaluate(() => S.settings.backup.on)), "Not now leaves it off: the backup there is never written over");
+  await bp.evaluate(() => onFolderPicked(""));
+  await bp.waitForSelector('#pop [data-act="ask-alt"]');
+  await bp.click('#pop [data-act="ask-alt"]'); // Replace it
+  ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns it back on");
   await bp.evaluate(() => {
     sessionStorage.setItem("cfg", JSON.stringify({ status: { folder: "", usable: false, last: 0, error: "" } }));
     V.screen = "settings";

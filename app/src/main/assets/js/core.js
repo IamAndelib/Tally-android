@@ -176,6 +176,7 @@ const LOCAL_SYM = {
   TZS: "TSh",
   UGX: "USh",
   VES: "Bs.S",
+  XCG: "Cg.",
 };
 /* f's text for v, with LOCAL_SYM's sign in place of a bare code (f.sym, set in money()) */
 const fmtSym = (f, v) =>

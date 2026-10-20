@@ -1,3 +1,4 @@
 - Every currency is listed with its name on every phone, newer ones included.
-- Currency search finds a currency by country ("Germany" finds the euro), name, code or sign like B/.
+- Currency search finds a currency by country ("Germany" finds the euro), name, code or sign like B/., best match first.
 - Currencies without a sign on your phone show the local one, such as B/. for the Panamanian balboa.
+- Auto backup no longer writes over a backup already in a newly chosen folder unless you say so.

@@ -573,14 +573,18 @@ function curSym(c) {
   } catch (e) {}
   return (curSyms[c] = s);
 }
-/* the countries that use currency c, each as its name in the phone's language (where the phone has one) and its
-   English names, "|" between them */
-function curCountries(c) {
+/* the countries (ISO 3166 codes) that use currency c today: none for a retired one */
+function curRegionsOf(c) {
   if (!curRegions) {
     curRegions = {};
     for (const r in REGIONS) REGIONS[r][1].split(" ").forEach(k => (curRegions[k] = curRegions[k] || []).push(r));
   }
-  return (curRegions[c] || []).map(r => {
+  return curRegions[c] || [];
+}
+/* the countries that use currency c, each as its name in the phone's language (where the phone has one) and its
+   English names, "|" between them */
+function curCountries(c) {
+  return curRegionsOf(c).map(r => {
     let n = "";
     try {
       regDN = regDN || new Intl.DisplayNames(undefined, { type: "region" });
@@ -599,40 +603,69 @@ function allCurs() {
     try {
       if (Intl.supportedValuesOf) l = [...new Set(Intl.supportedValuesOf("currency").concat(l))];
     } catch (e) {}
-    const rest = l.filter(c => !MAJOR.includes(c)).sort((a, b) => (curName(a) || a).localeCompare(curName(b) || b));
+    const name = new Map(l.map(c => [c, curName(c) || c])),
+      coll = new Intl.Collator();
+    const rest = l.filter(c => !MAJOR.includes(c)).sort((a, b) => coll.compare(name.get(a), name.get(b)));
     curAll = MAJOR.concat(rest);
   }
   return curAll;
 }
-/* lower case, without accents or apostrophes: "Panameño" → "panameno", "Côte d’Ivoire" → "cote divoire" */
-const fold = t =>
+/* text as the search compares it: lower case, without accents, apostrophes or full-width forms, letters with a stroke
+   spelled plainly and "&" as "and" ("Panameño" → "panameno", "Côte d’Ivoire" → "cote divoire", "ＵＳＤ" → "usd") */
+const PLAIN = { ı: "i", ł: "l", đ: "d", ø: "o", æ: "ae", œ: "oe", ß: "ss", þ: "th" };
+const curFold = t =>
   String(t)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f'’`]/g, "")
-    .toLowerCase();
-const wordsOf = t => t.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-/* each currency's search text, folded once (the euro alone has some 35 countries) */
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f'‘’`´ʻʼ]/g, "")
+    .replace(/[ıłđøæœßþ]/g, ch => PLAIN[ch])
+    .replace(/&/g, " and ");
+/* words, vowel signs and other combining marks included (Hindi, Thai) */
+const curWords = t => t.split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
+/* each currency's search text, folded once: its code and sign, the words of its names, then those of each country
+   using it (the euro: 39) */
 const CURQ = new Map();
-/* how currency c answers the search q: 2 by its code, sign or name (the phone's language or English), 1 by a country
-   that uses it, 0 not at all. Each word typed must start a word there, or start with one (of 4 letters or more), so
-   plurals and other endings match: "quetzales" finds the Guatemalan quetzal, "balboas" the Panamanian balboa. */
-function curMatch(c, q) {
-  q = fold(q).trim();
-  if (!q) return 2;
+function curText(c) {
   let t = CURQ.get(c);
   if (!t) {
-    const own = fold([c, curSym(c), curName(c), CUR_EN[c] || ""].join(" "));
-    t = [{ f: own, w: wordsOf(own) }].concat(
-      curCountries(c).map(n => {
-        const f = fold(n.replace(/\|/g, " "));
-        return { f, w: wordsOf(f) };
-      })
-    );
+    const words = s => curWords(curFold(s));
+    t = {
+      sign: curFold(c + " " + curSym(c)),
+      own: words([c, curSym(c), ...new Set([curName(c), CUR_EN[c] || ""])].join(" ")),
+      lands: curCountries(c).map(words),
+    };
     CURQ.set(c, t);
   }
-  const qw = q.split(/\s+/),
-    hit = e => e.f.includes(q) || qw.every(x => e.w.some(n => n.startsWith(x) || (n.length >= 4 && x.startsWith(n))));
-  return hit(t[0]) ? 2 : t.slice(1).some(hit) ? 1 : 0;
+  return t;
+}
+/* how well currency c answers the search q, best first (0: not at all):
+   6 the code itself; 5.5 its code or sign holds the search ("B/.", "Q"); 5 every word typed starts a word of its code,
+   sign or name (the phone's language or English); 4 the same in a country that uses it; 3 a typed word starts with a
+   word of its name of 4 letters or more, so plurals and other endings match ("quetzales" finds the Guatemalan
+   quetzal); 2 the same for a country. A retired currency (the kuna) ranks below the ones that replaced it. */
+function curMatch(c, q) {
+  q = curFold(q).trim();
+  if (!q) return 6;
+  const t = curText(c),
+    qw = curWords(q),
+    starts = w => qw.every(x => w.some(n => n.startsWith(x))),
+    ends = w => qw.every(x => w.some(n => n.startsWith(x) || (n.length >= 4 && x.startsWith(n))));
+  if (!qw.length) qw.push(q); // only punctuation: a sign, or nothing
+  const s =
+    q === curFold(c)
+      ? 6
+      : t.sign.includes(q)
+        ? 5.5
+        : starts(t.own)
+          ? 5
+          : t.lands.some(starts)
+            ? 4
+            : ends(t.own)
+              ? 3
+              : t.lands.some(ends)
+                ? 2
+                : 0;
+  return s && s < 6 && !curRegionsOf(c).length ? s - 2.5 : s;
 }
 function curPicker(current, onPick, title) {
   openSheet2(
@@ -643,12 +676,13 @@ function curPicker(current, onPick, title) {
   );
   CURPICK = onPick;
   curList("");
+  // the first search builds every currency's search text: do it while the list is only being looked at
+  if (window.requestIdleCallback) requestIdleCallback(() => allCurs().forEach(curText));
 }
 function curList(q) {
   const box = $("#curlist");
   if (!box) return;
   const cur = box.dataset.cur;
-  const match = c => curMatch(c, q);
   const row = c =>
     '<button class="tx" data-act="cur-pick" data-v="' +
     esc(c) +
@@ -663,14 +697,14 @@ function curList(q) {
     "</button>";
   let h = "";
   const sec = (title, l) => {
-    l = l.filter(match);
     if (l.length)
       h += '<div class="day"><span>' + title + '</span></div><div class="list">' + l.map(row).join("") + "</div>";
   };
-  const inUse = [...new Set([cur, S.settings.cur].concat(S.accounts.map(a => a.currency)))].filter(Boolean),
+  const used = S.accounts.concat(S.assets).map(a => a.currency),
+    inUse = [...new Set([cur, S.settings.cur].concat(used))].filter(Boolean),
     all = allCurs();
   if (q.trim()) {
-    /* found by name before found by country: "Panama" lists the balboa, then the US dollar */
+    /* best match first (curMatch): "Panama" lists the balboa, then the US dollar; Enter picks the first */
     const rank = new Map([...new Set(inUse.concat(all))].map(c => [c, curMatch(c, q)]));
     sec(
       "Results",

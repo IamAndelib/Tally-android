@@ -111,6 +111,46 @@ const ok = (c, m) => {
       !(await search(page, "United Kingdom")).includes("USD"),
       "android: a country's words must all match one country"
     );
+    // names CLDR writes with "&", "St." or another spelling, typed the usual way
+    for (const [q, c] of [
+      ["trinidad and tobago", "TTD"],
+      ["bosnia and herzegovina", "BAM"],
+      ["saint lucia", "XCD"],
+      ["St. Lucia", "XCD"],
+      ["macau", "MOP"],
+      ["holy see", "EUR"],
+      ["guinea-bissau", "XOF"],
+    ])
+      ok((await search(page, q)).includes(c), `android: search "${q}" finds ${c}`);
+    ok((await search(page, "guinea-bissau")).length === 1, "android: a hyphenated name is one country");
+    // the best match first, which Enter picks
+    for (const [q, first] of [
+      ["France", "EUR"],
+      ["croatia", "EUR"],
+      ["bulgaria", "EUR"],
+      ["zimbabwe", "ZWG"],
+      ["ron", "RON"],
+      ["nad", "NAD"],
+      ["irr", "IRR"],
+      ["ang", "ANG"],
+      ["nigeria", "NGN"],
+      ["Guatemala", "GTQ"],
+      ["quetzales", "GTQ"],
+      ["B/.", "PAB"],
+    ]) {
+      const l = await search(page, q);
+      ok(l[0] === first, `android: "${q}" lists ${first} first: ${l.slice(0, 4)}`);
+    }
+    ok(
+      (await search(page, "zimbabwe"))[1] === "USD",
+      "android: Zimbabwe: its gold, then the US dollar, then the old dollar"
+    );
+    let picked = "";
+    await page.evaluate(() => curPicker("USD", c => (window.picked = c)));
+    await page.fill("#cur-q", "France");
+    await page.press("#cur-q", "Enter");
+    picked = await page.evaluate(() => window.picked);
+    ok(picked === "EUR", 'android: Enter on "France" picks the euro: ' + picked);
     await ctx.close();
   }
 
@@ -171,7 +211,36 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
-  // ---- 4. signs: the home country's where the phone has none, everything else as before
+  // ---- 4. other scripts and letters: Hindi words in any order, Turkish ı, Polish ł, full-width Latin
+  for (const [locale, q, c] of [
+    ["hi-IN", "रुपया भारतीय", "INR"],
+    ["tr-TR", "ırak", "IQD"],
+    ["pl-PL", "lotwa", "EUR"],
+    ["ja-JP", "ＵＳＤ", "USD"],
+  ]) {
+    const { ctx, page } = await open(locale);
+    await page.evaluate(() => curPicker("USD", () => {}));
+    await page.waitForTimeout(100);
+    ok((await search(page, q)).includes(c), `${locale}: search "${q}" finds ${c}`);
+    await ctx.close();
+  }
+
+  // ---- 5. an asset's currency is in use too
+  {
+    const { ctx, page } = await open("en-US");
+    await page.evaluate(() => {
+      S.assets.push({ id: "g", name: "Land", value: 5, currency: "KES" });
+      curPicker("USD", () => {});
+    });
+    await page.waitForTimeout(100);
+    const inUse = await page.$$eval("#curlist .list", l =>
+      [...l[0].querySelectorAll("[data-v]")].map(b => b.dataset.v)
+    );
+    ok(inUse.includes("KES"), "an asset's currency is listed under In use: " + inUse);
+    await ctx.close();
+  }
+
+  // ---- 6. signs: the home country's where the phone has none, everything else as before
   {
     const { ctx, page } = await open("en-US");
     const r = await page.evaluate(() => ({
@@ -186,6 +255,7 @@ const ok = (c, m) => {
       usd: [money(5, "USD", true), money(5, "USD"), signed(-5, "USD")],
       sek: money(5, "SEK", true),
       sarShort: money(5, "SAR", true),
+      xcg: money(5, "XCG", true),
     }));
     ok(r.sym === "B/." && r.pen === "S/" && r.gtq === "Q", "picker signs: PAB B/., PEN S/, GTQ Q (" + r.gtq + ")");
     ok(r.sar === "", "SAR, with no sign in Latin letters, shows none on an English phone");
@@ -195,6 +265,7 @@ const ok = (c, m) => {
     ok(r.usd.join("|") === "$5.00|$5.00|−⁠$5.00", "USD unchanged: " + r.usd.join("|"));
     ok(r.sek === "kr\u00a05.00", "SEK short unchanged: " + r.sek);
     ok(r.sarShort.includes("SAR"), "SAR keeps its code: " + r.sarShort);
+    ok(r.xcg.includes("Cg.") || !r.xcg.includes("XCG"), "the Caribbean guilder has a sign: " + r.xcg);
     await ctx.close();
   }
 
