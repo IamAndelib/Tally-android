@@ -82,7 +82,7 @@ function restoreText(t, auto, after) {
      left out, and said so */
   const count = (k, one, many) => n[k].length + " " + (n[k].length === 1 ? one : many),
     had = k => (Array.isArray(o[k]) ? o[k].length - n[k].length : 0),
-    lost = had("txns") + had("accounts") + had("loans") + had("assets"),
+    lost = had("txns") + had("accounts") + had("loans") + had("assets") + had("repeats"),
     newer = typeof o.v === "number" && o.v > blank().v;
   askDialog(
     auto ? "Restore Tally backup.json?" : "Restore this backup?",

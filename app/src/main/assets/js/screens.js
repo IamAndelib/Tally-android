@@ -38,8 +38,9 @@ function render() {
 function drawScreen() {
   const app = $("#app");
   RBC = null;
+  REPC = null;
   if (V.screen !== "history") V.sel = null;
-  const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
+  const tabs = ["home", "plan", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
   document.body.classList.toggle("land", land);
@@ -59,6 +60,7 @@ function drawScreen() {
   if (V.screen === "history") app.innerHTML = historyView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
+  else if (V.screen === "plan") app.innerHTML = planView();
   else if (V.screen === "settings") {
     app.innerHTML = settingsView();
     fitWeekSeg();
@@ -70,6 +72,7 @@ function drawScreen() {
     ? '<div class="in">' +
       [
         ["home", "Home", "home"],
+        ["plan", "Plan", "event"],
         ["assets", "Assets", "wallet"],
         ["liabs", "Liabilities", "card"],
       ]
@@ -180,6 +183,7 @@ function homeView() {
       '<button class="acc add" data-act="acc-form" aria-label="Add account">' +
       ic("add") +
       "</button></div>";
+  side += planLine(); // something due today or tomorrow: one line, to Plan
   /* one column: the balances (or the balance card) above the ring; two panes: beside it, with the period's entries */
   if (!wide) h += side;
   else {
@@ -541,6 +545,9 @@ function txLine(t) {
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
+  /* written for a repeating item: a small mark, named for screen readers */
+  if (t.rep && rep(t.rep))
+    s = '<span class="repmark">' + ic("event") + '<span class="vh">Repeating. </span></span>' + s;
   const selMode = !!V.sel && V.screen === "history",
     on = selMode && V.sel.has(t.id);
   return (

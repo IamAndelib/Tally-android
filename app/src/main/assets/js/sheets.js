@@ -132,8 +132,9 @@ const catBtns = (list, sel) =>
     )
     .join("");
 const catChipInner = k => emblem(k, "ci") + esc(k.name) + ic("down");
-/* pre (a new entry made for something else, e.g. an over-repaid lending's extra): {amount, cur, account, date, note,
-   also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
+/* pre (a new entry made for something else, e.g. an over-repaid lending's extra, or a repeating item's due payment):
+   {amount, cur: only accounts in it, account, date, note, also: a change saved with it, msg: the start of its message,
+   back: the loan to go back to, link: {rep, due} the repeating item's occurrence it settles} */
 function txSheet(id, type, catId, pre) {
   if (!id && !activeAccounts().length) {
     snack("Add an account first");
@@ -173,6 +174,7 @@ function txSheet(id, type, catId, pre) {
     cat: t ? t.cat : catId || (inc && !pre ? "income" : null),
     account: t ? t.account : pre ? pre.account : def,
     pre,
+    rep: null,
   };
   if (pre && pre.back) BACKTO = { screen: V.screen, open: () => loanOpen(pre.back) };
   const k = F.cat ? cat(F.cat) : null,
@@ -207,7 +209,7 @@ function txSheet(id, type, catId, pre) {
       "f-acc",
       F.account,
       null,
-      accChoices(F.account).filter(x => !pre || x.currency === pre.cur)
+      accChoices(F.account).filter(x => !pre || !pre.cur || x.currency === pre.cur)
     );
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
@@ -215,6 +217,7 @@ function txSheet(id, type, catId, pre) {
     '" aria-label="Note"><div class="nd-date">' +
     dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
+  if (!id && !pre) h += repToggle();
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
     ic("check") +
@@ -286,8 +289,9 @@ const feeField = (open, value, label, add) =>
   ic("add") +
   esc(add) +
   "</button>";
-/* transfer between own accounts, with optional fee */
-function trSheet(id) {
+/* transfer between own accounts, with optional fee; pre fills a new one in (a repeating transfer that's due):
+   {account, to, amount, toAmount, date, note, link} */
+function trSheet(id, pre) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
     snack("Add a second account to transfer");
@@ -296,9 +300,9 @@ function trSheet(id) {
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
   const fee = t && t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
-  const f = t ? t.account : (act[0] || {}).id;
-  const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
-  F = { kind: "tr", id, from: f, to, showFee: !!fee };
+  const f = t ? t.account : pre ? pre.account : (act[0] || {}).id;
+  const to = t ? t.to : pre ? pre.to : (act.find(a => a.id !== f) || {}).id;
+  F = { kind: "tr", id, from: f, to, showFee: !!fee, pre, rep: null };
   const list = accChoices(f, to);
   let h = '<div class="lbl" style="margin-top:4px">From</div>' + accChips("tr-from", F.from, null, list);
   h +=
@@ -306,19 +310,24 @@ function trSheet(id) {
     ic("swapv") +
     "</button></div>";
   h += '<div class="lbl">To</div>' + accChips("tr-to", F.to, F.from, list);
-  h += amtField("f-amt", "", t ? String(t.amount) : "", { curId: "tr-cur", label: "Amount sent" });
+  h += amtField("f-amt", "", t ? String(t.amount) : pre ? String(pre.amount) : "", {
+    curId: "tr-cur",
+    label: "Amount sent",
+  });
+  const got = t ? t.toAmount : pre ? pre.toAmount : null;
   h +=
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
-    esc(t && t.toAmount != null ? String(t.toAmount) : "") +
+    esc(got != null ? String(got) : "") +
     '"></label>';
   h += feeField(F.showFee, fee ? String(fee.amount) : "", "", "Add a fee (ATM, cash‑out)");
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
-    esc(t ? t.note : "") +
+    esc(t ? t.note : pre ? pre.note : "") +
     '" aria-label="Note"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : entryDate(), { max: today(), now: !t }) +
+    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
+  if (!id && !pre) h += repToggle();
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tr-save">' +
     ic("check") +
@@ -544,8 +553,10 @@ function accForm(id) {
     (used ? " Currency is locked because this account has entries." : "") +
     "</p>";
   h += '<div class="gap"></div><button class="btn" data-act="acc-save">' + (id ? "Save" : "Add account") + "</button>";
-  if (id) {
-    if (!used) h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">Delete account</button>';
+  if (id && !used) {
+    if (S.repeats.some(r => r.account === id || r.to === id))
+      h += '<p class="hint">A repeating item uses this account: delete that in Plan first to delete the account.</p>';
+    else h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">Delete account</button>';
   }
   openSheet(id ? "Edit account" : "New account", h);
 }
@@ -593,7 +604,7 @@ function saveAccount() {
 /* only accounts without entries can be deleted (deleting would change other balances through transfers); the rest are archived */
 function deleteAccount() {
   const id = F.id;
-  if (S.txns.some(t => t.account === id || t.to === id)) return;
+  if (S.txns.some(t => t.account === id || t.to === id) || S.repeats.some(r => r.account === id || r.to === id)) return;
   askDialog(
     "Delete this account?",
     "It has no entries, so nothing else changes.",
@@ -667,7 +678,9 @@ function removeCat() {
     snack("Keep at least one category");
     return;
   }
-  if (CATS.some(d => d.id === c.id) || S.txns.some(t => t.cat === c.id)) c.hidden = true;
+  /* still in use (an entry or a repeating item): hidden, never deleted, so nothing loses its category */
+  if (CATS.some(d => d.id === c.id) || S.txns.some(t => t.cat === c.id) || S.repeats.some(r => r.cat === c.id))
+    c.hidden = true;
   else S.cats = S.cats.filter(x => x !== c);
   closeSheet();
   commit();
@@ -725,7 +738,9 @@ function saveTx() {
   const id = F.id,
     pre = F.pre || {},
     nid = newId(),
-    ts = Date.now();
+    ts = Date.now(),
+    series = repFromEntry(t); // the form's Repeat: this entry starts a repeating item
+  const link = pre.link || (series ? { rep: series.id, due: t.date } : {});
   const mutate = id
     ? () => {
         const old = S.txns.find(x => x.id === id);
@@ -733,7 +748,8 @@ function saveTx() {
       }
     : () => {
         if (pre.also) pre.also();
-        S.txns.push(Object.assign({ id: nid, ts }, t));
+        if (series) S.repeats.push(series);
+        S.txns.push(Object.assign({ id: nid, ts }, t, link));
       };
   guardOverdraw(mutate, t.date, () => {
     if (pre.back) BACKTO = null; // saved: it ends here, like a payment (back to the loan is for closing it unsaved)
@@ -795,11 +811,26 @@ function saveTr() {
     note = (v.note || "").trim(),
     nid = newId(),
     fid = newId(),
-    ts = Date.now();
+    ts = Date.now(),
+    link = (F.pre || {}).link,
+    series = repFromEntry({
+      type: "transfer",
+      account: from,
+      to,
+      amount: amt,
+      toAmount: diff ? got : null,
+      date,
+      note,
+    });
   const mutate = () => {
     let t = id ? S.txns.find(x => x.id === id) : null;
     if (!t) {
       t = { id: nid, ts };
+      if (link) Object.assign(t, link);
+      else if (series) {
+        S.repeats.push(series);
+        Object.assign(t, { rep: series.id, due: date });
+      }
       S.txns.push(t);
     }
     const oldFee = t.feeId ? S.txns.find(x => x.id === t.feeId) : null;

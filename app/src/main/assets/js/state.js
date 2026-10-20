@@ -8,7 +8,7 @@
 const LS = "tally:v1";
 function blank() {
   return {
-    v: 6,
+    v: 7,
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
          times show as 24-hour (ISO 8601) until changed in Settings → Region */
@@ -28,6 +28,7 @@ function blank() {
     txns: [],
     loans: [],
     assets: [],
+    repeats: [],
   };
 }
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance.
@@ -229,6 +230,11 @@ function migrate(o) {
           if (t0.feeOf) t.feeOf = sid(t0.feeOf);
         }
       } else return null;
+      /* v7: an entry written for a repeating item names it and the due date it settles (checked once repeats are read) */
+      if (t0.rep && isDay(t0.due) && (t.type === "expense" || t.type === "income" || t.type === "transfer")) {
+        t.rep = sid(t0.rep);
+        t.due = day(t0.due);
+      }
       return t;
     })
     .filter(Boolean);
@@ -291,6 +297,51 @@ function migrate(o) {
       currency: curOf(x.currency),
     }));
   uniq(s.assets);
+  /* v7: repeating items (plan.js): what each occurrence prefills and when they fall; one on a missing account, or a
+     transfer to itself, is left out, and an entry pointing at a series that's gone keeps its money but not the link */
+  const okCat = new Set(s.cats.map(c => c.id)),
+    int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+  s.repeats = (Array.isArray(o.repeats) ? o.repeats : [])
+    .filter(q => q && q.id && ["expense", "income", "transfer"].includes(q.type) && okAcc.has(sid(q.account)))
+    .filter(q => okNum(q.amount) && +q.amount > 0 && isDay(q.first))
+    .map(q => {
+      const x = {
+        id: sid(q.id),
+        ts: stamp(q.ts),
+        type: q.type,
+        account: sid(q.account),
+        amount: +q.amount,
+        note: str(q.note).slice(0, 80),
+        name: str(q.name).slice(0, 40),
+        every: int(q.every, 1, 99) ? q.every : 1,
+        unit: ["d", "w", "m", "y"].includes(q.unit) ? q.unit : "m",
+        first: day(q.first),
+        last: q.last === true,
+        skip: [...new Set((Array.isArray(q.skip) ? q.skip : []).filter(isDay).map(day))],
+        off: q.off === true,
+      };
+      if (isDay(q.until)) x.until = day(q.until);
+      if (isDay(q.from)) x.from = day(q.from); // resumed after a pause: what fell due before isn't owed
+      if (int(q.times, 1, 9999)) x.times = q.times;
+      if (q.type === "transfer") {
+        x.to = sid(q.to);
+        if (!okAcc.has(x.to) || x.to === x.account) return null;
+        if (okNum(q.toAmount) && +q.toAmount > 0) x.toAmount = +q.toAmount;
+      } else {
+        const c = sid(q.cat);
+        x.cat = okCat.has(c) ? c : q.type === "income" ? "otherin" : "other";
+      }
+      return x;
+    })
+    .filter(Boolean);
+  uniq(s.repeats);
+  const okRep = new Set(s.repeats.map(q => q.id));
+  s.txns.forEach(t => {
+    if (t.rep && !okRep.has(t.rep)) {
+      delete t.rep;
+      delete t.due;
+    }
+  });
   return s;
 }
 let S = blank();
@@ -502,7 +553,13 @@ function currencies() {
 /* msg may be a function, read after the change */
 function withUndo(msg, change, fx) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
-  const before = JSON.stringify({ txns: S.txns, loans: S.loans, accounts: S.accounts, assets: S.assets });
+  const before = JSON.stringify({
+    txns: S.txns,
+    loans: S.loans,
+    accounts: S.accounts,
+    assets: S.assets,
+    repeats: S.repeats,
+  });
   change();
   FX = fx || {};
   commit();
@@ -513,6 +570,7 @@ function withUndo(msg, change, fx) {
     S.loans = o.loans;
     S.accounts = o.accounts;
     S.assets = o.assets;
+    S.repeats = o.repeats;
     commit();
     snack("Undone");
   });
@@ -523,10 +581,12 @@ function guardOverdraw(mutate, date, proceed) {
   const b0 = balances(),
     d0 = balances(addDays(date, 1)),
     T = S.txns,
-    L = S.loans;
+    L = S.loans,
+    R = S.repeats;
   let b1, d1;
   S.txns = JSON.parse(JSON.stringify(T));
   S.loans = JSON.parse(JSON.stringify(L));
+  S.repeats = JSON.parse(JSON.stringify(R)); // the trial may start a repeating item too (a new entry's Repeat)
   try {
     mutate();
     b1 = balances();
@@ -534,6 +594,7 @@ function guardOverdraw(mutate, date, proceed) {
   } finally {
     S.txns = T;
     S.loans = L;
+    S.repeats = R;
   }
   const low = (n, o) => n < -0.0005 && n < o - 0.0005;
   const bad = S.accounts.find(a => a.type !== "card" && (low(b1[a.id], b0[a.id]) || low(d1[a.id], d0[a.id])));

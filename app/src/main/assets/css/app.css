@@ -1716,7 +1716,8 @@ input {
   max-width: 560px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   height: 76px;
 }
 .nav button {
@@ -1754,6 +1755,72 @@ body.hasnav main {
 }
 body.hasnav .snack {
   bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+/* Plan (plan.js): an Upcoming row is the row (opens what's due) and its Record button side by side */
+.duerow {
+  display: flex;
+  align-items: center;
+}
+.duerow + .duerow {
+  border-top: 1px solid var(--outline-variant);
+}
+.duerow .tx {
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
+}
+.duerow .rec {
+  flex: none;
+  margin-right: 8px;
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.tx.dim .d,
+.tx.dim .a {
+  color: var(--on-surface-variant);
+}
+.tx .s .repmark .ic {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-right: 3px;
+}
+/* Home's one line while something is due today or tomorrow */
+.planline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  margin: 8px 0 4px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+  text-align: left;
+  font-weight: 500;
+}
+.planline span {
+  flex: 1;
+  min-width: 0;
+}
+.planline .ic {
+  flex: none;
+}
+/* a new entry's Repeat, and how often */
+.reprow {
+  margin-top: 8px;
+}
+.reprow #f-rep {
+  width: auto;
+  padding: 0 12px;
+}
+.reprow #f-rep.on {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.reprow .seg {
+  margin-top: 8px;
 }
 /* loans */
 .loanbtns {

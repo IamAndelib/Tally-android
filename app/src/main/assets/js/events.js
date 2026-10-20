@@ -80,6 +80,61 @@ document.addEventListener("click", ev => {
     case "loan-open":
       loanOpen(v);
       break;
+    /* Plan (plan.js): what's due, and the repeating form */
+    case "due-open":
+      dueOpen(v);
+      break;
+    case "due-rec":
+      dueRecord(v);
+      break;
+    case "due-skip":
+      dueSkip(v);
+      break;
+    case "rep-new":
+      repSheet(null);
+      break;
+    case "rep-edit":
+      repSheet(v);
+      break;
+    case "rp-type":
+      repType(v);
+      break;
+    case "rp-from":
+      repPickFrom(v);
+      break;
+    case "rp-to":
+      repPickTo(v);
+      break;
+    case "rp-unit":
+      repUnit(v);
+      break;
+    case "rp-end":
+      repEnd(v);
+      break;
+    case "rp-more":
+      repMore(el);
+      break;
+    case "rp-last":
+      repLast(el);
+      break;
+    case "rp-save":
+      saveRep();
+      break;
+    case "rp-pause":
+      repPause();
+      break;
+    case "rp-endnow":
+      repEndNow();
+      break;
+    case "rp-del":
+      repDelete();
+      break;
+    case "f-rep":
+      repToggleTap(el);
+      break;
+    case "f-repunit":
+      repToggleUnit(v);
+      break;
     case "loan-pay":
       payLoan();
       break;
@@ -676,6 +731,7 @@ document.addEventListener("keydown", e => {
       loanf: "loan-save",
       loan: "loan-pay",
       assetf: "asset-save",
+      rep: "rp-save",
     };
     const act = two ? (F.kind === "loan" ? "loandraw-save" : "") : map[F.kind],
       b = act && $((two ? "#sheet2" : "#sheet") + ' [data-act="' + act + '"]');

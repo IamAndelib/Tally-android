@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Plan**, a new tab for what's coming:
+  - **Repeating**: rent, subscriptions, a salary, a monthly move to savings. Spending, money in or a transfer; daily,
+    weekly, monthly or yearly, every so many, on a month's last day, and ending on a date or after so many times. A new
+    entry's **Repeat** button makes it the first of a series.
+  - **Upcoming**: everything due in the next two weeks, and every payment that's overdue, oldest first; loans due soon
+    show here too. **Record** opens the usual form already filled in and dated on the day it was due; you save it.
+    Tally never writes anything by itself. Skip one, pause, end or delete a series; entries already written stay.
+  - Home shows one line while something is due today or tomorrow, and History marks entries written for a repeating
+    item.
+
 ## [1.4.1] — 2026-10-20
 
 ### Fixed

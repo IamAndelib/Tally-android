@@ -93,7 +93,7 @@ function sampleState(t, nCats) {
       kind: "out",
     });
   return {
-    v: 6,
+    v: 7,
     settings: { cur: "USD", week: 1, clock: "24", lastCheck: t },
     accounts: [
       { id: "b", name: "Everyday account", type: "bank", currency: "USD", opening: 3200 },
@@ -117,6 +117,53 @@ function sampleState(t, nCats) {
       { id: "L2", kind: "borrow", person: "Sam", account: "s", date: ago(8), note: "", status: "open" },
     ],
     assets: [{ id: "a1", name: "Laptop", i: "laptop", c: "#5b6cff", value: 1400, currency: "USD" }],
+    /* Plan: one overdue three times, one due today, a transfer, money in, one paused (long names on purpose) */
+    repeats: [
+      {
+        id: "r1",
+        type: "expense",
+        account: "b",
+        cat: "fun",
+        amount: 49.99,
+        note: "Climbing gym membership",
+        first: ago(70),
+        unit: "m",
+      },
+      { id: "r2", type: "expense", account: "b", cat: "housing", amount: 1850, note: "Rent", first: t, unit: "m" },
+      {
+        id: "r3",
+        type: "transfer",
+        account: "b",
+        to: "s",
+        amount: 400,
+        toAmount: 370,
+        first: ahead(3),
+        unit: "w",
+        every: 2,
+      },
+      {
+        id: "r4",
+        type: "income",
+        account: "b",
+        cat: "income",
+        amount: 2450,
+        note: "Salary",
+        first: ahead(9),
+        unit: "m",
+        last: true,
+      },
+      {
+        id: "r5",
+        type: "expense",
+        account: "c",
+        cat: "bills",
+        amount: 12.99,
+        note: "Streaming",
+        first: ago(9),
+        unit: "m",
+        off: true,
+      },
+    ],
   };
 }
 
@@ -425,6 +472,25 @@ function inspect() {
         V.screen = "liabs";
         render();
       })
+    );
+    await shot(
+      "plan",
+      ev(() => {
+        V.screen = "plan";
+        render();
+      })
+    );
+    await shot(
+      "repeat-form",
+      ev(() => repSheet("r3"))
+    );
+    await shot("repeat-form-more", async () => {
+      await page.evaluate(() => repSheet("r4"));
+      await page.click('#sheet [data-act="rp-more"]');
+    });
+    await shot(
+      "due-open",
+      ev(() => dueOpen("r:r1"))
     );
     await shot(
       "history",

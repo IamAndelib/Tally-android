@@ -50,6 +50,7 @@ Tally is a native Android shell around a web page.
 | `js/loans.js` | loans and lendings |
 | `js/sheets.js` | entry, transfer, balance-fix, account, category and asset sheets |
 | `js/summary.js` | the spending summary |
+| `js/plan.js` | the Plan tab: repeating items, what's due (`upcoming()`), recording one |
 | `js/screens.js` | `render()` and the Home, Assets, Liabilities, History and Settings screens |
 | `js/bridge.js` | talking to the Android shell; `goBack()` |
 | `js/backup.js` | CSV export, backup, restore, delete all |
@@ -59,7 +60,7 @@ Tally is a native Android shell around a web page.
 ### The data
 
 All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
-`{v, settings, accounts, types, cats, txns, loans, assets}`. Each save is numbered (`tally:v1:seq`) and also kept by
+`{v, settings, accounts, types, cats, txns, loans, assets, repeats}`. Each save is numbered (`tally:v1:seq`) and also kept by
 the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (see `save()` in `js/state.js`).
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
@@ -70,6 +71,12 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
   transfer or payment) that is never counted as spending (`isSpend()`).
 - A **loan** is a person tab, `{id, kind: "borrow" | "lend", person, account, date, note, status}`. Its amounts, what's
   left and its status are always derived from its entries by `loanInfo()`, never stored.
+- A **repeating item** (`repeats`) is what each occurrence prefills (`type`, `account`, `to`, `cat`, `amount`, `note`)
+  and when they fall: `first`, `every` + `unit` (`d` / `w` / `m` / `y`), `last` (a month's last day), and an optional
+  end (`until` or `times`). Occurrence *k* is always worked out from `first` (`repDate()`), never from the one before.
+  An entry written for one carries `rep` and `due` (the occurrence it settles); what is open, overdue or next is derived
+  by `repInfo()` from those entries and the skipped dates (`skip`), never stored. Tally never writes an entry by
+  itself: Record opens the usual form, filled in.
 - Balances are never stored either: `balances()` adds every entry to each account's opening balance.
 - **Changing the shape of the data** means bumping `v` in `blank()` and teaching `migrate()` to upgrade older saves
   *and* older backup files without changing any balance. Add a test that loads the old shape.
