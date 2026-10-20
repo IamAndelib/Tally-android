@@ -1,3 +1,4 @@
 - Every currency is listed again on phones with an older system WebView.
 - Currency search finds names in your language or English, without accents, plurals included, and signs like B/.
 - Currencies without a sign on your phone show the local one, such as B/. for the Panamanian balboa.
+- Settings → About → Support Tally, for anyone who wants to support Tally's development.

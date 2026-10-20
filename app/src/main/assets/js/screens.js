@@ -916,12 +916,19 @@ function settingsView() {
         })()
       : "";
   h +=
-    '<div class="sec center">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
+    '<div class="sec center">About</div><a class="btn tonal" href="' +
+    DONATE_URL +
+    '"><svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' +
+    ICONS.volunteer_activism[0] +
+    '"/></svg>Support Tally</a><div class="gap"></div>' +
+    '<p class="muted small" style="margin:0 4px;text-align:center">Tally' +
     (ver ? " · Version " + esc(ver) : "") +
     '<br>By <a href="https://github.com/IamAndelib">IamAndelib</a>' +
     '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
   return h;
 }
+/* where "Support Tally" (Settings → About) leads: a page in the browser, so Tally itself stays offline */
+const DONATE_URL = "https://ko-fi.com/DONATE_NAME";
 /* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder or the
    daily backup is on). A row goes as soon as its permission is allowed (tallyPerms / resume re-render). */
 function healthCard() {
