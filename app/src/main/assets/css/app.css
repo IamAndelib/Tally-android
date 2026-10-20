@@ -1430,6 +1430,10 @@ input {
 .seg button + button {
   border-left: 1px solid var(--outline);
 }
+/* four choices across a small phone at large text (Daily · Weekly · Monthly · Yearly) */
+.seg.seg4 button {
+  font-size: 0.8rem;
+}
 .seg button[aria-pressed="true"] {
   background: var(--secondary-container);
   color: var(--on-secondary-container);

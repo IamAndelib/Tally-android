@@ -235,7 +235,7 @@ const ok = (c, m) => {
     "Delete all data stops when its backup didn't save: " + (await page.textContent("#snack"))
   );
   await page.evaluate(b => restoreText(JSON.stringify(b)), {
-    v: 7,
+    v: 99, // from a version of Tally newer than this one
     settings: { cur: "USD" },
     accounts: [
       { id: "x", name: "Cash", type: "cash", currency: "USD", opening: 10 },

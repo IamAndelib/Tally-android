@@ -393,7 +393,7 @@ function repSheet(id, keep) {
     esc(old.note != null ? old.note : r ? r.note : "") +
     '"></label>';
   h +=
-    '<div class="lbl">Repeats</div><div class="seg" role="group" aria-label="Repeats">' +
+    '<div class="lbl">Repeats</div><div class="seg seg4" role="group" aria-label="Repeats">' +
     ["d", "w", "m", "y"]
       .map(
         u =>
