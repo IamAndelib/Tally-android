@@ -202,6 +202,11 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "TAG=v$version" >> "$GITHUB_ENV"
           if [ "$GITHUB_REF_TYPE" = tag ] || [ "$GITHUB_REF" = refs/heads/main ]; then
+            # temporary, until the donation page is known: never release the placeholder link
+            if grep -rqs DONATE_NAME app/src/main/assets .github/FUNDING.yml README.md; then
+              echo "::error::The donation link is still the placeholder DONATE_NAME"
+              exit 1
+            fi
             mode=release name=$version
           else
             mode=preview name="$version-preview.$GITHUB_RUN_NUMBER" code=$((code - 1))

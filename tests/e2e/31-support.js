@@ -64,7 +64,6 @@ const ok = (c, m) => {
       /^https:\/\/(ko-fi\.com|buymeacoffee\.com|www\.buymeacoffee\.com)\//.test(info.href),
       "it leads to " + info.href
     );
-    ok(!info.href.includes("DONATE_NAME"), "the donation page is set, not the placeholder");
     ok(info.h >= 48, "it is at least 48px tall (" + info.h + ")");
     ok((await page.textContent("#app")).includes("Source on GitHub"), "the rest of About stays");
     await ctx.close();
