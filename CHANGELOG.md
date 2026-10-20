@@ -7,11 +7,6 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [1.4.1] — 2026-10-20
 
-### Added
-
-- **Settings → About → Support Tally** opens Tally's donation page in the browser, for anyone who wants to support its
-  development. Tally itself still never goes online.
-
 ### Fixed
 
 - Currencies:
