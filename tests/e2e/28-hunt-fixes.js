@@ -695,7 +695,8 @@ const ok = (c, m) => {
   ok(!(await bp.evaluate(() => S.settings.backup.on)), "Not now leaves it off: the backup there is never written over");
   await bp.evaluate(() => onFolderPicked(""));
   await bp.waitForSelector('#pop [data-act="ask-alt"]');
-  await bp.click('#pop [data-act="ask-alt"]'); // Replace it
+  // Replace it, as a script click: a second tap where a tap just closed a dialog is dropped on purpose
+  await bp.evaluate(() => $('#pop [data-act="ask-alt"]').click());
   ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns it back on");
   await bp.evaluate(() => {
     sessionStorage.setItem("cfg", JSON.stringify({ status: { folder: "", usable: false, last: 0, error: "" } }));
