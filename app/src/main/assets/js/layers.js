@@ -546,28 +546,20 @@ const MAJOR = [
   "QAR",
   "KWD",
 ];
-/* the currencies a current web view lists (Intl.supportedValuesOf, from Chrome 99), for the older ones that can't */
-const ISO4217 = (
-  "AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF " +
-  "CLP CNY COP CRC CUC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL " +
-  "HRK HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD " +
-  "MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR " +
-  "RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLL SOS SRD SSP STN SVC SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS " +
-  "UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XDR XOF XPF XSU YER ZAR ZMW ZWL"
-).split(" ");
 let CURPICK = null,
   curDN,
-  curEN,
+  regDN,
+  curRegions = null,
   curAll = null;
 const curSyms = {};
+/* the name in the phone's language, else Tally's English one (Android's web view has names for few currencies) */
 function curName(c) {
   try {
     curDN = curDN || new Intl.DisplayNames(undefined, { type: "currency" });
     const n = curDN.of(c);
-    return n && n !== c ? n : "";
-  } catch (e) {
-    return "";
-  }
+    if (n && n !== c) return n;
+  } catch (e) {}
+  return CUR_EN[c] || "";
 }
 function curSym(c) {
   if (c in curSyms) return curSyms[c];
@@ -581,15 +573,21 @@ function curSym(c) {
   } catch (e) {}
   return (curSyms[c] = s);
 }
-/* the English name too, so a search finds a currency by either */
-function curNameEn(c) {
-  try {
-    curEN = curEN || new Intl.DisplayNames("en", { type: "currency" });
-    const n = curEN.of(c);
-    return n && n !== c ? n : "";
-  } catch (e) {
-    return "";
+/* the countries that use currency c, each as its name in the phone's language (where the phone has one) and its
+   English names, "|" between them */
+function curCountries(c) {
+  if (!curRegions) {
+    curRegions = {};
+    for (const r in REGIONS) REGIONS[r][1].split(" ").forEach(k => (curRegions[k] = curRegions[k] || []).push(r));
   }
+  return (curRegions[c] || []).map(r => {
+    let n = "";
+    try {
+      regDN = regDN || new Intl.DisplayNames(undefined, { type: "region" });
+      n = regDN.of(r);
+    } catch (e) {}
+    return (n && n !== r ? n + "|" : "") + REGIONS[r][0];
+  });
 }
 const curLabel = c => {
   const n = curName(c);
@@ -597,36 +595,49 @@ const curLabel = c => {
 };
 function allCurs() {
   if (!curAll) {
-    let l = ISO4217;
+    let l = Object.keys(CUR_EN); // what the phone lists (Chrome 99+), and Tally's own list for what it leaves out
     try {
-      if (Intl.supportedValuesOf) l = Intl.supportedValuesOf("currency");
+      if (Intl.supportedValuesOf) l = [...new Set(Intl.supportedValuesOf("currency").concat(l))];
     } catch (e) {}
     const rest = l.filter(c => !MAJOR.includes(c)).sort((a, b) => (curName(a) || a).localeCompare(curName(b) || b));
     curAll = MAJOR.concat(rest);
   }
   return curAll;
 }
-/* lower case, without accents: "Panameño" → "panameno" */
+/* lower case, without accents or apostrophes: "Panameño" → "panameno", "Côte d’Ivoire" → "cote divoire" */
 const fold = t =>
   String(t)
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u0300-\u036f'’`]/g, "")
     .toLowerCase();
-/* whether currency c answers the search q: by code, symbol, or its name in the phone's language or English. Each word
-   typed must start a word of the name, or start with one (of 4 letters or more), so plurals and other endings match:
-   "quetzales" finds the Guatemalan quetzal, "balboas" the Panamanian balboa. */
+const wordsOf = t => t.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+/* each currency's search text, folded once (the euro alone has some 35 countries) */
+const CURQ = new Map();
+/* how currency c answers the search q: 2 by its code, sign or name (the phone's language or English), 1 by a country
+   that uses it, 0 not at all. Each word typed must start a word there, or start with one (of 4 letters or more), so
+   plurals and other endings match: "quetzales" finds the Guatemalan quetzal, "balboas" the Panamanian balboa. */
 function curMatch(c, q) {
   q = fold(q).trim();
-  if (!q) return true;
-  const names = [c, curSym(c), curName(c), curNameEn(c)].map(fold);
-  if (names.some(n => n.includes(q))) return true;
-  const words = names.join(" ").split(/[^\p{L}\p{N}]+/u);
-  return q.split(/\s+/).every(w => words.some(n => n && (n.startsWith(w) || (n.length >= 4 && w.startsWith(n)))));
+  if (!q) return 2;
+  let t = CURQ.get(c);
+  if (!t) {
+    const own = fold([c, curSym(c), curName(c), CUR_EN[c] || ""].join(" "));
+    t = [{ f: own, w: wordsOf(own) }].concat(
+      curCountries(c).map(n => {
+        const f = fold(n.replace(/\|/g, " "));
+        return { f, w: wordsOf(f) };
+      })
+    );
+    CURQ.set(c, t);
+  }
+  const qw = q.split(/\s+/),
+    hit = e => e.f.includes(q) || qw.every(x => e.w.some(n => n.startsWith(x) || (n.length >= 4 && x.startsWith(n))));
+  return hit(t[0]) ? 2 : t.slice(1).some(hit) ? 1 : 0;
 }
 function curPicker(current, onPick, title) {
   openSheet2(
     title || "Currency",
-    '<div class="qbar"><input id="cur-q" type="search" placeholder="Search name or code" autocomplete="off" aria-label="Search currency"></div><div id="curlist" data-cur="' +
+    '<div class="qbar"><input id="cur-q" type="search" placeholder="Search name, code or country" autocomplete="off" aria-label="Search currency"></div><div id="curlist" data-cur="' +
       esc(current) +
       '"></div>'
   );
@@ -658,8 +669,14 @@ function curList(q) {
   };
   const inUse = [...new Set([cur, S.settings.cur].concat(S.accounts.map(a => a.currency)))].filter(Boolean),
     all = allCurs();
-  if (q.trim()) sec("Results", [...new Set(inUse.concat(all))]);
-  else {
+  if (q.trim()) {
+    /* found by name before found by country: "Panama" lists the balboa, then the US dollar */
+    const rank = new Map([...new Set(inUse.concat(all))].map(c => [c, curMatch(c, q)]));
+    sec(
+      "Results",
+      [...rank.keys()].filter(c => rank.get(c)).sort((a, b) => rank.get(b) - rank.get(a))
+    );
+  } else {
     sec("In use", inUse);
     sec(
       "Popular",

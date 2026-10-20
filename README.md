@@ -251,7 +251,8 @@ itself still sends nothing anywhere.
 
 ## License
 
-Tally is released under the [MIT License](LICENSE). It includes Material Symbols (Apache 2.0) and the Onest typeface
-(SIL Open Font License 1.1) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Tally is released under the [MIT License](LICENSE). It includes Material Symbols (Apache 2.0), the Onest typeface
+(SIL Open Font License 1.1) and Unicode CLDR data (Unicode License v3) — see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Made by [IamAndelib](https://github.com/IamAndelib).

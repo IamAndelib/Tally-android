@@ -1,6 +1,7 @@
-// Currencies: the picker lists every currency on web views too old to list them (before Chrome 99), search finds a
-// currency by any of its names (accents, plurals, the English name, its sign), signs the phone's data leaves out come
-// from the currency's home country (B/. for the Panamanian balboa).
+// Currencies: the picker lists every currency with a name, also on Android's web view (names for only some 60
+// currencies, a short list) and on web views too old to list them (before Chrome 99); search finds a currency by any of
+// its names (accents, plurals, the English name), its sign, or a country that uses it; signs the phone's data leaves
+// out come from the currency's home country (B/. for the Panamanian balboa).
 const { chromium, appUrl, launchOptions } = require("./harness");
 let fails = 0;
 const ok = (c, m) => {
@@ -56,7 +57,64 @@ const ok = (c, m) => {
     return listed(page);
   };
 
-  // ---- 1. a web view before Chrome 99 (no Intl.supportedValuesOf) still lists every currency
+  // ---- 1. Android's web view: currency names for a few currencies only, no country names, a short list
+  {
+    const few = ["USD", "EUR", "GBP", "JPY", "CNY", "INR", "CAD", "AUD", "CHF", "MXN", "BRL", "RUB", "KRW", "TRY"];
+    const { ctx, page } = await open(
+      "en-US",
+      `const keep = new Set(${JSON.stringify(few)}), DN = Intl.DisplayNames;
+       Intl.DisplayNames = function (loc, o) {
+         const d = new DN(loc, o);
+         return { of: c => (o.type === "currency" && keep.has(c) ? d.of(c) : c) };
+       };
+       Intl.supportedValuesOf = () => [...keep];`
+    );
+    ok(
+      await page.evaluate(() => new Intl.DisplayNames("en", { type: "currency" }).of("GTQ") === "GTQ"),
+      "android: no name for GTQ"
+    );
+    await page.evaluate(() => curPicker("USD", () => {}));
+    await page.waitForTimeout(100);
+    const all = await listed(page);
+    ok(
+      all.includes("GTQ") && all.includes("PAB") && all.length > 150,
+      "android: every currency is listed (" + all.length + ")"
+    );
+    const name = c => page.textContent(`#curlist [data-v="${c}"] .d`);
+    ok(
+      (await name("GTQ")) === "Guatemalan Quetzal" && (await name("PAB")) === "Panamanian Balboa",
+      "android: rows show names"
+    );
+    for (const [q, c] of [
+      ["quetzales", "GTQ"],
+      ["balboa", "PAB"],
+      ["Panamanian", "PAB"],
+      ["B/.", "PAB"],
+      ["GTQ", "GTQ"],
+      ["pab", "PAB"],
+      ["Guatemala", "GTQ"],
+      ["Germany", "EUR"],
+      ["spain", "EUR"],
+      ["United Kingdom", "GBP"],
+      ["UK", "GBP"],
+      ["Ecuador", "USD"],
+      ["El Salvador", "USD"],
+      ["cote d'ivoire", "XOF"],
+      ["Ivory Coast", "XOF"],
+      ["Switzerland", "CHF"],
+      ["Bulgaria", "EUR"],
+    ])
+      ok((await search(page, q)).includes(c), `android: search "${q}" finds ${c}`);
+    const pa = await search(page, "Panama");
+    ok(pa[0] === "PAB" && pa.includes("USD"), "android: Panama lists the balboa first, then the US dollar: " + pa);
+    ok(
+      !(await search(page, "United Kingdom")).includes("USD"),
+      "android: a country's words must all match one country"
+    );
+    await ctx.close();
+  }
+
+  // ---- 2. a web view before Chrome 99 (no Intl.supportedValuesOf) still lists every currency
   {
     const { ctx, page } = await open("en-US", "delete Intl.supportedValuesOf;");
     ok(await page.evaluate(() => !Intl.supportedValuesOf), "old web view: Intl.supportedValuesOf is missing");
@@ -71,7 +129,7 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
-  // ---- 2. search: accents, plurals, the English name, signs, codes
+  // ---- 3. search: accents, plurals, the English name, signs, codes, countries in the phone's language
   {
     const { ctx, page } = await open("es-ES");
     await page.evaluate(() => curPicker("USD", () => {}));
@@ -88,6 +146,9 @@ const ok = (c, m) => {
       ["pab", "PAB"],
       ["Q", "GTQ"],
       ["dolares", "USD"],
+      ["Alemania", "EUR"],
+      ["Panamá", "PAB"],
+      ["Germany", "EUR"],
     ])
       ok((await search(page, q)).includes(c), `search "${q}" finds ${c}`);
     ok(!(await search(page, "quetzales")).includes("PAB"), 'search "quetzales" leaves out PAB');
@@ -99,10 +160,18 @@ const ok = (c, m) => {
       curMatch("PAB", "balboa panameño"),
     ]);
     ok(m[0] && !m[1] && m[2], "curMatch: empty matches all, words must all match");
+    // fast enough to filter as you type, on a slow phone too
+    const ms = await page.evaluate(() => {
+      CURQ.clear(); // from cold: the first keystroke builds every currency's search text
+      const t = performance.now();
+      for (const q of ["g", "ge", "ger", "germ", "germa", "german"]) curList(q);
+      return (performance.now() - t) / 6;
+    });
+    ok(ms < 50, "a keystroke filters the list in " + ms.toFixed(1) + " ms");
     await ctx.close();
   }
 
-  // ---- 3. signs: the home country's where the phone has none, everything else as before
+  // ---- 4. signs: the home country's where the phone has none, everything else as before
   {
     const { ctx, page } = await open("en-US");
     const r = await page.evaluate(() => ({

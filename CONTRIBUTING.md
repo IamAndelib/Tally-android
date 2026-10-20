@@ -39,6 +39,7 @@ Tally is a native Android shell around a web page.
 | File | What's in it |
 | --- | --- |
 | `js/core.js` | built-in categories and account types, inline icons, DOM/date/number helpers, money formatting, snackbar |
+| `js/currencies.js` | every currency's English name and the countries using each (Unicode CLDR), for the currency picker |
 | `js/state.js` | the data `S`, `migrate()`, load/save, balances, `withUndo()`, `guardOverdraw()`, `deleteEntries()` |
 | `js/theme.js` | Material 3 colour roles from the phone's palette |
 | `js/period.js` | what Home (`V`) and History (`HP`) show: day / range / month and the period dialog |
