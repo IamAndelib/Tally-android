@@ -685,6 +685,7 @@ const ok = (c, m) => {
   ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns auto backup on");
   // Change to another folder that holds a backup, auto backup on: nothing is written there unless the answer says so
   await bp.evaluate(() => onFolderPicked(""));
+  await bp.waitForSelector('#pop [data-act="ask-alt"]'); // the folder is read on the shell's thread
   ok(
     (await bp.textContent("#pop")).includes("already has a Tally backup") &&
       !(await bp.evaluate(() => S.settings.backup.on)),
