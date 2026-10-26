@@ -34,7 +34,7 @@ function exportCsv() {
     ].join(","),
   ];
   [...S.txns]
-    .sort((a, b) => a.date.localeCompare(b.date) || (a.ts || 0) - (b.ts || 0))
+    .sort((a, b) => cmpDay(a.date, b.date) || (a.ts || 0) - (b.ts || 0))
     .forEach(t => {
       const a = acc(t.account),
         to = acc(t.to),
@@ -102,9 +102,11 @@ function restoreText(t, auto, after) {
   };
   askDialog(
     auto ? T("restore.autoQ", { file: "Tally backup.json" }) : T("restore.q"),
-    T(what.when ? "restore.bodySaved" : "restore.body", what) +
-      (lost > 0 ? " " + T("restore.lost", { count: lost }) : "") +
-      (newer ? " " + T("restore.newer") : ""),
+    sentences(
+      T(what.when ? "restore.bodySaved" : "restore.body", what),
+      lost > 0 && T("restore.lost", { count: lost }),
+      newer && T("restore.newer")
+    ),
     T("restore.ok"),
     () => {
       /* this phone's own set-up stays: its auto backup (the folder lives in the shell), a copy so Undo gets back what

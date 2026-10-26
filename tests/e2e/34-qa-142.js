@@ -6,6 +6,8 @@
 //    while the saved data can't be read, Restore offers the auto backup and a restore never switches it off
 //  - while the saved data can't be read, a setting changed doesn't store the blank stand-in over it (the next start
 //    asks again); a full localStorage with the shell's copy failing too says so
+//  - a name typed in another case (Turkish İrem / IREM, Işık / IŞIK) adds to that person's open tab; Chinese sentences
+//    run on without a space after 。
 //  - notes Tally writes itself (balance fix, fees) show in today's language and aren't stored; a day inside a
 //    sentence is a date, never a capitalised "Yesterday"; standalone date headings start with a capital
 //  - the first account doesn't bring the balance check at once; a transfer, entry or loan that needed an account
@@ -321,6 +323,46 @@ const ok = (c, m) => {
       return $("#app .month .plabel span").textContent;
     });
     ok(/^[А-ЯЁ]/.test(h), "a Russian month heading starts with a capital: " + h);
+    await ctx.close();
+  }
+
+  // ---- names in any case, sentences in Chinese
+  {
+    const { ctx, page } = await open({ uiLang: "tr", locale: "tr-TR" });
+    await seed(page);
+    await page.evaluate(() => {
+      for (const [id, who] of [
+        ["L1", "İrem"],
+        ["L2", "Işık"],
+      ]) {
+        S.loans.push({ id, kind: "lend", person: who, account: "a", date: today(), note: "", status: "open" });
+        S.txns.push({
+          id: "d" + id,
+          ts: 1,
+          type: "loan",
+          dir: "out",
+          loan: id,
+          principal: true,
+          amount: 10,
+          account: "a",
+          date: today(),
+        });
+      }
+      commit();
+      loanForm("lend");
+    });
+    const merged = [];
+    for (const n of ["irem", "IREM", "ışık", "IŞIK"]) {
+      await page.fill("#f-person", n);
+      merged.push(await page.evaluate(() => F.merge));
+    }
+    ok(merged.join() === "L1,L1,L2,L2", "a name in another case adds to that tab: " + merged);
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ uiLang: "zh-Hans", locale: "zh-CN" });
+    const t = await page.evaluate(() => [sentences("一。", "", "二！", "三"), sentences("One.", false, "Two.")]);
+    ok(t[0] === "一。二！三" && t[1] === "One. Two.", "sentences: no space after 。, one after a full stop: " + t);
     await ctx.close();
   }
 

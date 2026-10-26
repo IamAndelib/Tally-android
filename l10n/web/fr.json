@@ -53,7 +53,7 @@
     "archiveOwes": "Il reste {{amount}} à rembourser sur ce compte. Les comptes archivés ne comptent plus dans vos totaux ; leurs opérations restent dans l’historique.",
     "archive": "Archiver",
     "archivedTag": "archivé",
-    "startedWith": "Ouvert aujourd’hui avec {{amount}}",
+    "startedWith": "En début de journée : {{amount}}",
     "mismatch": "Ça ne correspond pas ?",
     "mismatchHint": "Saisissez ce que vous avez vraiment. Tally enregistre l’écart comme une correction de solde.",
     "actual": "Solde réel",

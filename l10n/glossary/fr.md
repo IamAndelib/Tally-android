@@ -48,7 +48,7 @@ quotes are « … » with no-break spaces inside, and a no-break space (U+00A0) 
   and “{{amount}} emprunté à {{who}}” read as the user received the money. Please check every `loan.*` and `tx.*`
   text with this in mind. Where a sentence could be read either way, the person is named again (“S’ajoute à ce que
   vous avez prêté à {{who}} : {{who}} vous doit maintenant {{amount}}”).
-- **Home buttons** “Loan” / “Lend” are both verbs: “Emprunter” / “Prêter”.
+- **Home buttons** “Borrow” / “Lend” are both verbs: “Emprunter” / “Prêter”.
 - **Forgiven** (a loan the lender let go) is “Dette effacée”, and the action is “Marquer comme effacée” (the debt is
   understood). “Remise de dette” is the legal term; “annulé” could read as deleted. A reviewer may prefer another
   wording.
@@ -68,6 +68,6 @@ quotes are « … » with no-break spaces inside, and a no-break space (U+00A0) 
   “Rent” is “Loyer”. “Mobile wallet” is “Portefeuille mobile” (francophone Africa may say “mobile money”).
 - **Settings:** “Settings” is “Paramètres” (Android’s own word); the “Feel” section is “Toucher”; theme “Phone” is
   “Téléphone”. “Emblem” is “icône”.
-- **“Page started for today”** (after confirming the morning balance check) is “Nouvelle page pour aujourd’hui”.
+- **“Balances confirmed”** (after confirming the morning balance check) is “Soldes confirmés”.
 - **Permissions:** “Alarmes et rappels” is Android’s own French name. “Unrestricted battery” is “Batterie sans
   restriction”; the Android settings screen may say “Non limitée”, worth checking on a French phone.

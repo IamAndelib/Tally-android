@@ -79,3 +79,9 @@ function i18nText(key, vars, html) {
 const T = (key, vars) => i18nText(key, vars, false);
 /* a text as HTML: the text and each value escaped, except values given as {html: …} (a name in bdi(), an icon) */
 const TH = (key, vars) => i18nText(key, vars, true);
+/* plain-text sentences one after another: a space between them, none after a full-width stop (Chinese 。！？) */
+const sentences = (...a) =>
+  a
+    .filter(Boolean)
+    .join(" ")
+    .replace(/([。！？]) /g, "$1");

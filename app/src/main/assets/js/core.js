@@ -286,11 +286,17 @@ function monthLabel(m, always) {
   if (always || y !== new Date().getFullYear()) o.year = "numeric";
   return new Date(y, mo - 1, 1).toLocaleDateString(DATE_LOC, o);
 }
+/* toLocaleDateString builds a formatter on every call (History calls this once per day shown): built once instead */
+const DAY_DTF = {};
 function dayLabel(d) {
-  const x = parseISO(d);
-  const o = { weekday: "short", day: "numeric", month: "short" };
-  if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
-  return x.toLocaleDateString(DATE_LOC, o);
+  const x = parseISO(d),
+    y = x.getFullYear() !== new Date().getFullYear() ? "y" : "n";
+  if (!DAY_DTF[y]) {
+    const o = { weekday: "short", day: "numeric", month: "short" };
+    if (y === "y") o.year = "numeric";
+    DAY_DTF[y] = new Intl.DateTimeFormat(DATE_LOC, o);
+  }
+  return isNaN(x) ? "" : DAY_DTF[y].format(x); // loanRow asks for an open loan with no due date (unused)
 }
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
 const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));
@@ -516,6 +522,7 @@ function shortDay(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(DATE_LOC, o);
 }
+/* ISO dates (YYYY-MM-DD) sort as plain strings; localeCompare runs ICU collation on every comparison */
+const cmpDay = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 /* newest first; a fee saved with its transfer's own time (before 1.4) comes just above it, as balances count it */
-const byNewest = (a, b) =>
-  b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);
+const byNewest = (a, b) => cmpDay(b.date, a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);

@@ -1209,6 +1209,10 @@ input {
   border-radius: 20px;
   overflow: hidden;
 }
+/* a day's entries (History, the entries sheet): off screen, not laid out or painted until scrolled near */
+.dl {
+  content-visibility: auto;
+}
 .day {
   display: flex;
   justify-content: space-between;

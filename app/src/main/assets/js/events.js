@@ -500,8 +500,10 @@ document.addEventListener("click", ev => {
     case "sel-toggle":
       if (V.sel.has(v)) V.sel.delete(v);
       else V.sel.add(v);
-      if (!V.sel.size) V.sel = null;
-      render();
+      if (!V.sel.size) {
+        V.sel = null;
+        render();
+      } else selSync(el);
       break;
     case "sel-all": {
       const ids = historyList().map(t => t.id);
@@ -634,9 +636,9 @@ document.addEventListener("input", ev => {
   else if (id === "f-person" && F && F.kind === "loanf") {
     /* a name typed out in full that has an open tab (same kind and currency) adds to it, as picking it would: the
        hint says so, and changing the name undoes it */
-    const name = ev.target.value.trim().toLowerCase(),
+    const name = curFold(ev.target.value.trim()), // any case, any script's (Turkish İrem / irem / IREM)
       cur = (acc(F.account) || {}).currency,
-      same = name && cur ? personCandidates(F.lk, cur, name).find(l => l.person.toLowerCase() === name) : null;
+      same = name && cur ? personCandidates(F.lk, cur, ev.target.value).find(l => curFold(l.person) === name) : null;
     F.merge = same ? same.id : null;
     mergeHint();
     personSuggest(ev.target.value);

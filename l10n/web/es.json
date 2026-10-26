@@ -53,7 +53,7 @@
     "archiveOwes": "Aún debe {{amount}}. Las cuentas archivadas no cuentan en tus totales; sus movimientos siguen en el Historial.",
     "archive": "Archivar",
     "archivedTag": "archivada",
-    "startedWith": "Empezó hoy con {{amount}}",
+    "startedWith": "Al empezar el día: {{amount}}",
     "mismatch": "¿No coincide?",
     "mismatchHint": "Escribe lo que tienes de verdad ahora. Tally anota la diferencia como un ajuste de saldo.",
     "actual": "Saldo real",
@@ -621,7 +621,7 @@
     "owedHint": "El dinero que prestas aparece aquí hasta que te lo devuelven.",
     "lendBtn": "Prestar dinero",
     "other": "Otros bienes",
-    "otherHint": "Cosas tuyas que no son cuentas, como oro o una bicicleta."
+    "otherHint": "Cosas tuyas que no son cuentas, como oro o un portátil."
   },
   "loans": {
     "dropActive": "Suelta aquí para reactivar",

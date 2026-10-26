@@ -26,7 +26,7 @@ function loanEntries(id) {
    out of each draw, nextDue the earliest due date still unpaid, dueAmt what is due by then (or by today) */
 function loanInfo(l) {
   const mine = loanEntries(l.id),
-    byDate = (x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0);
+    byDate = (x, y) => cmpDay(x.date, y.date) || (x.ts || 0) - (y.ts || 0);
   const draws = mine.filter(t => t.principal).sort(byDate);
   const pays = mine.filter(t => !t.principal);
   const newest = draws[draws.length - 1],
@@ -37,7 +37,7 @@ function loanInfo(l) {
   const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
     paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
     left = owed(total - paid);
-  const order = draws.slice().sort((x, y) => (x.due ? (y.due ? x.due.localeCompare(y.due) : -1) : y.due ? 1 : 0)),
+  const order = draws.slice().sort((x, y) => (x.due ? (y.due ? cmpDay(x.due, y.due) : -1) : y.due ? 1 : 0)),
     rem = {};
   draws.forEach(t => (rem[t.id] = t.amount));
   /* a payment goes to the draws made by its day, due soonest first: never to one lent or borrowed after it, whose
@@ -148,9 +148,8 @@ function deleteLoanEntry(id) {
     relinkLoan(l.id);
   });
 }
-function loanRow(l) {
-  const i = loanInfo(l),
-    lend = l.kind === "lend";
+function loanRow(l, i = loanInfo(l)) {
+  const lend = l.kind === "lend";
   const a = acc(l.account),
     date = dayLabel(i.open ? i.nextDue : l.date);
   const sub =
@@ -196,7 +195,7 @@ function personCandidates(kind, cur, q) {
     const i = loanInfo(l);
     if (!i.open || i.cur !== cur) return;
     if (qq && !curFold(l.person).startsWith(qq)) return;
-    const key = l.person.toLowerCase();
+    const key = curFold(l.person);
     if (seen.has(key)) return;
     seen.add(key);
     out.push({ l, ts: i.draws.length ? i.draws[i.draws.length - 1].ts || 0 : 0 });
@@ -873,9 +872,10 @@ function clearLoan(id) {
     offText = T(lend ? "loan.clear.writeOff" : "loan.clear.forgive");
   askDialog(
     T(lend ? "loan.clear.titleLend" : "loan.clear.titleBorrow", v),
-    T(lend ? "loan.clear.owesYou" : "loan.clear.youOwe", v) +
-      " " +
-      T(account ? (lend ? "loan.clear.into" : "loan.clear.from") : "loan.clear.noAccount", v),
+    sentences(
+      T(lend ? "loan.clear.owesYou" : "loan.clear.youOwe", v),
+      T(account ? (lend ? "loan.clear.into" : "loan.clear.from") : "loan.clear.noAccount", v)
+    ),
     account ? T(lend ? "loan.clear.gotAll" : "loan.clear.paidAll") : offText,
     account ? paid : off,
     account ? { alt: [offText, off] } : undefined

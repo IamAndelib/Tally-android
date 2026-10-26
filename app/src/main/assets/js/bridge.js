@@ -48,11 +48,15 @@ function syncReminders() {
     now = today();
   /* the last day something was written: the day of its writing (an entry dated ahead counts on that day, never past
      today; an old one without a time on its date) */
-  const last = S.txns.reduce((m, t) => {
-    const c = t.ts ? iso(new Date(t.ts)) : t.date,
-      d = c < now ? c : now;
-    return d > m ? d : m;
-  }, "");
+  let maxTs = 0,
+    maxDate = "";
+  S.txns.forEach(t => {
+    if (t.ts) maxTs = Math.max(maxTs, t.ts);
+    else if (t.date > maxDate) maxDate = t.date;
+  });
+  const c = maxTs ? iso(new Date(maxTs)) : "",
+    newest = c > maxDate ? c : maxDate,
+    last = newest < now ? newest : now;
   const dues =
     r.dues === false
       ? []
@@ -316,7 +320,7 @@ function folderCheck() {
       );
     askDialog(
       T("backup.badFile.title"),
-      (r.error ? nativeErr(r.error) : T("backup.badFile.cantRead")) + " " + T("backup.badFile.replaceQ"),
+      sentences(r.error ? nativeErr(r.error) : T("backup.badFile.cantRead"), T("backup.badFile.replaceQ")),
       T("backup.found.replace"),
       backupOn,
       { cancel: T("common.notNow") }

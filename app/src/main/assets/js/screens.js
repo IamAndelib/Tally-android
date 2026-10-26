@@ -368,9 +368,33 @@ function fitFigures(root) {
     shrink(el, over);
     if (over()) el.style.overflowWrap = "anywhere";
   });
-  root.querySelectorAll(".tx .a").forEach(el => {
+  /* a day's list far off screen isn't laid out (content-visibility, .dl): its rows are fitted as they come near */
+  const fitRow = el => {
     const row = el.closest(".tx");
     shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+  };
+  if (root.fitIO) root.fitIO.disconnect();
+  const far = [...root.querySelectorAll(".dl")].filter(l => {
+    const r = l.getBoundingClientRect();
+    return r.top > innerHeight + 800 || r.bottom < -800;
+  });
+  if (far.length && window.IntersectionObserver) {
+    const io = (root.fitIO = new IntersectionObserver(
+      es =>
+        es.forEach(e => {
+          if (!e.isIntersecting) return;
+          io.unobserve(e.target);
+          e.target.querySelectorAll(".tx .a").forEach(fitRow);
+        }),
+      { rootMargin: "800px 0px" }
+    ));
+    far.forEach(l => {
+      l.dataset.far = "1";
+      io.observe(l);
+    });
+  }
+  root.querySelectorAll(".tx .a").forEach(el => {
+    if (!el.closest("[data-far]")) fitRow(el);
   });
   root.querySelectorAll(".row > .btn, .fbtn").forEach(el => {
     const over = () => el.scrollWidth > el.clientWidth + 1;
@@ -498,15 +522,15 @@ function assetsView() {
 /* one kind of loan on Assets (lend) or Liabilities (borrow): the open ones (or a hint) and a button for a new one, then
    the cleared ones behind "Show cleared"; open and cleared are drop zones, to drag a loan between them */
 function loanSection(kind, title, none, add) {
-  const mine = S.loans.filter(l => l.kind === kind),
-    open = mine.filter(l => loanInfo(l).open),
-    done = mine.filter(l => !loanInfo(l).open);
+  const mine = S.loans.filter(l => l.kind === kind).map(l => [l, loanInfo(l)]),
+    open = mine.filter(x => x[1].open),
+    done = mine.filter(x => !x[1].open);
   let h =
     '<div class="sec">' +
     esc(title) +
     "</div>" +
     (open.length
-      ? zoneList(kind + "-open", open.map(l => loanRow(l)).join(""))
+      ? zoneList(kind + "-open", open.map(([l, i]) => loanRow(l, i)).join(""))
       : '<p class="hint" style="margin:0 4px">' + esc(none) + "</p>") +
     dropBox(kind + "-open", T("loans.dropActive"), "reset") +
     '<button class="btn text" data-act="loan-new" data-v="' +
@@ -521,20 +545,20 @@ function loanSection(kind, title, none, add) {
       '<button class="btn text" data-act="toggle-cleared">' +
       TH(V.showCleared ? "loans.hideCleared" : "loans.showCleared", { count: done.length }) +
       "</button>";
-    if (V.showCleared) h += zoneList(kind + "-done", done.map(l => loanRow(l)).join("")) + dragTip();
+    if (V.showCleared) h += zoneList(kind + "-done", done.map(([l, i]) => loanRow(l, i)).join("")) + dragTip();
   }
   return h;
 }
 function liabsView() {
   const b = balances();
   let h = "";
-  const open = S.loans.filter(l => l.kind === "borrow" && loanInfo(l).open);
+  const open = S.loans
+    .filter(l => l.kind === "borrow")
+    .map(loanInfo)
+    .filter(i => i.open);
   const cards = activeAccounts().filter(a => a.type === "card");
   const owed = perCur(add => {
-    open.forEach(l => {
-      const i = loanInfo(l);
-      add(i.cur, i.left);
-    });
+    open.forEach(i => add(i.cur, i.left));
     cards.forEach(a => {
       if (b[a.id] < 0) add(a.currency, -b[a.id]);
     });
@@ -676,8 +700,10 @@ function dayGroups(list) {
   let h = "",
     cur = "";
   /* each day's spending per currency, in one pass (a year of History is thousands of rows) */
-  const days = new Map();
+  const days = new Map(),
+    rows = new Map();
   list.forEach(x => {
+    rows.set(x.date, (rows.get(x.date) || 0) + 1);
     if (!isSpend(x)) return;
     const c = (acc(x.account) || {}).currency,
       sp = days.get(x.date) || {};
@@ -696,7 +722,9 @@ function dayGroups(list) {
         esc(capFirst(dayLabel(t.date))) +
         "</span><span>" +
         esc(tot) +
-        '</span></div><div class="list">';
+        '</span></div><div class="list dl" style="contain-intrinsic-size:0 ' +
+        rows.get(cur) * 72 +
+        'px">';
     }
     h += txLine(t);
   });
@@ -717,6 +745,16 @@ function historyList() {
   let list = S.txns.filter(t => t.date >= s && t.date <= e);
   if (V.hAcc) list = list.filter(t => t.account === V.hAcc || t.to === V.hAcc);
   return list.sort(byNewest);
+}
+/* a row ticked or unticked in History's selection: that row and the count change, not the whole (long) list */
+function selSync(b) {
+  const on = V.sel.has(b.dataset.v),
+    n = V.sel.size;
+  b.classList.toggle("on", on);
+  b.setAttribute("aria-pressed", on);
+  b.querySelector(".em.pick").innerHTML = ic(on ? "checked" : "unchecked");
+  $("#app .appbar h1").textContent = T("history.selected", { count: n });
+  $('#app [data-act="sel-del"]').disabled = !n;
 }
 function historyView() {
   if (V.hAcc && !acc(V.hAcc)) V.hAcc = ""; // its account was deleted, or a backup restored

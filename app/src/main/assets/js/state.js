@@ -64,8 +64,14 @@ function migrate(o) {
       return Number.isFinite(n) && n > 0 && n < 8.64e15 ? Math.round(n) : 0;
     },
     /* a date of years 1000–9999 that stays one once read (2024-02-30 is 2024-03-01; 9999-12-32 would be year 10000) */
-    isDay = v => typeof v === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(v) && /^[1-9]\d{3}-/.test(iso(parseISO(v))),
-    day = v => iso(parseISO(v)),
+    /* read once per distinct date (thousands of entries fall on a few hundred days) */
+    days = new Map(),
+    day = v => {
+      let d = days.get(v);
+      if (d === undefined) days.set(v, (d = iso(parseISO(v))));
+      return d;
+    },
+    isDay = v => typeof v === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(v) && /^[1-9]\d{3}-/.test(day(v)),
     /* the first of each id keeps it, later ones (a hand-made or damaged backup) get their own */
     uniq = list => {
       const seen = new Set();
@@ -263,10 +269,14 @@ function migrate(o) {
     if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
   });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
+  const drawsOf = new Map();
+  s.txns.forEach(t => {
+    if (t.type === "loan" && t.principal) drawsOf.set(t.loan, (drawsOf.get(t.loan) || []).concat(t));
+  });
   const newestDraw = id =>
-    s.txns
-      .filter(t => t.type === "loan" && t.principal && t.loan === id)
-      .sort((x, y) => x.date.localeCompare(y.date) || x.ts - y.ts)
+    (drawsOf.get(id) || [])
+      .slice()
+      .sort((x, y) => cmpDay(x.date, y.date) || x.ts - y.ts)
       .pop();
   s.loans = (Array.isArray(o.loans) ? o.loans : [])
     .filter(l => l && l.id && (l.kind === "borrow" || l.kind === "lend") && (ver >= 6 || okNum(l.amount)))
@@ -474,7 +484,7 @@ function runBal() {
   });
   S.txns
     .slice()
-    .sort((x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0))
+    .sort((x, y) => cmpDay(x.date, y.date) || (x.ts || 0) - (y.ts || 0))
     .forEach(t => {
       if (!applyEntry(b, t)) return;
       const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
@@ -527,13 +537,14 @@ function currencies() {
 /* msg may be a function, read after the change */
 function withUndo(msg, change, fx) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
-  const before = JSON.stringify({ txns: S.txns, loans: S.loans, accounts: S.accounts, assets: S.assets });
+  const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
+    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) };
   change();
   FX = fx || {};
   commit();
   FX = {};
   snack(typeof msg === "function" ? msg() : msg, () => {
-    const o = JSON.parse(before);
+    const o = before;
     S.txns = o.txns;
     S.loans = o.loans;
     S.accounts = o.accounts;
@@ -550,8 +561,9 @@ function guardOverdraw(mutate, date, proceed) {
     txs = S.txns,
     L = S.loans;
   let b1, d1;
-  S.txns = JSON.parse(JSON.stringify(txs));
-  S.loans = JSON.parse(JSON.stringify(L));
+  /* entries and loans are flat objects: copying each is a deep copy, ~10x quicker than a JSON round trip */
+  S.txns = txs.map(t => ({ ...t }));
+  S.loans = L.map(l => ({ ...l }));
   try {
     mutate();
     b1 = balances();

@@ -53,7 +53,7 @@
     "archiveOwes": "Tagihannya masih {{amount}}. Akun yang diarsipkan tidak dihitung dalam total; transaksinya tetap ada di Riwayat.",
     "archive": "Arsipkan",
     "archivedTag": "diarsipkan",
-    "startedWith": "Mulai hari ini dengan {{amount}}",
+    "startedWith": "Awal hari ini: {{amount}}",
     "mismatch": "Tidak cocok?",
     "mismatchHint": "Ketik jumlah yang benar-benar kamu punya sekarang. Tally mencatat selisihnya sebagai koreksi saldo.",
     "actual": "Saldo sebenarnya",
@@ -420,10 +420,10 @@
       "oweAgain": "Kamu kembali berutang {{amount}} pada {{who}}"
     },
     "over": {
-      "lendToLoan": "Piutang {{who}} lunas · kamu berutang {{amount}} pada {{who}}",
+      "lendToLoan": "Piutang ke {{who}} lunas · kamu berutang {{amount}} pada {{who}}",
       "loanToLend": "Utang lunas · {{who}} berutang {{amount}} padamu",
       "extraNote": "Kelebihan dari {{who}}",
-      "lendCleared": "Piutang {{who}} lunas",
+      "lendCleared": "Piutang ke {{who}} lunas",
       "asFeeMsg": "Utang lunas · {{amount}} sebagai biayanya",
       "theyPaid": "{{who}} membayar {{amount}} lebih",
       "youPaid": "Kamu membayar {{amount}} lebih",
@@ -437,7 +437,7 @@
       "asFee": "Catat sebagai biaya"
     },
     "clear": {
-      "titleLend": "Tutup piutang {{who}}?",
+      "titleLend": "Tutup piutang ke {{who}}?",
       "titleBorrow": "Tutup utang ke {{who}}?",
       "owesYou": "{{who}} masih berutang {{amount}}.",
       "youOwe": "Kamu masih berutang {{amount}} pada {{who}}.",
