@@ -21,6 +21,24 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The time picker writes AM and PM the way the phone's language does.
 - A search for a person finds names whatever their accents or Turkish dotted and dotless i.
 - An emblem search in a script other than Latin finds nothing, instead of listing every emblem.
+- Long lists (History over months, a busy notebook) open and scroll faster, and saving an entry in a large notebook
+  takes less time.
+
+### Fixed
+
+- Picking the auto backup's folder again no longer turns auto backup off, and a damaged backup in a newly picked
+  folder offers to replace it.
+- While saved data can't be read, changing a setting no longer hides the problem at the next start or turns auto
+  backup off, Restore offers the auto backup first, and restoring a file keeps auto backup on.
+- A daily backup missed because the phone was off or Tally was stopped runs a minute later, not a day later.
+- A backup file saved by an editor with a byte-order mark restores.
+- A save that fails both on the phone's storage and in Tally's own copy now says so.
+- A loan payment counts only against what was borrowed or lent by its day, so a later loan keeps its due date.
+- A name typed in another case adds to that person's open loan instead of starting a second one.
+- A payback day can't be set to yesterday after midnight passes with the form open.
+- An amount that rounds to nothing in its currency ($0.004) is no longer saved as $0.00.
+- Going back from the low-balance question no longer changes the account offered next time.
+- The focus stays on screen when a button turns itself off (Next reaching today), for TalkBack and keyboards.
 
 ## [1.4.1] — 2026-10-20
 
