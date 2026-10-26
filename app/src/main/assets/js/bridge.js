@@ -218,6 +218,8 @@ function applyNativeActions() {
   }
 }
 /* ---- daily auto backup (BackupReceiver.java): the shell keeps a copy of S and writes it to the picked folder ---- */
+/* the auto backup's file in the folder picked (BackupReceiver.NAME) */
+const BACKUP_FILE = "Tally backup.json";
 const canBackup = () => !!(window.Android && Android.setBackupData && Android.pickBackupFolder);
 let mirrorT = 0;
 /* after every save while auto backup is on, hand the shell the data (debounced: a drag saves many times) */
@@ -250,7 +252,7 @@ function syncBackup() {
    language; a sentence an older Tally stored, or one the page made, is shown as it is */
 const nativeErr = x =>
   /^[a-z_]+$/.test(x) && i18nGet("native.err." + x) != null
-    ? T("native.err." + x, { file: x === "saved_temp" ? "Tally backup (new).json" : "Tally backup.json" })
+    ? T("native.err." + x, { file: x === "saved_temp" ? "Tally backup (new).json" : BACKUP_FILE })
     : String(x);
 /* {on, folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
 function backupStatus() {
@@ -329,7 +331,7 @@ function folderCheck() {
 }
 /* Answers from the shell's own threads (a slow folder can't freeze the page), each matched to its request by number,
    so two in a row never trade answers */
-let shellAsks = 0;
+let shellAsks = Date.now() % 1e9; // per page: an answer to the page before a recreate never matches (fits Java's int)
 const shellThen = {};
 function askShell(call, then, fail) {
   const id = ++shellAsks;
@@ -390,12 +392,12 @@ function fixReminders(kind) {
     Android.openSetting(kind);
   } catch (e) {}
 }
-/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
-   "backup" from a failed auto backup (window.tallyOpen) */
 /* the first-open permissions dialog stays up when Tally was first opened from the widget (it shows once per install) */
 const keepPermsUp = () => {
   if (!$("#pp-rows")) closePop();
 };
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
+   "backup" from a failed auto backup (window.tallyOpen) */
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
   if (k === "add") {

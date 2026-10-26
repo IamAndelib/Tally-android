@@ -366,7 +366,7 @@ function timePicker(title, cur, onPick) {
     );
   };
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog tp" role="dialog" aria-modal="true" aria-label="' +
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="' +
     esc(title) +
     '"><div class="dp-h"><div class="t">' +
     esc(title) +
@@ -463,22 +463,31 @@ const closePop = () => {
   ASK = null;
   ASK_ALT = null;
 };
-function openSheet(title, body) {
-  $("#sheet").innerHTML =
-    '<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="' +
+/* a sheet in its layer (#sheet, or #sheet2 for pickers opened from inside one): handle, title, ✕ and body */
+function showSheet(layer, cls, bgAct, closeAct, title, body) {
+  const el = $(layer);
+  el.innerHTML =
+    '<div class="' +
+    cls +
+    '" data-act="' +
+    bgAct +
+    '"><div class="p" role="dialog" aria-modal="true" aria-label="' +
     esc(title) +
     '"><div class="handle"></div><div class="h"><h2>' +
     esc(title) +
-    '</h2><button class="icon" data-act="close" aria-label="' +
+    '</h2><button class="icon" data-act="' +
+    closeAct +
+    '" aria-label="' +
     TH("common.close") +
     '">' +
     ic("close") +
     "</button></div>" +
     body +
     "</div></div>";
-  groupAmountInputs($("#sheet"));
-  fitFigures($("#sheet"));
+  groupAmountInputs(el);
+  fitFigures(el);
 }
+const openSheet = (title, body) => showSheet("#sheet", "sheet", "sheet-bg", "close", title, body);
 /* amounts already in a new sheet (editing an entry, a loan's balance) show grouped like typed ones */
 function groupAmountInputs(root) {
   root.querySelectorAll('input[inputmode="decimal"]').forEach(i => (i.value = groupDigits(i.value)));
@@ -502,22 +511,7 @@ function closeSheet() {
   }
 }
 /* second layer, for pickers opened from inside a sheet */
-function openSheet2(title, body) {
-  $("#sheet2").innerHTML =
-    '<div class="sheet s2" data-act="sheet2-bg"><div class="p" role="dialog" aria-modal="true" aria-label="' +
-    esc(title) +
-    '"><div class="handle"></div><div class="h"><h2>' +
-    esc(title) +
-    '</h2><button class="icon" data-act="close2" aria-label="' +
-    TH("common.close") +
-    '">' +
-    ic("close") +
-    "</button></div>" +
-    body +
-    "</div></div>";
-  groupAmountInputs($("#sheet2"));
-  fitFigures($("#sheet2"));
-}
+const openSheet2 = (title, body) => showSheet("#sheet2", "sheet s2", "sheet2-bg", "close2", title, body);
 function closeSheet2() {
   $("#sheet2").innerHTML = "";
   CURPICK = null;
@@ -722,7 +716,7 @@ function curPicker(current, onPick, title) {
   CURPICK = onPick;
   curList("");
   // the first search builds every currency's search text: do it while the list is only being looked at
-  if (window.requestIdleCallback) requestIdleCallback(() => allCurs().forEach(curText));
+  requestIdleCallback(() => allCurs().forEach(curText));
 }
 /* the currencies of the phone's country (its region setting), main one first: offered first when picking */
 let HOME_CURS = null;

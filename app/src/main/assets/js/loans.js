@@ -25,9 +25,8 @@ function loanEntries(id) {
    Payments go to the draw due soonest first (draws without a due date last, oldest first): rem[id] is what is still
    out of each draw, nextDue the earliest due date still unpaid, dueAmt what is due by then (or by today) */
 function loanInfo(l) {
-  const mine = loanEntries(l.id),
-    byDate = (x, y) => cmpDay(x.date, y.date) || (x.ts || 0) - (y.ts || 0);
-  const draws = mine.filter(t => t.principal).sort(byDate);
+  const mine = loanEntries(l.id);
+  const draws = mine.filter(t => t.principal).sort(byOldest);
   const pays = mine.filter(t => !t.principal);
   const newest = draws[draws.length - 1],
     a = acc(newest ? newest.account : l.account),
@@ -55,7 +54,7 @@ function loanInfo(l) {
   let credit = 0;
   pays
     .slice()
-    .sort(byDate)
+    .sort(byOldest)
     .forEach(p => (credit = take(p.date, rnd(credit + p.amount))));
   take("", credit);
   draws.forEach(t => (rem[t.id] = owed(rem[t.id])));
@@ -134,7 +133,7 @@ function loanBlock(ids) {
 }
 /* Delete on a row of the loan sheet (never the loan's only draw, nor one already paid back) */
 function deleteLoanEntry(id) {
-  const t = S.txns.find(x => x.id === id),
+  const t = entry(id),
     l = t && t.type === "loan" && loan(t.loan);
   if (!l || (t.principal && loanInfo(l).draws.length <= 1)) return;
   const no = loanBlock([id]);
@@ -144,8 +143,7 @@ function deleteLoanEntry(id) {
   }
   closeSheet();
   withUndo(T(t.principal ? "common.deleted" : "loan.payDeleted"), () => {
-    S.txns = S.txns.filter(x => x.id !== id && x.feeOf !== id); // a payment's fee goes with it
-    relinkLoan(l.id);
+    deleteEntries([id]); // a payment's fee goes with it
   });
 }
 function loanRow(l, i = loanInfo(l)) {
@@ -385,7 +383,7 @@ function loanOpen(id, focusPay) {
     hist
       .map(t => {
         const a = acc(t.account),
-          f = t.feeId && S.txns.find(x => x.id === t.feeId);
+          f = t.feeId && entry(t.feeId);
         const r = runBal()[t.id] || {},
           canDel = !t.principal || i.draws.length > 1,
           name = a ? a.name : "?",
@@ -475,7 +473,7 @@ function loanDrawEdit(txnId) {
   if (!F || F.kind !== "loan") return;
   const l = loan(F.id);
   if (!l) return;
-  const t = S.txns.find(x => x.id === txnId);
+  const t = entry(txnId);
   if (!t) return;
   const i = loanInfo(l),
     lend = l.kind === "lend";
@@ -534,7 +532,7 @@ function saveLoanDraw() {
     return;
   }
   const txnId = F.editTxn,
-    t0 = S.txns.find(x => x.id === txnId);
+    t0 = entry(txnId);
   if (!t0) return;
   /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan; and no payment
      before the first draw */
@@ -555,14 +553,14 @@ function saveLoanDraw() {
     return;
   }
   const mutate = () => {
-    const t = S.txns.find(x => x.id === txnId);
+    const t = entry(txnId);
     if (!t) return;
     t.amount = amt;
     t.account = acc2;
     t.date = date2;
     if (setDue) t.due = due2;
     /* a payment's fee goes with it: same account, same day */
-    const fee = t.feeId && S.txns.find(x => x.id === t.feeId);
+    const fee = t.feeId && entry(t.feeId);
     if (fee) {
       fee.account = acc2;
       fee.date = date2;
@@ -659,9 +657,8 @@ function deleteLoan() {
   const id = F.id;
   closeSheet();
   withUndo(T("common.deleted"), () => {
-    const gone = new Set(S.txns.filter(t => t.type === "loan" && t.loan === id).map(t => t.id));
-    S.loans = S.loans.filter(l => l.id !== id);
-    S.txns = S.txns.filter(t => !gone.has(t.id) && !gone.has(t.feeOf)); // the payments' fees go with them
+    deleteEntries(S.txns.filter(t => t.type === "loan" && t.loan === id).map(t => t.id)); // with the payments' fees
+    S.loans = S.loans.filter(l => l.id !== id); // even one left without a draw (a hand-made backup)
   });
 }
 /* a payment on loan l, plus its fee when there is one: an expense linked both ways, like a transfer's (off the same
@@ -738,16 +735,14 @@ function payLoan() {
   const mutate = () => {
     S.txns.push(...payTxns(l, pid, ts, amt, account, date, fee));
   };
-  guardOverdraw(mutate, date, () => {
-    closeSheet();
-    withUndo(
-      T(lend ? "loan.msg.gotBack" : "loan.msg.paidBack", { amount: money(amt, i.cur) }) +
-        plusFee(fee, i.cur) +
-        (done ? " · " + T("loan.msg.allCleared") : ""),
-      mutate,
-      { row: id }
-    );
-  });
+  saveChecked(
+    mutate,
+    date,
+    T(lend ? "loan.msg.gotBack" : "loan.msg.paidBack", { amount: money(amt, i.cur) }) +
+      plusFee(fee, i.cur) +
+      (done ? " · " + T("loan.msg.allCleared") : ""),
+    { row: id }
+  );
 }
 /* someone paid back more than they owed (or you did): the payment clears this one, and the extra is either a loan the
    other way, or (they paid you more) income, on the income form so the category is the user's choice, or (you paid
@@ -765,11 +760,7 @@ function overpay(l, i, amt, account, date, fee) {
   const clear = more => {
     if (i.left > 0) S.txns.push(...payTxns(l, pid, ts, i.left, account, date, rnd(fee + (more || 0))));
   };
-  const book = (mutate, msg, row) =>
-    guardOverdraw(mutate, date, () => {
-      closeSheet();
-      withUndo(msg, mutate, { row });
-    });
+  const book = (mutate, msg, row) => saveChecked(mutate, date, msg, { row });
   const asLoan = () =>
     book(
       () => {
@@ -899,7 +890,7 @@ function reopenLoan(id) {
   withUndo(
     T(lend ? "loan.msg.owesAgain" : "loan.msg.oweAgain", { who, amount: money(last.amount, i.cur) }),
     () => {
-      S.txns = S.txns.filter(t => t.id !== last.id && t.feeOf !== last.id); // with its fee
+      deleteEntries([last.id]); // with its fee
       loan(id).status = "open";
     },
     { row: id }

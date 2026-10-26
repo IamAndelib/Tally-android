@@ -4,28 +4,30 @@
  */
 "use strict";
 
-/* default colours: validated with a colour-blind-safe check (OKLab ΔE) in ring order on the light and dark surfaces;
-   the last six are extra choices for the user */
-const PALETTE = [
-  "#15a06f",
-  "#c98500",
-  "#0a91b8",
-  "#7c9a0d",
-  "#a646c9",
-  "#e0578c",
-  "#4b5fd6",
-  "#e0504f",
-  "#2a78d6",
-  "#df5f2b",
-  "#00897b",
-  "#b0671f",
-  "#5f7389",
-  "#c2185b",
-  "#689f38",
-  "#6a3fb5",
-  "#0288d1",
-  "#a1887f",
-];
+/* the palette and each colour's name for screen readers (a whole text of its own, color.*). Defaults in ring order,
+   validated with a colour-blind-safe check (OKLab ΔE) on the light and dark surfaces; the last six are extra choices
+   for the user. */
+const COL_NAMES = {
+  "#15a06f": "green",
+  "#c98500": "amber",
+  "#0a91b8": "cyan",
+  "#7c9a0d": "olive",
+  "#a646c9": "purple",
+  "#e0578c": "pink",
+  "#4b5fd6": "indigo",
+  "#e0504f": "red",
+  "#2a78d6": "blue",
+  "#df5f2b": "orange",
+  "#00897b": "teal",
+  "#b0671f": "brown",
+  "#5f7389": "slateGrey",
+  "#c2185b": "raspberry",
+  "#689f38": "leafGreen",
+  "#6a3fb5": "violet",
+  "#0288d1": "skyBlue",
+  "#a1887f": "taupe",
+};
+const PALETTE = Object.keys(COL_NAMES);
 const TYPE_ICON = {
   bank: "account_balance",
   wallet: "mobile",
@@ -45,8 +47,8 @@ function emblem(o, cls, extra) {
     p = o && o.i && ICONS[o.i];
   return (
     '<span class="' +
-    (cls || "emb") +
-    ' emb" style="background:' +
+    (cls ? cls + " " : "") +
+    'emb" style="background:' +
     c +
     ";--ec:" +
     c +
@@ -91,28 +93,7 @@ function normHex(v) {
       .join("");
   return /^[0-9a-f]{6}$/.test(h) ? "#" + h : null;
 }
-/* a colour's name for screen readers: the palette's own, else from its hue and lightness ("Dark blue"), each a whole
-   text of its own (color.*) */
-const COL_NAMES = {
-  "#15a06f": "green",
-  "#c98500": "amber",
-  "#0a91b8": "cyan",
-  "#7c9a0d": "olive",
-  "#a646c9": "purple",
-  "#e0578c": "pink",
-  "#4b5fd6": "indigo",
-  "#e0504f": "red",
-  "#2a78d6": "blue",
-  "#df5f2b": "orange",
-  "#00897b": "teal",
-  "#b0671f": "brown",
-  "#5f7389": "slateGrey",
-  "#c2185b": "raspberry",
-  "#689f38": "leafGreen",
-  "#6a3fb5": "violet",
-  "#0288d1": "skyBlue",
-  "#a1887f": "taupe",
-};
+/* a colour's name: the palette's own, else from its hue and lightness ("Dark blue") */
 function colName(x) {
   if (COL_NAMES[x]) return T("color." + COL_NAMES[x]);
   const [r, g, b] = hexRgb(x).map(v => v / 255),
@@ -148,6 +129,7 @@ const colDot = (x, sel) =>
   esc(colName(x)) +
   '"></button>';
 const LOAN_EMB = { borrow: { i: "handshake", c: "#6a3fb5" }, lend: { i: "volunteer_activism", c: "#0288d1" } };
+const XFER_EMB = { i: "swap_horiz", c: "#5f7389" }; // a transfer, and a transfer's fee
 /* search: every word must match the start of a word in the name or tags; whole-word matches rank first */
 function iconSearch(q) {
   const words = q
@@ -225,7 +207,7 @@ function emblemEditor(o) {
     TH("icon.change") +
     '"><span id="f-cprev">' +
     emblem(o, "cprev") +
-    '</span></button><button class="btn text" data-act="f-icon" style="width:auto;height:36px">' +
+    '</span></button><button class="btn text" data-act="f-icon" style="width:auto">' +
     ic("edit") +
     TH("icon.change") +
     "</button></div>" +

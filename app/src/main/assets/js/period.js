@@ -61,9 +61,8 @@ const canNext = (p = V) => range(p)[1] < today();
 /* the date a new entry gets: the day being looked at (today when it is in view) */
 function entryDate() {
   const t = today(),
-    [s, e] = range();
-  if (t >= s && t <= e) return V.period === "day" ? V.anchor : t;
-  return V.period === "day" ? V.anchor : e;
+    [s, e] = range(); // a day: both are that day
+  return t >= s && t <= e ? t : e;
 }
 /* A new day, at midnight with the app open or on coming back to it. Home jumps to today (a range ending on the day
    that ended moves to end today), History leaves that day's month for this one, and an open form's dates move too:

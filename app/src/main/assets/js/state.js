@@ -63,14 +63,14 @@ function migrate(o) {
       const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? +v : NaN;
       return Number.isFinite(n) && n > 0 && n < 8.64e15 ? Math.round(n) : 0;
     },
-    /* a date of years 1000–9999 that stays one once read (2024-02-30 is 2024-03-01; 9999-12-32 would be year 10000) */
-    /* read once per distinct date (thousands of entries fall on a few hundred days) */
+    /* each distinct date read once (thousands of entries fall on a few hundred days) */
     days = new Map(),
     day = v => {
       let d = days.get(v);
       if (d === undefined) days.set(v, (d = iso(parseISO(v))));
       return d;
     },
+    /* a date of years 1000–9999 that stays one once read (2024-02-30 is 2024-03-01; 9999-12-32 would be year 10000) */
     isDay = v => typeof v === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(v) && /^[1-9]\d{3}-/.test(day(v)),
     /* the first of each id keeps it, later ones (a hand-made or damaged backup) get their own */
     uniq = list => {
@@ -277,11 +277,7 @@ function migrate(o) {
   s.txns.forEach(t => {
     if (t.type === "loan" && t.principal) drawsOf.set(t.loan, (drawsOf.get(t.loan) || []).concat(t));
   });
-  const newestDraw = id =>
-    (drawsOf.get(id) || [])
-      .slice()
-      .sort((x, y) => cmpDay(x.date, y.date) || x.ts - y.ts)
-      .pop();
+  const newestDraw = id => (drawsOf.get(id) || []).slice().sort(byOldest).pop();
   s.loans = (Array.isArray(o.loans) ? o.loans : [])
     .filter(l => l && l.id && (l.kind === "borrow" || l.kind === "lend") && (ver >= 6 || okNum(l.amount)))
     .map(l => {
@@ -477,6 +473,13 @@ const balanceIn = (cur, b) =>
       .reduce((q, a) => q + b[a.id], 0)
   );
 const outCats = () => S.cats.filter(c => c.kind === "out" && !c.hidden);
+/* the ring has room for 24 spending categories: true (and said) when one more of that kind wouldn't fit */
+const MAX_OUT_CATS = 24;
+function catsFull(kind) {
+  if (kind !== "out" || outCats().length < MAX_OUT_CATS) return false;
+  snack(T("category.max", { count: MAX_OUT_CATS }));
+  return true;
+}
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
 /* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment
    left the loan partly paid or cleared. Cached until the next render. */
@@ -498,7 +501,7 @@ function runBal() {
   });
   S.txns
     .slice()
-    .sort((x, y) => cmpDay(x.date, y.date) || (x.ts || 0) - (y.ts || 0))
+    .sort(byOldest)
     .forEach(t => {
       if (!applyEntry(b, t)) return;
       const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
@@ -546,9 +549,9 @@ function applyEntry(b, t) {
 function currencies() {
   return [...new Set(activeAccounts().map(a => a.currency))];
 }
-/* Every add/edit/delete of entries goes through here: snapshot entries, loans and accounts, apply the change,
-   save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. */
-/* msg may be a function, read after the change */
+/* Every add/edit/delete of entries goes through here: snapshot entries, loans, accounts and assets, apply the change,
+   save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. msg may be
+   a function, read after the change. */
 function withUndo(msg, change, fx) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
   const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
@@ -558,15 +561,17 @@ function withUndo(msg, change, fx) {
   commit();
   FX = {};
   snack(typeof msg === "function" ? msg() : msg, () => {
-    const o = before;
-    S.txns = o.txns;
-    S.loans = o.loans;
-    S.accounts = o.accounts;
-    S.assets = o.assets;
+    Object.assign(S, before);
     commit();
     snack(T("common.undone"));
   });
 }
+/* a form's save: the low-balance question when it applies, then the form closes and the change is made with its Undo */
+const saveChecked = (mutate, date, msg, fx) =>
+  guardOverdraw(mutate, date, () => {
+    closeSheet();
+    withUndo(msg, mutate, fx);
+  });
 /* Money sources (not credit cards) shouldn't go below zero. Try the change on a copy first; if it would take an account
    below zero (now, or at the end of that day) and lower than it already was, ask before saving. */
 function guardOverdraw(mutate, date, proceed) {

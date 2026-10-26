@@ -24,14 +24,10 @@ if (unreadable)
   );
 else if (!permsIntro()) backupNudge();
 /* follow the phone's light/dark switch */
-{
-  const mq = matchMedia("(prefers-color-scheme: dark)");
-  if (mq.addEventListener)
-    mq.addEventListener("change", () => {
-      applyTheme();
-      render();
-    });
-}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  applyTheme();
+  render();
+});
 /* hooks the Android shell (MainActivity.java) calls, installed last so they never run before the app is ready */
 Object.assign(window, {
   tallyBack: goBack,

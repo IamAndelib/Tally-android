@@ -7,7 +7,9 @@
 /* A second tap right where a tap just closed a sheet or dialog (a double tap on Save), or swapped the sheet for another
    (Add category from the entry form, and back), would land on whatever is there now: such a tap is dropped. Keyboard
    and script clicks (detail 0) always go through. */
-let ghostTap = null;
+let ghostTap = null,
+  tapLayers = 0, // layers open when the tap began
+  sheetSwap = false; // this tap swapped the entry form for Add category / Add account, or back (txQuickAdd)
 const layersUp = () => ["#sheet", "#sheet2", "#pop"].filter(id => $(id).innerHTML).length;
 document.addEventListener(
   "click",
@@ -25,8 +27,6 @@ document.addEventListener(
   },
   true
 );
-let tapLayers = 0,
-  sheetSwap = false; // this tap swapped the entry form for Add category / Add account, or back (txQuickAdd)
 document.addEventListener("click", ev => {
   if (swallowClick) {
     swallowClick = false;
@@ -458,16 +458,11 @@ document.addEventListener("click", ev => {
     case "acc-save":
       saveAccount();
       break;
-    case "acc-arch": {
-      const a = acc(F.id);
-      closeSheet();
-      if (a) setArchived(a.id, !a.archived);
-      break;
-    }
+    case "acc-arch":
     case "acc-unarch": {
       const id = F.id;
       closeSheet();
-      setArchived(id, false);
+      setArchived(id, act === "acc-arch");
       break;
     }
     case "loan-reopen": {
@@ -550,11 +545,7 @@ document.addEventListener("click", ev => {
       catForm(v);
       break;
     case "cat-new":
-      if (v === "out" && outCats().length >= 24) {
-        snack(T("category.max", { count: 24 }));
-        return;
-      }
-      catForm(null, v);
+      if (!catsFull(v)) catForm(null, v);
       break;
     case "cat-back":
       restoreCat(v);

@@ -41,13 +41,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
   backup off, Restore offers the auto backup first, and restoring a file keeps auto backup on.
 - A daily backup missed because the phone was off or Tally was stopped runs a minute later, not a day later.
 - A backup file saved by an editor with a byte-order mark restores.
-- A save that fails both on the phone's storage and in Tally's own copy now says so.
 - A loan payment counts only against what was borrowed or lent by its day, so a later loan keeps its due date.
 - A name typed in another case adds to that person's open loan instead of starting a second one.
 - A payback day can't be set to yesterday after midnight passes with the form open.
 - An amount that rounds to nothing in its currency ($0.004) is no longer saved as $0.00.
 - Going back from the low-balance question no longer changes the account offered next time.
 - The focus stays on screen when a button turns itself off (Next reaching today), for TalkBack and keyboards.
+- A long list (History, a day's entries) keeps the entry you were looking at in place after a save, an Undo or going
+  back to it.
+- History keeps only listed entries selected, so Delete never removes one out of sight (after midnight, or an Undo).
+- The evening nudge and the balance check still come, a minute late, when the phone was off at their time.
+- A save that both of the phone's stores refuse is said even the first time.
 
 ## [1.4.1] — 2026-10-20
 

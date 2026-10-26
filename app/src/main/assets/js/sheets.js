@@ -138,8 +138,8 @@ const addTile = (act, v) =>
   '</span><span class="cn">' +
   TH("common.add") +
   "</span></button>";
-/* quick add / edit for spending and money in; add: the "Add" tile at the end */
-const catBtns = (list, sel, add) =>
+/* the categories of the entry form, the "Add" tile at the end */
+const catBtns = (list, sel) =>
   list
     .map(
       c =>
@@ -153,7 +153,7 @@ const catBtns = (list, sel, add) =>
         esc(catName(c)) +
         "</span></button>"
     )
-    .join("") + (add ? addTile("f-cat-new", "") : "");
+    .join("") + addTile("f-cat-new", "");
 const catChipInner = k => emblem(k, "ci") + esc(catName(k)) + ic("down");
 /* who was paid ("Paid to") or who paid ("Received from"), with earlier names offered under it as you type
    (payeeSuggest) */
@@ -231,7 +231,7 @@ function txSheet(id, type, catId, pre, draft) {
     accForm(null, () => txSheet(id, type, catId, pre));
     return;
   }
-  const t = id ? S.txns.find(x => x.id === id) : null;
+  const t = id ? entry(id) : null;
   if (id && !t) {
     snack(T("entry.gone"));
     return;
@@ -257,7 +257,7 @@ function txSheet(id, type, catId, pre, draft) {
   const inc = type === "income";
   const last = inc ? S.settings.lastAccIn : S.settings.lastAcc;
   const def = acc(last) && !acc(last).archived ? last : (activeAccounts()[0] || {}).id;
-  const d = draft || null;
+  const d = draft;
   F = {
     kind: "tx",
     id,
@@ -271,9 +271,9 @@ function txSheet(id, type, catId, pre, draft) {
     a = acc(F.account);
   let list = inc ? inCats() : outCats();
   if (k && !list.includes(k)) list = list.concat([k]);
-  const payee = (d ? d.payee : t ? t.payee : pre ? pre.payee : "") || "";
+  const payee = (d ? d.payee : t ? t.payee : "") || "";
   let h = "";
-  if (inc) h += '<div class="catgrid">' + catBtns(list, F.cat, true) + "</div>" + payeeField(true, payee) + payeeSug;
+  if (inc) h += '<div class="catgrid">' + catBtns(list, F.cat) + "</div>" + payeeField(true, payee) + payeeSug;
   else
     h +=
       /* the picked category and who was paid, side by side (the box wraps below when the row is too narrow) */
@@ -293,7 +293,7 @@ function txSheet(id, type, catId, pre, draft) {
       '<div class="catgrid" id="f-catgrid" style="margin-top:8px"' +
       (k ? " hidden" : "") +
       ">" +
-      catBtns(list, F.cat, true) +
+      catBtns(list, F.cat) +
       "</div>";
   h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : pre ? String(pre.amount) : "", {
     curId: "amt-cur",
@@ -355,7 +355,7 @@ function txDraft() {
 }
 function txQuickAdd(what) {
   const inc = F.type === "income";
-  if (what === "cat" && !inc && outCats().length >= 24) return snack(T("category.max", { count: 24 }));
+  if (what === "cat" && catsFull(inc ? "in" : "out")) return;
   const dr = txDraft();
   let back = false; // once only: saved (then) or closed (BACKTO), never both
   const reopen = patch => {
@@ -372,14 +372,18 @@ function txQuickAdd(what) {
 }
 /* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
 function openEntry(id) {
-  const scroll = ($("#sheet .p") || {}).scrollTop || 0;
+  const p0 = $("#sheet .p"),
+    scroll = (p0 || {}).scrollTop || 0,
+    a = p0 && rowAnchor(p0, p0);
   BACKTO = $("#sheet #ent-list")
     ? {
         screen: V.screen,
         open: () => {
           entriesSheet();
           const p = $("#sheet .p");
-          if (p) p.scrollTop = scroll;
+          if (!p) return;
+          p.scrollTop = scroll;
+          if (a) toAnchor(a, p, p); // the row it was opened from, where it was
         },
       }
     : null;
@@ -447,8 +451,8 @@ function trSheet(id) {
     accForm(null, () => trSheet());
     return;
   }
-  const t = id ? S.txns.find(x => x.id === id) : null;
-  const fee = t && t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
+  const t = id ? entry(id) : null;
+  const fee = t && t.feeId ? entry(t.feeId) : null;
   const f = t ? t.account : (act[0] || {}).id;
   const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
   F = { kind: "tr", id, from: f, to, showFee: !!fee };
@@ -548,7 +552,7 @@ function trPreview() {
 }
 /* view / delete a balance fix */
 function adjSheet(id) {
-  const t = S.txns.find(x => x.id === id);
+  const t = entry(id);
   if (!t) return;
   const a = acc(t.account);
   F = { kind: "adj", id };
@@ -638,10 +642,7 @@ function saveFix() {
     mutate = () => {
       S.txns.push({ id: xid, ts, type: "adjust", amount: d, account: id, date: today(), note: "" });
     };
-  guardOverdraw(mutate, today(), () => {
-    closeSheet();
-    withUndo(T("account.setTo", { name: a.name, amount: money(val, a.currency) }), mutate, { row: id });
-  });
+  saveChecked(mutate, today(), T("account.setTo", { name: a.name, amount: money(val, a.currency) }), { row: id });
 }
 function fixPreview() {
   const el = $("#fix-prev");
@@ -825,10 +826,7 @@ function catForm(id, kind, then) {
     TH(id ? "common.save" : "category.add") +
     "</button>";
   if (id)
-    h +=
-      '<div class="gap"></div><button class="btn danger" data-act="cat-del">' +
-      TH(c.hidden ? "category.bringBack" : "common.remove") +
-      "</button>";
+    h += '<div class="gap"></div><button class="btn danger" data-act="cat-del">' + TH("common.remove") + "</button>";
   openSheet(T(id ? "category.edit" : c.kind === "in" ? "category.newIn" : "category.newOut"), h);
 }
 function saveCat() {
@@ -861,13 +859,6 @@ function saveCat() {
 function removeCat() {
   const c = S.cats.find(x => x.id === F.id);
   if (!c) return;
-  if (c.hidden) {
-    c.hidden = false;
-    closeSheet();
-    commit();
-    snack(T("category.back", { name: catName(c) }));
-    return;
-  }
   if (S.cats.filter(x => x.kind === c.kind && !x.hidden).length <= 1) {
     snack(T("category.keepOne"));
     return;
@@ -882,10 +873,7 @@ function removeCat() {
 function restoreCat(id) {
   const c = S.cats.find(x => x.id === id);
   if (!c) return;
-  if (c.kind === "out" && outCats().length >= 24) {
-    snack(T("category.max", { count: 24 }));
-    return;
-  }
+  if (catsFull(c.kind)) return;
   c.hidden = false;
   commit();
   snack(T("category.back", { name: catName(c) }));
@@ -927,7 +915,7 @@ function saveTx() {
     return;
   }
   const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() },
-    payee = (v.payee || "").trim().slice(0, 40);
+    payee = (v.payee || "").trim(); // the box takes 40 characters; a longer one (an old backup) stays as written
   if (payee) t.payee = payee;
   const id = F.id,
     pre = F.pre || {},
@@ -935,7 +923,7 @@ function saveTx() {
     ts = Date.now();
   const mutate = id
     ? () => {
-        const old = S.txns.find(x => x.id === id);
+        const old = entry(id);
         Object.assign(old, t);
         if (!payee) delete old.payee; // cleared
       }
@@ -1011,12 +999,12 @@ function saveTr() {
     fid = newId(),
     ts = Date.now();
   const mutate = () => {
-    let t = id ? S.txns.find(x => x.id === id) : null;
+    let t = id ? entry(id) : null;
     if (!t) {
       t = { id: nid, ts };
       S.txns.push(t);
     }
-    const oldFee = t.feeId ? S.txns.find(x => x.id === t.feeId) : null;
+    const oldFee = t.feeId ? entry(t.feeId) : null;
     Object.assign(t, { type: "transfer", amount: amt, account: from, to, date, note });
     if (diff) t.toAmount = got;
     else delete t.toAmount;
@@ -1038,14 +1026,10 @@ function saveTr() {
       delete t.feeId;
     }
   };
-  guardOverdraw(mutate, date, () => {
-    closeSheet();
-    withUndo(
-      id ? T("common.saved") : T("transfer.done", { amount: money(amt, fa.currency), account: ta.name }),
-      mutate,
-      {
-        row: id || nid,
-      }
-    );
-  });
+  saveChecked(
+    mutate,
+    date,
+    id ? T("common.saved") : T("transfer.done", { amount: money(amt, fa.currency), account: ta.name }),
+    { row: id || nid }
+  );
 }

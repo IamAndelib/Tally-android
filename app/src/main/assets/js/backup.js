@@ -34,42 +34,36 @@ function exportCsv() {
       "payee", // last, so files read by column position keep their columns
     ].join(","),
   ];
-  [...S.txns]
-    .sort((a, b) => cmpDay(a.date, b.date) || (a.ts || 0) - (b.ts || 0))
-    .forEach(t => {
-      const a = acc(t.account),
-        to = acc(t.to),
-        l = t.type === "loan" && loan(t.loan);
-      lines.push(
-        [
-          t.date,
-          kind(t),
-          rnd(t.amount),
-          a ? a.currency : "",
-          q(a ? a.name : ""),
-          q(to ? to.name : ""),
-          t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
-          q((t.type === "expense" && !t.feeOf) || t.type === "income" ? catName(cat(t.cat)) : ""),
-          q(
-            t.type === "adjust"
-              ? noteShown(t, "fix.title")
-              : t.feeOf
-                ? noteShown(t, kind(t) === "loan-fee" ? "loan.feeNote" : "transfer.feeNote")
-                : t.note
-          ),
-          to ? to.currency : "",
-          q(l ? l.person : ""),
-          q(t.payee || ""),
-        ].join(",")
-      );
-    });
+  [...S.txns].sort(byOldest).forEach(t => {
+    const a = acc(t.account),
+      to = acc(t.to),
+      l = t.type === "loan" && loan(t.loan);
+    lines.push(
+      [
+        t.date,
+        kind(t),
+        rnd(t.amount),
+        a ? a.currency : "",
+        q(a ? a.name : ""),
+        q(to ? to.name : ""),
+        t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
+        q((t.type === "expense" && !t.feeOf) || t.type === "income" ? catName(cat(t.cat)) : ""),
+        q(
+          t.type === "adjust"
+            ? noteShown(t, "fix.title")
+            : t.feeOf
+              ? noteShown(t, kind(t) === "loan-fee" ? "loan.feeNote" : "transfer.feeNote")
+              : t.note
+        ),
+        to ? to.currency : "",
+        q(l ? l.person : ""),
+        q(t.payee || ""),
+      ].join(",")
+    );
+  });
   /* the byte-order mark tells spreadsheets (Excel) the file is UTF-8, so names in any script read right */
   saveOut("tally-entries-" + today() + ".csv", "text/csv", "\ufeff" + lines.join("\n"));
 }
-/* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
-   `auto` = {when} for the auto backup file, whose dialog also offers "Choose another file". */
-/* after: what follows a restore (turning auto backup on, when it came from the folder being picked) */
-/* false when the text isn't a backup that can be read */
 /* a backup file's text as its data, or null when it isn't a Tally backup (a byte-order mark from an editor is fine) */
 function backupData(t) {
   try {
@@ -79,6 +73,10 @@ function backupData(t) {
     return null;
   }
 }
+/* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
+   auto: {when} for the auto backup file, whose dialog also offers "Choose another file"; after: what follows a restore
+   (turning auto backup on, when it came from the folder being picked). False when the text isn't a backup that can be
+   read. */
 function restoreText(t, auto, after) {
   const o = backupData(t);
   let n = null;
@@ -103,7 +101,7 @@ function restoreText(t, auto, after) {
     when: auto && auto.when ? backupWhen(auto.when, true) : "",
   };
   askDialog(
-    auto ? T("restore.autoQ", { file: "Tally backup.json" }) : T("restore.q"),
+    auto ? T("restore.autoQ", { file: BACKUP_FILE }) : T("restore.q"),
     sentences(
       T(what.when ? "restore.bodySaved" : "restore.body", what),
       lost > 0 && T("restore.lost", { count: lost }),

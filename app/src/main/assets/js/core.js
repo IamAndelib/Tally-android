@@ -296,7 +296,7 @@ function dayLabel(d) {
     if (y === "y") o.year = "numeric";
     DAY_DTF[y] = new Intl.DateTimeFormat(DATE_LOC, o);
   }
-  return isNaN(x) ? "" : DAY_DTF[y].format(x); // loanRow asks for an open loan with no due date (unused)
+  return isNaN(x) ? "" : DAY_DTF[y].format(x); // no date (an open loan without a due day): nothing to write
 }
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
 const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));
@@ -524,5 +524,7 @@ function shortDay(d) {
 }
 /* ISO dates (YYYY-MM-DD) sort as plain strings; localeCompare runs ICU collation on every comparison */
 const cmpDay = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+/* oldest first: by day, then by when written (the order balances add entries up in) */
+const byOldest = (a, b) => cmpDay(a.date, b.date) || (a.ts || 0) - (b.ts || 0);
 /* newest first; a fee saved with its transfer's own time (before 1.4) comes just above it, as balances count it */
 const byNewest = (a, b) => cmpDay(b.date, a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);

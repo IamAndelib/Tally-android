@@ -31,9 +31,55 @@ const panes = (left, right, cls) =>
       "</div>";
 /* the ring's width: its pane on a wide screen (measured on an empty pane pair), else the column */
 let RINGW = 0;
-/* the screen, drawn anew; the control that had the focus gets it back (keepFocus) */
+/* the screen, drawn anew; the control that had the focus gets it back (keepFocus), and the same screen keeps the row
+   that was in view where it was (rowAnchor) */
+let drawnScreen = "";
 function render() {
+  const a = V.screen === drawnScreen ? rowAnchor($("#app")) : null;
   keepFocus($("#app"), drawScreen);
+  drawnScreen = V.screen;
+  if (a) toAnchor(a, $("#app"));
+}
+/* The row in the middle of the view (an entry, an account) and where it is in it, {v, top}, so toAnchor() can put it back
+   there once the list is drawn anew: a day's list off screen has only an estimated height (content-visibility, .dl),
+   so the same scroll position would show other rows. scroller: the sheet's panel, else the page. */
+function rowAnchor(box, scroller) {
+  const r = scroller ? scroller.getBoundingClientRect() : { top: 0, height: innerHeight },
+    y = Math.max(r.top, 0) + Math.min(r.height, innerHeight) / 2,
+    lists = box.querySelectorAll(".dl"),
+    below = e => e.getBoundingClientRect().bottom >= y;
+  /* the day's list at that height first (found by halves, never laying out the lists off screen), then its row; by
+     position, as the screen behind a sheet just closed can't be hit-tested (inert) */
+  let lo = 0,
+    hi = lists.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (below(lists[mid])) hi = mid;
+    else lo = mid + 1;
+  }
+  const rows = [...(lists.length ? lists[lo] : box).querySelectorAll(".tx[data-v]")],
+    row = rows.find(below) || rows[rows.length - 1];
+  return row ? { v: row.dataset.v, top: row.getBoundingClientRect().top - r.top } : null;
+}
+function toAnchor(a, box, scroller) {
+  const fix = () => {
+    const row = box.querySelector('.tx[data-v="' + CSS.escape(a.v) + '"]'),
+      d = row ? row.getBoundingClientRect().top - (scroller ? scroller.getBoundingClientRect().top : 0) - a.top : 0;
+    if (Math.abs(d) < 1) return;
+    if (scroller) scroller.scrollTop += d;
+    else scrollBy(0, d);
+  };
+  fix();
+  /* lists coming into view get their real height over the next frames: the row stays put then too (a ResizeObserver
+     runs before the frame is painted), for the few frames that takes, or until the person touches or scrolls */
+  const ro = new ResizeObserver(fix),
+    stop = () => {
+      ro.disconnect();
+      ["pointerdown", "wheel", "keydown"].forEach(t => removeEventListener(t, stop, true));
+    };
+  box.querySelectorAll(".dl").forEach(l => ro.observe(l));
+  ["pointerdown", "wheel", "keydown"].forEach(t => addEventListener(t, stop, true));
+  setTimeout(stop, 250);
 }
 function drawScreen() {
   const app = $("#app");
@@ -64,7 +110,7 @@ function drawScreen() {
     fitWeekSeg();
   } else app.innerHTML = homeView();
   fitFigures(app);
-  if (document.fonts && document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
+  if (document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
   document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
@@ -106,9 +152,7 @@ function homeView() {
   /* every account archived: not a new notebook, so a way back to them */
   if (!act.length && S.accounts.length)
     return (
-      '<header class="appbar"><h1>Tally</h1>' +
-      topIcons() +
-      "</header>" +
+      tabBar("Tally") +
       '<div class="welcome"><div class="big">🗄️</div><h2>' +
       TH("home.allArchived") +
       "</h2><p>" +
@@ -123,9 +167,7 @@ function homeView() {
     );
   if (!act.length) {
     return (
-      '<header class="appbar"><h1>Tally</h1>' +
-      topIcons() +
-      "</header>" +
+      tabBar("Tally") +
       '<div class="welcome"><div class="big">📒</div><h2>' +
       TH("welcome.title") +
       "</h2><p>" +
@@ -374,11 +416,12 @@ function fitFigures(root) {
     shrink(el, () => row.scrollWidth > row.clientWidth + 1);
   };
   if (root.fitIO) root.fitIO.disconnect();
+  root.querySelectorAll("[data-far]").forEach(l => delete l.dataset.far); // a second pass: near now is fitted now
   const far = [...root.querySelectorAll(".dl")].filter(l => {
     const r = l.getBoundingClientRect();
     return r.top > innerHeight + 800 || r.bottom < -800;
   });
-  if (far.length && window.IntersectionObserver) {
+  if (far.length) {
     const io = (root.fitIO = new IntersectionObserver(
       es =>
         es.forEach(e => {
@@ -386,7 +429,7 @@ function fitFigures(root) {
           io.unobserve(e.target);
           e.target.querySelectorAll(".tx .a").forEach(fitRow);
         }),
-      { rootMargin: "800px 0px" }
+      { root: root.querySelector(".p"), rootMargin: "800px 0px" } // a sheet scrolls its panel, the screen the page
     ));
     far.forEach(l => {
       l.dataset.far = "1";
@@ -585,7 +628,7 @@ function txLine(t) {
     cls = "";
   if (t.type === "transfer") {
     const to = acc(t.to);
-    em = { i: "swap_horiz", c: "#5f7389" };
+    em = XFER_EMB;
     cls = "xfer";
     d = esc(t.note || T("transfer.title"));
     s = bdi(a ? a.name : "?") + " → " + bdi(to ? to.name : "?");
@@ -627,7 +670,7 @@ function txLine(t) {
         TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } });
     } else {
       const to = acc(host.to);
-      em = { i: "swap_horiz", c: "#5f7389" };
+      em = XFER_EMB;
       d = esc(noteShown(t, "transfer.feeNote"));
       s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
     }
@@ -759,6 +802,12 @@ function selSync(b) {
 function historyView() {
   if (V.hAcc && !acc(V.hAcc)) V.hAcc = ""; // its account was deleted, or a backup restored
   const list = historyList();
+  /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
+     entry out of sight */
+  if (V.sel) {
+    const listed = new Set(list.map(t => t.id));
+    V.sel = new Set([...V.sel].filter(id => listed.has(id)));
+  }
   let h;
   if (V.sel) {
     const n = V.sel.size;
@@ -1134,11 +1183,9 @@ function healthCard() {
   if (!rows.length) return "";
   return (
     '<section class="rhealth list"><div class="rh-head">' +
-    (ICONS.warning
-      ? '<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="' +
-        ICONS.warning[0] +
-        '"/></svg>'
-      : "") +
+    '<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="' +
+    ICONS.warning[0] +
+    '"/></svg>' +
     "<b>" +
     TH("perms.title") +
     "</b></div>" +
@@ -1191,7 +1238,9 @@ function autoBackupHtml() {
     TH("backup.auto") +
     '"></button></div>' +
     (b.on
-      ? '<div class="setrow"><span class="mid"><div>Tally backup.json</div><div class="s">' +
+      ? '<div class="setrow"><span class="mid"><div>' +
+        BACKUP_FILE +
+        '</div><div class="s">' +
         esc(bs.folder || T("backup.noFolder")) +
         '</div></span><button class="btn text" data-act="bk-folder">' +
         TH("common.change") +
