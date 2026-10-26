@@ -236,7 +236,7 @@ document.addEventListener("click", ev => {
     case "check-ok":
       S.settings.lastCheck = today();
       commit();
-      snack("Page started for today");
+      snack(T("home.checked"));
       break;
     case "entries":
       entriesSheet();
@@ -297,7 +297,7 @@ document.addEventListener("click", ev => {
     case "tr-del": {
       const id = F.id;
       closeSheet();
-      withUndo("Deleted", () => deleteEntries([id]));
+      withUndo(T("common.deleted"), () => deleteEntries([id]));
       break;
     }
     case "tr-new":
@@ -331,7 +331,7 @@ document.addEventListener("click", ev => {
     case "adj-del": {
       const id = F.id;
       closeSheet();
-      withUndo("Fix deleted", () => deleteEntries([id]));
+      withUndo(T("fix.deleted"), () => deleteEntries([id]));
       break;
     }
     case "acc-open":
@@ -393,7 +393,7 @@ document.addEventListener("click", ev => {
     case "ic-emo-ok": {
       const e = $("#ic-emo").value.trim();
       if (!e) {
-        snack("Type an emoji");
+        snack(T("icon.emoji"));
         return;
       }
       const f = ICPICK && ICPICK.onPick;
@@ -519,7 +519,7 @@ document.addEventListener("click", ev => {
       }
       let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
       withUndo(
-        () => "Deleted " + n + " " + (n === 1 ? "entry" : "entries"),
+        () => T("history.deleted", { count: n }),
         () => {
           n = S.txns.length;
           deleteEntries(ids);
@@ -540,7 +540,7 @@ document.addEventListener("click", ev => {
       break;
     case "cat-new":
       if (v === "out" && outCats().length >= 24) {
-        snack("Up to 24 spending categories");
+        snack(T("category.max", { count: 24 }));
         return;
       }
       catForm(null, v);
@@ -597,9 +597,9 @@ document.addEventListener("click", ev => {
     }
     case "kept-del":
       askDialog(
-        "Delete the kept data?",
-        "Only do this once it's saved as a file, or you're sure you don't need it.",
-        "Delete",
+        T("data.kept.deleteQ"),
+        T("data.kept.deleteBody"),
+        T("common.delete"),
         () => {
           keptKeys().forEach(k => localStorage.removeItem(k));
           render();

@@ -168,7 +168,9 @@
     "kept": {
       "title": "Unreadable data kept",
       "body": "Saved data Tally couldn’t open is kept on this phone. Save it as a file to keep it, or delete it.",
-      "delete": "Delete it"
+      "delete": "Delete it",
+      "deleteQ": "Delete the kept data?",
+      "deleteBody": "Only do this once it's saved as a file, or you're sure you don't need it."
     },
     "noSaving": "Saving isn't available here",
     "fileSaved": "Saved",
@@ -489,12 +491,14 @@
     "checkQ": "Do these still match what you have?",
     "checkYesterday": "Yesterday you spent {{amount}}.",
     "fix": "Fix",
-    "allMatch": "All match"
+    "allMatch": "All match",
+    "checked": "Page started for today"
   },
   "fix": {
     "title": "Balance fix",
     "about": "A correction so Tally matches what you really had. It isn’t counted as spending or income.",
-    "delete": "Delete this fix"
+    "delete": "Delete this fix",
+    "deleted": "Fix deleted"
   },
   "settings": {
     "mainCur": "Main currency",
@@ -648,7 +652,9 @@
       "day": "Nothing written down that day.",
       "month": "Nothing written down that month.",
       "range": "Nothing written down in those days."
-    }
+    },
+    "deleted_one": "Deleted {{count}} entry",
+    "deleted_other": "Deleted {{count}} entries"
   },
   "remind": {
     "nudge": "Evening nudge",
