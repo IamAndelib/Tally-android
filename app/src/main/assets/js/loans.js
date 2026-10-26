@@ -270,7 +270,7 @@ function loanForm(kind) {
     '<div class="field"><span>' +
     esc(dueLbl) +
     "</span>" +
-    dateField("f-due", "", { min: today(), opt: true, none: T("loan.pickDay"), label: dueLbl }) +
+    dateField("f-due", "", { min: "today", opt: true, none: T("loan.pickDay"), label: dueLbl }) +
     "</div></div>";
   h +=
     '<label class="field"><span>' +
@@ -346,7 +346,7 @@ function loanOpen(id, focusPay) {
       (dueDraw
         ? '<div style="margin-top:10px">' +
           dateField("f-due2", i.nextDue || "", {
-            min: today(),
+            min: "today",
             opt: true,
             none: T("loan.pickDay"),
             label: T("loan.changeDue"),
@@ -511,7 +511,7 @@ function saveLoanDraw() {
   const l = loan(F.id);
   if (!l) return;
   const amt = evalAmt(($("#ed-amt") || {}).value);
-  if (!(amt > 0)) {
+  if (!(shown(amt, loanInfo(l).cur) > 0)) {
     snack(T("common.enterAmount"));
     return;
   }
@@ -585,7 +585,7 @@ function saveLoan() {
     snack(T(lend ? "loan.whoLend" : "loan.whoBorrow"));
     return;
   }
-  if (!(amt > 0)) {
+  if (!(shown(amt, (acc(F.account) || {}).currency) > 0)) {
     snack(T("common.enterAmount"));
     return;
   }
@@ -712,7 +712,7 @@ function payLoan() {
     v = readVals(),
     amt = evalAmt(v.amount),
     lend = l.kind === "lend";
-  if (!(amt > 0)) {
+  if (!(shown(amt, i.cur) > 0)) {
     snack(T("common.enterAmount"));
     return;
   }
@@ -812,19 +812,13 @@ function overpay(l, i, amt, account, date, fee) {
       back: l.id,
     });
   const asFee = () => book(() => clear(extra), T("loan.over.asFeeMsg", { amount: money(rnd(fee + extra), cur) }), l.id);
-  const left = i.left > 0;
   const v = { who, amount: money(extra, cur) };
   askDialog(
     T(lend ? "loan.over.theyPaid" : "loan.over.youPaid", v),
-    T("loan.over." + (lend ? "askLend" : "askBorrow") + (left ? "Or" : ""), v),
+    T(lend ? "loan.over.askLendOr" : "loan.over.askBorrowOr", v),
     T(lend ? "loan.over.asLoan" : "loan.over.asLend"),
     asLoan,
-    left
-      ? {
-          alt: [T(lend ? "loan.over.asIncome" : "loan.over.asFee"), lend ? asIncome : asFee],
-          cancel: T("common.goBack"),
-        }
-      : { cancel: T("common.goBack") }
+    { alt: [T(lend ? "loan.over.asIncome" : "loan.over.asFee"), lend ? asIncome : asFee], cancel: T("common.goBack") }
   );
 }
 /* dropped on Cleared: ask how it was cleared, because one way moves money */

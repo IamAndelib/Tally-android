@@ -453,6 +453,7 @@ function evalAmt(v) {
   if (!t) return null;
   /* one separator before one or two digits is the decimal point, whatever the phone writes */
   s = /^[-+]?\d+[.,]\d{1,2}$/.test(t) ? t.replace(",", ".") : amtCanon(s).replace(/\s+/g, "");
+  s = s.replace(/([\d.])[-+×÷]$/, "$1"); // "12+" saved as it is: the operator still waiting for its number is left out
   if (/[×÷]/.test(s)) return /^[\d.+\-×÷]+$/.test(s) ? amtOk(calcEval(s)) : null;
   if (!/^[-+]?(\d+\.?\d*|\.\d+)([-+](\d+\.?\d*|\.\d+))*$/.test(s)) return null;
   let tot = 0;

@@ -8,6 +8,9 @@
 //    asks again); a full localStorage with the shell's copy failing too says so
 //  - a name typed in another case (Turkish İrem / IREM, Işık / IŞIK) adds to that person's open tab; Chinese sentences
 //    run on without a space after 。
+//  - a button that turns itself off (Next reaching today) hands the focus to its neighbour; a payback day's "no day
+//    before today" moves at midnight; an amount that rounds to nothing in its currency isn't saved; "12+" saves 12;
+//    Go back on the overdraw question leaves the account offered next time as it was
 //  - notes Tally writes itself (balance fix, fees) show in today's language and aren't stored; a day inside a
 //    sentence is a date, never a capitalised "Yesterday"; standalone date headings start with a capital
 //  - the first account doesn't bring the balance check at once; a transfer, entry or loan that needed an account
@@ -363,6 +366,52 @@ const ok = (c, m) => {
     const { ctx, page } = await open({ uiLang: "zh-Hans", locale: "zh-CN" });
     const t = await page.evaluate(() => [sentences("一。", "", "二！", "三"), sentences("One.", false, "Two.")]);
     ok(t[0] === "一。二！三" && t[1] === "One. Two.", "sentences: no space after 。, one after a full stop: " + t);
+    await ctx.close();
+  }
+
+  // ---- daily use
+  {
+    const { ctx, page } = await open();
+    await seed(page);
+    await page.click('#app [data-act="prev"]');
+    await page.focus('#app [data-act="next"]');
+    await page.keyboard.press("Enter");
+    const f = await page.evaluate(() => [document.activeElement.tagName, document.activeElement.dataset.act]);
+    ok(f[0] === "BUTTON" && f[1] !== "next", "Next reaching today hands the focus on: " + f);
+    const r = await page.evaluate(() => {
+      const y = addDays(today(), -1),
+        out = {};
+      // a lending form opened yesterday, still open after midnight
+      loanForm("lend");
+      $("#f-due").dataset.min = y;
+      lastDay = y;
+      catchUpToday();
+      out.min = $("#f-due").dataset.min;
+      closeSheet();
+      out.trailing = evalAmt("12+");
+      // $0.004 shows as $0.00: not saved
+      const n = S.txns.length;
+      txSheet(null, "expense", "food");
+      $("#f-amt").value = "0.004";
+      saveTx();
+      out.tiny = S.txns.length - n;
+      closeSheet();
+      // Go back on the overdraw question: the account offered next time stays
+      S.accounts.push({ id: "b", name: "Cash", type: "cash", currency: "USD", opening: 5, archived: false });
+      S.settings.lastAcc = "a";
+      txSheet(null, "expense", "food");
+      F.account = "b";
+      $("#f-amt").value = "50";
+      saveTx();
+      out.asked = !!$("#pop [data-act=ask-ok]");
+      $("#pop [data-act=pd-close]").click();
+      out.last = S.settings.lastAcc;
+      return out;
+    });
+    ok(r.min === (await page.evaluate(() => today())), "a payback day's earliest day moves at midnight: " + r.min);
+    ok(r.trailing === 12, "12+ is 12: " + r.trailing);
+    ok(r.tiny === 0, "an amount shown as $0.00 isn't saved");
+    ok(r.asked && r.last === "a", "Go back keeps the account offered next time: " + JSON.stringify(r));
     await ctx.close();
   }
 

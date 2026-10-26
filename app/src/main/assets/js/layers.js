@@ -140,7 +140,7 @@ const miniDialog = (label, body, okAct, okText) => {
     "</button></div></div></div>";
 };
 /* a date button; o.now: a new entry's "today", which moves to the new day at midnight until a date is picked
-   (catchUpToday). Screen readers hear its label and the date. */
+   (catchUpToday); o.min "today": no day before today, also after midnight. Screen readers hear its label and the date. */
 function dateField(id, val, o) {
   o = o || {};
   const shownAs = val ? shortDay(val) : o.none || T("picker.noDate"),
@@ -151,7 +151,7 @@ function dateField(id, val, o) {
     '" data-act="pick-date" data-v="' +
     esc(val || "") +
     '"' +
-    (o.min ? ' data-min="' + o.min + '"' : "") +
+    (o.min ? ' data-min="' + (o.min === "today" ? today() + '" data-min-today="1' : o.min) + '"' : "") +
     (o.max ? ' data-max="' + o.max + '"' : "") +
     (o.opt ? ' data-opt="1"' : "") +
     (o.now && val === today() ? ' data-now="1"' : "") +
@@ -184,7 +184,11 @@ function refocus(root, k) {
       : k.act
         ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
         : "",
-    el = sel && root.querySelector(sel);
+    usable = b => !b.disabled && b.getClientRects().length > 0;
+  let el = sel && root.querySelector(sel);
+  /* a button that just turned itself off (Next reaching today, Later at the newest period): its neighbour in the same
+     bar takes the focus, so it isn't lost to the page */
+  if (el && !usable(el)) el = [...el.parentElement.querySelectorAll("button")].find(usable) || null;
   if (el) el.focus({ preventScroll: true });
   return !!el;
 }
@@ -203,7 +207,15 @@ function datePicker(el) {
   let ref = v || today();
   if (mx && ref > mx) ref = mx;
   if (mn && ref < mn) ref = mn;
-  DP = { id: el.id, month: ref.slice(0, 7), sel: v, min: mn, max: mx, opt: !!el.dataset.opt };
+  DP = {
+    id: el.id,
+    month: ref.slice(0, 7),
+    sel: v,
+    min: mn,
+    max: mx,
+    opt: !!el.dataset.opt,
+    minToday: !!el.dataset.minToday,
+  };
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="dp" role="dialog" aria-modal="true" aria-label="' +
     TH("picker.date") +

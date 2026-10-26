@@ -90,11 +90,13 @@ function catchUpToday() {
   }
   document.querySelectorAll(".datefld").forEach(el => {
     if (el.dataset.max === was) el.dataset.max = t;
+    if (el.dataset.minToday) el.dataset.min = t;
     if (el.dataset.now) setDateField(el, t, true);
   });
-  /* an open date or period picker: today's ring, its Today button and the latest day it allows */
+  /* an open date or period picker: today's ring, its Today button and the first and latest days it allows */
   if (DP && $("#dp")) {
     if (DP.max === was) DP.max = t;
+    if (DP.minToday) DP.min = t;
     dpRender();
   }
   if (PD && $("#pd")) pdRender();

@@ -763,7 +763,7 @@ function saveTx() {
     snack(T("entry.pickCat"));
     return;
   }
-  if (!(amt > 0)) {
+  if (!(shown(amt, (acc(F.account) || {}).currency) > 0)) {
     snack(T("common.enterAmount"));
     return;
   }
@@ -781,8 +781,6 @@ function saveTx() {
     return;
   }
   const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() };
-  if (F.type === "income") S.settings.lastAccIn = F.account;
-  else S.settings.lastAcc = F.account;
   const id = F.id,
     pre = F.pre || {},
     nid = newId(),
@@ -798,6 +796,9 @@ function saveTx() {
       };
   guardOverdraw(mutate, t.date, () => {
     if (pre.back) BACKTO = null; // saved: it ends here, like a payment (back to the loan is for closing it unsaved)
+    // the account to offer next time, once saved (not when Go back answers the overdraw question)
+    if (t.type === "income") S.settings.lastAccIn = t.account;
+    else S.settings.lastAcc = t.account;
     closeSheet();
     buzz("confirm");
     withUndo(
@@ -825,7 +826,7 @@ function saveTr() {
     return;
   }
   const amt = evalAmt(v.amount);
-  if (!(amt > 0)) {
+  if (!(shown(amt, fa.currency) > 0)) {
     snack(T("transfer.enterSent"));
     return;
   }
@@ -833,7 +834,7 @@ function saveTr() {
   let got = null;
   if (diff) {
     got = evalAmt(v.toAmount);
-    if (!(got > 0)) {
+    if (!(shown(got, ta.currency) > 0)) {
       snack(T("transfer.enterArrived", { cur: ta.currency }));
       return;
     }

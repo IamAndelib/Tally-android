@@ -574,6 +574,7 @@ document.addEventListener("click", ev => {
       F.merge = v;
       $("#f-person-sug").hidden = true;
       mergeHint();
+      if (el2) el2.focus({ preventScroll: true }); // the chips are gone: back to the name, now filled in
       break;
     }
     case "cat-save":
