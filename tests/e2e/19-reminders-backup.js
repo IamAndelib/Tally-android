@@ -670,7 +670,7 @@ const stub = () => {
   ok(
     dlg.includes("Restore Tally backup.json?") &&
       dlg.includes("2 accounts and 1 entry") &&
-      dlg.includes("saved Today") &&
+      /saved [A-Z][a-z]{2}, [A-Z][a-z]{2} \d+, \d\d:\d\d/.test(dlg) && // a date inside the sentence, not "Today"
       dlg.includes("Choose another file"),
     "Restore offers the auto backup with its counts and date: " + dlg
   );
