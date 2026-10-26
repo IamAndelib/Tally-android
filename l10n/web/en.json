@@ -33,7 +33,10 @@
     "back": "Back",
     "previous": "Previous",
     "next": "Next",
-    "change": "Change"
+    "change": "Change",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No"
   },
   "day": {
     "today": "Today",
@@ -124,7 +127,33 @@
     "first": "First backup at {{time}}",
     "auto": "Auto backup",
     "noFolder": "No folder",
-    "now": "Back up now"
+    "now": "Back up now",
+    "at": "Back up every day at",
+    "on": "Auto backup on · daily at {{time}}",
+    "found": {
+      "title": "This folder already has a Tally backup",
+      "body": "Restore it on this phone, or replace it with this phone's data from now on?",
+      "restore": "Restore it",
+      "replace": "Replace it"
+    },
+    "badFile": {
+      "title": "Couldn't read this folder's backup",
+      "cantRead": "The backup file can't be read.",
+      "replaceQ": "Replace it with this phone's data from now on?"
+    },
+    "unavailable": "Backup isn't available here",
+    "running": "Backing up…",
+    "done": "Backed up",
+    "lostAsk": {
+      "title": "Auto backup can't reach its folder",
+      "body": "On a new phone, or after reinstalling, Tally needs the backup folder picked again. Until then nothing is backed up.",
+      "ok": "Choose folder"
+    },
+    "nudge": {
+      "title": "Keep your data safe?",
+      "body": "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
+      "ok": "Turn on"
+    }
   },
   "data": {
     "saveFailed": {
@@ -140,7 +169,11 @@
       "title": "Unreadable data kept",
       "body": "Saved data Tally couldn’t open is kept on this phone. Save it as a file to keep it, or delete it.",
       "delete": "Delete it"
-    }
+    },
+    "noSaving": "Saving isn't available here",
+    "fileSaved": "Saved",
+    "notSavedKept": "Not saved, so nothing was deleted",
+    "notSaved": "Not saved"
   },
   "overdraw": {
     "title": "Not enough in {{account}}",
@@ -623,12 +656,55 @@
     "check": "Balance check",
     "checkHint": "Do your balances still match?",
     "dues": "Loan & lending due days",
-    "duesHint": "On the day, with +1 day / +1 week"
+    "duesHint": "On the day, with +1 day / +1 week",
+    "nudgeAt": "Evening nudge at",
+    "checkAt": "Balance check at",
+    "duesAt": "Due-day reminders at"
   },
   "restore": {
-    "btn": "Restore from backup"
+    "btn": "Restore from backup",
+    "notBackup": "That isn't a Tally backup file",
+    "unreadable": "That backup couldn't be read",
+    "accounts_one": "{{count}} account",
+    "accounts_other": "{{count}} accounts",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "autoQ": "Restore {{file}}?",
+    "q": "Restore this backup?",
+    "body": "Replaces everything on this phone with {{accounts}} and {{entries}}.",
+    "bodySaved": "Replaces everything on this phone with {{accounts}} and {{entries}} · saved {{when}}.",
+    "lost_one": "{{count}} item in it can't be read and will be left out.",
+    "lost_other": "{{count}} items in it can't be read and will be left out.",
+    "newer": "It was made by a newer version of Tally: update Tally first so nothing is left out.",
+    "ok": "Restore",
+    "done": "Backup restored",
+    "other": "Choose another file",
+    "cantRead": "Couldn't read that file"
   },
   "perms": {
-    "title": "Permissions"
+    "title": "Permissions",
+    "notif": "Notifications",
+    "notifWhy": "Reminders can't show without them",
+    "battery": "Unrestricted battery",
+    "batteryWhy": "So reminders and the backup come on time",
+    "exact": "Alarms & reminders",
+    "exactWhy": "So reminders come on time",
+    "allowed": "Allowed",
+    "allow": "Allow",
+    "intro": "For reminders and the daily backup."
+  },
+  "wipe": {
+    "first": {
+      "title": "Back up first?",
+      "body": "Your last backup may not have your latest entries. Save them before deleting everything?"
+    },
+    "none": {
+      "title": "No backup yet",
+      "body": "Save a backup of your data before deleting it?"
+    },
+    "skip": "Skip",
+    "title": "Delete all data?",
+    "body": "Every account and entry on this phone. This can't be undone.",
+    "done": "All data deleted"
   }
 }

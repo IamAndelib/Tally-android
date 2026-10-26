@@ -114,10 +114,10 @@ function pickTime(k) {
   const r = S.settings.remind,
     b = S.settings.backup,
     c = {
-      nudge: ["Evening nudge at", r.time, v => (r.time = v)],
-      check: ["Balance check at", r.checkTime, v => (r.checkTime = v)],
-      due: ["Due-day reminders at", r.dueTime, v => (r.dueTime = v)],
-      backup: ["Back up every day at", b.time, v => (b.time = v)],
+      nudge: [T("remind.nudgeAt"), r.time, v => (r.time = v)],
+      check: [T("remind.checkAt"), r.checkTime, v => (r.checkTime = v)],
+      due: [T("remind.duesAt"), r.dueTime, v => (r.dueTime = v)],
+      backup: [T("backup.at"), b.time, v => (b.time = v)],
     }[k];
   if (!c) return;
   timePicker(c[0], c[1], v => {
@@ -135,26 +135,22 @@ function askNotify() {
     if (window.Android && Android.requestNotifications) Android.requestNotifications();
   } catch (e) {}
 }
-/* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind, name, why] */
-const PERM_ROWS = [
-  ["notif", "Notifications", "Reminders can't show without them"],
-  ["battery", "Unrestricted battery", "So reminders and the backup come on time"],
-  ["exact", "Alarms &amp; reminders", "So reminders come on time"],
-];
+/* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind] (texts perms.<kind>) */
+const PERM_ROWS = [["notif"], ["battery"], ["exact"]];
 /* the rows to offer: Android counts unrestricted battery as allowing alarms & reminders, so that row only shows on a
    phone where it's still off although battery is already allowed */
 const permRows = h => PERM_ROWS.filter(([k]) => k !== "exact" || (h.battery !== false && h.exact === false));
 /* one permission: Allow (the shell opens Android's prompt, popup or switch screen), or a quiet "Allowed" */
-function permRow([k, t, why], ok) {
+function permRow([k], ok) {
   return (
     '<div class="setrow"><span class="mid"><div>' +
-    t +
+    TH("perms." + k) +
     '</div><div class="s">' +
-    why +
+    TH("perms." + k + "Why") +
     "</div></span>" +
     (ok
-      ? '<span class="pok">' + ic("check") + "Allowed</span>"
-      : '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">Allow</button>') +
+      ? '<span class="pok">' + ic("check") + TH("perms.allowed") + "</span>"
+      : '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">' + TH("perms.allow") + "</button>") +
     "</div>"
   );
 }
@@ -169,12 +165,20 @@ function permsIntro() {
   const h = first && reminderHealth();
   if (!h || permRows(h).every(([k]) => h[k] !== false)) return false;
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Permissions">' +
-    '<h3 class="dlg-t">Permissions</h3><p class="dlg-x">For reminders and the daily backup.</p><div id="pp-rows">' +
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="' +
+    TH("perms.title") +
+    '">' +
+    '<h3 class="dlg-t">' +
+    TH("perms.title") +
+    '</h3><p class="dlg-x">' +
+    TH("perms.intro") +
+    '</p><div id="pp-rows">' +
     permRows(h)
       .map(r => permRow(r, h[r[0]] !== false))
       .join("") +
-    '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">Done</button></div></div></div>';
+    '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">' +
+    TH("common.done") +
+    "</button></div></div></div>";
   return true;
 }
 /* window.tallyPerms / resume: a permission may have changed; the open dialog's rows and Settings' card follow at once
@@ -269,7 +273,7 @@ function backupOn() {
   save();
   syncBackup();
   if (V.screen === "settings") render();
-  snack("Auto backup on · daily at " + timeLabel(S.settings.backup.time));
+  snack(T("backup.on", { time: timeLabel(S.settings.backup.time) }));
 }
 function pickBackupFolder() {
   try {
@@ -296,18 +300,18 @@ function folderCheck() {
     }
     if (typeof r.text === "string" && r.text.trim())
       return askDialog(
-        "This folder already has a Tally backup",
-        "Restore it on this phone, or replace it with this phone's data from now on?",
-        "Restore it",
+        T("backup.found.title"),
+        T("backup.found.body"),
+        T("backup.found.restore"),
         () => restoreText(r.text, null, backupOn),
-        { alt: ["Replace it", backupOn], cancel: "Not now" }
+        { alt: [T("backup.found.replace"), backupOn], cancel: T("common.notNow") }
       );
     askDialog(
-      "Couldn't read this folder's backup",
-      (r.error || "The backup file can't be read.") + " Replace it with this phone's data from now on?",
-      "Replace it",
+      T("backup.badFile.title"),
+      (r.error || T("backup.badFile.cantRead")) + " " + T("backup.badFile.replaceQ"),
+      T("backup.found.replace"),
       backupOn,
-      { cancel: "Not now" }
+      { cancel: T("common.notNow") }
     );
   });
 }
@@ -335,7 +339,7 @@ function readAutoBackup(then) {
   askShell(
     id => Android.readAutoBackup(id),
     then,
-    id => onAutoBackup({ error: "Backup isn't available here" }, id)
+    id => onAutoBackup({ error: T("backup.unavailable") }, id)
   );
 }
 function onAutoBackup(r, id) {
@@ -345,16 +349,16 @@ function onAutoBackup(r, id) {
    the problem, "" when done */
 function backupNow(then) {
   mirrorNow();
-  snack("Backing up…");
+  snack(T("backup.running"));
   askShell(
     id => Android.backupNow(id),
     then,
-    id => onBackedUp("Backup isn't available here", id)
+    id => onBackedUp(T("backup.unavailable"), id)
   );
 }
 function onBackedUp(err, id) {
   if (V.screen === "settings") render();
-  snack(err || "Backed up");
+  snack(err || T("backup.done"));
   shellAnswer(id, err || "");
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
@@ -436,7 +440,7 @@ function saveOut(name, mime, text, then) {
   const bridged = !!(window.Android && Android.saveFile);
   AFTER_SAVE = bridged ? then || null : null;
   if (bridged) Android.saveFile(name, mime, text);
-  else snack("Saving isn't available here");
+  else snack(T("data.noSaving"));
 }
 /* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),
    then a selection, then another screen goes Home. False when there is nothing left to close (then the app closes). */
@@ -487,7 +491,7 @@ function onFileSaved(ok) {
   const then = AFTER_SAVE;
   AFTER_SAVE = null;
   /* what waited on the file (Delete all data) goes on only once it landed */
-  snack(ok ? "Saved" : then ? "Not saved, so nothing was deleted" : "Not saved");
+  snack(T(ok ? "data.fileSaved" : then ? "data.notSavedKept" : "data.notSaved"));
   if (then && ok) then();
 }
 /* Auto backup is off but there's something worth keeping (3+ entries): now and then (at start or on return, at most
@@ -501,19 +505,11 @@ function backupNudge() {
   s.backupAsk = today();
   save();
   if (lost)
-    askDialog(
-      "Auto backup can't reach its folder",
-      "On a new phone, or after reinstalling, Tally needs the backup folder picked again. Until then nothing is backed up.",
-      "Choose folder",
-      pickBackupFolder,
-      { cancel: "Not now" }
-    );
+    askDialog(T("backup.lostAsk.title"), T("backup.lostAsk.body"), T("backup.lostAsk.ok"), pickBackupFolder, {
+      cancel: T("common.notNow"),
+    });
   else
-    askDialog(
-      "Keep your data safe?",
-      "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
-      "Turn on",
-      toggleAutoBackup,
-      { cancel: "Not now" }
-    );
+    askDialog(T("backup.nudge.title"), T("backup.nudge.body"), T("backup.nudge.ok"), toggleAutoBackup, {
+      cancel: T("common.notNow"),
+    });
 }

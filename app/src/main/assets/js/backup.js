@@ -69,32 +69,31 @@ function restoreText(t, auto, after) {
     o = JSON.parse(t);
   } catch (e) {}
   if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
-    snack("That isn't a Tally backup file");
+    snack(T("restore.notBackup"));
     return false;
   }
   try {
     n = migrate(o);
   } catch (e) {
-    snack("That backup couldn't be read");
+    snack(T("restore.unreadable"));
     return false;
   }
   /* what will really be restored: an entry, account, loan or asset that can't be read (or on a missing account) is
      left out, and said so */
-  const count = (k, one, many) => n[k].length + " " + (n[k].length === 1 ? one : many),
-    had = k => (Array.isArray(o[k]) ? o[k].length - n[k].length : 0),
+  const had = k => (Array.isArray(o[k]) ? o[k].length - n[k].length : 0),
     lost = had("txns") + had("accounts") + had("loans") + had("assets"),
     newer = typeof o.v === "number" && o.v > blank().v;
+  const what = {
+    accounts: T("restore.accounts", { count: n.accounts.length }),
+    entries: T("restore.entries", { count: n.txns.length }),
+    when: auto && auto.when ? backupWhen(auto.when) : "",
+  };
   askDialog(
-    auto ? "Restore Tally backup.json?" : "Restore this backup?",
-    "Replaces everything on this phone with " +
-      count("accounts", "account", "accounts") +
-      " and " +
-      count("txns", "entry", "entries") +
-      (auto && auto.when ? " · saved " + backupWhen(auto.when) : "") +
-      "." +
-      (lost > 0 ? " " + lost + (lost === 1 ? " item" : " items") + " in it can't be read and will be left out." : "") +
-      (newer ? " It was made by a newer version of Tally: update Tally first so nothing is left out." : ""),
-    "Restore",
+    auto ? T("restore.autoQ", { file: "Tally backup.json" }) : T("restore.q"),
+    T(what.when ? "restore.bodySaved" : "restore.body", what) +
+      (lost > 0 ? " " + T("restore.lost", { count: lost }) : "") +
+      (newer ? " " + T("restore.newer") : ""),
+    T("restore.ok"),
     () => {
       /* this phone's own set-up stays: its auto backup (the folder lives in the shell), a copy so Undo gets back what
          was here; while the saved data couldn't be read, the stand-in's setting means nothing: the backup's own is kept */
@@ -106,15 +105,15 @@ function restoreText(t, auto, after) {
       syncBackup();
       applyTheme();
       if (after) after();
-      snack("Backup restored", () => {
+      snack(T("restore.done"), () => {
         S = old;
         commit();
         syncBackup();
         applyTheme();
-        snack("Undone");
+        snack(T("common.undone"));
       });
     },
-    auto ? { alt: ["Choose another file", pickRestoreFile] } : undefined
+    auto ? { alt: [T("restore.other"), pickRestoreFile] } : undefined
   );
 }
 /* the file input (a browser without the Android shell): Settings → Restore from backup */
@@ -124,7 +123,7 @@ function restoreFile(input) {
   if (!f) return;
   f.text().then(
     t => restoreText(t),
-    () => snack("Couldn't read that file")
+    () => snack(T("restore.cantRead"))
   );
 }
 /* Restore on Android: the shell reads the file itself (WebView's own File could refuse a document whose size the
@@ -169,11 +168,9 @@ function wipeAll() {
     bs = backupStatus(),
     auto = S.settings.backup.on && bs && bs.usable;
   askDialog(
-    had ? "Back up first?" : "No backup yet",
-    had
-      ? "Your last backup may not have your latest entries. Save them before deleting everything?"
-      : "Save a backup of your data before deleting it?",
-    "Save backup",
+    T(had ? "wipe.first.title" : "wipe.none.title"),
+    T(had ? "wipe.first.body" : "wipe.none.body"),
+    T("backup.save"),
     () => {
       if (!auto) return saveBackup(wipeConfirm);
       /* a failed Back up now: a file instead. If the user has moved on meanwhile (a slow folder), the answer is only
@@ -184,16 +181,16 @@ function wipeAll() {
         else wipeConfirm();
       });
     },
-    { cancel: "Skip", no: wipeConfirm }
+    { cancel: T("wipe.skip"), no: wipeConfirm }
   );
 }
 /* the final Yes / No; keeps the preferences: main currency, week start, time format, theme, reminders, haptics, the
    donut's middle and auto backup (which never overwrites its file with an empty notebook) */
 function wipeConfirm() {
   askDialog(
-    "Delete all data?",
-    "Every account and entry on this phone. This can't be undone.",
-    "Yes",
+    T("wipe.title"),
+    T("wipe.body"),
+    T("common.yes"),
     () => {
       const keep = {
         cur: S.settings.cur,
@@ -209,8 +206,8 @@ function wipeConfirm() {
       S = blank();
       Object.assign(S.settings, keep);
       commit();
-      snack("All data deleted");
+      snack(T("wipe.done"));
     },
-    { danger: true, cancel: "No" }
+    { danger: true, cancel: T("common.no") }
   );
 }
