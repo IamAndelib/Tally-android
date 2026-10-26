@@ -48,7 +48,7 @@ function exportCsv() {
           q(a ? a.name : ""),
           q(to ? to.name : ""),
           t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
-          q((t.type === "expense" && !t.feeOf) || t.type === "income" ? cat(t.cat).name : ""),
+          q((t.type === "expense" && !t.feeOf) || t.type === "income" ? catName(cat(t.cat)) : ""),
           q(t.note),
           to ? to.currency : "",
           q(l ? l.person : ""),

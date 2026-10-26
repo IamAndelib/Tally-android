@@ -592,8 +592,8 @@ function txLine(t) {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    d = esc(t.note || k.name);
-    s = bdi(k.name) + " · " + bdi(a ? a.name : "?");
+    d = esc(t.note || catName(k));
+    s = bdi(catName(k)) + " · " + bdi(a ? a.name : "?");
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
@@ -793,7 +793,7 @@ function catGrid(kind) {
         '">' +
         emblem(c, "ci") +
         '<span class="cn" dir="auto">' +
-        esc(c.name) +
+        esc(catName(c)) +
         "</span></button>";
     });
   return (
@@ -932,7 +932,8 @@ function settingsView() {
     seg("clock", S.settings.clock, [
       ["24", T("settings.h24")],
       ["12", T("settings.h12")],
-    ]);
+    ]) +
+    langRow();
   const r = S.settings.remind,
     remRow = (k, act, title, sub, on, time) =>
       '<div class="setrow"><span class="mid"><div>' +
@@ -990,7 +991,7 @@ function settingsView() {
             '">' +
             emblem(c, "sm") +
             '<span class="chn" dir="auto">' +
-            esc(c.name) +
+            esc(catName(c)) +
             "</span></button>"
         )
         .join("") +
@@ -1056,6 +1057,26 @@ function settingsView() {
     TH("settings.source") +
     "</a></p>";
   return h;
+}
+/* Settings → Region → Language, where Android has a language setting for each app (13+): the language Tally shows,
+   and the way to Android's screen to change it. Elsewhere Tally simply follows the phone's language. */
+function langRow() {
+  let on = false;
+  try {
+    on = !!(window.Android && Android.appLanguage && Android.appLanguage());
+  } catch (e) {}
+  if (!on) return "";
+  return (
+    '<div class="lbl set">' +
+    TH("settings.language") +
+    '</div><button class="fieldbtn" data-act="lang-open" aria-label="' +
+    TH("common.labelValue", { label: T("settings.language"), value: T("lang.name") }) +
+    '"><span>' +
+    TH("lang.name") +
+    "</span>" +
+    ic("right") +
+    "</button>"
+  );
 }
 /* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder or the
    daily backup is on). A row goes as soon as its permission is allowed (tallyPerms / resume re-render). */

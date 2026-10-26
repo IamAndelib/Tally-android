@@ -120,7 +120,7 @@ function smDonut(split, total) {
       '" stroke-dashoffset="' +
       (-off).toFixed(2) +
       '"><title>' +
-      esc(cat(k).name) +
+      esc(catName(cat(k))) +
       "</title></circle>";
     off += (v / total) * C;
   });
@@ -258,7 +258,7 @@ function drawSm() {
             '<div class="tx">' +
             emblem(c, "em") +
             '<span class="mid"><div class="d" dir="auto">' +
-            esc(c.name) +
+            esc(catName(c)) +
             (M
               ? ' <span class="muted small">' + esc(p < 1 ? "<" + percent(1) : percent(Math.round(p))) + "</span>"
               : "") +

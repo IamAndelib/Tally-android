@@ -56,6 +56,13 @@ const OLD_DEFAULT_IDS = [
   "transfer",
 ];
 const ICONS = window.TALLY_ICONS || {};
+/* a category's name as shown: a built-in one still called by its English default speaks Tally's language (cat.<id>);
+   one the user named shows as typed. The stored name stays the English default, so a backup reads the same in every
+   version and language. */
+const catName = c => {
+  const d = CATS.find(x => x.id === c.id);
+  return d && c.name === d.name ? T("cat." + c.id) : c.name;
+};
 const TYPES = { bank: "Bank", wallet: "Mobile wallet", cash: "Cash", card: "Credit card", savings: "Savings" };
 const P = {
   left: "M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z",

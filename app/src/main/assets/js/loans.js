@@ -159,14 +159,14 @@ function loanRow(l) {
 }
 /* people you already have an open loan/lending of the same kind + currency with (most recently drawn on first) */
 function personCandidates(kind, cur, q) {
-  const qq = q.trim().toLowerCase(),
+  const qq = curFold(q.trim()),
     seen = new Set(),
     out = [];
   S.loans.forEach(l => {
     if (l.kind !== kind || !l.person) return;
     const i = loanInfo(l);
     if (!i.open || i.cur !== cur) return;
-    if (qq && !l.person.toLowerCase().startsWith(qq)) return;
+    if (qq && !curFold(l.person).startsWith(qq)) return;
     const key = l.person.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);

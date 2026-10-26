@@ -288,6 +288,16 @@ const timeLabel = hm => {
     hourCycle: h24 ? "h23" : "h12",
   });
 };
+/* "AM" / "PM" as the phone's language writes them ("a. m.", "上午", "ص") */
+function dayPeriod(v) {
+  try {
+    const p = new Intl.DateTimeFormat(LOC.fmt, { hour: "numeric", hourCycle: "h12" })
+      .formatToParts(new Date(2024, 0, 1, v === "PM" ? 15 : 9))
+      .find(x => x.type === "dayPeriod");
+    if (p) return p.value;
+  } catch (e) {}
+  return v;
+}
 /* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM with Settings → Region's
    12-hour time), the centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above
    and below, so row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times
@@ -313,7 +323,7 @@ function timePicker(title, cur, onPick) {
     const v = c.id === "h" ? (h24 ? h : h % 12 || 12) : c.id === "m" ? m : h < 12 ? "AM" : "PM";
     c.idx = (c.loop ? c.vals.length : 0) + c.vals.indexOf(v);
   });
-  const txt = (c, v) => (c.id === "ap" ? v : c.id === "h" && !h24 ? String(v) : pad(v));
+  const txt = (c, v) => (c.id === "ap" ? dayPeriod(v) : c.id === "h" && !h24 ? String(v) : pad(v));
   TP = { cols, onPick, txt };
   const col = c => {
     let rows = "";

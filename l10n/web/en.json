@@ -536,7 +536,8 @@
     "about": "About",
     "version": "Version {{version}}",
     "by": "By {{name}}",
-    "source": "Source on GitHub"
+    "source": "Source on GitHub",
+    "language": "Language"
   },
   "welcome": {
     "yourCur": "Your currency",
@@ -732,5 +733,25 @@
       "no_picker": "No file picker on this phone",
       "no_folder_picker": "This phone has no folder picker, so auto backup can't be set up."
     }
+  },
+  "cat": {
+    "groceries": "Groceries",
+    "food": "Eating out",
+    "transport": "Transport",
+    "housing": "Rent",
+    "bills": "Bills",
+    "shopping": "Shopping",
+    "education": "Study",
+    "health": "Health",
+    "fun": "Fun",
+    "family": "Family",
+    "fees": "Fees",
+    "other": "Other",
+    "income": "Income",
+    "gift": "Gift",
+    "otherin": "Other"
+  },
+  "lang": {
+    "name": "English"
   }
 }

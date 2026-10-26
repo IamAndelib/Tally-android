@@ -377,7 +377,8 @@ function reminderHealth() {
   }
 }
 /* an Allow button on the permissions card; "notif": the shell shows Android's prompt while it still can, else the
-   settings page; "exact": the Alarms & reminders switch; "battery": Android's battery popup */
+   settings page; "exact": the Alarms & reminders switch; "battery": Android's battery popup; and "lang": Android's
+   language setting for Tally (Settings → Region) */
 function fixReminders(kind) {
   try {
     Android.openSetting(kind);

@@ -133,11 +133,11 @@ const catBtns = (list, sel) =>
         '">' +
         emblem(c, "ci") +
         '<span class="cn" dir="auto">' +
-        esc(c.name) +
+        esc(catName(c)) +
         "</span></button>"
     )
     .join("");
-const catChipInner = k => emblem(k, "ci") + esc(k.name) + ic("down");
+const catChipInner = k => emblem(k, "ci") + esc(catName(k)) + ic("down");
 /* pre (a new entry made for something else, e.g. an over-repaid lending's extra): {amount, cur, account, date, note,
    also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
 function txSheet(id, type, catId, pre) {
@@ -669,7 +669,7 @@ function catForm(id, kind) {
     '<label class="field"><span>' +
     TH("common.name") +
     '</span><input id="f-cname" value="' +
-    esc(c.name) +
+    esc(catName(c)) +
     '" maxlength="16" placeholder="' +
     TH("category.example") +
     '"></label>';
@@ -692,12 +692,13 @@ function saveCat() {
     snack(T("common.nameIt"));
     return;
   }
-  if (F.id)
-    Object.assign(
-      S.cats.find(c => c.id === F.id),
-      { name, e, i, c: F.col }
-    );
-  else {
+  if (F.id) {
+    const c = S.cats.find(x => x.id === F.id),
+      d = CATS.find(x => x.id === F.id);
+    /* a built-in name left as shown keeps its English default, so it goes on following Tally's language */
+    const keep = d && c.name === d.name && name === catName(c);
+    Object.assign(c, { name: keep ? c.name : name, e, i, c: F.col });
+  } else {
     const c = { id: "c" + newId(), name, e, i, c: F.col, kind: F.ck };
     const lastVis = S.cats.map(x => x.kind === F.ck && !x.hidden).lastIndexOf(true);
     S.cats.splice(lastVis + 1, 0, c);
@@ -713,7 +714,7 @@ function removeCat() {
     c.hidden = false;
     closeSheet();
     commit();
-    snack(T("category.back", { name: c.name }));
+    snack(T("category.back", { name: catName(c) }));
     return;
   }
   if (S.cats.filter(x => x.kind === c.kind && !x.hidden).length <= 1) {
@@ -724,7 +725,7 @@ function removeCat() {
   else S.cats = S.cats.filter(x => x !== c);
   closeSheet();
   commit();
-  snack(T("category.removed", { name: c.name }));
+  snack(T("category.removed", { name: catName(c) }));
 }
 /* a hidden category's "bring back" chip in Settings */
 function restoreCat(id) {
@@ -736,7 +737,7 @@ function restoreCat(id) {
   }
   c.hidden = false;
   commit();
-  snack(T("category.back", { name: c.name }));
+  snack(T("category.back", { name: catName(c) }));
 }
 function entriesSheet() {
   RBC = null;
@@ -797,7 +798,10 @@ function saveTx() {
     withUndo(
       id
         ? T("common.saved")
-        : (pre.msg || "") + signed(t.type === "income" ? amt : -amt, acc(t.account).currency) + " · " + cat(t.cat).name,
+        : (pre.msg || "") +
+            signed(t.type === "income" ? amt : -amt, acc(t.account).currency) +
+            " · " +
+            catName(cat(t.cat)),
       mutate,
       { row: id || nid, cat: t.cat }
     );

@@ -595,6 +595,9 @@ document.addEventListener("click", ev => {
       });
       break;
     }
+    case "lang-open":
+      fixReminders("lang"); // Android's language setting for Tally
+      break;
     case "kept-del":
       askDialog(
         T("data.kept.deleteQ"),

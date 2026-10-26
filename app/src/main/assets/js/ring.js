@@ -103,13 +103,13 @@ function ringHTML(cats, o) {
       (home
         ? ' aria-label="' +
           (v
-            ? TH("ring.addShare", { cat: p.c.name, share: percent(Math.max(1, Math.round((v / o.spent) * 100))) })
-            : TH("ring.add", { cat: p.c.name })) +
+            ? TH("ring.addShare", { cat: catName(p.c), share: percent(Math.max(1, Math.round((v / o.spent) * 100))) })
+            : TH("ring.add", { cat: catName(p.c) })) +
           '"'
         : "") +
       ">" +
       emblem(p.c, "ci") +
-      (names ? '<span class="cn" dir="auto">' + esc(p.c.name) + "</span>" : "") +
+      (names ? '<span class="cn" dir="auto">' + esc(catName(p.c)) + "</span>" : "") +
       (home
         ? '<span class="cp" style="color:' +
           inkOn(p.c.c) + // the category's colour, readable on the surface
