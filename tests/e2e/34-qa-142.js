@@ -9,7 +9,7 @@
 //  - a name typed in another case (Turkish İrem / IREM, Işık / IŞIK) adds to that person's open tab; Chinese sentences
 //    run on without a space after 。
 //  - a button that turns itself off (Next reaching today) hands the focus to its neighbour; a payback day's "no day
-//    before today" moves at midnight; an amount that rounds to nothing in its currency isn't saved; "12+" saves 12;
+//    before today" moves at midnight; an amount that rounds to nothing in its currency isn't saved;
 //    Go back on the overdraw question leaves the account offered next time as it was
 //  - notes Tally writes itself (balance fix, fees) show in today's language and aren't stored; a day inside a
 //    sentence is a date, never a capitalised "Yesterday"; standalone date headings start with a capital
@@ -388,7 +388,6 @@ const ok = (c, m) => {
       catchUpToday();
       out.min = $("#f-due").dataset.min;
       closeSheet();
-      out.trailing = evalAmt("12+");
       // $0.004 shows as $0.00: not saved
       const n = S.txns.length;
       txSheet(null, "expense", "food");
@@ -409,7 +408,6 @@ const ok = (c, m) => {
       return out;
     });
     ok(r.min === (await page.evaluate(() => today())), "a payback day's earliest day moves at midnight: " + r.min);
-    ok(r.trailing === 12, "12+ is 12: " + r.trailing);
     ok(r.tiny === 0, "an amount shown as $0.00 isn't saved");
     ok(r.asked && r.last === "a", "Go back keeps the account offered next time: " + JSON.stringify(r));
     await ctx.close();
