@@ -50,14 +50,17 @@ public class BackupReceiver extends BroadcastReceiver {
     private static final List<String> FOLDER_ERRORS = Arrays.asList(E_NO_FOLDER, E_UNWRITABLE, E_NO_ACCESS, E_GONE);
     private static final String PREFS = "tally_backup";
     private static final int REQ = 3, NOTE_ID = 3;
-    /** The largest backup read back (Restore, checks): far above any real one (a few hundred KB after years). */
-    static final int MAX = 64 * 1024 * 1024; // about 130 bytes an entry: far past years of daily entries; more is not one
+    /** The largest notebook mirrored or backup read back: at about 130 bytes an entry, far past years of daily
+     *  entries (a real one is a few hundred KB); anything larger isn't a notebook. */
+    static final int MAX = 64 * 1024 * 1024;
     /** snapshot.json and its "dirty" mark: held only for quick file work, so a save never waits on a slow folder */
     private static final Object DATA = new Object();
     /** one write (and read-back) of the backup file, or read of it, at a time */
     private static final Object RUN = new Object();
     /** bumped by every setData that changed the snapshot: a save during a backup's write stays "not backed up" */
     private static int gen;
+    /** What snapshot.json holds, once read or written (under DATA): compared in memory, not re-read at every save. */
+    private static String held;
 
     @Override
     public void onReceive(Context ctx, Intent in) {
@@ -99,6 +102,7 @@ public class BackupReceiver extends BroadcastReceiver {
             if (!o.optBoolean("on")) {
                 synchronized (DATA) {
                     snapshot(ctx).delete();
+                    held = null;
                 }
             }
         } catch (JSONException ignored) { }
@@ -110,13 +114,15 @@ public class BackupReceiver extends BroadcastReceiver {
         if (json == null || json.length() > MAX) return; // never a real notebook: a backup couldn't be read back anyway
         synchronized (DATA) {
             File f = snapshot(ctx), tmp = new File(f.getPath() + ".tmp");
-            if (json.equals(read(f))) return; // unchanged (e.g. every app start): nothing new to back up, no write
+            if (held == null) held = read(f);
+            if (json.equals(held)) return; // unchanged (e.g. every app start): nothing new to back up, no write
             try (OutputStream os = new FileOutputStream(tmp)) {
                 os.write(json.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 return;
             }
             if (tmp.renameTo(f)) {
+                held = json;
                 gen++;
                 prefs(ctx).edit().putBoolean("dirty", true).apply();
             }
@@ -302,7 +308,7 @@ public class BackupReceiver extends BroadcastReceiver {
 
     /**
      * The auto backup file's text for Settings → Restore and a newly picked folder, read straight from the folder:
-     * {text, when (ms, the last backup), folder} or {error}, with none: true when the folder holds no backup file.
+     * {text, when (ms, the last backup)} or {error}, with none: true when the folder holds no backup file.
      */
     static String readAuto(Context ctx) {
         synchronized (RUN) { // never half-way through a backup's rewrite of the file

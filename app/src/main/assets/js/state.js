@@ -413,24 +413,34 @@ function save() {
   const standIn = unreadable && !S.accounts.length && !S.txns.length && !S.loans.length && !S.assets.length;
   savedJson = standIn ? unreadable : JSON.stringify(S);
   saveSeq++;
-  let kept = false; // the shell's copy has this save (its last write didn't fail)
+  const shell = !!(window.Android && Android.keepState);
   try {
-    if (window.Android && Android.keepState) kept = Android.keepState(saveSeq, savedJson) !== false;
+    if (shell) Android.keepState(saveSeq, savedJson);
   } catch (e) {}
   try {
     localStorage.setItem(LS, savedJson);
     localStorage.setItem(LS + ":seq", String(saveSeq)); // after the data: a number never claims data that didn't fit
   } catch (e) {
-    /* localStorage is full (a notebook of tens of thousands of entries) or blocked: with the shell's copy, which has
-       this save and wins at the next start (its number is higher), nothing is lost; without it, say so */
-    if (!kept)
-      setTimeout(() =>
-        askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
-          cancel: T("common.notNow"),
-        })
-      );
+    /* localStorage is full (a notebook of tens of thousands of entries) or blocked: with the shell's copy, which gets
+       this save moments later and wins at the next start (its number is higher), nothing is lost; if that write
+       fails too, or there is no shell, say so */
+    if (shell) whenKept(saveSeq, 0);
+    else setTimeout(saveFailed);
   }
   mirrorSoon();
+}
+const saveFailed = () =>
+  askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
+    cancel: T("common.notNow"),
+  });
+/* the shell writes its copy on a thread of its own: asked again until it says written (1) or failed (-1), for 5 s */
+function whenKept(seq, tries) {
+  let st = -1;
+  try {
+    st = Android.keptStatus(seq);
+  } catch (e) {}
+  if (st === 0 && tries < 25) setTimeout(() => whenKept(seq, tries + 1), 200);
+  else if (st !== 1) saveFailed();
 }
 function commit() {
   dropUndo(); // an Undo still on screen would restore its snapshot over this newer change

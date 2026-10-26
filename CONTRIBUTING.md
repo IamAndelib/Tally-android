@@ -21,8 +21,8 @@ Tally is a native Android shell around a web page.
   `ready` (ends the launch screen), `haptic`, `saveFile`, `getColors` (Material You palette), `setBars`,
   `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `getLocale` / `appLanguage`
   (`Lang.java`: the texts' language and the number format), `is24h`, `fontScale`, `reminderHealth` /
-  `openSetting` / `permsIntro` (permissions), `keepState` / `keptState` (the shell's own copy of every save,
-  `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
+  `openSetting` / `permsIntro` (permissions), `keepState` / `keptStatus` / `keptState` (the shell's own copy
+  of every save, `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
   `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls the page's hooks
   `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`, `tallyFolder`,
   `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that

@@ -35,10 +35,9 @@ const ok = (c, m) => {
           setReminders: j => (window.__native.reminders = j),
           setBackup: j => window.__native.backup.push(j),
           setBackupData() {},
-          keepState: () => {
-            window.__native.kept = (window.__native.kept || 0) + 1;
-            return !window.__native.keepFails;
-          },
+          keepState: () => (window.__native.kept = (window.__native.kept || 0) + 1),
+          // the shell's copy: written (1), or refused (-1) once keepFails, after `slow` answers of "not yet" (0)
+          keptStatus: () => (window.__native.slow-- > 0 ? 0 : window.__native.keepFails ? -1 : 1),
           pickBackupFolder() {},
           backupStatus: () => JSON.stringify(window.__native.status || { folder: "x", usable: true, last: 1 }),
           readAutoBackup: id => {
@@ -203,6 +202,25 @@ const ok = (c, m) => {
       return new Promise(res => setTimeout(() => res($("#pop h3") ? $("#pop h3").textContent : ""), 50));
     });
     ok(d === "Couldn't save on this phone", "a full localStorage with the shell's copy failing too says so: " + d);
+    // the shell answers "not yet" first: the dialog waits for its "refused", and none comes when it's written
+    const late = async fails =>
+      page.evaluate(f => {
+        closePop();
+        window.__native.keepFails = f;
+        window.__native.slow = 2;
+        const set = Storage.prototype.setItem;
+        Storage.prototype.setItem = () => {
+          throw new Error("QuotaExceededError");
+        };
+        save();
+        Storage.prototype.setItem = set;
+        const now = !!$("#pop h3");
+        return new Promise(res => setTimeout(() => res([now, !!$("#pop h3")]), 700));
+      }, fails);
+    const lf = await late(true),
+      lo = await late(false);
+    ok(!lf[0] && lf[1], "a write refused after a moment still says so: " + lf);
+    ok(!lo[0] && !lo[1], "a write done after a moment says nothing: " + lo);
     await ctx.close();
   }
 

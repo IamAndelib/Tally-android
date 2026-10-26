@@ -87,7 +87,7 @@ public class ReminderReceiver extends BroadcastReceiver {
      * say "Nothing written today" about a day that has just begun; it only re-arms.
      */
     private static boolean reached(JSONObject o, int defH) {
-        Calendar c = dayAt(0, o == null ? defH : o.optInt("h", defH), o == null ? 0 : o.optInt("m", 0));
+        Calendar c = dayAt(0, o.optInt("h", defH), o.optInt("m", 0));
         return System.currentTimeMillis() >= c.getTimeInMillis() - 60_000; // a minute's slack for clock drift
     }
 
@@ -166,12 +166,14 @@ public class ReminderReceiver extends BroadcastReceiver {
         long now = System.currentTimeMillis();
 
         // nothing until the page has said what's on (a widget can arm this before Tally was ever opened)
-        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, false);
-        armDaily(ctx, am, cfg.optJSONObject("check"), A_CHECK, CHECK_ID, 8, false);
+        String t = today();
+        JSONObject ck = cfg.optJSONObject("check");
+        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, "nudge",
+                !t.equals(prefs(ctx).getString("lastEntry", "")));
+        armDaily(ctx, am, ck, A_CHECK, CHECK_ID, 8, "check", ck != null && !t.equals(ck.optString("checked")));
 
         JSONObject at = cfg.optJSONObject("duesAt");
-        int dh = Math.max(0, Math.min(23, at == null ? 9 : at.optInt("h", 9)));
-        int dm = Math.max(0, Math.min(59, at == null ? 0 : at.optInt("m", 0)));
+        int dh = at == null ? 9 : at.optInt("h", 9), dm = at == null ? 0 : at.optInt("m", 0); // dayAt clamps them
         SharedPreferences p = prefs(ctx);
         try {
             JSONArray armed = new JSONArray(p.getString("armed", "[]"));
@@ -180,7 +182,6 @@ public class ReminderReceiver extends BroadcastReceiver {
         JSONArray nowArmed = new JSONArray();
         Set<String> keep = new HashSet<>(Arrays.asList("shown:nudge", "shown:check"));
         JSONArray dues = cfg.optJSONArray("dues");
-        String t = today();
         for (int i = 0; dues != null && i < dues.length(); i++) {
             JSONObject d = dues.optJSONObject(i);
             if (d == null) continue;
@@ -189,24 +190,15 @@ public class ReminderReceiver extends BroadcastReceiver {
             if (id.isEmpty() || c == null) continue;
             long when;
             if (date.compareTo(t) > 0) {
-                c.set(Calendar.HOUR_OF_DAY, dh);
-                c.set(Calendar.MINUTE, dm);
+                c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, dh)));
+                c.set(Calendar.MINUTE, Math.max(0, Math.min(59, dm)));
                 when = c.getTimeInMillis();
             } else if (!t.equals(p.getString("shown:" + id, ""))) {
                 // due today or overdue and not shown yet today: at the set time, or in a minute if that has passed
-                Calendar c2 = Calendar.getInstance();
-                c2.set(Calendar.HOUR_OF_DAY, dh);
-                c2.set(Calendar.MINUTE, dm);
-                c2.set(Calendar.SECOND, 0);
-                when = Math.max(c2.getTimeInMillis(), now + 60_000);
+                when = Math.max(dayAt(0, dh, dm).getTimeInMillis(), now + 60_000);
             } else {
                 // already reminded today: again tomorrow at the set time while it stays open
-                Calendar c2 = Calendar.getInstance();
-                c2.add(Calendar.DAY_OF_MONTH, 1);
-                c2.set(Calendar.HOUR_OF_DAY, dh);
-                c2.set(Calendar.MINUTE, dm);
-                c2.set(Calendar.SECOND, 0);
-                when = c2.getTimeInMillis();
+                when = dayAt(1, dh, dm).getTimeInMillis();
             }
             arm(am, when, broadcast(ctx, A_DUE, id, code(ctx, id)));
             nowArmed.put(id);
@@ -220,12 +212,29 @@ public class ReminderReceiver extends BroadcastReceiver {
         e.apply();
     }
 
-    /** A once-a-day notice (the nudge, the balance check): armed at its h:m while on, cancelled when off. */
-    private static void armDaily(Context ctx, AlarmManager am, JSONObject o, String action, int req, int defH, boolean defOn) {
+    /**
+     * A once-a-day notice (the nudge, the balance check): armed at its h:m while on, cancelled when off. Its time
+     * passing today without the alarm (the phone was off, or re-arming replaced an inexact one still waiting) brings
+     * it a minute later, while it still applies (applies: nothing written today / balances not confirmed today) and
+     * hasn't shown today; switching it on after its time doesn't (only a time it was armed for counts).
+     */
+    private static void armDaily(Context ctx, AlarmManager am, JSONObject o, String action, int req, int defH,
+                                 String kind, boolean applies) {
         PendingIntent pi = broadcast(ctx, action, null, req);
-        if (o == null) o = new JSONObject();
-        if (o.optBoolean("on", defOn)) arm(am, nextAt(o.optInt("h", defH), o.optInt("m", 0)), pi);
-        else am.cancel(pi);
+        SharedPreferences p = prefs(ctx);
+        if (o == null || !o.optBoolean("on")) {
+            am.cancel(pi);
+            p.edit().remove("due:" + kind).remove("late:" + kind).apply();
+            return;
+        }
+        long now = System.currentTimeMillis(), was = p.getLong("due:" + kind, 0);
+        String t = today();
+        boolean owed = was > 0 && t.equals(fmt().format(new Date(was))) && applies
+                && !t.equals(p.getString("shown:" + kind, ""));
+        boolean late = owed && (was <= now || p.getBoolean("late:" + kind, false)); // missed, or its catch-up waiting
+        long at = !late ? nextAt(o.optInt("h", defH), o.optInt("m", 0)) : was <= now ? now + 60_000 : was;
+        arm(am, at, pi);
+        p.edit().putLong("due:" + kind, at).putBoolean("late:" + kind, late).apply();
     }
 
     // ---------- notifications ----------

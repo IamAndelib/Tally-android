@@ -43,6 +43,7 @@ public class TallyWidget extends AppWidgetProvider {
 
     static void refresh(Context ctx) {
         AppWidgetManager m = AppWidgetManager.getInstance(ctx);
+        if (m == null) return; // a device without home-screen widgets
         int[] ids = m.getAppWidgetIds(new ComponentName(ctx, TallyWidget.class));
         if (ids == null || ids.length == 0) return;
         for (int id : ids) m.updateAppWidget(id, build(ctx, m, id));

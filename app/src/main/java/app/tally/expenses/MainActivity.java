@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
@@ -79,6 +80,10 @@ public class MainActivity extends Activity {
     /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
     private Integer pageColor;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** For answers from other threads (deliver), whichever activity is on screen then. */
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    /** What the permission prompts remember (the notification prompt asked once, the first-open dialog shown). */
+    private static final String PERMS_PREFS = "tally_perms";
     /** Renderer losses (onRenderProcessGone) in the minute since goneSince; static, since each loss recreates this. */
     private static long goneSince;
     private static int goneCount;
@@ -208,7 +213,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(java.util.Locale.ROOT);
+                String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(Locale.ROOT);
                 // only the app's own https assets stay in the WebView (WebViewAssetLoader serves nothing over http)
                 if ("https".equals(scheme) && HOST.equals(u.getHost())) return false;
                 // web links (the About footer) open in the browser; anything else (intent:, content:, file:…) is dropped
@@ -324,7 +329,7 @@ public class MainActivity extends Activity {
         }
         if (asking) return true; // its prompt is already up: one Allow, one prompt
         asking = true;
-        getSharedPreferences("tally_perms", MODE_PRIVATE).edit().putBoolean("notif", true).apply();
+        getSharedPreferences(PERMS_PREFS, MODE_PRIVATE).edit().putBoolean("notif", true).apply();
         requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIF_REQ);
         return true;
     }
@@ -332,7 +337,7 @@ public class MainActivity extends Activity {
     /** Android 13+'s prompt can still show: never asked on this install, or refused only once so far. */
     private boolean canPromptNotif() {
         return Build.VERSION.SDK_INT >= 33
-                && (!getSharedPreferences("tally_perms", MODE_PRIVATE).getBoolean("notif", false)
+                && (!getSharedPreferences(PERMS_PREFS, MODE_PRIVATE).getBoolean("notif", false)
                     || shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS"));
     }
 
@@ -413,7 +418,7 @@ public class MainActivity extends Activity {
      * then reaches the page even if the activity was recreated meanwhile (renderer lost, text size changed).
      */
     static void deliver(String js) {
-        new Handler(Looper.getMainLooper()).post(() -> {
+        MAIN.post(() -> {
             MainActivity a = live;
             if (a != null && !a.isDestroyed()) a.callPage(js);
             else orphans.add(js);
@@ -483,7 +488,7 @@ public class MainActivity extends Activity {
                     sb.append(",\"").append(names[p]).append("\":[");
                     for (int i = 0; i < ids[p].length; i++) {
                         if (i > 0) sb.append(',');
-                        sb.append('"').append(String.format("#%06X", 0xFFFFFF & getColor(ids[p][i]))).append('"');
+                        sb.append('"').append(String.format(Locale.ROOT, "#%06X", 0xFFFFFF & getColor(ids[p][i]))).append('"');
                     }
                     sb.append(']');
                 }
@@ -721,7 +726,7 @@ public class MainActivity extends Activity {
         /** True only the first time on this install: the page then shows its Permissions dialog (once, never again). */
         @JavascriptInterface
         public boolean permsIntro() {
-            SharedPreferences p = getSharedPreferences("tally_perms", MODE_PRIVATE);
+            SharedPreferences p = getSharedPreferences(PERMS_PREFS, MODE_PRIVATE);
             if (p.getBoolean("intro", false)) return false;
             p.edit().putBoolean("intro", true).apply();
             return true;
@@ -765,14 +770,16 @@ public class MainActivity extends Activity {
             BackupReceiver.setConfig(MainActivity.this, json);
         }
 
-        /**
-         * Every save (state.js save()): the shell's own copy, on disk at once (see SavedCopy). False when the last
-         * write failed.
-         */
+        /** Every save (state.js save()): the shell's own copy, on disk at once (see SavedCopy). */
         @JavascriptInterface
-        public boolean keepState(int seq, String json) {
+        public void keepState(int seq, String json) {
             SavedCopy.keep(MainActivity.this, seq, json);
-            return !SavedCopy.failed;
+        }
+
+        /** Whether that copy has save {@code seq}: 1 yes, -1 its write failed, 0 not written yet (SavedCopy.status). */
+        @JavascriptInterface
+        public int keptStatus(int seq) {
+            return SavedCopy.status(seq);
         }
 
         /** That copy, for the page's start-up: the save number, a line break and the data; "" when there is none. */
@@ -788,7 +795,7 @@ public class MainActivity extends Activity {
             BackupReceiver.setData(MainActivity.this, json);
         }
 
-        /** {folder, usable, last, error} for Settings. */
+        /** {on, folder, usable, last, error} for Settings and Restore (BackupReceiver.status). */
         @JavascriptInterface
         public String backupStatus() {
             return BackupReceiver.status(MainActivity.this);
