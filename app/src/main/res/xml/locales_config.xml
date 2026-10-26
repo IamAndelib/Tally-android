@@ -2,5 +2,14 @@
 <!-- The languages Tally is translated into, for Android 13+'s per-app language setting. Keep in step with
      l10n/web/ and resourceConfigurations in app/build.gradle (tests/e2e/32-i18n-static.js checks). -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="de" />
     <locale android:name="en" />
+    <locale android:name="es" />
+    <locale android:name="fr" />
+    <!-- Indonesian under its older code, as Android's own sample writes it (values-in) -->
+    <locale android:name="in" />
+    <locale android:name="pt-BR" />
+    <locale android:name="ru" />
+    <locale android:name="tr" />
+    <locale android:name="zh-Hans" />
 </locale-config>

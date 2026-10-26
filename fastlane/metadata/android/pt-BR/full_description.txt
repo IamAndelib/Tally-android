@@ -1,0 +1,42 @@
+O Tally funciona como um caderninho de bolso para o seu dinheiro. Toda manhã, seus saldos ficam no alto da página,
+você anota os gastos ao longo do dia com um toque, e tudo passa para o dia seguinte.
+
+UM TOQUE POR GASTO
+Suas categorias de gasto ficam em volta de um gráfico com os gastos de hoje. Toque em uma categoria, digite o valor,
+salve. Uma calculadora embutida resolve contas rápidas como 12 + 4,50.
+
+TODAS AS CONTAS, TODAS AS MOEDAS
+Contas bancárias, carteiras digitais, dinheiro vivo, cartões de crédito e poupança, cada um na sua moeda: qualquer
+moeda do mundo.
+
+TRANSFERÊNCIAS QUE NUNCA CONTAM COMO GASTO
+Passe dinheiro entre suas próprias contas, até entre moedas diferentes, e adicione a taxa de saque ou de caixa
+eletrônico quando houver.
+
+AJUSTE UM SALDO EM SEGUNDOS
+Se uma conta não confere com o que você realmente tem, digite o valor real e o Tally registra a diferença.
+
+DÍVIDAS E EMPRÉSTIMOS
+Acompanhe o dinheiro que você pegou emprestado ou emprestou: vários valores por pessoa, vencimentos, pagamentos
+parciais (com as taxas), lembretes e valores dados como perdidos. Veja seu patrimônio líquido nas abas Ativos e
+Passivos.
+
+OLHE PARA TRÁS
+Histórico de qualquer dia, intervalo de datas ou mês, com o saldo de cada conta depois de cada lançamento. Toque no
+gráfico para ver seus últimos 7 dias, 8 semanas ou um mês por categoria.
+
+LEMBRETES E UM WIDGET
+Um lembrete à noite se você não anotou nada hoje, lembretes de vencimento de dívidas e empréstimos, e um widget na
+tela inicial com o saldo de hoje, os gastos de hoje e uma adição rápida.
+
+SEUS DADOS SÃO SEUS
+Sem cadastro, sem anúncios, sem rastreamento, sem precisar de internet. Tudo fica guardado no seu celular. Faça
+backup em um arquivo quando quiser, restaure em um celular novo ou exporte todos os lançamentos em CSV.
+
+NO SEU IDIOMA
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia e Türkçe: o Tally segue o
+idioma do seu celular e escreve números, datas e valores do jeito que o seu celular escreve.
+
+Segue as cores do Material You do seu celular, no tema claro e no escuro.
+
+Código aberto (MIT): https://github.com/IamAndelib/Tally-android

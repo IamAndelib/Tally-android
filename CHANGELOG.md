@@ -5,6 +5,21 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Tally speaks Spanish, Brazilian Portuguese, French, German, Russian, Simplified Chinese, Indonesian and Turkish,
+  following the phone's language: every screen, notification and the widget, and the store listing. On Android 13
+  and later, Settings → Region shows the language and opens Android's setting to pick one just for Tally. Numbers,
+  dates and money keep the phone's own format, also on phones in a language Tally isn't translated into. The
+  translations are drafts, to be reviewed by native speakers.
+
+### Changed
+
+- Shares and comparisons are written the phone's way (12 %, %12), and counts of a thousand or more are grouped.
+- The time picker writes AM and PM the way the phone's language does.
+- A search for a person finds names whatever their accents or Turkish dotted and dotless i.
+- An emblem search in a script other than Latin finds nothing, instead of listing every emblem.
+
 ## [1.4.1] — 2026-10-20
 
 ### Fixed

@@ -1,0 +1,2 @@
+- Tally artık İspanyolca, Brezilya Portekizcesi, Fransızca, Almanca, Rusça, Basitleştirilmiş Çince, Endonezce ve Türkçe konuşuyor ve telefonunun dilini kullanıyor. Android 13 ve sonrasında yalnızca Tally için ayrı bir dil de seçebilirsin.
+- Sayılar, tarihler ve para telefonunun kendi biçiminde kalır.

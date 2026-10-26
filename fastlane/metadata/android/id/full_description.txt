@@ -1,0 +1,41 @@
+Tally seperti buku catatan saku untuk uangmu. Setiap pagi saldomu ada di bagian atas halaman, kamu mencatat
+pengeluaran sepanjang hari dengan satu ketukan, dan semuanya berlanjut ke hari berikutnya.
+
+SATU KETUKAN PER PENGELUARAN
+Kategori pengeluaranmu mengelilingi donat pengeluaran hari ini. Ketuk kategori, ketik jumlahnya, simpan. Kalkulator
+bawaan siap untuk hitungan cepat seperti 12 + 4,50.
+
+SEMUA AKUN, SEMUA MATA UANG
+Rekening bank, dompet digital, uang tunai, kartu kredit, dan tabungan, masing-masing dengan mata uangnya sendiri:
+mata uang apa pun di dunia.
+
+TRANSFER YANG TIDAK PERNAH DIHITUNG SEBAGAI PENGELUARAN
+Pindahkan uang antarakunmu sendiri, bahkan antar mata uang, dan tambahkan biaya ATM atau tarik tunai kalau ada.
+
+KOREKSI SALDO DALAM HITUNGAN DETIK
+Kalau saldo akun tidak cocok dengan yang benar-benar kamu punya, ketik jumlah sebenarnya dan Tally mencatat
+selisihnya.
+
+UTANG DAN PIUTANG
+Catat uang yang kamu pinjam atau pinjamkan: beberapa jumlah per orang, jatuh tempo, pembayaran sebagian (beserta
+biayanya), pengingat, dan pinjaman yang diikhlaskan. Lihat kekayaan bersihmu di tab Aset dan Utang.
+
+LIHAT KE BELAKANG
+Riwayat untuk hari, rentang tanggal, atau bulan apa pun, dengan saldo tiap akun setelah setiap transaksi. Ketuk
+donatnya untuk melihat 7 hari, 8 minggu, atau sebulan terakhir per kategori.
+
+PENGINGAT DAN WIDGET
+Pengingat malam kalau kamu belum mencatat apa pun hari ini, pengingat jatuh tempo utang, dan widget layar utama
+dengan saldo hari ini, pengeluaran hari ini, dan tombol tambah cepat.
+
+DATAMU TETAP MILIKMU
+Tanpa perlu daftar, tanpa iklan, tanpa pelacakan, tanpa internet. Semuanya tersimpan di ponselmu. Cadangkan ke file kapan
+saja, pulihkan di ponsel baru, atau ekspor semua transaksi sebagai CSV.
+
+DALAM BAHASAMU
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia, dan Türkçe: Tally
+mengikuti bahasa ponselmu, dan menulis angka, tanggal, serta uang sesuai format ponselmu.
+
+Mengikuti warna Material You ponselmu, dalam mode terang dan gelap.
+
+Sumber terbuka (MIT): https://github.com/IamAndelib/Tally-android

@@ -5,7 +5,8 @@
 // sheets taller than the screen. Screenshots of every state go to tests/e2e/output/22-layout/ for review.
 //
 // LAYOUT_FULL=1 runs every size with every text scale (the default is a smaller matrix that still covers the edges);
-// LAYOUT_ONLY=<device ids> runs only those sizes.
+// LAYOUT_ONLY=<device ids> runs only those sizes. Then the languages with the longest words (German, Russian) and
+// Chinese run on the tightest sizes; LAYOUT_LANGS=<codes> picks others (en-XA: accented English a third longer).
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("22-layout");
 let fails = 0;
@@ -42,6 +43,37 @@ const matrix = DEVICES.filter(d => !ONLY.length || ONLY.includes(d.id)).flatMap(
   ).map(s => ({ ...d, s }))
 );
 
+/* other languages, on the sizes where room is tightest; the locale writes numbers and dates as that phone would */
+const LANG_LOCALE = { de: "de-DE", ru: "ru-RU", "zh-Hans": "zh-CN", es: "es-ES", "pt-BR": "pt-BR", fr: "fr-FR" };
+Object.assign(LANG_LOCALE, { id: "id-ID", tr: "tr-TR", "en-XA": "en-US" });
+const LANGS = (process.env.LAYOUT_LANGS || "de,ru,zh-Hans").split(",").filter(Boolean);
+const runs = matrix
+  .map(d => ({ ...d, lang: "en" }))
+  .concat(
+    ONLY.length && !process.env.LAYOUT_LANGS
+      ? []
+      : LANGS.flatMap(lang =>
+          DEVICES.filter(d => ["small-16x9", "phone-landscape"].includes(d.id)).map(d => ({
+            ...d,
+            s: d.id === "small-16x9" ? 1.3 : 1,
+            lang,
+          }))
+        )
+  );
+/* accented English a third longer, to find text that's cut or doesn't wrap (Android's own en-XA idea) */
+function pseudo() {
+  const flat = (o, p = "") =>
+    Object.entries(o).flatMap(([k, v]) => (typeof v === "object" ? flat(v, p + k + ".") : [[p + k, v]]));
+  const A = [..."àƀçđéƒĝĥîĵķļɱñöþǫŕšţûṽŵẋýžÀßÇĐÉƑĜĤÎĴĶĻṀÑÖÞǪŔŠŢÛṼŴẊÝŽ"],
+    L = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const tr = t =>
+    t
+      .split(/(\{\{\w+\}\})/)
+      .map((q, i) => (i % 2 ? q : [...q].map(c => (L.includes(c) ? A[L.indexOf(c)] : c)).join("")))
+      .join("") + " ·".repeat(Math.ceil(t.length / 6));
+  const en = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "../../l10n/web/en.json"), "utf8"));
+  return JSON.stringify(Object.fromEntries(flat(en).map(([k, v]) => [k, tr(v)])));
+}
 /* a notebook as a real user might have it: several accounts and currencies, a day of spending, loans, an asset */
 function sampleState(t, nCats) {
   const ago = n => {
@@ -332,16 +364,18 @@ function inspect() {
 (async () => {
   const browser = await chromium.launch(launchOptions);
   const summary = {};
-  for (const dev of matrix) {
+  for (const dev of runs) {
     const ctx = await browser.newContext({
+      uiLang: dev.lang,
       viewport: { width: dev.w, height: dev.h },
       screen: { width: dev.w, height: dev.h }, // the screen's shape tells a phone held sideways (phoneLand)
       deviceScaleFactor: 1,
       isMobile: true,
       reducedMotion: "reduce", // sheets and dialogs appear at once, so each state is measured settled
       hasTouch: true,
-      locale: "en-US",
+      locale: LANG_LOCALE[dev.lang] || "en-US",
     });
+    if (dev.lang === "en-XA") await ctx.addInitScript(c => (window.I18N = { "en-XA": c }), pseudo());
     await ctx.addInitScript(s => {
       window.Android = {
         getColors: () => null,
@@ -358,7 +392,7 @@ function inspect() {
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     await page.goto(appUrl);
-    const tag = dev.id + "@" + dev.s;
+    const tag = dev.id + "@" + dev.s + (dev.lang === "en" ? "" : "-" + dev.lang);
     const states = [];
     const shot = async (label, open) => {
       await page.evaluate(() => {
@@ -618,7 +652,7 @@ function inspect() {
   }
   const keys = Object.keys(summary);
   for (const k of keys) console.log("  " + k + "\n    - " + summary[k].join("\n    - "));
-  ok(keys.length === 0, "no layout problems in " + matrix.length + " sizes");
+  ok(keys.length === 0, "no layout problems in " + runs.length + " sizes and languages");
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");
   process.exitCode = fails ? 1 : 0;

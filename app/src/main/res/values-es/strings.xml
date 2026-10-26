@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally hoy</string>
+    <string name="w_desc">Saldo y gastos de hoy, con un + rápido</string>
+    <string name="w_label">Tally · Hoy</string>
+    <string name="w_spent">Gastado hoy</string>
+    <string name="w_open">Abrir Tally</string>
+    <string name="w_add">Añadir rápido</string>
+    <string name="qa_title">Añadir rápido</string>
+    <string name="qa_out">Gasto</string>
+    <string name="qa_in">Ingreso</string>
+    <string name="qa_tr">Transferencia</string>
+    <string name="page_stopped">La pantalla de Tally se sigue cerrando. Todo lo que guardaste se conserva.</string>
+    <string name="try_again">Reintentar</string>
+    <string name="no_webview">Tally necesita Android System WebView, que falta o se está actualizando ahora mismo. Vuelve a intentarlo en un momento.</string>
+
+    <!-- notificaciones (ReminderReceiver) -->
+    <string name="ch_nudge">Aviso de la noche</string>
+    <string name="ch_check">Revisión de saldos</string>
+    <string name="ch_dues">Pagos de préstamos y deudas</string>
+    <string name="ch_backup">Problemas con la copia</string>
+    <string name="n_nudge_title">Hoy no anotaste nada en Tally</string>
+    <string name="n_nudge_text">Tómate un minuto para anotar lo que gastaste.</string>
+    <string name="n_check_title">¿Siguen coincidiendo tus saldos?</string>
+    <!-- %1$s: la persona, %2$s: la cantidad que se debe -->
+    <string name="n_owes_you">%1$s te debe %2$s</string>
+    <string name="n_you_owe">Le debes %2$s a %1$s</string>
+    <string name="n_payback_today">Hoy es el día de cobro</string>
+    <!-- %1$s: una fecha, como «lun, 15 jun» -->
+    <string name="n_payback_was">El cobro era el %1$s</string>
+    <string name="n_due_today">Vence hoy</string>
+    <string name="n_due_was">Vencía el %1$s</string>
+    <!-- %1$s: toda la cantidad que aún se debe -->
+    <string name="n_in_all">%1$s en total</string>
+    <string name="n_record">Anotar pago</string>
+    <string name="n_plus_day">+1 día</string>
+    <string name="n_plus_week">+1 semana</string>
+    <string name="n_someone">Alguien</string>
+    <!-- en una pantalla de bloqueo que oculta el contenido: solo el tipo -->
+    <string name="pub_check">Revisión de saldos</string>
+    <string name="pub_dues">Vence un préstamo o una deuda</string>
+    <string name="pub_backup">Problema con la copia</string>
+    <string name="pub_nudge">Hoy no anotaste nada</string>
+
+    <!-- copia automática (BackupReceiver) -->
+    <string name="bk_failed">Tally no pudo hacer la copia</string>
+    <string name="bk_tap_folder">Toca para volver a elegir la carpeta.</string>
+    <string name="bk_tap_settings">Toca para abrir los Ajustes.</string>
+    <string name="bk_err_no_folder">No hay ninguna carpeta elegida.</string>
+    <string name="bk_err_not_ready">Los datos de Tally aún no están listos. Vuelve a intentarlo en un momento.</string>
+    <string name="bk_err_nothing">Aún no hay nada que copiar.</string>
+    <string name="bk_err_unwritable">No se puede escribir en la carpeta.</string>
+    <string name="bk_err_write_failed">No se pudo escribir la copia.</string>
+    <!-- %1$s: el nombre del archivo, "Tally backup (new).json" -->
+    <string name="bk_err_saved_temp">La copia se guardó como “%1$s”.</string>
+    <string name="bk_err_no_access">Tally ya no puede abrir la carpeta de copias.</string>
+    <string name="bk_err_folder_gone">No se encuentra la carpeta de copias.</string>
+    <!-- %1$s: el nombre del archivo, "Tally backup.json" -->
+    <string name="bk_err_no_file">No hay ningún “%1$s” en la carpeta de copias.</string>
+    <string name="bk_err_read_failed">No se puede leer el archivo de copia.</string>
+    <!-- dónde está la carpeta de copias, en Ajustes -->
+    <string name="bk_folder_phone">Almacenamiento del teléfono</string>
+    <string name="bk_folder_sd">Tarjeta SD</string>
+    <!-- %1$s: la ruta de la carpeta en la tarjeta, como "Backups" -->
+    <string name="bk_folder_sd_path">Tarjeta SD/%1$s</string>
+    <string name="bk_folder_other">Carpeta elegida</string>
+</resources>

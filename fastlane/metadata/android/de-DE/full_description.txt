@@ -1,0 +1,41 @@
+Tally ist wie ein Notizbuch für dein Geld, das in die Hosentasche passt. Jeden Morgen stehen deine Kontostände oben
+auf der Seite, über den Tag notierst du Ausgaben mit einem Tipp, und alles wird auf morgen übertragen.
+
+EIN TIPP PRO AUSGABE
+Deine Ausgabenkategorien liegen rund um einen Ring mit den heutigen Ausgaben. Kategorie antippen, Betrag eingeben,
+speichern. Ein eingebauter Rechner erledigt schnelle Summen wie 12 + 4,50.
+
+ALLE KONTEN, JEDE WÄHRUNG
+Bankkonten, E-Wallets, Bargeld, Kreditkarten und Sparkonten, jedes in seiner eigenen Währung: jede Währung der Welt.
+
+UMBUCHUNGEN ZÄHLEN NIE ALS AUSGABE
+Schieb Geld zwischen deinen eigenen Konten hin und her, auch zwischen Währungen, und trag eine Gebühr für
+Geldautomat oder Auszahlung ein, wenn eine anfällt.
+
+KONTOSTAND IN SEKUNDEN KORRIGIEREN
+Wenn ein Konto nicht zu dem passt, was du wirklich hast, gib den echten Betrag ein, und Tally bucht den Unterschied.
+
+GELIEHEN UND VERLIEHEN
+Behalte im Blick, was du dir geliehen oder an andere verliehen hast: mehrere Beträge pro Person, Fälligkeiten,
+Teilzahlungen (mit Gebühren), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst du in den Tabs Vermögen
+und Schulden.
+
+ZURÜCKBLICKEN
+Verlauf für jeden Tag, Zeitraum oder Monat, mit dem Stand jedes Kontos nach jedem Eintrag. Tippe auf den Ring, um
+deine letzten 7 Tage, 8 Wochen oder einen Monat nach Kategorien zu sehen.
+
+ERINNERUNGEN UND EIN WIDGET
+Eine Erinnerung am Abend, wenn du heute noch nichts notiert hast, Erinnerungen an fällige Rückzahlungen und ein
+Widget für den Startbildschirm mit dem heutigen Stand, den heutigen Ausgaben und einem Schnelleintrag.
+
+DEINE DATEN GEHÖREN DIR
+Kein Benutzerkonto, keine Werbung, kein Tracking, kein Internet nötig. Alles wird auf deinem Handy gespeichert.
+Sichere jederzeit in eine Datei, stell sie auf einem neuen Handy wieder her oder exportiere alle Einträge als CSV.
+
+IN DEINER SPRACHE
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia und Türkçe: Tally folgt
+der Sprache deines Handys und schreibt Zahlen, Daten und Beträge so, wie dein Handy es tut.
+
+Passt sich an die Material-You-Farben deines Handys an, hell und dunkel.
+
+Open Source (MIT): https://github.com/IamAndelib/Tally-android

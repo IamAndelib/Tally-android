@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally сегодня</string>
+    <string name="w_desc">Баланс и расходы за сегодня и быстрая кнопка +</string>
+    <string name="w_label">Tally · Сегодня</string>
+    <string name="w_spent">Потрачено сегодня</string>
+    <string name="w_open">Открыть Tally</string>
+    <string name="w_add">Быстрая запись</string>
+    <string name="qa_title">Быстрая запись</string>
+    <string name="qa_out">Расход</string>
+    <string name="qa_in">Доход</string>
+    <string name="qa_tr">Перевод</string>
+    <string name="page_stopped">Экран Tally постоянно закрывается. Всё, что вы сохранили, на месте.</string>
+    <string name="try_again">Повторить</string>
+    <string name="no_webview">Для Tally нужен Android System WebView, а его нет или он сейчас обновляется. Попробуйте ещё раз чуть позже.</string>
+
+    <!-- уведомления (ReminderReceiver) -->
+    <string name="ch_nudge">Вечернее напоминание</string>
+    <string name="ch_check">Сверка балансов</string>
+    <string name="ch_dues">Сроки долгов</string>
+    <string name="ch_backup">Проблемы с копией</string>
+    <string name="n_nudge_title">Сегодня в Tally ничего не записано</string>
+    <string name="n_nudge_text">Уделите минутку и запишите, что потратили.</string>
+    <string name="n_check_title">Балансы всё ещё сходятся?</string>
+    <!-- %1$s: человек, %2$s: сумма к возврату -->
+    <string name="n_owes_you">%1$s: вам должны %2$s</string>
+    <string name="n_you_owe">%1$s: вы должны %2$s</string>
+    <string name="n_payback_today">Сегодня срок возврата</string>
+    <!-- %1$s: дата, например «пн, 15 июн.» -->
+    <string name="n_payback_was">Срок возврата был %1$s</string>
+    <string name="n_due_today">Вернуть сегодня</string>
+    <string name="n_due_was">Нужно было вернуть %1$s</string>
+    <!-- %1$s: вся сумма, которую ещё должны -->
+    <string name="n_in_all">Всего %1$s</string>
+    <string name="n_record">Записать платёж</string>
+    <string name="n_plus_day">+1 день</string>
+    <string name="n_plus_week">+1 неделя</string>
+    <string name="n_someone">Кто-то</string>
+    <!-- на экране блокировки, который скрывает текст уведомлений: только их вид -->
+    <string name="pub_check">Сверка балансов</string>
+    <string name="pub_dues">Подошёл срок долга</string>
+    <string name="pub_backup">Проблема с копией</string>
+    <string name="pub_nudge">Сегодня ничего не записано</string>
+
+    <!-- автокопирование (BackupReceiver) -->
+    <string name="bk_failed">Tally не удалось сделать копию</string>
+    <string name="bk_tap_folder">Нажмите, чтобы снова выбрать папку.</string>
+    <string name="bk_tap_settings">Нажмите, чтобы открыть настройки.</string>
+    <string name="bk_err_no_folder">Папка не выбрана.</string>
+    <string name="bk_err_not_ready">Копия ваших данных в Tally ещё не готова. Попробуйте чуть позже.</string>
+    <string name="bk_err_nothing">Пока нечего сохранять.</string>
+    <string name="bk_err_unwritable">В эту папку нельзя записать.</string>
+    <string name="bk_err_write_failed">Не удалось записать копию.</string>
+    <!-- %1$s: имя файла, «Tally backup (new).json» -->
+    <string name="bk_err_saved_temp">Копия сохранена как «%1$s».</string>
+    <string name="bk_err_no_access">Tally больше не может открыть папку с копиями.</string>
+    <string name="bk_err_folder_gone">Папка с копиями не найдена.</string>
+    <!-- %1$s: имя файла, «Tally backup.json» -->
+    <string name="bk_err_no_file">В папке с копиями нет файла «%1$s».</string>
+    <string name="bk_err_read_failed">Файл копии не читается.</string>
+    <!-- где лежит папка для копий, в настройках -->
+    <string name="bk_folder_phone">Память телефона</string>
+    <string name="bk_folder_sd">SD-карта</string>
+    <!-- %1$s: путь к папке на карте, например «Backups» -->
+    <string name="bk_folder_sd_path">SD-карта/%1$s</string>
+    <string name="bk_folder_other">Выбранная папка</string>
+</resources>

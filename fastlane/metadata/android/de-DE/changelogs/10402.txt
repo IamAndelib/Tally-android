@@ -1,0 +1,2 @@
+- Tally spricht jetzt Spanisch, brasilianisches Portugiesisch, Französisch, Deutsch, Russisch, vereinfachtes Chinesisch, Indonesisch und Türkisch und folgt der Sprache deines Handys. Ab Android 13 kannst du auch eine Sprache nur für Tally wählen.
+- Zahlen, Daten und Beträge behalten das Format deines Handys.

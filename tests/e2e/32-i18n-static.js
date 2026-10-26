@@ -159,7 +159,13 @@ ok(
 );
 const lc = exists(RES + "xml/locales_config.xml") ? read(RES + "xml/locales_config.xml") : "";
 const listed = [...lc.matchAll(/<locale android:name="([^"]+)"/g)].map(m => m[1]);
-ok(same(listed, codes), "Android's language list (locales_config.xml): " + listed);
+ok(
+  same(
+    listed,
+    codes.map(c => (c === "id" ? "in" : c))
+  ),
+  "Android's language list (locales_config.xml): " + listed
+);
 ok(
   /android:localeConfig="@xml\/locales_config"/.test(read("app/src/main/AndroidManifest.xml")),
   "the manifest names it"

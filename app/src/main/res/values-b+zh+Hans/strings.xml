@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally 今日</string>
+    <string name="w_desc">今天的余额和支出，还能一键快速记账</string>
+    <string name="w_label">Tally · 今天</string>
+    <string name="w_spent">今日支出</string>
+    <string name="w_open">打开 Tally</string>
+    <string name="w_add">快速记账</string>
+    <string name="qa_title">快速记账</string>
+    <string name="qa_out">支出</string>
+    <string name="qa_in">收入</string>
+    <string name="qa_tr">转账</string>
+    <string name="page_stopped">Tally 的界面一直停止运行。你保存的内容都还在。</string>
+    <string name="try_again">重试</string>
+    <string name="no_webview">Tally 需要 Android System WebView，但它缺失或正在更新。请稍后再试。</string>
+
+    <!-- 通知（ReminderReceiver） -->
+    <string name="ch_nudge">晚间提醒</string>
+    <string name="ch_check">余额核对</string>
+    <string name="ch_dues">借贷到期日</string>
+    <string name="ch_backup">备份问题</string>
+    <string name="n_nudge_title">今天还没在 Tally 里记账</string>
+    <string name="n_nudge_text">花一分钟记下今天的支出吧。</string>
+    <string name="n_check_title">你的余额还对得上吗？</string>
+    <!-- %1$s：对方，%2$s：到期金额 -->
+    <string name="n_owes_you">%1$s欠你%2$s</string>
+    <string name="n_you_owe">你欠%1$s%2$s</string>
+    <string name="n_payback_today">今天是还款日</string>
+    <!-- %1$s：日期，如“6月15日 周一” -->
+    <string name="n_payback_was">原定%1$s还款</string>
+    <string name="n_due_today">今天到期</string>
+    <string name="n_due_was">%1$s已到期</string>
+    <!-- %1$s：仍欠的全部金额 -->
+    <string name="n_in_all">共%1$s</string>
+    <string name="n_record">记录还款</string>
+    <string name="n_plus_day">+1 天</string>
+    <string name="n_plus_week">+1 周</string>
+    <string name="n_someone">某人</string>
+    <!-- 锁屏隐藏通知内容时：只显示类型 -->
+    <string name="pub_check">余额核对</string>
+    <string name="pub_dues">有一笔借贷到期了</string>
+    <string name="pub_backup">备份问题</string>
+    <string name="pub_nudge">今天还没记账</string>
+
+    <!-- 自动备份（BackupReceiver） -->
+    <string name="bk_failed">Tally 备份失败</string>
+    <string name="bk_tap_folder">点按重新选择文件夹。</string>
+    <string name="bk_tap_settings">点按打开设置。</string>
+    <string name="bk_err_no_folder">未选择文件夹。</string>
+    <string name="bk_err_not_ready">Tally 的数据副本还没准备好，请稍后再试。</string>
+    <string name="bk_err_nothing">还没有可以备份的内容。</string>
+    <string name="bk_err_unwritable">无法写入这个文件夹。</string>
+    <string name="bk_err_write_failed">备份无法写入。</string>
+    <!-- %1$s：文件名，“Tally backup (new).json” -->
+    <string name="bk_err_saved_temp">备份已另存为“%1$s”。</string>
+    <string name="bk_err_no_access">Tally 已无法打开备份文件夹。</string>
+    <string name="bk_err_folder_gone">找不到备份文件夹。</string>
+    <!-- %1$s：文件名，“Tally backup.json” -->
+    <string name="bk_err_no_file">备份文件夹里没有“%1$s”。</string>
+    <string name="bk_err_read_failed">备份文件无法读取。</string>
+    <!-- 设置中备份文件夹的位置 -->
+    <string name="bk_folder_phone">手机存储</string>
+    <string name="bk_folder_sd">SD 卡</string>
+    <!-- %1$s：卡上文件夹的路径，如“Backups” -->
+    <string name="bk_folder_sd_path">SD 卡/%1$s</string>
+    <string name="bk_folder_other">已选文件夹</string>
+</resources>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally bugün</string>
+    <string name="w_desc">Bugünün bakiyesi ve harcaması, hızlı + ile</string>
+    <string name="w_label">Tally · Bugün</string>
+    <string name="w_spent">Bugün harcanan</string>
+    <string name="w_open">Tally’yi aç</string>
+    <string name="w_add">Hızlı ekle</string>
+    <string name="qa_title">Hızlı ekle</string>
+    <string name="qa_out">Harcama</string>
+    <string name="qa_in">Gelen</string>
+    <string name="qa_tr">Transfer</string>
+    <string name="page_stopped">Tally’nin ekranı durmaya devam ediyor. Kaydettiğin her şey duruyor.</string>
+    <string name="try_again">Tekrar dene</string>
+    <string name="no_webview">Tally için Android System WebView gerekiyor; şu an yüklü değil ya da güncelleniyor. Lütfen birazdan tekrar dene.</string>
+
+    <!-- bildirimler (ReminderReceiver) -->
+    <string name="ch_nudge">Akşam hatırlatması</string>
+    <string name="ch_check">Bakiye kontrolü</string>
+    <string name="ch_dues">Borç ve alacak vadeleri</string>
+    <string name="ch_backup">Yedekleme sorunları</string>
+    <string name="n_nudge_title">Bugün Tally’ye hiçbir şey yazılmadı</string>
+    <string name="n_nudge_text">Bir dakikanı ayırıp harcadıklarını not et.</string>
+    <string name="n_check_title">Bakiyelerin hâlâ tutuyor mu?</string>
+    <!-- %1$s: kişi, %2$s: ödenecek tutar -->
+    <string name="n_owes_you">%1$s sana %2$s borçlu</string>
+    <string name="n_you_owe">%1$s: %2$s borcun var</string>
+    <string name="n_payback_today">Geri ödeme günü bugün</string>
+    <!-- %1$s: bir tarih, örneğin "15 Haz Pzt" -->
+    <string name="n_payback_was">Geri ödeme günü geçti: %1$s</string>
+    <string name="n_due_today">Son ödeme günü bugün</string>
+    <string name="n_due_was">Son ödeme günü geçti: %1$s</string>
+    <!-- %1$s: hâlâ borçlu olunan toplam tutar -->
+    <string name="n_in_all">toplam %1$s</string>
+    <string name="n_record">Ödemeyi kaydet</string>
+    <string name="n_plus_day">+1 gün</string>
+    <string name="n_plus_week">+1 hafta</string>
+    <string name="n_someone">Biri</string>
+    <!-- bildirim içeriğini gizleyen kilit ekranında: yalnızca türü -->
+    <string name="pub_check">Bakiye kontrolü</string>
+    <string name="pub_dues">Bir borcun ya da alacağın vadesi geldi</string>
+    <string name="pub_backup">Yedekleme sorunu</string>
+    <string name="pub_nudge">Bugün hiçbir şey yazılmadı</string>
+
+    <!-- otomatik yedek (BackupReceiver) -->
+    <string name="bk_failed">Tally yedekleyemedi</string>
+    <string name="bk_tap_folder">Klasörü yeniden seçmek için dokun.</string>
+    <string name="bk_tap_settings">Ayarlar’ı açmak için dokun.</string>
+    <string name="bk_err_no_folder">Klasör seçilmedi.</string>
+    <string name="bk_err_not_ready">Tally’nin veri kopyası henüz hazır değil. Birazdan tekrar dene.</string>
+    <string name="bk_err_nothing">Henüz yedeklenecek bir şey yok.</string>
+    <string name="bk_err_unwritable">Klasöre yazılamıyor.</string>
+    <string name="bk_err_write_failed">Yedek yazılamadı.</string>
+    <!-- %1$s: dosya adı, "Tally backup (new).json" -->
+    <string name="bk_err_saved_temp">Yedek “%1$s” olarak kaydedildi.</string>
+    <string name="bk_err_no_access">Tally artık yedek klasörünü açamıyor.</string>
+    <string name="bk_err_folder_gone">Yedek klasörü bulunamıyor.</string>
+    <!-- %1$s: dosya adı, "Tally backup.json" -->
+    <string name="bk_err_no_file">Yedek klasöründe “%1$s” yok.</string>
+    <string name="bk_err_read_failed">Yedek dosyası okunamıyor.</string>
+    <!-- Ayarlar’da yedek klasörünün yeri -->
+    <string name="bk_folder_phone">Telefon belleği</string>
+    <string name="bk_folder_sd">SD kart</string>
+    <!-- %1$s: klasörün karttaki yolu, örneğin "Backups" -->
+    <string name="bk_folder_sd_path">SD kart/%1$s</string>
+    <string name="bk_folder_other">Seçilen klasör</string>
+</resources>

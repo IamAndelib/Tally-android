@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally hari ini</string>
+    <string name="w_desc">Saldo dan pengeluaran hari ini, dengan tombol + cepat</string>
+    <string name="w_label">Tally · Hari ini</string>
+    <string name="w_spent">Keluar hari ini</string>
+    <string name="w_open">Buka Tally</string>
+    <string name="w_add">Tambah cepat</string>
+    <string name="qa_title">Tambah cepat</string>
+    <string name="qa_out">Pengeluaran</string>
+    <string name="qa_in">Pemasukan</string>
+    <string name="qa_tr">Transfer</string>
+    <string name="page_stopped">Layar Tally terus berhenti. Semua yang sudah kamu simpan tetap aman.</string>
+    <string name="try_again">Coba lagi</string>
+    <string name="no_webview">Tally memerlukan Android System WebView, yang tidak ada atau sedang diperbarui. Coba lagi sebentar lagi.</string>
+
+    <!-- notifikasi (ReminderReceiver) -->
+    <string name="ch_nudge">Pengingat malam</string>
+    <string name="ch_check">Cek saldo</string>
+    <string name="ch_dues">Jatuh tempo utang &amp; piutang</string>
+    <string name="ch_backup">Masalah cadangan</string>
+    <string name="n_nudge_title">Belum ada catatan di Tally hari ini</string>
+    <string name="n_nudge_text">Luangkan semenit untuk mencatat pengeluaranmu.</string>
+    <string name="n_check_title">Saldomu masih cocok?</string>
+    <!-- %1$s: orangnya, %2$s: jumlah yang jatuh tempo -->
+    <string name="n_owes_you">%1$s berutang %2$s padamu</string>
+    <string name="n_you_owe">Kamu berutang %2$s pada %1$s</string>
+    <string name="n_payback_today">Hari ini tanggal kembalinya</string>
+    <!-- %1$s: tanggal, misalnya "Sen, 15 Jun" -->
+    <string name="n_payback_was">Seharusnya kembali %1$s</string>
+    <string name="n_due_today">Jatuh tempo hari ini</string>
+    <string name="n_due_was">Sudah jatuh tempo %1$s</string>
+    <!-- %1$s: seluruh jumlah yang masih terutang -->
+    <string name="n_in_all">Total %1$s</string>
+    <string name="n_record">Catat pembayaran</string>
+    <string name="n_plus_day">+1 hari</string>
+    <string name="n_plus_week">+1 minggu</string>
+    <string name="n_someone">Seseorang</string>
+    <!-- di layar kunci yang menyembunyikan isi notifikasi: hanya jenisnya -->
+    <string name="pub_check">Cek saldo</string>
+    <string name="pub_dues">Ada utang atau piutang yang jatuh tempo</string>
+    <string name="pub_backup">Masalah cadangan</string>
+    <string name="pub_nudge">Belum ada catatan hari ini</string>
+
+    <!-- cadangan otomatis (BackupReceiver) -->
+    <string name="bk_failed">Tally tidak bisa mencadangkan</string>
+    <string name="bk_tap_folder">Ketuk untuk memilih folder lagi.</string>
+    <string name="bk_tap_settings">Ketuk untuk membuka Pengaturan.</string>
+    <string name="bk_err_no_folder">Belum ada folder yang dipilih.</string>
+    <string name="bk_err_not_ready">Salinan data Tally belum siap. Coba lagi sebentar lagi.</string>
+    <string name="bk_err_nothing">Belum ada yang bisa dicadangkan.</string>
+    <string name="bk_err_unwritable">Folder itu tidak bisa ditulisi.</string>
+    <string name="bk_err_write_failed">Cadangan tidak bisa ditulis.</string>
+    <!-- %1$s: nama file, "Tally backup (new).json" -->
+    <string name="bk_err_saved_temp">Cadangan disimpan sebagai “%1$s”.</string>
+    <string name="bk_err_no_access">Tally tidak bisa membuka folder cadangan lagi.</string>
+    <string name="bk_err_folder_gone">Folder cadangan tidak ditemukan.</string>
+    <!-- %1$s: nama file, "Tally backup.json" -->
+    <string name="bk_err_no_file">Tidak ada “%1$s” di folder cadangan.</string>
+    <string name="bk_err_read_failed">File cadangan tidak bisa dibaca.</string>
+    <!-- lokasi folder cadangan, di Pengaturan -->
+    <string name="bk_folder_phone">Penyimpanan ponsel</string>
+    <string name="bk_folder_sd">Kartu SD</string>
+    <!-- %1$s: jalur folder di kartu, misalnya "Backups" -->
+    <string name="bk_folder_sd_path">Kartu SD/%1$s</string>
+    <string name="bk_folder_other">Folder pilihan</string>
+</resources>
