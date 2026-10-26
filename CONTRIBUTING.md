@@ -91,7 +91,10 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
 - The calculator's minus key is the Unicode minus `−` (U+2212); any regex over keys or expressions must include it.
 - No inline scripts or `on…=` attributes: the page's Content-Security-Policy blocks them.
 - Formatting is Prettier's (`npm run format`); `npm run lint` must pass (it also refuses CSS selectors newer than
-  WebView 87, such as `:is()`, which would drop the whole rule there).
+  WebView 87, such as `:is()`, which would drop the whole rule there). Its `tests/dead-code.js` refuses what nothing
+  uses: a function or constant no running code reaches, a click action without an element or a handler, a bridge
+  method or page hook one side lacks, a CSS class nothing writes, a text no code asks for, an Android resource nothing
+  names, a parameter every call passes the same. Delete the leftover, or add it to its `ALLOW` with the reason.
 - Java: keep the bridge small; anything the page can compute, it computes.
 - **Every text a person sees goes through the catalogue** (see Translations): `T("area.key", {values})` for plain
   text (`snack()`, `askDialog()`, `textContent`), `TH()` inside HTML. A whole sentence is one key with `{{values}}`,
