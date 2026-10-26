@@ -141,7 +141,7 @@ function migrate(o) {
       const type = own(TYPES, a.type) ? a.type : sid(a.type);
       return {
         id: sid(a.id),
-        name: str(a.name) || "Account",
+        name: str(a.name) || T("account.fallbackName"),
         type: own(TYPES, type) || s.types.some(t => t.id === type) ? type : "bank",
         currency: curOf(a.currency),
         opening: num(a.opening),
@@ -220,7 +220,7 @@ function migrate(o) {
           // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
           t.type = "adjust";
           t.amount = t0.type === "expense" ? -Math.abs(t.amount) : Math.abs(t.amount);
-          if (!t.note) t.note = "Transfer (not tracked)";
+          if (!t.note) t.note = T("transfer.untracked");
         } else {
           let c = t0.cat ? sid(t0.cat) : t0.type === "income" ? "income" : "other";
           if (t0.type === "income" && c === "family") c = "gift";
@@ -283,7 +283,7 @@ function migrate(o) {
     .filter(x => x && x.id)
     .map(x => ({
       id: sid(x.id),
-      name: str(x.name) || "Asset",
+      name: str(x.name) || T("asset.fallbackName"),
       e: x.e && x.e !== "💎" ? str(x.e) : "",
       i: own(ICONS, x.i) ? x.i : !x.e || x.e === "💎" ? "diamond" : "",
       c: hex(x.c) ? x.c : "#a646c9",
@@ -388,14 +388,9 @@ function save() {
     localStorage.setItem(LS + ":seq", String(saveSeq)); // after the data: a number never claims data that didn't fit
   } catch (e) {
     setTimeout(() =>
-      askDialog(
-        "Couldn't save on this phone",
-        "Tally's storage on this phone is full or blocked, so this change may be lost when Tally closes. Save a backup " +
-          "file now to keep everything.",
-        "Save backup",
-        () => saveBackup(),
-        { cancel: "Not now" }
-      )
+      askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
+        cancel: T("common.notNow"),
+      })
     );
   }
   mirrorSoon();
@@ -514,7 +509,7 @@ function withUndo(msg, change, fx) {
     S.accounts = o.accounts;
     S.assets = o.assets;
     commit();
-    snack("Undone");
+    snack(T("common.undone"));
   });
 }
 /* Money sources (not credit cards) shouldn't go below zero. Try the change on a copy first; if it would take an account
@@ -544,21 +539,13 @@ function guardOverdraw(mutate, date, proceed) {
   const now = low(b1[bad.id], b0[bad.id]),
     had = now ? b0[bad.id] : d0[bad.id],
     will = now ? b1[bad.id] : d1[bad.id];
+  const v = { account: bad.name, had: money(had, bad.currency), will: signed(will, bad.currency), day: shortDay(date) };
   askDialog(
-    "Not enough in " + bad.name,
-    now
-      ? bad.name + " has " + money(had, bad.currency) + ". This would make it " + signed(will, bad.currency) + "."
-      : bad.name +
-          " had " +
-          money(had, bad.currency) +
-          " at the end of " +
-          shortDay(date) +
-          ". This would make it " +
-          signed(will, bad.currency) +
-          " that day.",
-    "Save anyway",
+    T("overdraw.title", v),
+    now ? T("overdraw.now", v) : T("overdraw.thatDay", v),
+    T("common.saveAnyway"),
     proceed,
-    { cancel: "Go back" }
+    { cancel: T("common.goBack") }
   );
 }
 /* delete entries by id, keeping transfers + fees and loans + their payments consistent: a loan goes (with its

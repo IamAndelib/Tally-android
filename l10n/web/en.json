@@ -1,10 +1,60 @@
 {
   "common": {
-    "undo": "Undo"
+    "undo": "Undo",
+    "notNow": "Not now",
+    "saveAnyway": "Save anyway",
+    "goBack": "Go back",
+    "saveFile": "Save file",
+    "undone": "Undone",
+    "cancel": "Cancel",
+    "amount": "Amount"
   },
   "day": {
     "today": "Today",
     "yesterday": "Yesterday",
     "tomorrow": "Tomorrow"
+  },
+  "account": {
+    "fallbackName": "Account"
+  },
+  "asset": {
+    "fallbackName": "Asset"
+  },
+  "transfer": {
+    "untracked": "Transfer (not tracked)"
+  },
+  "backup": {
+    "save": "Save backup"
+  },
+  "data": {
+    "saveFailed": {
+      "title": "Couldn't save on this phone",
+      "body": "Tally's storage on this phone is full or blocked, so this change may be lost when Tally closes. Save a backup file now to keep everything."
+    },
+    "unreadable": {
+      "title": "Couldn't open your saved data",
+      "kept": "A copy is kept on this phone. Save it as a file so it's safe?",
+      "notKept": "There isn't room to keep a copy on this phone. Save it as a file now, or it's gone once you add anything."
+    }
+  },
+  "overdraw": {
+    "title": "Not enough in {{account}}",
+    "now": "{{account}} has {{had}}. This would make it {{will}}.",
+    "thatDay": "{{account}} had {{had}} at the end of {{day}}. This would make it {{will}} that day."
+  },
+  "period": {
+    "title": "Choose what to show",
+    "day": "Day",
+    "range": "Range",
+    "month": "Month",
+    "prevYear": "Previous year",
+    "nextYear": "Next year",
+    "rangeEnd": "Now tap the end day",
+    "rangeHint": "Drag across days, or tap start then end"
+  },
+  "calc": {
+    "open": "Calculator",
+    "keyboard": "Use keyboard",
+    "decimal": "Decimal point"
   }
 }

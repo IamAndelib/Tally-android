@@ -11,7 +11,9 @@ const CALC_ICON =
 const calcBtn = id =>
   '<button type="button" class="icon calcbtn" data-act="calc-toggle" data-v="' +
   id +
-  '" aria-label="Calculator" aria-expanded="false">' +
+  '" aria-label="' +
+  TH("calc.open") +
+  '" aria-expanded="false">' +
   CALC_ICON +
   "</button>";
 const CALC_KEYS = ["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "⌫", "0", ".", "+"];
@@ -23,7 +25,9 @@ const calcPanelHtml = id =>
   id +
   '"></span><button type="button" class="icon kbdbtn" data-act="calc-kbd" data-v="' +
   id +
-  '" aria-label="Use keyboard">' +
+  '" aria-label="' +
+  TH("calc.keyboard") +
+  '">' +
   ic("keyboard") +
   "</button></div>" +
   CALC_KEYS.map(
@@ -33,7 +37,7 @@ const calcPanelHtml = id =>
       '" data-act="calc-key" data-v="' +
       esc(k) +
       '"' +
-      (k === "." ? ' aria-label="Decimal point"' : "") +
+      (k === "." ? ' aria-label="' + TH("calc.decimal") + '"' : "") +
       ">" +
       esc(k === "." ? NUMSEP.dec : k) + // the phone's decimal separator
       "</button>"
@@ -54,7 +58,7 @@ function amtField(id, cur, val, o = {}) {
     '" value="' +
     esc(val || "") +
     '" aria-label="' +
-    esc(o.label || "Amount") +
+    esc(o.label || T("common.amount")) +
     '"><span class="caretmirror" id="cm-' +
     id +
     '" data-act="calc-pos" data-v="' +

@@ -101,7 +101,7 @@ const src = fs
   .filter(f => f.endsWith(".js"))
   .map(f => fs.readFileSync(path.join(JS, f), "utf8"))
   .join("\n");
-const asked = [...src.matchAll(/\bTH?\(\s*"([\w.]+)"/g)].map(m => m[1]);
+const asked = [...src.matchAll(/\bTH?\(\s*"([\w.]*\w)"(?!\s*\+)/g)].map(m => m[1]);
 const enBase = new Set(Object.keys(en).map(base));
 const unknown = [...new Set(asked.filter(k => !(k in en) && !enBase.has(k)))];
 ok(!unknown.length, "every text the code asks for is in English" + (unknown.length ? ": " + unknown : ""));
