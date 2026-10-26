@@ -7,7 +7,12 @@
     "saveFile": "Save file",
     "undone": "Undone",
     "cancel": "Cancel",
-    "amount": "Amount"
+    "amount": "Amount",
+    "ok": "OK",
+    "close": "Close",
+    "date": "Date",
+    "currency": "Currency",
+    "labelValue": "{{label}}: {{value}}"
   },
   "day": {
     "today": "Today",
@@ -56,5 +61,23 @@
     "open": "Calculator",
     "keyboard": "Use keyboard",
     "decimal": "Decimal point"
+  },
+  "picker": {
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "dayEntries": "{{date}}, has entries",
+    "date": "Pick a date",
+    "noDate": "No date",
+    "clear": "Clear",
+    "hour": "Hour",
+    "minute": "Minute",
+    "ampm": "AM or PM",
+    "curSearch": "Search name, code or country",
+    "curSearchLabel": "Search currency",
+    "results": "Results",
+    "inUse": "In use",
+    "popular": "Popular",
+    "allCurs": "All currencies",
+    "noCur": "No currency found"
   }
 }
