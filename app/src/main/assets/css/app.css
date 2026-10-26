@@ -1763,7 +1763,8 @@ body.hasnav .snack {
 }
 .loanbtns .fbtn {
   flex: 1;
-  height: 64px;
+  min-height: 64px; /* a long label (Russian, large text) wraps to two lines inside it */
+  padding: 0 12px;
   border-radius: 24px;
   display: flex;
   align-items: center;

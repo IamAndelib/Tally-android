@@ -278,6 +278,8 @@ function shiftMonth(m, d) {
   }
   return y + "-" + pad(mo);
 }
+/* a date label standing on its own starts with a capital, as a heading does ("Июнь 2026 г.", "Lun. 15 juin") */
+const capFirst = s => (s ? s.charAt(0).toLocaleUpperCase(LOC.fmt) + s.slice(1) : s);
 function monthLabel(m, always) {
   const [y, mo] = m.split("-").map(Number);
   const o = { month: "long" };

@@ -233,7 +233,7 @@
   },
   "icon": {
     "title": "Pilih ikon",
-    "search": "Cari: kopi, mobil, hadiah…",
+    "search": "Cari dalam bahasa Inggris: coffee, car, gift…",
     "searchLabel": "Cari ikon",
     "emoji": "Ketik emoji",
     "useEmoji": "Pakai emoji ini",
@@ -488,7 +488,7 @@
     "checkYesterday": "Kemarin kamu mengeluarkan {{amount}}.",
     "fix": "Koreksi",
     "allMatch": "Semua cocok",
-    "checked": "Halaman hari ini dimulai"
+    "checked": "Saldo sudah dikonfirmasi"
   },
   "fix": {
     "title": "Koreksi saldo",

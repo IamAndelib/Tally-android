@@ -16,7 +16,7 @@ function exportCsv() {
     t.type === "loan"
       ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir
       : t.feeOf
-        ? ((S.txns.find(x => x.id === t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
+        ? ((entry(t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
         : t.type;
   const lines = [
     [
@@ -49,7 +49,13 @@ function exportCsv() {
           q(to ? to.name : ""),
           t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
           q((t.type === "expense" && !t.feeOf) || t.type === "income" ? catName(cat(t.cat)) : ""),
-          q(t.note),
+          q(
+            t.type === "adjust"
+              ? noteShown(t, "fix.title")
+              : t.feeOf
+                ? noteShown(t, kind(t) === "loan-fee" ? "loan.feeNote" : "transfer.feeNote")
+                : t.note
+          ),
           to ? to.currency : "",
           q(l ? l.person : ""),
         ].join(",")
@@ -66,7 +72,7 @@ function restoreText(t, auto, after) {
   let o = null,
     n = null;
   try {
-    o = JSON.parse(t);
+    o = JSON.parse(String(t).replace(/^\uFEFF/, ""));
   } catch (e) {}
   if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
     snack(T("restore.notBackup"));
@@ -86,7 +92,7 @@ function restoreText(t, auto, after) {
   const what = {
     accounts: T("restore.accounts", { count: n.accounts.length }),
     entries: T("restore.entries", { count: n.txns.length }),
-    when: auto && auto.when ? backupWhen(auto.when) : "",
+    when: auto && auto.when ? backupWhen(auto.when, true) : "",
   };
   askDialog(
     auto ? T("restore.autoQ", { file: "Tally backup.json" }) : T("restore.q"),
@@ -97,7 +103,8 @@ function restoreText(t, auto, after) {
     () => {
       /* this phone's own set-up stays: its auto backup (the folder lives in the shell), a copy so Undo gets back what
          was here; while the saved data couldn't be read, the stand-in's setting means nothing: the backup's own is kept */
-      const old = S;
+      const old = S,
+        was = unreadable;
       if (!unreadable) n.settings.backup = { ...S.settings.backup };
       unreadable = null; // a real notebook again: auto backup may follow it
       S = n;
@@ -107,6 +114,7 @@ function restoreText(t, auto, after) {
       if (after) after();
       snack(T("restore.done"), () => {
         S = old;
+        unreadable = was; // back to the stand-in: auto backup keeps its folder and file (syncBackup waits)
         commit();
         syncBackup();
         applyTheme();

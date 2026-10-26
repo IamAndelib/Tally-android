@@ -32,6 +32,9 @@ function range(p = V) {
   return [m + "-01", monthEnd(m)];
 }
 function periodLabel(p = V) {
+  return capFirst(periodText(p));
+}
+function periodText(p) {
   const t = today(),
     [s, e] = range(p);
   if (p.period === "day") return dayName(p.anchor);
@@ -177,7 +180,7 @@ function drawPd() {
           '"' +
           (m > tm ? " disabled" : "") +
           ">" +
-          esc(new Date(PD.year, i, 1).toLocaleDateString(DATE_LOC, { month: "short" })) +
+          esc(capFirst(new Date(PD.year, i, 1).toLocaleDateString(DATE_LOC, { month: "short" }))) +
           "</button>"
         );
       }).join("") +

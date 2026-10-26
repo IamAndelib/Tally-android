@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">No se puede leer el archivo de copia.</string>
     <!-- dónde está la carpeta de copias, en Ajustes -->
     <string name="bk_folder_phone">Almacenamiento del teléfono</string>
+    <string name="bk_folder_docs">Documentos</string>
+    <string name="bk_folder_docs_path">Documentos/%1$s</string>
     <string name="bk_folder_sd">Tarjeta SD</string>
     <!-- %1$s: la ruta de la carpeta en la tarjeta, como "Backups" -->
     <string name="bk_folder_sd_path">Tarjeta SD/%1$s</string>

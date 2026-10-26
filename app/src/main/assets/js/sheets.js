@@ -143,7 +143,7 @@ const catChipInner = k => emblem(k, "ci") + esc(catName(k)) + ic("down");
 function txSheet(id, type, catId, pre) {
   if (!id && !activeAccounts().length) {
     snack(T("account.addFirst"));
-    accForm();
+    accForm(null, () => txSheet(id, type, catId, pre));
     return;
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
@@ -304,7 +304,7 @@ function trSheet(id) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
     snack(T("transfer.needTwo"));
-    accForm();
+    accForm(null, () => trSheet());
     return;
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
@@ -496,7 +496,7 @@ function saveFix() {
     xid = newId(),
     ts = Date.now(),
     mutate = () => {
-      S.txns.push({ id: xid, ts, type: "adjust", amount: d, account: id, date: today(), note: T("fix.title") });
+      S.txns.push({ id: xid, ts, type: "adjust", amount: d, account: id, date: today(), note: "" });
     };
   guardOverdraw(mutate, today(), () => {
     closeSheet();
@@ -532,8 +532,9 @@ function pickMainCur(next) {
     T(S.settings.cur ? "settings.mainCur" : "welcome.yourCur")
   );
 }
-function accForm(id) {
-  if (!id && !S.settings.cur) return pickMainCur(() => accForm());
+/* then: what to go on with once a new account is saved (the entry, transfer or loan that needed it) */
+function accForm(id, then) {
+  if (!id && !S.settings.cur) return pickMainCur(() => accForm(id, then));
   const a = id ? acc(id) : { name: "", type: firstType(), currency: S.settings.cur, opening: "" };
   const used = id && S.txns.some(t => t.account === id || t.to === id);
   F = {
@@ -546,6 +547,7 @@ function accForm(id) {
     col: a.c || typeCol(a.type),
     iSet: !!(a.i || a.e),
     cSet: !!a.c,
+    then,
   };
   if (!F.i && !F.e) F.i = typeIcon(a.type);
   let h =
@@ -619,15 +621,18 @@ function saveAccount() {
       e: F.iSet ? F.e : "",
       c: F.cSet ? F.col : "",
     },
-    was = F.id;
+    was = F.id,
+    then = F.then;
   const go = () => {
     const first = !activeAccounts().length;
     if (was) Object.assign(acc(was), data);
     else S.accounts.push(Object.assign({ id: newId(), archived: false }, data));
+    if (first) S.settings.lastCheck = today(); // its balance was just typed: no "do they still match?" today
     closeSheet();
     commit();
     if (first) scrollTo(0, 0); // the welcome page was scrolled: Home starts at its top
     snack(was ? T("account.saved") : T("account.added", { name }));
+    if (!was && then) then();
   };
   if (o < 0 && data.type !== "card" && !(was && acc(was).opening === o))
     askDialog(
@@ -874,7 +879,7 @@ function saveTr() {
         account: from,
         cat: "fees",
         date,
-        note: T("transfer.feeNote"),
+        note: "",
         feeOf: t.id,
       });
       t.feeId = f.id;

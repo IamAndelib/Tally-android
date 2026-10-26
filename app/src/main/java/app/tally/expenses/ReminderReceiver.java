@@ -268,7 +268,11 @@ public class ReminderReceiver extends BroadcastReceiver {
             return; // some ROMs refuse this; the notices then just stay as they were
         }
         String t = today();
-        if (up.contains(DAILY_ID) && t.equals(cfg.optString("lastEntry"))) nm.cancel(DAILY_ID);
+        if (up.contains(DAILY_ID)) {
+            if (t.equals(cfg.optString("lastEntry"))) nm.cancel(DAILY_ID);
+            else show(ctx, CH_NUDGE, DAILY_ID, ctx.getString(R.string.n_nudge_title), ctx.getString(R.string.n_nudge_text),
+                    openApp(ctx, null, DAILY_ID), null, true); // the same, in the app's language now
+        }
         if (up.contains(CHECK_ID)) {
             JSONObject ck = cfg.optJSONObject("check");
             if (ck == null || !ck.optBoolean("on") || t.equals(ck.optString("checked"))) nm.cancel(CHECK_ID);
@@ -319,7 +323,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                      Notification.Action[] actions, boolean quiet) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
-        if (Build.VERSION.SDK_INT >= 26) channels(ctx);
+        channels(ctx);
         Notification.Builder b = builder(ctx, channel);
         b.setSmallIcon(R.drawable.ic_notif).setContentTitle(title).setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))

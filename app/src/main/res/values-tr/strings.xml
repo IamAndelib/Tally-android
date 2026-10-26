@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">Yedek dosyası okunamıyor.</string>
     <!-- Ayarlar’da yedek klasörünün yeri -->
     <string name="bk_folder_phone">Telefon belleği</string>
+    <string name="bk_folder_docs">Belgeler</string>
+    <string name="bk_folder_docs_path">Belgeler/%1$s</string>
     <string name="bk_folder_sd">SD kart</string>
     <!-- %1$s: klasörün karttaki yolu, örneğin "Backups" -->
     <string name="bk_folder_sd_path">SD kart/%1$s</string>

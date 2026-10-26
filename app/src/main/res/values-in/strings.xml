@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">File cadangan tidak bisa dibaca.</string>
     <!-- lokasi folder cadangan, di Pengaturan -->
     <string name="bk_folder_phone">Penyimpanan ponsel</string>
+    <string name="bk_folder_docs">Dokumen</string>
+    <string name="bk_folder_docs_path">Dokumen/%1$s</string>
     <string name="bk_folder_sd">Kartu SD</string>
     <!-- %1$s: jalur folder di kartu, misalnya "Backups" -->
     <string name="bk_folder_sd_path">Kartu SD/%1$s</string>

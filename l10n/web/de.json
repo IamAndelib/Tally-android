@@ -234,7 +234,7 @@
   },
   "icon": {
     "title": "Symbol wählen",
-    "search": "Suche: Kaffee, Auto, Geschenk …",
+    "search": "Auf Englisch suchen: coffee, car, gift…",
     "searchLabel": "Symbole suchen",
     "emoji": "Emoji eingeben",
     "useEmoji": "Dieses Emoji nehmen",
@@ -316,11 +316,11 @@
     "notNumber": "Die Gebühr ist keine Zahl"
   },
   "loan": {
-    "noDueYet": "Noch kein Termin",
+    "noDueYet": "Noch keine Frist",
     "paybackHead": "Rückzahlung · {{date}}",
     "returnHead": "Zurückzahlen bis · {{date}}",
     "st": {
-      "active": "Offen",
+      "active": "Läuft",
       "partly": "Teils bezahlt",
       "overdue": "Überfällig",
       "cleared": "Beglichen",
@@ -336,7 +336,7 @@
     "dueAmount": "{{amount}} fällig am {{date}}",
     "paybackOn": "Rückzahlung am {{date}}",
     "returnOn": "Zurückzahlen bis {{date}}",
-    "noDue": "Kein Termin",
+    "noDue": "Ohne Frist",
     "lentOn": "Verliehen am {{date}}",
     "borrowedOn": "Geliehen am {{date}}",
     "mergeLend": "Kommt zu dem dazu, was du an {{who}} verliehen hast – jetzt schuldet {{who}} dir {{amount}}.",
@@ -362,7 +362,7 @@
     "leftOf": "von {{total}} offen",
     "ofTotal": "von {{total}}",
     "paidBar": "Zurückgezahlt",
-    "changeDue": "Termin ändern",
+    "changeDue": "Frist ändern",
     "gotBackQ": "Geld zurückbekommen?",
     "paidBackQ": "Etwas zurückgezahlt?",
     "partOk": "Ein Teil geht auch.",
@@ -456,7 +456,7 @@
   "entry": {
     "gone": "Dieser Eintrag wurde gelöscht",
     "whatFor": "Wofür war es?",
-    "into": "Auf",
+    "into": "Auf Konto",
     "paidFrom": "Bezahlt von",
     "notePh": "Notiz (optional)",
     "editIn": "Einnahme bearbeiten",
@@ -492,7 +492,7 @@
     "checkYesterday": "Gestern hast du {{amount}} ausgegeben.",
     "fix": "Korrigieren",
     "allMatch": "Alles passt",
-    "checked": "Neue Seite für heute"
+    "checked": "Kontostände bestätigt"
   },
   "fix": {
     "title": "Korrektur",

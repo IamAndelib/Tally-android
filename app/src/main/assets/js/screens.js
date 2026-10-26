@@ -561,7 +561,7 @@ function txLine(t) {
         : "");
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = esc(t.note || T("fix.title"));
+    d = esc(noteShown(t, "fix.title"));
     s = TH("fix.title") + " · " + bdi(a ? a.name : "?");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
@@ -578,14 +578,14 @@ function txLine(t) {
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
     /* a fee: shown with the transfer or loan payment it was charged on, not as a category's spending */
-    const host = S.txns.find(x => x.id === t.feeOf) || {},
+    const host = entry(t.feeOf) || {},
       l = host.type === "loan" && loan(host.loan);
     cls = "xfer";
     amt = esc(signed(-t.amount, cur));
     if (l) {
       const lend = l.kind === "lend";
       em = LOAN_EMB[lend ? "lend" : "borrow"];
-      d = esc(t.note || T("loan.feeNote"));
+      d = esc(noteShown(t, "loan.feeNote"));
       s =
         bdi(a ? a.name : "?") +
         " · " +
@@ -593,7 +593,7 @@ function txLine(t) {
     } else {
       const to = acc(host.to);
       em = { i: "swap_horiz", c: "#5f7389" };
-      d = esc(t.note || T("transfer.feeNote"));
+      d = esc(noteShown(t, "transfer.feeNote"));
       s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
     }
   } else {
@@ -682,7 +682,7 @@ function dayGroups(list) {
         .join(" · ");
       h +=
         '<div class="day"><span>' +
-        esc(dayLabel(t.date)) +
+        esc(capFirst(dayLabel(t.date))) +
         "</span><span>" +
         esc(tot) +
         '</span></div><div class="list">';
@@ -856,7 +856,7 @@ function fitWeekSeg() {
   if (b.some(x => x.scrollWidth > x.clientWidth + 1))
     b.forEach(x => {
       x.setAttribute("aria-label", x.textContent);
-      x.textContent = weekdayName(+x.dataset.v, "short");
+      x.textContent = capFirst(weekdayName(+x.dataset.v, "short"));
     });
 }
 function settingsView() {
@@ -932,7 +932,7 @@ function settingsView() {
     seg(
       "week",
       String(S.settings.week),
-      [1, 0, 6].map(d => [String(d), weekdayName(d, "long")])
+      [1, 0, 6].map(d => [String(d), capFirst(weekdayName(d, "long"))])
     ) +
     '<div class="lbl set">' +
     TH("settings.clock") +
@@ -1109,10 +1109,13 @@ function healthCard() {
   );
 }
 /* when the last automatic backup was written: "Today, 23:00" or "Mon 3 Aug, 23:00" */
-function backupWhen(ms) {
+function backupWhen(ms, inSentence) {
   const d = new Date(ms),
     day = iso(d);
-  return T("backup.when", { day: dayName(day), time: timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes())) });
+  return T("backup.when", {
+    day: inSentence ? dayLabel(day) : dayName(day), // inside a sentence a date, not a capitalised "Today"
+    time: timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes())),
+  });
 }
 /* Settings → Your data: the daily automatic backup into one file in a folder the user picked (Android only) */
 function autoBackupHtml() {

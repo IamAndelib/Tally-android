@@ -51,7 +51,7 @@ public class BackupReceiver extends BroadcastReceiver {
     private static final String PREFS = "tally_backup";
     private static final int REQ = 3, NOTE_ID = 3;
     /** The largest backup read back (Restore, checks): far above any real one (a few hundred KB after years). */
-    static final int MAX = 10 * 1024 * 1024; // a Tally backup is well under 1 MB; more is not one
+    static final int MAX = 64 * 1024 * 1024; // about 130 bytes an entry: far past years of daily entries; more is not one
     /** snapshot.json and its "dirty" mark: held only for quick file work, so a save never waits on a slow folder */
     private static final Object DATA = new Object();
     /** one write (and read-back) of the backup file, or read of it, at a time */
@@ -67,6 +67,7 @@ public class BackupReceiver extends BroadcastReceiver {
         new Thread(() -> {
             try {
                 // the next one first: if Android ends this process mid-write, tomorrow's backup is still armed
+                prefs(app).edit().putLong("ran", System.currentTimeMillis()).apply();
                 schedule(app);
                 String err = run(app, false);
                 if (err != null) {
@@ -89,7 +90,12 @@ public class BackupReceiver extends BroadcastReceiver {
     static void setConfig(Context ctx, String json) {
         try {
             JSONObject o = new JSONObject(json);
-            prefs(ctx).edit().putBoolean("on", o.optBoolean("on")).putInt("h", o.optInt("h", 23)).putInt("m", o.optInt("m", 0)).apply();
+            SharedPreferences p = prefs(ctx);
+            SharedPreferences.Editor e = p.edit().putBoolean("on", o.optBoolean("on")).putInt("h", o.optInt("h", 23))
+                    .putInt("m", o.optInt("m", 0));
+            // just switched on: the first backup comes at the set time, not at once (see schedule)
+            if (o.optBoolean("on") && !p.getBoolean("on", false)) e.putLong("ran", System.currentTimeMillis());
+            e.apply();
             if (!o.optBoolean("on")) {
                 synchronized (DATA) {
                     snapshot(ctx).delete();
@@ -128,7 +134,7 @@ public class BackupReceiver extends BroadcastReceiver {
             } catch (SecurityException ignored) { }
         }
         SharedPreferences.Editor e = p.edit().putString("tree", tree.toString()).putString("label", providerName(ctx, tree))
-                .putBoolean("dirty", true).remove("error");
+                .putBoolean("dirty", true).putLong("ran", System.currentTimeMillis()).remove("error");
         // another folder: nothing of this install's is in it yet (the page asks before writing over what is there)
         if (old == null || !old.equals(tree.toString())) e.remove("last");
         e.apply();
@@ -170,7 +176,14 @@ public class BackupReceiver extends BroadcastReceiver {
         Intent i = new Intent(ctx, BackupReceiver.class).setAction(A_BACKUP);
         PendingIntent pi = PendingIntent.getBroadcast(ctx, REQ, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (p.getBoolean("on", false) && p.getString("tree", null) != null) {
-            ReminderReceiver.arm(am, ReminderReceiver.nextAt(p.getInt("h", 23), p.getInt("m", 0)), pi);
+            int h = p.getInt("h", 23), m = p.getInt("m", 0);
+            long now = System.currentTimeMillis(), at = ReminderReceiver.nextAt(h, m),
+                    due = ReminderReceiver.dayAt(0, h, m).getTimeInMillis();
+            if (due > now) due = ReminderReceiver.dayAt(-1, h, m).getTimeInMillis();
+            // the backup time passed without a run (the phone was off, or re-arming at a start or a reboot replaced an
+            // alarm still waiting, e.g. an inexact one), with changes not backed up: in a minute, not a day later
+            if (p.getBoolean("dirty", false) && p.getLong("ran", now) < due) at = now + 60_000;
+            ReminderReceiver.arm(am, at, pi);
         } else {
             am.cancel(pi);
         }
@@ -347,6 +360,9 @@ public class BackupReceiver extends BroadcastReceiver {
             if ("com.android.externalstorage.documents".equals(tree.getAuthority()) && colon >= 0) {
                 String path = id.substring(colon + 1);
                 if (id.startsWith("primary:")) return path.isEmpty() ? ctx.getString(R.string.bk_folder_phone) : path;
+                // Android 7-10's "Documents" root in the picker (phone storage too)
+                if (id.startsWith("home:"))
+                    return path.isEmpty() ? ctx.getString(R.string.bk_folder_docs) : ctx.getString(R.string.bk_folder_docs_path, path);
                 return path.isEmpty() ? ctx.getString(R.string.bk_folder_sd) : ctx.getString(R.string.bk_folder_sd_path, path);
             }
         } catch (Exception ignored) { }
@@ -365,6 +381,23 @@ public class BackupReceiver extends BroadcastReceiver {
             }
         } catch (Exception ignored) { }
         return "";
+    }
+
+    /** The "couldn't back up" notice, still on screen after a language change, said again in the new one, quietly. */
+    static void refreshNotice(Context ctx) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        String err = prefs(ctx).getString("error", null);
+        if (nm == null || err == null) return;
+        try {
+            for (android.service.notification.StatusBarNotification s : nm.getActiveNotifications()) {
+                if (s.getId() == NOTE_ID) {
+                    ReminderReceiver.show(ctx, ReminderReceiver.CH_BACKUP, NOTE_ID, ctx.getString(R.string.bk_failed),
+                            errorText(ctx, err) + " " + ctx.getString(FOLDER_ERRORS.contains(err) ? R.string.bk_tap_folder
+                                    : R.string.bk_tap_settings), ReminderReceiver.openApp(ctx, "backup", NOTE_ID), null, true);
+                    return;
+                }
+            }
+        } catch (RuntimeException ignored) { } // some ROMs refuse to list notifications
     }
 
     /** A problem's code said in the app's language; a sentence an older Tally stored is shown as it is. */

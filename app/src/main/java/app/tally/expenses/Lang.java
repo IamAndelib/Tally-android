@@ -15,8 +15,8 @@ import java.util.Locale;
  * <li>{@link #ui}: the language of Tally's words. It is whichever translation Android picked for the app from the
  * phone's languages (or the app's own language, Android 13+), named by the {@code lang} string each values folder
  * carries (values/lang.xml, values-es/lang.xml, …).</li>
- * <li>{@link #fmt}: how numbers, dates and times are written: the app's own language if one is set, else the phone's
- * first language, with its regional preferences. Never Locale.getDefault(): Android moves that to the language it
+ * <li>{@link #fmt}: how numbers, dates and times are written: the phone's first language with its regional
+ * preferences, or the app's own language (Android 13+) with the phone's region. Never Locale.getDefault(): Android moves that to the language it
  * picked for the app's words, so a phone in Dutch, with English second, would start writing numbers the English way.</li>
  * </ul>
  */
@@ -28,21 +28,31 @@ final class Lang {
     }
 
     static Locale fmt(Context ctx) {
+        LocaleList phones = Resources.getSystem().getConfiguration().getLocales();
+        Locale phone = phones.isEmpty() ? Locale.getDefault() : phones.get(0);
         if (Build.VERSION.SDK_INT >= 33) {
             try {
                 LocaleManager lm = ctx.getSystemService(LocaleManager.class);
                 LocaleList app = lm == null ? null : lm.getApplicationLocales();
-                if (app != null && !app.isEmpty()) return app.get(0);
-            } catch (RuntimeException ignored) { }
+                // Tally's own language, written the phone's way: the phone's locale when it's the same language (a
+                // Mexican phone set to Español keeps 1,234.50, regional preferences included), else that language
+                // with the phone's region (a German phone set to English writes en-DE's 1.234,50)
+                if (app != null && !app.isEmpty()) {
+                    Locale a = app.get(0);
+                    if (a.getLanguage().equals(phone.getLanguage())) return phone;
+                    if (a.getCountry().isEmpty() && !phone.getCountry().isEmpty())
+                        return new Locale.Builder().setLocale(a).setRegion(phone.getCountry()).build();
+                    return a;
+                }
+            } catch (RuntimeException ignored) { } // IllformedLocaleException is one
         }
-        LocaleList phone = Resources.getSystem().getConfiguration().getLocales();
-        return phone.isEmpty() ? Locale.getDefault() : phone.get(0);
+        return phone;
     }
 
     /**
-     * After the phone's or the app's language changed (BootReceiver's LOCALE_CHANGED; MainActivity.onCreate, as
-     * Android sends no broadcast for the app's own language): the notification channels get their new names, the
-     * notices on screen and the widget are written again. Nothing happens while the language stays the same.
+     * After the phone's or the app's language changed (BootReceiver's LOCALE_CHANGED, which Android 13+ also sends to
+     * the app for its own language; MainActivity.onCreate as a safety net): the notification channels get their new
+     * names, the notices on screen and the widget are written again. Nothing happens while the language stays the same.
      */
     static void syncIfChanged(Context ctx) {
         String now = ui(ctx) + "|" + fmt(ctx).toLanguageTag();
@@ -51,6 +61,7 @@ final class Lang {
         p.edit().putString("was", now).apply();
         ReminderReceiver.channels(ctx);
         ReminderReceiver.refreshShown(ctx);
+        BackupReceiver.refreshNotice(ctx);
         TallyWidget.refresh(ctx);
     }
 }

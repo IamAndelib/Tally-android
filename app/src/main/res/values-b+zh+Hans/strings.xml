@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">备份文件无法读取。</string>
     <!-- 设置中备份文件夹的位置 -->
     <string name="bk_folder_phone">手机存储</string>
+    <string name="bk_folder_docs">文档</string>
+    <string name="bk_folder_docs_path">文档/%1$s</string>
     <string name="bk_folder_sd">SD 卡</string>
     <!-- %1$s：卡上文件夹的路径，如“Backups” -->
     <string name="bk_folder_sd_path">SD 卡/%1$s</string>

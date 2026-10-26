@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">Файл копии не читается.</string>
     <!-- где лежит папка для копий, в настройках -->
     <string name="bk_folder_phone">Память телефона</string>
+    <string name="bk_folder_docs">Документы</string>
+    <string name="bk_folder_docs_path">Документы/%1$s</string>
     <string name="bk_folder_sd">SD-карта</string>
     <!-- %1$s: путь к папке на карте, например «Backups» -->
     <string name="bk_folder_sd_path">SD-карта/%1$s</string>

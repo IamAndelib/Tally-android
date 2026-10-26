@@ -234,7 +234,7 @@
   },
   "icon": {
     "title": "Simge seç",
-    "search": "Ara: kahve, araba, hediye…",
+    "search": "İngilizce ara: coffee, car, gift…",
     "searchLabel": "Simge ara",
     "emoji": "Bir emoji yaz",
     "useEmoji": "Bu emojiyi kullan",
@@ -492,7 +492,7 @@
     "checkYesterday": "Dün {{amount}} harcadın.",
     "fix": "Düzelt",
     "allMatch": "Hepsi tutuyor",
-    "checked": "Bugünün sayfası açıldı"
+    "checked": "Bakiyeler onaylandı"
   },
   "fix": {
     "title": "Bakiye düzeltme",

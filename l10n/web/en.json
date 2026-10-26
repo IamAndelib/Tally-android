@@ -483,7 +483,7 @@
     "transferLabel": "Transfer between accounts",
     "transfer": "Transfer",
     "addIn": "Add money received",
-    "loan": "Loan",
+    "loan": "Borrow",
     "lend": "Lend",
     "morning": "Good morning",
     "afternoon": "Good afternoon",
@@ -492,7 +492,7 @@
     "checkYesterday": "Yesterday you spent {{amount}}.",
     "fix": "Fix",
     "allMatch": "All match",
-    "checked": "Page started for today"
+    "checked": "Balances confirmed"
   },
   "fix": {
     "title": "Balance fix",

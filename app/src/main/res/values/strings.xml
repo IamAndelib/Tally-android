@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">The backup file can\'t be read.</string>
     <!-- where the backup folder is, in Settings -->
     <string name="bk_folder_phone">Phone storage</string>
+    <string name="bk_folder_docs">Documents</string>
+    <string name="bk_folder_docs_path">Documents/%1$s</string>
     <string name="bk_folder_sd">SD card</string>
     <!-- %1$s: the folder's path on the card, such as "Backups" -->
     <string name="bk_folder_sd_path">SD card/%1$s</string>

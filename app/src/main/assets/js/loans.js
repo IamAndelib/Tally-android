@@ -5,15 +5,30 @@
 "use strict";
 
 const loan = id => S.loans.find(l => l.id === id);
+/* each loan's entries (draws and payments), found in one pass over S.txns and kept while it stays the same list: an
+   entry added or removed changes its length, a deletion makes a new list, and amounts are read from the entries live */
+let LOANIX = null;
+function loanEntries(id) {
+  if (!LOANIX || LOANIX.list !== S.txns || LOANIX.n !== S.txns.length) {
+    const m = new Map();
+    S.txns.forEach(t => {
+      if (t.type !== "loan") return;
+      if (!m.has(t.loan)) m.set(t.loan, []);
+      m.get(t.loan).push(t);
+    });
+    LOANIX = { list: S.txns, n: S.txns.length, m };
+  }
+  return LOANIX.m.get(id) || [];
+}
 /* paid so far, what is left and the status; everything is derived from the loan's entries */
 /* a loan/lending is one or more "draws" (principal entries), each with its own amount, date and optional due date.
    Payments go to the draw due soonest first (draws without a due date last, oldest first): rem[id] is what is still
    out of each draw, nextDue the earliest due date still unpaid, dueAmt what is due by then (or by today) */
 function loanInfo(l) {
-  const draws = S.txns
-    .filter(t => t.type === "loan" && t.loan === l.id && t.principal)
-    .sort((x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0));
-  const pays = S.txns.filter(t => t.type === "loan" && t.loan === l.id && !t.principal);
+  const mine = loanEntries(l.id),
+    byDate = (x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0);
+  const draws = mine.filter(t => t.principal).sort(byDate);
+  const pays = mine.filter(t => !t.principal);
   const newest = draws[draws.length - 1],
     a = acc(newest ? newest.account : l.account),
     cur = a ? a.currency : S.settings.cur,
@@ -24,12 +39,26 @@ function loanInfo(l) {
     left = owed(total - paid);
   const order = draws.slice().sort((x, y) => (x.due ? (y.due ? x.due.localeCompare(y.due) : -1) : y.due ? 1 : 0)),
     rem = {};
-  let pool = paid;
-  order.forEach(t => {
-    const r = owed(t.amount - pool);
-    pool = rnd(Math.max(0, pool - t.amount));
-    rem[t.id] = r;
-  });
+  draws.forEach(t => (rem[t.id] = t.amount));
+  /* a payment goes to the draws made by its day, due soonest first: never to one lent or borrowed after it, whose
+     due date would otherwise vanish; anything over is credit, for the draws that came later */
+  const take = (by, n) => {
+    for (const t of order) {
+      if (n <= 0) break;
+      if (by && t.date > by) continue;
+      const x = Math.min(rem[t.id], n);
+      rem[t.id] = rnd(rem[t.id] - x);
+      n = rnd(n - x);
+    }
+    return n;
+  };
+  let credit = 0;
+  pays
+    .slice()
+    .sort(byDate)
+    .forEach(p => (credit = take(p.date, rnd(credit + p.amount))));
+  take("", credit);
+  draws.forEach(t => (rem[t.id] = owed(rem[t.id])));
   const owing = order.filter(t => rem[t.id] > 0),
     dueDraw = owing.find(t => t.due) || null,
     nextDue = dueDraw ? dueDraw.due : "",
@@ -214,7 +243,7 @@ function mergeHint() {
 function loanForm(kind) {
   if (!activeAccounts().length) {
     snack(T("account.addFirst"));
-    accForm();
+    accForm(null, () => loanForm(kind));
     return;
   }
   const lend = kind === "lend",
@@ -660,7 +689,7 @@ function payTxns(l, pid, ts, amount, account, date, fee) {
     account,
     cat: "fees",
     date,
-    note: T("loan.feeNote"),
+    note: "",
   };
   f.feeOf = p.id;
   p.feeId = f.id;

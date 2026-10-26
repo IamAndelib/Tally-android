@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">Le fichier de sauvegarde est illisible.</string>
     <!-- où se trouve le dossier de sauvegarde, dans les paramètres -->
     <string name="bk_folder_phone">Stockage du téléphone</string>
+    <string name="bk_folder_docs">Documents</string>
+    <string name="bk_folder_docs_path">Documents/%1$s</string>
     <string name="bk_folder_sd">Carte SD</string>
     <!-- %1$s : le chemin du dossier sur la carte, comme « Backups » -->
     <string name="bk_folder_sd_path">Carte SD/%1$s</string>

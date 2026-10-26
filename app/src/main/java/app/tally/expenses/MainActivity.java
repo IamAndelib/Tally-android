@@ -111,7 +111,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         live = this;
-        queued.addAll(orphans);
+        // answers that arrived while the activity was being recreated; a fresh launch (Tally was closed) drops them
+        if (savedInstanceState != null) queued.addAll(orphans);
         orphans.clear();
         dropOldSaves();
         try {
@@ -222,7 +223,7 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "Android");
         ReminderReceiver.channels(this); // listed in Android's settings from the start, one per kind of reminder
-        Lang.syncIfChanged(this); // the app's own language (Android 13+) changed: notices and widget follow
+        Lang.syncIfChanged(this); // the language changed while Tally wasn't running: notices and widget follow
 
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for

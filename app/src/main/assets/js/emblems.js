@@ -291,7 +291,7 @@ function addType() {
   }
   const same = Object.keys(TYPES)
     .concat(S.types.map(t => t.id))
-    .find(k => [typeName(k), TYPES[k]].some(n => n && n.toLowerCase() === name.toLowerCase())); // English too
+    .find(k => [typeName(k), TYPES[k]].some(n => n && n.toLocaleLowerCase(LOC.ui) === name.toLocaleLowerCase(LOC.ui))); // English too
   closePop();
   if (same) {
     if ((S.settings.hiddenTypes || []).includes(same)) {

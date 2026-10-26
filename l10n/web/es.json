@@ -496,7 +496,7 @@
     "checkYesterday": "Ayer gastaste {{amount}}.",
     "fix": "Ajustar",
     "allMatch": "Todo coincide",
-    "checked": "Nueva página para hoy"
+    "checked": "Saldos confirmados"
   },
   "fix": {
     "title": "Ajuste de saldo",

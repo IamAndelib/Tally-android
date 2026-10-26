@@ -233,7 +233,7 @@
   },
   "icon": {
     "title": "选择图标",
-    "search": "搜索：咖啡、汽车、礼物…",
+    "search": "用英文搜索：coffee、car、gift…",
     "searchLabel": "搜索图标",
     "emoji": "输入一个表情",
     "useEmoji": "使用这个表情",
@@ -488,7 +488,7 @@
     "checkYesterday": "昨天你花了{{amount}}。",
     "fix": "修正",
     "allMatch": "全都对得上",
-    "checked": "今天的新一页开始了"
+    "checked": "余额已确认"
   },
   "fix": {
     "title": "余额校正",

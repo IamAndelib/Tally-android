@@ -51,7 +51,7 @@ function smBuckets() {
       out.push({
         s: d,
         e: d,
-        x: parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" }),
+        x: capFirst(parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" })),
         full: dayName(d),
       });
     }
@@ -75,8 +75,8 @@ function smBuckets() {
       out.push({
         s: m + "-01",
         e: monthEnd(m),
-        x: parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }),
-        full: monthLabel(m),
+        x: capFirst(parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" })),
+        full: capFirst(monthLabel(m)),
       });
     }
   }
@@ -161,7 +161,7 @@ function drawSm() {
     '">' +
     ic("left") +
     "</button><b>" +
-    esc(M ? monthLabel(b.s.slice(0, 7), true) : smSpan(bars)) +
+    esc(capFirst(M ? monthLabel(b.s.slice(0, 7), true) : smSpan(bars))) +
     '</b><button class="icon" data-act="sm-nav" data-v="1" aria-label="' +
     TH("summary.later") +
     '"' +

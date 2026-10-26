@@ -235,7 +235,7 @@
   },
   "icon": {
     "title": "Escolha um ícone",
-    "search": "Pesquisar: café, carro, presente…",
+    "search": "Busque em inglês: coffee, car, gift…",
     "searchLabel": "Pesquisar ícones",
     "emoji": "Digite um emoji",
     "useEmoji": "Usar este emoji",
@@ -496,7 +496,7 @@
     "checkYesterday": "Ontem você gastou {{amount}}.",
     "fix": "Ajustar",
     "allMatch": "Tudo confere",
-    "checked": "Página de hoje aberta"
+    "checked": "Saldos confirmados"
   },
   "fix": {
     "title": "Ajuste de saldo",
@@ -749,7 +749,7 @@
     "food": "Restaurante",
     "transport": "Transporte",
     "housing": "Aluguel",
-    "bills": "Contas",
+    "bills": "Boletos",
     "shopping": "Compras",
     "education": "Estudos",
     "health": "Saúde",

@@ -235,7 +235,7 @@
   },
   "icon": {
     "title": "Choisir une icône",
-    "search": "Rechercher : café, voiture, cadeau…",
+    "search": "Cherchez en anglais : coffee, car, gift…",
     "searchLabel": "Rechercher une icône",
     "emoji": "Saisissez un emoji",
     "useEmoji": "Utiliser cet emoji",
@@ -496,7 +496,7 @@
     "checkYesterday": "Hier, vous avez dépensé {{amount}}.",
     "fix": "Corriger",
     "allMatch": "Tout correspond",
-    "checked": "Nouvelle page pour aujourd’hui"
+    "checked": "Soldes confirmés"
   },
   "fix": {
     "title": "Correction de solde",

@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">Não é possível ler o arquivo de backup.</string>
     <!-- onde fica a pasta de backup, nas Configurações -->
     <string name="bk_folder_phone">Armazenamento do celular</string>
+    <string name="bk_folder_docs">Documentos</string>
+    <string name="bk_folder_docs_path">Documentos/%1$s</string>
     <string name="bk_folder_sd">Cartão SD</string>
     <!-- %1$s: o caminho da pasta no cartão, como "Backups" -->
     <string name="bk_folder_sd_path">Cartão SD/%1$s</string>

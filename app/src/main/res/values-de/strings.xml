@@ -60,6 +60,8 @@
     <string name="bk_err_read_failed">Die Backup-Datei kann nicht gelesen werden.</string>
     <!-- wo der Backup-Ordner liegt, in den Einstellungen -->
     <string name="bk_folder_phone">Interner Speicher</string>
+    <string name="bk_folder_docs">Dokumente</string>
+    <string name="bk_folder_docs_path">Dokumente/%1$s</string>
     <string name="bk_folder_sd">SD-Karte</string>
     <!-- %1$s: der Pfad des Ordners auf der Karte, etwa „Backups“ -->
     <string name="bk_folder_sd_path">SD-Karte/%1$s</string>

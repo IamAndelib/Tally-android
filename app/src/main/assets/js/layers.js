@@ -36,7 +36,7 @@ function calGrid(m, o) {
     ">" +
     ic("left") +
     "</button><b>" +
-    esc(monthLabel(m, true)) +
+    esc(capFirst(monthLabel(m, true))) +
     '</b><button class="icon" data-act="' +
     o.monAct +
     '" data-v="1" aria-label="' +
@@ -712,6 +712,18 @@ function curPicker(current, onPick, title) {
   // the first search builds every currency's search text: do it while the list is only being looked at
   if (window.requestIdleCallback) requestIdleCallback(() => allCurs().forEach(curText));
 }
+/* the currencies of the phone's country (its region setting), main one first: offered first when picking */
+let HOME_CURS = null;
+function homeCurs() {
+  if (!HOME_CURS) {
+    let r = "";
+    try {
+      r = new Intl.Locale(new Intl.DateTimeFormat(LOC.fmt).resolvedOptions().locale).maximize().region || "";
+    } catch (e) {}
+    HOME_CURS = REGIONS[r] ? REGIONS[r][1].split(" ").filter(c => allCurs().includes(c)) : [];
+  }
+  return HOME_CURS;
+}
 function curList(q) {
   const box = $("#curlist");
   if (!box) return;
@@ -744,14 +756,12 @@ function curList(q) {
       [...rank.keys()].filter(c => rank.get(c)).sort((a, b) => rank.get(b) - rank.get(a))
     );
   } else {
+    const popular = [...new Set(homeCurs().concat(MAJOR))].filter(c => !inUse.includes(c));
     sec(TH("picker.inUse"), inUse);
-    sec(
-      TH("picker.popular"),
-      MAJOR.filter(c => !inUse.includes(c))
-    );
+    sec(TH("picker.popular"), popular);
     sec(
       TH("picker.allCurs"),
-      all.filter(c => !MAJOR.includes(c) && !inUse.includes(c))
+      all.filter(c => !popular.includes(c) && !inUse.includes(c))
     );
   }
   box.innerHTML = h || '<div class="empty">' + TH("picker.noCur") + "</div>";

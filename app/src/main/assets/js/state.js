@@ -30,6 +30,22 @@ function blank() {
     assets: [],
   };
 }
+/* a note Tally wrote itself on a balance fix or a fee (1.4.1 and earlier wrote "Balance fix", "Transfer fee", "Payment
+   fee"; 1.4.2 writes none), in any language: never one the user typed */
+let AUTO_NOTES = null;
+const autoNote = n =>
+  !!n &&
+  (AUTO_NOTES =
+    AUTO_NOTES ||
+    new Set(
+      ["Balance fix", "Transfer fee", "Payment fee"].concat(
+        ...Object.keys(window.I18N || {}).map(c =>
+          ["fix.title", "transfer.feeNote", "loan.feeNote"].map(k => i18nCat(c)[k])
+        )
+      )
+    )).has(n);
+/* an entry's note as shown: a balance fix's or a fee's own name (key) in today's language, unless the user wrote one */
+const noteShown = (t, key) => (!t.note || autoNote(t.note) ? T(key) : t.note);
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance.
    A backup can come from anywhere, so ids, currencies, colours and numbers are checked here, once. */
 function migrate(o) {
@@ -330,7 +346,7 @@ function shellCopy() {
 /* a saved notebook's text read through migrate(), or null when it isn't one (not JSON, or not an object) */
 function readNotebook(t) {
   try {
-    const o = JSON.parse(t);
+    const o = JSON.parse(String(t).replace(/^\uFEFF/, "")); // a byte-order mark from an editor
     return o && typeof o === "object" && !Array.isArray(o) ? migrate(o) : null;
   } catch (e) {
     return null;
@@ -387,11 +403,14 @@ function save() {
     localStorage.setItem(LS, savedJson);
     localStorage.setItem(LS + ":seq", String(saveSeq)); // after the data: a number never claims data that didn't fit
   } catch (e) {
-    setTimeout(() =>
-      askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
-        cancel: T("common.notNow"),
-      })
-    );
+    /* localStorage is full (a notebook of tens of thousands of entries) or blocked: with the shell's copy, which has
+       this save and wins at the next start (its number is higher), nothing is lost; without it, say so */
+    if (!(window.Android && Android.keepState))
+      setTimeout(() =>
+        askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
+          cancel: T("common.notNow"),
+        })
+      );
   }
   mirrorSoon();
 }
@@ -401,6 +420,13 @@ function commit() {
   render();
   syncReminders();
   syncWidget();
+}
+/* an entry by its id, from a map kept while S.txns stays the same list (as loanEntries) */
+let TXIX = null;
+function entry(id) {
+  if (!TXIX || TXIX.list !== S.txns || TXIX.n !== S.txns.length)
+    TXIX = { list: S.txns, n: S.txns.length, m: new Map(S.txns.map(t => [t.id, t])) };
+  return TXIX.m.get(id);
 }
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
@@ -539,7 +565,7 @@ function guardOverdraw(mutate, date, proceed) {
   const now = low(b1[bad.id], b0[bad.id]),
     had = now ? b0[bad.id] : d0[bad.id],
     will = now ? b1[bad.id] : d1[bad.id];
-  const v = { account: bad.name, had: money(had, bad.currency), will: signed(will, bad.currency), day: shortDay(date) };
+  const v = { account: bad.name, had: money(had, bad.currency), will: signed(will, bad.currency), day: dayLabel(date) };
   askDialog(
     T("overdraw.title", v),
     now ? T("overdraw.now", v) : T("overdraw.thatDay", v),

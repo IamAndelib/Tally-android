@@ -51,7 +51,7 @@ written with a space before it (“Wird gesichert …”).
 - **Transfer** is “Umbuchung”, not “Überweisung” (which suggests paying someone else). Some apps say “Übertrag”.
 - **Asset** is “Sachwert” (gold, a laptop); the tab is “Vermögen” and Liabilities is “Schulden” to stay short.
 - **Owed to you** (heading on the Vermögen tab) is the colloquial “Bekommst du noch”.
-- **Theme “Phone”** is “Wie Handy”; “System” would be the more technical alternative.
+- **Theme “Phone”** is “System”, the word German Android itself uses.
 - **“Page started for today”** (after confirming the morning balance check) is “Neue Seite für heute”.
 - **Categories:** “Eating out” is “Essen gehen”, “Study” is “Bildung”, “Fun” is “Freizeit”, “Transport” is
   “Verkehr”, “Mobile wallet” is “E-Wallet”.
