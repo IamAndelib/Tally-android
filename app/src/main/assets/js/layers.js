@@ -465,6 +465,7 @@ function openSheet(title, body) {
     body +
     "</div></div>";
   groupAmountInputs($("#sheet"));
+  fitFigures($("#sheet"));
 }
 /* amounts already in a new sheet (editing an entry, a loan's balance) show grouped like typed ones */
 function groupAmountInputs(root) {
@@ -503,6 +504,7 @@ function openSheet2(title, body) {
     body +
     "</div></div>";
   groupAmountInputs($("#sheet2"));
+  fitFigures($("#sheet2"));
 }
 function closeSheet2() {
   $("#sheet2").innerHTML = "";

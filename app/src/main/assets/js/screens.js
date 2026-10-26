@@ -352,9 +352,12 @@ function perCur(add) {
 /* a figure too wide for its place (a long balance at a large text size on a small phone) is set smaller, a tenth at a
    time down to 60%, rather than cut: the summary cards' totals, and a row's amount where the row can't hold it (its
    balance lines are sized in em, so they shrink with it). Still too wide, a total wraps. Measured again once the font
-   has loaded. */
+   has loaded. A button beside another whose label is one word too long for it (German, French at a large text size)
+   is set smaller the same way, then breaks the word as a last resort. */
 function fitFigures(root) {
-  root.querySelectorAll(".sumcard .big[style], .tx .a[style]").forEach(el => el.removeAttribute("style"));
+  root
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style]")
+    .forEach(el => el.removeAttribute("style"));
   const shrink = (el, over) => {
     if (!over()) return;
     const f = parseFloat(getComputedStyle(el).fontSize);
@@ -368,6 +371,11 @@ function fitFigures(root) {
   root.querySelectorAll(".tx .a").forEach(el => {
     const row = el.closest(".tx");
     shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+  });
+  root.querySelectorAll(".row > .btn, .fbtn").forEach(el => {
+    const over = () => el.scrollWidth > el.clientWidth + 1;
+    shrink(el, over);
+    if (over()) el.style.overflowWrap = "anywhere";
   });
 }
 const curLines = m =>

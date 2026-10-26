@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.2] — 2026-10-26
+
 ### Added
 
 - Tally speaks Spanish, Brazilian Portuguese, French, German, Russian, Simplified Chinese, Indonesian and Turkish,
@@ -447,6 +449,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.2
 [1.4.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.1
 [1.4.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.0
 [1.3.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.2

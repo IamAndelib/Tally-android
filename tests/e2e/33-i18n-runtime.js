@@ -9,7 +9,7 @@ const ok = (c, m) => {
   console.log((c ? "PASS " : "FAIL ") + m);
   if (!c) fails++;
 };
-/* small stand-in catalogues, put in before the page's own */
+/* small stand-in catalogues, in place of the real ones once the page is up */
 const CATS = {
   es: { "day.today": "Hoy", "t.hi": "Hola, {{name}}" },
   "pt-BR": { "day.today": "Hoje" },
@@ -49,20 +49,20 @@ const EN = {
   const open = async (o, android) => {
     const { locale = "en-US", ...rest } = o;
     const ctx = await browser.newContext({ viewport: { width: 360, height: 800 }, locale, ...rest });
-    await ctx.addInitScript(
-      ([cats, en, android]) => {
-        window.I18N = {};
-        for (const c in cats) window.I18N[c] = JSON.stringify(cats[c]);
-        window.__en = en;
-        if (android) window.Android = { getLocale: () => JSON.stringify(android), getColors: () => null, setBars() {} };
-      },
-      [CATS, EN, android]
-    );
+    await ctx.addInitScript(android => {
+      if (android) window.Android = { getLocale: () => JSON.stringify(android), getColors: () => null, setBars() {} };
+    }, android);
     const page = await ctx.newPage();
     page.on("pageerror", e => errors.push(e.message));
     await page.goto(appUrl);
-    // the test texts join English's
-    await page.evaluate(() => Object.assign(i18nCat("en"), window.__en));
+    // the stand-in catalogues take the real ones' place, and the test texts join English's
+    await page.evaluate(
+      ([cats, en]) => {
+        for (const c in cats) I18N_CAT[c] = cats[c];
+        Object.assign(i18nCat("en"), en);
+      },
+      [CATS, EN]
+    );
     return { ctx, page };
   };
 
