@@ -381,7 +381,11 @@ function fitFigures(root) {
      in a full one), and only then its ellipsis */
   root.querySelectorAll(".cat .cn").forEach(el => {
     const min = el.closest(".rt") ? 9 : 10;
-    for (let px = parseFloat(getComputedStyle(el).fontSize) - 0.5; px >= min && el.scrollWidth > el.clientWidth + 1; px -= 0.5)
+    for (
+      let px = parseFloat(getComputedStyle(el).fontSize) - 0.5;
+      px >= min && el.scrollWidth > el.clientWidth + 1;
+      px -= 0.5
+    )
       el.style.fontSize = px + "px";
   });
 }
