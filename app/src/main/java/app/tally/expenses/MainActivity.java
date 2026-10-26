@@ -810,9 +810,9 @@ public class MainActivity extends Activity {
         }
 
         /**
-         * The auto backup's file (request {@code id}), for Settings → Restore and a newly picked folder: {text, when,
-         * folder} or {error}, read on a thread of its own and handed to window.tallyAutoBackup(it, id) (as an object:
-         * it is JSON).
+         * The auto backup's file (request {@code id}), for Settings → Restore and a newly picked folder: {text, when}
+         * or {error}, read on a thread of its own and handed to window.tallyAutoBackup(it, id) (as an object: it is
+         * JSON).
          */
         @JavascriptInterface
         public void readAutoBackup(final int id) {

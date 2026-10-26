@@ -248,7 +248,7 @@ const nativeErr = x =>
   /^[a-z_]+$/.test(x) && i18nGet("native.err." + x) != null
     ? T("native.err." + x, { file: x === "saved_temp" ? "Tally backup (new).json" : "Tally backup.json" })
     : String(x);
-/* {folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
+/* {on, folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
 function backupStatus() {
   if (!canBackup()) return null;
   try {
@@ -290,6 +290,8 @@ function pickBackupFolder() {
 function onFolderPicked(err) {
   if (err == null) return;
   if (err) return snack(nativeErr(err));
+  // the same folder picked again: its backup is this install's own (the shell keeps `last` only then), nothing to ask
+  if ((backupStatus() || {}).last > 0) return backupOn();
   folderCheck();
 }
 /* Before auto backup first writes into a folder: a Tally backup already there (after a reinstall, from another phone,
@@ -304,7 +306,7 @@ function folderCheck() {
       syncBackup();
       if (V.screen === "settings") render();
     }
-    if (typeof r.text === "string" && r.text.trim())
+    if (typeof r.text === "string" && backupData(r.text))
       return askDialog(
         T("backup.found.title"),
         T("backup.found.body"),
@@ -339,7 +341,7 @@ function shellAnswer(id, v) {
   delete shellThen[id];
   if (then) then(v);
 }
-/* the auto backup's file (window.tallyAutoBackup): `then` gets {text, when, folder}, or {error}, with none: true when
+/* the auto backup's file (window.tallyAutoBackup): `then` gets {text, when}, or {error}, with none: true when
    the folder holds no backup */
 function readAutoBackup(then) {
   askShell(

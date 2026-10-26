@@ -2,6 +2,8 @@
 //  - a loan payment counts against the draws made by its day, so a later draw keeps its due date and reminder
 //  - a backup file with a byte-order mark restores; Undo of a restore made while the saved data couldn't be read
 //    leaves auto backup on; a full localStorage with the shell's copy raises no alarm
+//  - picking the auto backup's folder again keeps auto backup on; a damaged file in a picked folder offers Replace;
+//    while the saved data can't be read, Restore offers the auto backup and a restore never switches it off
 //  - notes Tally writes itself (balance fix, fees) show in today's language and aren't stored; a day inside a
 //    sentence is a date, never a capitalised "Yesterday"; standalone date headings start with a capital
 //  - the first account doesn't bring the balance check at once; a transfer, entry or loan that needed an account
@@ -27,7 +29,13 @@ const ok = (c, m) => {
           setBackup: j => window.__native.backup.push(j),
           setBackupData() {},
           keepState: () => (window.__native.kept = (window.__native.kept || 0) + 1),
-          backupStatus: () => JSON.stringify({ folder: "x", usable: true, last: 1 }),
+          pickBackupFolder() {},
+          backupStatus: () => JSON.stringify(window.__native.status || { folder: "x", usable: true, last: 1 }),
+          readAutoBackup: id => {
+            window.__native.readAuto = (window.__native.readAuto || 0) + 1;
+            setTimeout(() => onAutoBackup(window.__native.auto || { none: true }, id));
+          },
+          pickRestoreFile: () => (window.__native.picked = true),
         };
     }, !!android);
     const page = await ctx.newPage();
@@ -138,6 +146,67 @@ const ok = (c, m) => {
       return new Promise(res => setTimeout(() => res(!!$("#pop").innerHTML), 50));
     });
     ok(!d, "a full localStorage with the shell's copy shows no dialog");
+    await ctx.close();
+  }
+
+  // ---- the auto backup's folder
+  {
+    const { ctx, page } = await open({}, true);
+    await seed(page);
+    const wait = () => page.waitForTimeout(50);
+    // auto backup on and written; the same folder picked again (Change): still on, nothing asked
+    await page.evaluate(() => {
+      S.settings.backup.on = true;
+      window.__native.status = { on: true, folder: "x", usable: true, last: 5 };
+      window.__native.auto = { text: JSON.stringify(S), when: 5 };
+      window.__native.backup = [];
+      onFolderPicked("");
+    });
+    await wait();
+    const a = await page.evaluate(() => ({
+      on: S.settings.backup.on,
+      dialog: $("#pop").textContent,
+      off: window.__native.backup.some(j => JSON.parse(j).on === false),
+    }));
+    ok(a.on && !a.off && !a.dialog, "picking the same folder again keeps auto backup on: " + JSON.stringify(a));
+    // a new folder with a damaged backup: the "can't read" question, with Replace it
+    const b = await page.evaluate(async () => {
+      closePop();
+      window.__native.status = { on: true, folder: "y", usable: true, last: 0 };
+      window.__native.auto = { text: '{"v":6,"accounts":[{"id":"a"', when: 0 };
+      onFolderPicked("");
+      await new Promise(r => setTimeout(r, 50));
+      const t = $("#pop h3").textContent;
+      $("#pop [data-act=ask-ok]").click();
+      return { t, on: S.settings.backup.on };
+    });
+    ok(
+      b.t === "Couldn't read this folder's backup" && b.on,
+      "a damaged backup offers Replace it: " + JSON.stringify(b)
+    );
+    // the saved data can't be read, the shell still backs up: Restore reads the auto backup first, and restoring an
+    // older file made before auto backup was on doesn't switch it off
+    const c = await page.evaluate(async () => {
+      closePop();
+      const file = JSON.parse(JSON.stringify(S));
+      file.settings.backup.on = false;
+      S = blank();
+      unreadable = "{broken";
+      window.__native.status = { on: true, folder: "x", usable: true, last: 5 };
+      window.__native.auto = { error: "read" };
+      window.__native.readAuto = 0;
+      window.__native.picked = false;
+      restoreStart();
+      await new Promise(r => setTimeout(r, 50));
+      const read = window.__native.readAuto,
+        picked = window.__native.picked;
+      window.__native.backup = [];
+      restoreText(JSON.stringify(file));
+      $("#pop [data-act=ask-ok]").click();
+      return { read, picked, sent: window.__native.backup.map(j => JSON.parse(j).on), on: S.settings.backup.on };
+    });
+    ok(c.read === 1 && c.picked, "while the saved data can't be read, Restore tries the auto backup first");
+    ok(c.on && !c.sent.includes(false), "restoring then keeps auto backup on: " + JSON.stringify(c));
     await ctx.close();
   }
 

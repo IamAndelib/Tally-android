@@ -65,16 +65,22 @@ function exportCsv() {
   saveOut("tally-entries-" + today() + ".csv", "text/csv", "\ufeff" + lines.join("\n"));
 }
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
-   `auto` = {when, folder} for the auto backup file, whose dialog also offers "Choose another file". */
+   `auto` = {when} for the auto backup file, whose dialog also offers "Choose another file". */
 /* after: what follows a restore (turning auto backup on, when it came from the folder being picked) */
 /* false when the text isn't a backup that can be read */
-function restoreText(t, auto, after) {
-  let o = null,
-    n = null;
+/* a backup file's text as its data, or null when it isn't a Tally backup (a byte-order mark from an editor is fine) */
+function backupData(t) {
   try {
-    o = JSON.parse(String(t).replace(/^\uFEFF/, ""));
-  } catch (e) {}
-  if (!o || !Array.isArray(o.accounts) || !Array.isArray(o.txns)) {
+    const o = JSON.parse(String(t).replace(/^\uFEFF/, ""));
+    return o && Array.isArray(o.accounts) && Array.isArray(o.txns) ? o : null;
+  } catch (e) {
+    return null;
+  }
+}
+function restoreText(t, auto, after) {
+  const o = backupData(t);
+  let n = null;
+  if (!o) {
     snack(T("restore.notBackup"));
     return false;
   }
@@ -102,10 +108,12 @@ function restoreText(t, auto, after) {
     T("restore.ok"),
     () => {
       /* this phone's own set-up stays: its auto backup (the folder lives in the shell), a copy so Undo gets back what
-         was here; while the saved data couldn't be read, the stand-in's setting means nothing: the backup's own is kept */
+         was here; while the saved data couldn't be read, the stand-in's setting means nothing: the backup's own is kept,
+         but an auto backup the shell still runs is never switched off by it */
       const old = S,
         was = unreadable;
       if (!unreadable) n.settings.backup = { ...S.settings.backup };
+      else if ((backupStatus() || {}).on) n.settings.backup.on = true;
       unreadable = null; // a real notebook again: auto backup may follow it
       S = n;
       commit();
@@ -138,7 +146,9 @@ function restoreFile(input) {
    picker reports wrongly). With auto backup on, its file first, with "Choose another file" beside it. */
 const canRestore = () => !!(window.Android && Android.pickRestoreFile);
 function restoreStart() {
-  if (!(S.settings.backup.on && Android.readAutoBackup)) return pickRestoreFile();
+  // while the saved data can't be read, the shell's own setting says whether auto backup runs
+  const on = S.settings.backup.on || (unreadable && (backupStatus() || {}).on);
+  if (!(on && Android.readAutoBackup)) return pickRestoreFile();
   /* the auto backup's file first; with none that can be read, the picker */
   readAutoBackup(r => {
     if (typeof r.text !== "string" || restoreText(r.text, r) === false) pickRestoreFile();

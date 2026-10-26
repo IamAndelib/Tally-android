@@ -149,7 +149,7 @@ public class BackupReceiver extends BroadcastReceiver {
     }
 
     /**
-     * {folder, usable, last (ms, 0 = never), error} for Settings. The folder is remembered while auto backup is off;
+     * {on, folder, usable, last (ms, 0 = never), error} for Settings and Restore. The folder is remembered while auto backup is off;
      * usable = Tally still holds its write permission, so switching auto backup back on needs no new pick.
      */
     static String status(Context ctx) {
@@ -160,7 +160,7 @@ public class BackupReceiver extends BroadcastReceiver {
             if (tree != null && u.isWritePermission() && tree.equals(u.getUri().toString())) usable = true;
         }
         try {
-            return new JSONObject().put("folder", folderLabel(ctx, p)).put("usable", usable)
+            return new JSONObject().put("on", p.getBoolean("on", false)).put("folder", folderLabel(ctx, p)).put("usable", usable)
                     .put("last", p.getLong("last", 0)).put("error", p.getString("error", "")).toString();
         } catch (JSONException e) {
             return "{}";
@@ -322,8 +322,7 @@ public class BackupReceiver extends BroadcastReceiver {
                     return o.put("none", true).put("error", E_NO_FILE).toString();
                 }
                 byte[] b = readDoc(ctx.getContentResolver(), doc, MAX);
-                return o.put("text", new String(b, StandardCharsets.UTF_8)).put("when", p.getLong("last", 0))
-                        .put("folder", folderLabel(ctx, p)).toString();
+                return o.put("text", new String(b, StandardCharsets.UTF_8)).put("when", p.getLong("last", 0)).toString();
             } catch (SecurityException e) {
                 return o.put("error", E_NO_ACCESS).toString();
             } catch (Exception e) {
