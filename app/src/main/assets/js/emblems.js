@@ -39,7 +39,7 @@ const glyphOn = bg => {
   const L = lumOf(bg);
   return 1.05 / (L + 0.05) >= (L + 0.05) / (lumOf("#1b1b1f") + 0.05) ? "#ffffff" : "#1b1b1f";
 };
-function emblem(o, cls) {
+function emblem(o, cls, extra) {
   const c = (o && o.c) || "#7a8190",
     fg = glyphOn(c),
     p = o && o.i && ICONS[o.i];
@@ -56,6 +56,7 @@ function emblem(o, cls) {
     (p
       ? '<svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="' + p[0] + '"/></svg>'
       : '<span class="emo">' + esc((o && o.e) || "•") + "</span>") +
+    (extra || "") +
     "</span>"
   );
 }
@@ -65,13 +66,15 @@ const typeName = k => (TYPES[k] ? T("type." + k) : (ctype(k) || {}).name || T("a
 const typeIcon = k => TYPE_ICON[k] || (ctype(k) || {}).i || "account_balance_wallet";
 const typeCol = k => TYPE_COL[k] || (ctype(k) || {}).c || "#5f7389";
 const accEmb = a => ({ i: a.i || (a.e ? "" : typeIcon(a.type)), e: a.e, c: a.c || typeCol(a.type) });
+/* a chip's leading emblem, with the check its picked state shows in place of the glyph (css .chip.lead) */
+const chipEmb = o => emblem(o, "sm", ic("check"));
 const typeChip = (k, sel) =>
-  '<button class="chip" data-act="f-type" data-v="' +
+  '<button class="chip lead" data-act="f-type" data-v="' +
   esc(k) +
   '" data-ctype="1" aria-pressed="' +
   (sel === k) +
   '">' +
-  emblem({ i: typeIcon(k), c: typeCol(k) }, "sm") +
+  chipEmb({ i: typeIcon(k), c: typeCol(k) }) +
   '<span class="chn" dir="auto">' +
   esc(typeName(k)) +
   "</span></button>";

@@ -51,6 +51,7 @@ Never edit `app/src/main/assets/js/i18n/*.js`: `tools/gen_i18n.py` makes them fr
 | liabilities | what you owe: loans and credit cards |
 | net worth | what you have and are owed, minus what you owe |
 | category | what spending was for (Groceries, Rent, …) |
+| payee / paid to / received from | who an entry's money went to (a shop, a person) or came from (an employer, a client) |
 | archive / archived | an account put away: hidden from the totals, its entries kept |
 | backup / auto backup / restore | a file copy of everything / the daily one in a folder / bringing a copy back |
 | evening nudge | the evening reminder when nothing was written that day |

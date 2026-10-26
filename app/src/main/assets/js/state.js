@@ -8,7 +8,7 @@
 const LS = "tally:v1";
 function blank() {
   return {
-    v: 6,
+    v: 7, // 7: entries may have a payee (an older Tally restoring a backup warns it's newer, see restoreText)
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
          times show as 24-hour (ISO 8601) until changed in Settings → Region */
@@ -249,6 +249,10 @@ function migrate(o) {
           if (t0.type === "income" && c === "other") c = "otherin";
           t.cat = c;
           if (t0.feeOf) t.feeOf = sid(t0.feeOf);
+          else {
+            const p = str(t0.payee); // who was paid, or who paid: kept as written, only when there is one
+            if (p.trim()) t.payee = p;
+          }
         }
       } else return null;
       return t;

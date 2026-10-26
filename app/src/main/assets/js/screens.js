@@ -635,7 +635,7 @@ function txLine(t) {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    d = esc(t.note || catName(k));
+    d = t.payee || t.note ? [t.payee, t.note].filter(Boolean).map(bdi).join(" · ") : esc(catName(k));
     s = bdi(catName(k)) + " · " + bdi(a ? a.name : "?");
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
@@ -853,18 +853,7 @@ function catGrid(kind) {
         esc(catName(c)) +
         "</span></button>";
     });
-  return (
-    h +
-    '<button class="cat tile-add" data-act="cat-new" data-v="' +
-    kind +
-    '" aria-label="' +
-    TH("category.add") +
-    '"><span class="ci">' +
-    ic("add") +
-    '</span><span class="cn">' +
-    TH("common.add") +
-    "</span></button></div>"
-  );
+  return h + addTile("cat-new", kind) + "</div>";
 }
 /* the vibration-strength slider (Material 3 discrete slider): 5 stops, a bar handle that reaches both ends, the
    active track left of it and the inactive one right, stop dots on both; dragged in gestures.js */

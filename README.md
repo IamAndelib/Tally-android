@@ -36,6 +36,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - **One tap per expense.** Up to 24 spending categories sit around a donut of the day's spending. Tap a category, type
   the amount, save. New entries default to the day you're looking at.
+- **Paid to / Received from:** who you paid or who paid you, beside the category, with names you used before offered
+  as you type. A new category or account can be added right from the entry form.
 - **Every account, every currency.** Bank, mobile wallet, cash, credit card, savings — or your own account types. Each
   account keeps its own currency, any of the world's currencies.
 - **Morning check.** Once a day Tally lists your balances and asks if they still match.
@@ -85,7 +87,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Your data**
 
 - Everything stays on the phone. No account, no ads, no analytics, **no network requests**.
-- **Backup and restore** (a JSON file you keep anywhere) and **CSV export** of every entry.
+- **Backup and restore** (a JSON file you keep anywhere) and **CSV export** of every entry, with its payee, for a
+  spreadsheet or an accounting app.
 - **Daily auto backup** into one file, "Tally backup.json", in a folder you pick; it stays there even if Tally is
   uninstalled.
 - **Undo** for every change.

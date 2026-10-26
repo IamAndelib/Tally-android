@@ -459,6 +459,8 @@
     "whatFor": "Foi com o quê?",
     "into": "Para",
     "paidFrom": "Pago com",
+    "paidTo": "Pago a",
+    "receivedFrom": "Recebido de",
     "notePh": "Nota (opcional)",
     "editIn": "Editar entrada",
     "editOut": "Editar gasto",
@@ -550,7 +552,8 @@
     "addFirst": "Adicionar primeira conta"
   },
   "category": {
-    "example": "ex.: Café",
+    "exampleOut": "ex.: Pets, Academia",
+    "exampleIn": "ex.: Freela, Reembolsos",
     "add": "Adicionar categoria",
     "bringBack": "Trazer de volta",
     "edit": "Editar categoria",

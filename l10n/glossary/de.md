@@ -34,6 +34,7 @@ written with a space before it (“Wird gesichert …”).
 | liabilities | Schulden |
 | net worth | Nettovermögen |
 | category | Kategorie |
+| payee (paid to / received from) | Bezahlt an / Erhalten von |
 | archive / archived | archivieren / archiviert |
 | backup / auto backup / restore | Backup (verb: sichern) / Auto-Backup / wiederherstellen |
 | evening nudge | Abend-Erinnerung |

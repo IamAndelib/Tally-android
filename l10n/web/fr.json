@@ -459,6 +459,8 @@
     "whatFor": "C’était pour quoi ?",
     "into": "Sur",
     "paidFrom": "Payé avec",
+    "paidTo": "Payé à",
+    "receivedFrom": "Reçu de",
     "notePh": "Note (facultatif)",
     "editIn": "Modifier la rentrée",
     "editOut": "Modifier la dépense",
@@ -550,7 +552,8 @@
     "addFirst": "Ajouter un premier compte"
   },
   "category": {
-    "example": "Ex. : Café",
+    "exampleOut": "Ex. : Animaux, Sport",
+    "exampleIn": "Ex. : Freelance, Remboursements",
     "add": "Ajouter la catégorie",
     "bringBack": "Rétablir",
     "edit": "Modifier la catégorie",

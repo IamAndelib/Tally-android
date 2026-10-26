@@ -453,6 +453,8 @@
     "whatFor": "Untuk apa?",
     "into": "Masuk ke",
     "paidFrom": "Dibayar dari",
+    "paidTo": "Dibayar ke",
+    "receivedFrom": "Diterima dari",
     "notePh": "Catatan (opsional)",
     "editIn": "Ubah pemasukan",
     "editOut": "Ubah pengeluaran",
@@ -542,7 +544,8 @@
     "addFirst": "Tambah akun pertama"
   },
   "category": {
-    "example": "mis. Kopi",
+    "exampleOut": "mis. Hewan peliharaan, Gym",
+    "exampleIn": "mis. Freelance, Pengembalian dana",
     "add": "Tambah kategori",
     "bringBack": "Kembalikan",
     "edit": "Ubah kategori",

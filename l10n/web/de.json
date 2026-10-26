@@ -456,6 +456,8 @@
     "whatFor": "Wofür war es?",
     "into": "Auf Konto",
     "paidFrom": "Bezahlt von",
+    "paidTo": "Bezahlt an",
+    "receivedFrom": "Erhalten von",
     "notePh": "Notiz (optional)",
     "editIn": "Einnahme bearbeiten",
     "editOut": "Ausgabe bearbeiten",
@@ -546,7 +548,8 @@
     "addFirst": "Erstes Konto hinzufügen"
   },
   "category": {
-    "example": "z. B. Kaffee",
+    "exampleOut": "z. B. Haustiere, Fitness",
+    "exampleIn": "z. B. Nebenjob, Erstattungen",
     "add": "Kategorie hinzufügen",
     "bringBack": "Zurückholen",
     "edit": "Kategorie bearbeiten",

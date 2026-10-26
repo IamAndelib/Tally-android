@@ -456,6 +456,8 @@
     "whatFor": "Ne içindi?",
     "into": "Hangi hesaba",
     "paidFrom": "Hangi hesaptan",
+    "paidTo": "Ödenen",
+    "receivedFrom": "Gönderen",
     "notePh": "Not (isteğe bağlı)",
     "editIn": "Gelen parayı düzenle",
     "editOut": "Harcamayı düzenle",
@@ -546,7 +548,8 @@
     "addFirst": "İlk hesabı ekle"
   },
   "category": {
-    "example": "ör. Kahve",
+    "exampleOut": "ör. Evcil hayvan, Spor salonu",
+    "exampleIn": "ör. Serbest iş, İadeler",
     "add": "Kategori ekle",
     "bringBack": "Geri getir",
     "edit": "Kategoriyi düzenle",

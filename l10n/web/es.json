@@ -459,6 +459,8 @@
     "whatFor": "¿Para qué fue?",
     "into": "En",
     "paidFrom": "Pagado desde",
+    "paidTo": "Pagado a",
+    "receivedFrom": "Recibido de",
     "notePh": "Nota (opcional)",
     "editIn": "Editar ingreso",
     "editOut": "Editar gasto",
@@ -550,7 +552,8 @@
     "addFirst": "Añadir primera cuenta"
   },
   "category": {
-    "example": "p. ej., Café",
+    "exampleOut": "p. ej., Mascotas, Gimnasio",
+    "exampleIn": "p. ej., Freelance, Reembolsos",
     "add": "Añadir categoría",
     "bringBack": "Recuperar",
     "edit": "Editar categoría",

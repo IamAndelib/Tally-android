@@ -65,7 +65,8 @@ All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
 the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (see `save()` in `js/state.js`).
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
-  `income` (with `cat`), `transfer` (with `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
+  `income` (with `cat`, and an optional `payee`: who was paid or who paid, stored only when filled), `transfer` (with
+  `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
   `loan` (money moving for a loan: `dir`, `loan`, and `principal` + optional `due` for a draw). `ts` is when it was
   written (`Date.now()`, so not an amount: `migrate()` reads it with `stamp()`) and orders a day's entries, newest
   first. A transfer's or loan payment's fee is an `expense` linked both ways (`feeOf` on the fee, `feeId` on the

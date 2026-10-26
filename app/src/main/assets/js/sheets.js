@@ -92,12 +92,13 @@ function deleteAsset() {
     S.assets = S.assets.filter(x => x.id !== id);
   });
 }
-const accChips = (act, sel, disabled, list) =>
+/* account chips; addAct: a dashed "Add account" chip at the end */
+const accChips = (act, sel, disabled, list, addAct) =>
   '<div class="chips">' +
   (list || activeAccounts())
     .map(
       a =>
-        '<button class="chip" data-act="' +
+        '<button class="chip lead" data-act="' +
         act +
         '" data-v="' +
         a.id +
@@ -106,12 +107,15 @@ const accChips = (act, sel, disabled, list) =>
         '"' +
         (a.id === disabled ? " disabled" : "") +
         ">" +
-        emblem(accEmb(a), "sm") +
+        chipEmb(accEmb(a)) +
         '<span class="chn" dir="auto">' +
         esc(a.name) +
         "</span></button>"
     )
     .join("") +
+  (addAct
+    ? '<button class="chip addnew" data-act="' + addAct + '">' + ic("add") + TH("account.add") + "</button>"
+    : "") +
   "</div>";
 function accChoices(...keep) {
   const l = activeAccounts();
@@ -121,8 +125,21 @@ function accChoices(...keep) {
   });
   return l;
 }
-/* quick add / edit for spending and money in */
-const catBtns = (list, sel) =>
+/* the dashed "Add" tile ending a grid of categories (Settings, the entry form) */
+const addTile = (act, v) =>
+  '<button class="cat tile-add" data-act="' +
+  act +
+  '" data-v="' +
+  esc(v) +
+  '" aria-label="' +
+  TH("category.add") +
+  '"><span class="ci">' +
+  ic("add") +
+  '</span><span class="cn">' +
+  TH("common.add") +
+  "</span></button>";
+/* quick add / edit for spending and money in; add: the "Add" tile at the end */
+const catBtns = (list, sel, add) =>
   list
     .map(
       c =>
@@ -136,11 +153,79 @@ const catBtns = (list, sel) =>
         esc(catName(c)) +
         "</span></button>"
     )
-    .join("");
+    .join("") + (add ? addTile("f-cat-new", "") : "");
 const catChipInner = k => emblem(k, "ci") + esc(catName(k)) + ic("down");
+/* who was paid ("Paid to") or who paid ("Received from"), with earlier names offered under it as you type
+   (payeeSuggest) */
+const payeeField = (inc, v) =>
+  '<input id="f-payee" maxlength="40" autocomplete="off" dir="auto" placeholder="' +
+  TH(inc ? "entry.receivedFrom" : "entry.paidTo") +
+  '" aria-label="' +
+  TH(inc ? "entry.receivedFrom" : "entry.paidTo") +
+  '" value="' +
+  esc(v) +
+  '"' +
+  (inc ? ' class="payee-in"' : "") +
+  ">";
+const payeeSug = '<div class="chips" id="f-payee-sug" hidden></div>';
+/* every payee written so far, once per name whatever its case or accents (curFold), in its newest spelling: names used
+   on this kind of entry first, then newest first. Made at the first letter typed, kept while the form is open. */
+function payeeIndex() {
+  if (F.payees) return F.payees;
+  const by = new Map(), // folded name → its payee
+    folded = new Map(); // each spelling folded once (thousands of entries, a few hundred names)
+  S.txns.forEach(t => {
+    if (!t.payee || t.feeOf || (t.type !== "expense" && t.type !== "income")) return;
+    const name = t.payee.trim();
+    if (!folded.has(name)) folded.set(name, curFold(name));
+    const key = folded.get(name);
+    if (!by.has(key)) by.set(key, { key, words: curWords(key), date: "", ts: 0 });
+    const p = by.get(key);
+    if (t.type === F.type) p.same = true;
+    if (cmpDay(t.date, p.date) > 0 || (t.date === p.date && (t.ts || 0) >= p.ts)) {
+      p.name = name;
+      p.date = t.date;
+      p.ts = t.ts || 0;
+    }
+  });
+  return (F.payees = [...by.values()].sort(
+    (a, b) => (b.same ? 1 : 0) - (a.same ? 1 : 0) || cmpDay(b.date, a.date) || b.ts - a.ts
+  ));
+}
+/* up to four earlier payees whose name or one of its words starts with what's typed (not one typed out in full) */
+function payeeSuggest(q) {
+  const el = $("#f-payee-sug"),
+    qq = curFold(q.trim());
+  if (!el || !F) return;
+  const list = qq
+    ? payeeIndex()
+        .filter(p => p.key !== qq && (p.key.startsWith(qq) || p.words.some(w => w.startsWith(qq))))
+        .slice(0, 4)
+    : [];
+  el.hidden = !list.length;
+  el.innerHTML = list
+    .map(
+      p =>
+        '<button class="chip" data-act="f-payee-pick" data-v="' +
+        esc(p.name) +
+        '"><span class="chn" dir="auto">' +
+        esc(p.name) +
+        "</span></button>"
+    )
+    .join("");
+}
+function pickPayee(name) {
+  const el = $("#f-payee");
+  if (el) {
+    el.value = name;
+    el.focus({ preventScroll: true });
+  }
+  $("#f-payee-sug").hidden = true;
+}
 /* pre (a new entry made for something else, e.g. an over-repaid lending's extra): {amount, cur, account, date, note,
    also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
-function txSheet(id, type, catId, pre) {
+/* draft: the form as it was before Add category / Add account (txQuickAdd), filled back in over everything else */
+function txSheet(id, type, catId, pre, draft) {
   if (!id && !activeAccounts().length) {
     snack(T("account.addFirst"));
     accForm(null, () => txSheet(id, type, catId, pre));
@@ -172,12 +257,13 @@ function txSheet(id, type, catId, pre) {
   const inc = type === "income";
   const last = inc ? S.settings.lastAccIn : S.settings.lastAcc;
   const def = acc(last) && !acc(last).archived ? last : (activeAccounts()[0] || {}).id;
+  const d = draft || null;
   F = {
     kind: "tx",
     id,
     type,
-    cat: t ? t.cat : catId || (inc && !pre ? "income" : null),
-    account: t ? t.account : pre ? pre.account : def,
+    cat: d ? d.cat : t ? t.cat : catId || (inc && !pre ? "income" : null),
+    account: d ? d.account : t ? t.account : pre ? pre.account : def,
     pre,
   };
   if (pre && pre.back) BACKTO = { screen: V.screen, open: () => loanOpen(pre.back) };
@@ -185,15 +271,20 @@ function txSheet(id, type, catId, pre) {
     a = acc(F.account);
   let list = inc ? inCats() : outCats();
   if (k && !list.includes(k)) list = list.concat([k]);
+  const payee = (d ? d.payee : t ? t.payee : pre ? pre.payee : "") || "";
   let h = "";
-  if (inc) h += '<div class="catgrid">' + catBtns(list, F.cat) + "</div>";
+  if (inc) h += '<div class="catgrid">' + catBtns(list, F.cat, true) + "</div>" + payeeField(true, payee) + payeeSug;
   else
     h +=
-      '<button class="catchip" id="f-catchip" data-act="f-showcats" aria-expanded="false"' +
+      /* the picked category and who was paid, side by side (the box wraps below when the row is too narrow) */
+      '<div class="row catrow" id="f-catrow"' +
       (k ? "" : " hidden") +
-      ">" +
+      '><button class="catchip" id="f-catchip" data-act="f-showcats" aria-expanded="false">' +
       (k ? catChipInner(k) : "") +
       "</button>" +
+      payeeField(false, payee) +
+      "</div>" +
+      payeeSug +
       '<div class="lbl" id="f-catlbl" style="margin-top:0"' +
       (k ? " hidden" : "") +
       ">" +
@@ -202,7 +293,7 @@ function txSheet(id, type, catId, pre) {
       '<div class="catgrid" id="f-catgrid" style="margin-top:8px"' +
       (k ? " hidden" : "") +
       ">" +
-      catBtns(list, F.cat) +
+      catBtns(list, F.cat, true) +
       "</div>";
   h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : pre ? String(pre.amount) : "", {
     curId: "amt-cur",
@@ -215,17 +306,21 @@ function txSheet(id, type, catId, pre) {
       "f-acc",
       F.account,
       null,
-      accChoices(F.account).filter(x => !pre || x.currency === pre.cur)
+      accChoices(F.account).filter(x => !pre || x.currency === pre.cur),
+      pre ? null : "f-acc-new" // not where only one currency will do: a new account in another wouldn't show
     );
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="' +
     TH("entry.notePh") +
     '" maxlength="80" value="' +
-    esc(t ? t.note : pre ? pre.note : "") +
+    esc(d ? d.note : t ? t.note : pre ? pre.note : "") +
     '" aria-label="' +
     TH("common.note") +
     '"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t }) +
+    dateField("f-date", d ? (d.now ? entryDate() : d.date) : t ? t.date : pre ? pre.date : entryDate(), {
+      max: today(),
+      now: d ? d.now : !t,
+    }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
@@ -235,7 +330,45 @@ function txSheet(id, type, catId, pre) {
   if (id)
     h += '<div class="gap"></div><button class="btn danger" data-act="tx-del">' + TH("common.delete") + "</button>";
   openSheet(T(id ? (inc ? "entry.editIn" : "entry.editOut") : inc ? "entry.newIn" : "entry.newOut"), h);
+  if (d) $("#f-amt").value = d.amt; // as it was shown (grouped the phone's way, or a sum like 12+3)
   if (!id && F.cat) focusAmt();
+}
+/* Add category / Add account from the entry form: the same form as in Settings, then back to the entry with all of it
+   as it was and the new one picked; closed without saving, back to the entry as it was */
+function txDraft() {
+  if (CALC && CALC.id === "f-amt") calcClose("f-amt", calcToggleBtn("f-amt")); // its sum, worked out
+  const val = s => ($(s) || {}).value || "",
+    dt = $("#f-date");
+  return {
+    id: F.id,
+    type: F.type,
+    cat: F.cat,
+    account: F.account,
+    pre: F.pre,
+    amt: val("#f-amt"),
+    note: val("#f-note"),
+    payee: val("#f-payee"),
+    date: dt ? dt.dataset.v : "",
+    now: !!(dt && dt.dataset.now),
+    back: BACKTO,
+  };
+}
+function txQuickAdd(what) {
+  const inc = F.type === "income";
+  if (what === "cat" && !inc && outCats().length >= 24) return snack(T("category.max", { count: 24 }));
+  const dr = txDraft();
+  let back = false; // once only: saved (then) or closed (BACKTO), never both
+  const reopen = patch => {
+    if (back) return;
+    back = true;
+    sheetSwap = true;
+    txSheet(dr.id, dr.type, null, dr.pre, Object.assign({}, dr, patch));
+    BACKTO = dr.back; // the entries list or loan this entry came from stays the way back
+  };
+  BACKTO = { screen: V.screen, open: () => reopen() }; // closed without saving: ✕, Back, a tap outside
+  sheetSwap = true;
+  if (what === "cat") catForm(null, inc ? "in" : "out", id => reopen({ cat: id }));
+  else accForm(null, id => reopen({ account: id }));
 }
 /* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
 function openEntry(id) {
@@ -258,7 +391,7 @@ function pickCat(id) {
   if (F.type === "income") return;
   const chip = $("#f-catchip");
   chip.innerHTML = catChipInner(cat(id));
-  chip.hidden = false;
+  $("#f-catrow").hidden = false;
   chip.setAttribute("aria-expanded", "false");
   $("#f-catgrid").hidden = true;
   $("#f-catlbl").hidden = true;
@@ -283,7 +416,14 @@ function readVals() {
     const el = $("#" + id);
     return el ? (el.tagName === "INPUT" ? el.value : el.dataset.v) : undefined;
   };
-  return { amount: g("f-amt"), note: g("f-note"), date: g("f-date"), toAmount: g("f-toamt"), fee: g("f-fee") };
+  return {
+    amount: g("f-amt"),
+    note: g("f-note"),
+    payee: g("f-payee"),
+    date: g("f-date"),
+    toAmount: g("f-toamt"),
+    fee: g("f-fee"),
+  };
 }
 /* the optional fee of a transfer or a loan payment: a field behind "Add a fee" (its label can be set later) */
 const feeField = (open, value, label, add) =>
@@ -625,14 +765,15 @@ function saveAccount() {
     then = F.then;
   const go = () => {
     const first = !activeAccounts().length;
+    const nid = newId();
     if (was) Object.assign(acc(was), data);
-    else S.accounts.push(Object.assign({ id: newId(), archived: false }, data));
+    else S.accounts.push(Object.assign({ id: nid, archived: false }, data));
     if (first) S.settings.lastCheck = today(); // its balance was just typed: no "do they still match?" today
     closeSheet();
     commit();
     if (first) scrollTo(0, 0); // the welcome page was scrolled: Home starts at its top
     snack(was ? T("account.saved") : T("account.added", { name }));
-    if (!was && then) then();
+    if (!was && then) then(nid);
   };
   if (o < 0 && data.type !== "card" && !(was && acc(was).opening === o))
     askDialog(
@@ -661,14 +802,15 @@ function deleteAccount() {
     { danger: true }
   );
 }
-function catForm(id, kind) {
+/* then: after a new one is saved, gets its id (the entry form's Add, txQuickAdd) */
+function catForm(id, kind, then) {
   const used = new Set(S.cats.map(x => String(x.c).toLowerCase())),
     free = PALETTE.find(x => !used.has(x)) || PALETTE[S.cats.length % PALETTE.length];
   const c = id
     ? S.cats.find(x => x.id === id)
     : { name: "", e: "🏷️", i: "label", c: free, kind: kind === "in" ? "in" : "out" };
   if (!c) return;
-  F = { kind: "catf", id, ck: c.kind, col: c.c, i: c.i || "", e: c.e };
+  F = { kind: "catf", id, ck: c.kind, col: c.c, i: c.i || "", e: c.e, then };
   let h = emblemEditor(c);
   h +=
     '<label class="field"><span>' +
@@ -676,7 +818,7 @@ function catForm(id, kind) {
     '</span><input id="f-cname" value="' +
     esc(catName(c)) +
     '" maxlength="16" placeholder="' +
-    TH("category.example") +
+    TH(c.kind === "in" ? "category.exampleIn" : "category.exampleOut") +
     '"></label>';
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="cat-save">' +
@@ -692,7 +834,9 @@ function catForm(id, kind) {
 function saveCat() {
   const name = $("#f-cname").value.trim(),
     e = F.e || "🏷️",
-    i = F.i;
+    i = F.i,
+    then = F.then; // read before closeSheet() clears F
+  let added = null;
   if (!name) {
     snack(T("common.nameIt"));
     return;
@@ -707,9 +851,11 @@ function saveCat() {
     const c = { id: "c" + newId(), name, e, i, c: F.col, kind: F.ck };
     const lastVis = S.cats.map(x => x.kind === F.ck && !x.hidden).lastIndexOf(true);
     S.cats.splice(lastVis + 1, 0, c);
+    added = c.id;
   }
   closeSheet();
   commit();
+  if (added && then) then(added);
 }
 /* built-in categories and ones with entries are hidden (old entries keep their emblem); unused custom ones are deleted */
 function removeCat() {
@@ -780,7 +926,9 @@ function saveTx() {
     snack(T("entry.gone"));
     return;
   }
-  const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() };
+  const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() },
+    payee = (v.payee || "").trim().slice(0, 40);
+  if (payee) t.payee = payee;
   const id = F.id,
     pre = F.pre || {},
     nid = newId(),
@@ -789,6 +937,7 @@ function saveTx() {
     ? () => {
         const old = S.txns.find(x => x.id === id);
         Object.assign(old, t);
+        if (!payee) delete old.payee; // cleared
       }
     : () => {
         if (pre.also) pre.also();

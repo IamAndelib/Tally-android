@@ -15,8 +15,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
   dates and money keep the phone's own format, also on phones in a language Tally isn't translated into. The
   translations are drafts, to be reviewed by native speakers.
 
+- A "Paid to" box beside the picked category when spending, and "Received from" when money comes in, offering names
+  used before as you type. Entries show it as their title, and the CSV export has it as its last column (`payee`).
+- Add a category or an account right from the entry form: the dashed Add tile and chip open the same form as in
+  Settings, and the entry comes back with everything typed and the new one picked.
+
 ### Changed
 
+- Account chips are a little narrower, so more fit on a row, and a picked one shows a check in its emblem instead of
+  growing, so the chips no longer move when one is tapped.
+- The example in a new category's name box fits its kind: spending or money in.
+- Saved data and backups are version 7 (for the payee); an older Tally warns before restoring a newer backup.
 - Shares and comparisons are written the phone's way (12 %, %12), and counts of a thousand or more are grouped.
 - The time picker writes AM and PM the way the phone's language does.
 - A search for a person finds names whatever their accents or Turkish dotted and dotless i.

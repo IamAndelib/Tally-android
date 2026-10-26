@@ -456,6 +456,8 @@
     "whatFor": "What was it for?",
     "into": "Into",
     "paidFrom": "Paid from",
+    "paidTo": "Paid to",
+    "receivedFrom": "Received from",
     "notePh": "Note (optional)",
     "editIn": "Edit money in",
     "editOut": "Edit spending",
@@ -546,7 +548,8 @@
     "addFirst": "Add first account"
   },
   "category": {
-    "example": "e.g. Coffee",
+    "exampleOut": "e.g. Pets, Gym",
+    "exampleIn": "e.g. Freelance, Refunds",
     "add": "Add category",
     "bringBack": "Bring back",
     "edit": "Edit category",

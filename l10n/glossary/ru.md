@@ -38,6 +38,7 @@ Tally обращается к пользователю на «вы», со ст�
 | liabilities | долги (вкладка) |
 | net worth | капитал |
 | category | категория |
+| payee (paid to / received from) | Кому / От кого |
 | archive / archived | архив, отправить в архив / в архиве |
 | backup / auto backup / restore | резервная копия, копия / автокопирование / восстановить |
 | evening nudge | вечернее напоминание |

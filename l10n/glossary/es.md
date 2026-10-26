@@ -34,6 +34,7 @@ locale, so texts only say “el {{date}}” and never assume a format.
 | liabilities | pasivos | tab name; the total line says “Debes” |
 | net worth | patrimonio | |
 | category | categoría | |
+| payee (paid to / received from) | Pagado a / Recibido de | |
 | archive / archived | archivar / archivada | agrees with “cuenta” |
 | backup / auto backup / restore | copia / copia automática / restaurar | short for “copia de seguridad” |
 | evening nudge | aviso de la noche | |

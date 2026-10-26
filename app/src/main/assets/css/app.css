@@ -694,6 +694,22 @@ body.hist #app {
 .row.notedate > .nd-date {
   flex: 1 1 130px;
 }
+/* the picked category and "Paid to" side by side, the box below the category when the row is too narrow */
+.row.catrow {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.row.catrow > .catchip {
+  flex: none;
+  max-width: 100%;
+}
+.row.catrow > input {
+  flex: 1 1 128px;
+}
+#f-payee-sug,
+.payee-in {
+  margin-top: 8px;
+}
 .gap {
   height: 8px;
 }
@@ -705,15 +721,16 @@ body.hist #app {
 #f-person-sug {
   margin-top: 8px;
 }
+/* Material 3 filter chip: 16px either side, 8px before a leading emblem or icon and between it and the name */
 .chip {
   min-height: 48px;
   max-width: 100%;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 10px;
   border: 1px solid var(--outline-variant);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--on-surface-variant);
@@ -727,7 +744,9 @@ body.hist #app {
   color: var(--on-secondary-container);
   border-color: transparent;
 }
-.chip[aria-pressed="true"]::after {
+/* picked: a ✓ after the name, or in a chip that leads with an emblem (.lead) a check in place of its glyph, so the
+   chip keeps its width and doesn't jump to the next line when tapped */
+.chip[aria-pressed="true"]:not(.lead)::after {
   content: "✓";
   font-size: 0.8rem;
   flex: none;
@@ -741,6 +760,22 @@ body.hist #app {
 }
 .chip > .emb {
   flex: none;
+}
+.chip > .emb:first-child,
+.chip > .ic:first-child {
+  margin-inline-start: -8px;
+}
+.chip > .emb.sm {
+  margin-right: 0;
+}
+.chip > .emb > .ic,
+.chip[aria-pressed="true"] > .emb > :not(.ic) {
+  display: none;
+}
+.chip[aria-pressed="true"] > .emb > .ic {
+  display: block;
+  width: 72%;
+  height: 72%;
 }
 .smc {
   display: flex;

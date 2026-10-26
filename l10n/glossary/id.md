@@ -33,6 +33,7 @@ Sentences stay short and plain; formal or accounting words (*liabilitas*, *dihap
 | liabilities | utang (tab) | section inside it: *Pinjaman* (loans), *Kartu kredit* |
 | net worth | kekayaan bersih | |
 | category | kategori | |
+| payee (paid to / received from) | Dibayar ke / Diterima dari | |
 | archive / archived | arsipkan / diarsipkan | |
 | backup / auto backup / restore | cadangan / cadangan otomatis / pulihkan | verb: *cadangkan* |
 | evening nudge | pengingat malam | |

@@ -493,6 +493,32 @@ function inspect() {
       "spend",
       ev(() => txSheet(null, "expense", "groceries"))
     );
+    await shot(
+      "spend-payee",
+      ev(() => {
+        txSheet(null, "expense", "groceries");
+        $("#f-payee").value = "Supermercado Hipermaxi Central"; // long: the box keeps its room, the text scrolls
+        $("#f-payee-sug").innerHTML = '<button class="chip"><span class="chn">Supermercado Hipermaxi</span></button>';
+        $("#f-payee-sug").hidden = false;
+      })
+    );
+    await shot(
+      "spend-cats",
+      ev(() => {
+        txSheet(null, "expense");
+        $("#sheet .p").scrollTop = 0;
+      })
+    );
+    await shot(
+      "income",
+      ev(() => txSheet(null, "income"))
+    );
+    await shot("quick-add", async () => {
+      await page.evaluate(() => {
+        txSheet(null, "expense", "groceries");
+        txQuickAdd("cat");
+      });
+    });
     await shot("spend-calc", async () => {
       await page.evaluate(() => txSheet(null, "expense", "groceries"));
       await page.click('#sheet [data-act="calc-toggle"]');

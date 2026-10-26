@@ -36,6 +36,7 @@ The same text is shown in Portugal, so slang that only works in Brazil is avoide
 | liabilities | Passivos |
 | net worth | patrimônio líquido |
 | category | categoria |
+| payee (paid to / received from) | Pago a / Recebido de |
 | archive / archived | arquivar / arquivada |
 | backup / auto backup / restore | backup / backup automático / restaurar |
 | evening nudge | lembrete da noite |

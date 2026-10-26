@@ -4,8 +4,9 @@
  */
 "use strict";
 
-/* A second tap right where a tap just closed a sheet or dialog (a double tap on Save) would land on whatever was
-   underneath it: such a tap is dropped. Keyboard and script clicks (detail 0) always go through. */
+/* A second tap right where a tap just closed a sheet or dialog (a double tap on Save), or swapped the sheet for another
+   (Add category from the entry form, and back), would land on whatever is there now: such a tap is dropped. Keyboard
+   and script clicks (detail 0) always go through. */
 let ghostTap = null;
 const layersUp = () => ["#sheet", "#sheet2", "#pop"].filter(id => $(id).innerHTML).length;
 document.addEventListener(
@@ -20,10 +21,12 @@ document.addEventListener(
       return;
     }
     tapLayers = layersUp();
+    sheetSwap = false;
   },
   true
 );
-let tapLayers = 0;
+let tapLayers = 0,
+  sheetSwap = false; // this tap swapped the entry form for Add category / Add account, or back (txQuickAdd)
 document.addEventListener("click", ev => {
   if (swallowClick) {
     swallowClick = false;
@@ -280,6 +283,12 @@ document.addEventListener("click", ev => {
     }
     case "f-cat":
       pickCat(v);
+      break;
+    case "f-cat-new":
+      txQuickAdd("cat");
+      break;
+    case "f-acc-new":
+      txQuickAdd("acc");
       break;
     case "f-acc":
       pickAccount(v);
@@ -568,6 +577,9 @@ document.addEventListener("click", ev => {
     case "calc-key":
       calcKey(v);
       break;
+    case "f-payee-pick":
+      pickPayee(v);
+      break;
     case "f-person-pick": {
       const el2 = $("#f-person");
       if (el2) el2.value = (loan(v) || {}).person || "";
@@ -623,8 +635,9 @@ document.addEventListener("click", ev => {
 });
 /* after the tap has been handled (this listener comes after the one above): did it close a layer? */
 document.addEventListener("click", ev => {
-  if (ev.detail && layersUp() < tapLayers) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
+  if (ev.detail && (layersUp() < tapLayers || sheetSwap)) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
   tapLayers = 0;
+  sheetSwap = false;
 });
 document.addEventListener("input", ev => {
   const id = ev.target.id;
@@ -643,7 +656,8 @@ document.addEventListener("input", ev => {
     F.merge = same ? same.id : null;
     mergeHint();
     personSuggest(ev.target.value);
-  } else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
+  } else if (id === "f-payee" && F && F.kind === "tx") payeeSuggest(ev.target.value);
+  else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
 });
 document.addEventListener("change", ev => {
   if (ev.target.id === "restore-file") restoreFile(ev.target);

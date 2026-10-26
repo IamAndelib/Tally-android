@@ -18,3 +18,7 @@ keystore.properties
 *.aab
 Tally backup*.json
 tally-backup*.json
+
+# leftovers of applying a patch: never part of the app
+*.orig
+*.rej

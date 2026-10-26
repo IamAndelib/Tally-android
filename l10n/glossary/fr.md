@@ -35,6 +35,7 @@ quotes are « … » with no-break spaces inside, and a no-break space (U+00A0) 
 | liabilities | Dettes |
 | net worth | patrimoine net |
 | category | catégorie |
+| payee (paid to / received from) | Payé à / Reçu de |
 | archive / archived | archiver / archivé (unarchive: réafficher) |
 | backup / auto backup / restore | sauvegarde / sauvegarde auto / restaurer |
 | evening nudge | rappel du soir |

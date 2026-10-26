@@ -453,6 +453,8 @@
     "whatFor": "属于哪一类？",
     "into": "存入账户",
     "paidFrom": "付款账户",
+    "paidTo": "收款方",
+    "receivedFrom": "付款方",
     "notePh": "备注（选填）",
     "editIn": "编辑收入",
     "editOut": "编辑支出",
@@ -542,7 +544,8 @@
     "addFirst": "添加第一个账户"
   },
   "category": {
-    "example": "如：咖啡",
+    "exampleOut": "如：宠物、健身",
+    "exampleIn": "如：兼职、退款",
     "add": "添加分类",
     "bringBack": "恢复",
     "edit": "编辑分类",

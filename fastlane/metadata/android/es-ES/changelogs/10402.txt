@@ -1,2 +1,3 @@
 - Tally ahora habla español, portugués de Brasil, francés, alemán, ruso, chino simplificado, indonesio y turco, según el idioma de tu teléfono. En Android 13 y versiones posteriores también puedes elegir uno solo para Tally.
 - Los números, las fechas y el dinero siguen el formato de tu teléfono.
+- Un campo «Pagado a» / «Recibido de», también en la exportación CSV. Añade una categoría o una cuenta desde el propio movimiento.

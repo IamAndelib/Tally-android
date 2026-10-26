@@ -31,6 +31,7 @@ function exportCsv() {
       "note",
       "to_currency",
       "person",
+      "payee", // last, so files read by column position keep their columns
     ].join(","),
   ];
   [...S.txns]
@@ -58,6 +59,7 @@ function exportCsv() {
           ),
           to ? to.currency : "",
           q(l ? l.person : ""),
+          q(t.payee || ""),
         ].join(",")
       );
     });
