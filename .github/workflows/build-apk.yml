@@ -23,7 +23,8 @@ permissions:
 jobs:
   check:
     name: Lint and end-to-end tests
-    runs-on: ubuntu-latest
+    # Playwright 1.56 has no browser for ubuntu-latest's newer Ubuntu: stay on the one it supports
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: tests
