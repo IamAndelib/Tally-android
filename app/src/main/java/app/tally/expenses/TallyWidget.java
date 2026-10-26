@@ -128,6 +128,10 @@ public class TallyWidget extends AppWidgetProvider {
         } catch (JSONException ignored) { }
         v.setTextViewText(R.id.w_balance, balance);
         v.setTextViewText(R.id.w_spent, spent);
+        // the labels in the app's language: the layout's own would follow the home screen's (no per-app language)
+        v.setTextViewText(R.id.w_title, ctx.getString(R.string.w_label));
+        v.setTextViewText(R.id.w_spent_label, ctx.getString(R.string.w_spent));
+        v.setContentDescription(R.id.w_add, ctx.getString(R.string.w_add));
 
         // through OpenActivity (like the + goes through QuickAddActivity): the home screen starts widget taps with a
         // plain-colour splash, so the app itself is started one step later, from our own activity, and gets its logo

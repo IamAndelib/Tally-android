@@ -1096,7 +1096,7 @@ function autoBackupHtml() {
       : lost
         ? TH("backup.lost")
         : bs.error
-          ? esc(bs.error)
+          ? esc(nativeErr(bs.error))
           : bs.last
             ? TH("backup.last", { when: backupWhen(bs.last) })
             : TH("backup.first", { time: timeLabel(b.time) });

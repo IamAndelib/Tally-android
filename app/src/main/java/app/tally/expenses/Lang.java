@@ -2,6 +2,7 @@ package app.tally.expenses;
 
 import android.app.LocaleManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.LocaleList;
@@ -36,5 +37,20 @@ final class Lang {
         }
         LocaleList phone = Resources.getSystem().getConfiguration().getLocales();
         return phone.isEmpty() ? Locale.getDefault() : phone.get(0);
+    }
+
+    /**
+     * After the phone's or the app's language changed (BootReceiver's LOCALE_CHANGED; MainActivity.onCreate, as
+     * Android sends no broadcast for the app's own language): the notification channels get their new names, the
+     * notices on screen and the widget are written again. Nothing happens while the language stays the same.
+     */
+    static void syncIfChanged(Context ctx) {
+        String now = ui(ctx) + "|" + fmt(ctx).toLanguageTag();
+        SharedPreferences p = ctx.getSharedPreferences("tally_lang", Context.MODE_PRIVATE);
+        if (now.equals(p.getString("was", null))) return;
+        p.edit().putString("was", now).apply();
+        ReminderReceiver.channels(ctx);
+        ReminderReceiver.refreshShown(ctx);
+        TallyWidget.refresh(ctx);
     }
 }

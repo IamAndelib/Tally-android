@@ -143,7 +143,7 @@ function pickRestoreFile() {
 }
 /* window.tallyRestore: the picked file's text, or why it couldn't be read; both null = cancelled */
 function onRestorePicked(text, err) {
-  if (err) snack(err);
+  if (err) snack(nativeErr(err));
   else if (text != null) restoreText(text);
 }
 /* whether a backup of this notebook exists: the daily auto backup has written its file, or a backup was saved here */

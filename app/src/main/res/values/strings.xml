@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Tally</string>
+    <string name="app_name" translatable="false">Tally</string>
     <string name="w_name">Tally today</string>
     <string name="w_desc">Today\'s balance and spending, with a quick +</string>
     <string name="w_label">Tally · Today</string>
@@ -13,4 +13,55 @@
     <string name="page_stopped">Tally\'s screen keeps stopping. Everything you saved is kept.</string>
     <string name="try_again">Try again</string>
     <string name="no_webview">Tally needs Android System WebView, which is missing or being updated right now. Please try again in a moment.</string>
+
+    <!-- notifications (ReminderReceiver) -->
+    <string name="ch_nudge">Evening nudge</string>
+    <string name="ch_check">Balance check</string>
+    <string name="ch_dues">Loan &amp; lending due days</string>
+    <string name="ch_backup">Backup problems</string>
+    <string name="n_nudge_title">Nothing written in Tally today</string>
+    <string name="n_nudge_text">Take a minute to note what you spent.</string>
+    <string name="n_check_title">Do your balances still match?</string>
+    <!-- %1$s: the person, %2$s: the amount due -->
+    <string name="n_owes_you">%1$s owes you %2$s</string>
+    <string name="n_you_owe">You owe %1$s %2$s</string>
+    <string name="n_payback_today">Payback day is today</string>
+    <!-- %1$s: a date, such as "Mon, Jun 15" -->
+    <string name="n_payback_was">Payback was due %1$s</string>
+    <string name="n_due_today">Due today</string>
+    <string name="n_due_was">Was due %1$s</string>
+    <!-- %1$s: the whole amount still owed -->
+    <string name="n_in_all">%1$s in all</string>
+    <string name="n_record">Record payment</string>
+    <string name="n_plus_day">+1 day</string>
+    <string name="n_plus_week">+1 week</string>
+    <string name="n_someone">Someone</string>
+    <!-- on a lock screen that hides what notifications say: only the kind -->
+    <string name="pub_check">Balance check</string>
+    <string name="pub_dues">A loan or lending is due</string>
+    <string name="pub_backup">Backup problem</string>
+    <string name="pub_nudge">Nothing written today</string>
+
+    <!-- auto backup (BackupReceiver) -->
+    <string name="bk_failed">Tally couldn\'t back up</string>
+    <string name="bk_tap_folder">Tap to choose the folder again.</string>
+    <string name="bk_tap_settings">Tap to open Settings.</string>
+    <string name="bk_err_no_folder">No folder is chosen.</string>
+    <string name="bk_err_not_ready">Tally\'s copy of your data isn\'t ready yet. Try again in a moment.</string>
+    <string name="bk_err_nothing">There\'s nothing to back up yet.</string>
+    <string name="bk_err_unwritable">The folder can\'t be written to.</string>
+    <string name="bk_err_write_failed">The backup couldn\'t be written.</string>
+    <!-- %1$s: the file name, "Tally backup (new).json" -->
+    <string name="bk_err_saved_temp">The backup was saved as \"%1$s\".</string>
+    <string name="bk_err_no_access">Tally can\'t open the backup folder any more.</string>
+    <string name="bk_err_folder_gone">The backup folder can\'t be found.</string>
+    <!-- %1$s: the file name, "Tally backup.json" -->
+    <string name="bk_err_no_file">There\'s no \"%1$s\" in the backup folder.</string>
+    <string name="bk_err_read_failed">The backup file can\'t be read.</string>
+    <!-- where the backup folder is, in Settings -->
+    <string name="bk_folder_phone">Phone storage</string>
+    <string name="bk_folder_sd">SD card</string>
+    <!-- %1$s: the folder's path on the card, such as "Backups" -->
+    <string name="bk_folder_sd_path">SD card/%1$s</string>
+    <string name="bk_folder_other">Chosen folder</string>
 </resources>

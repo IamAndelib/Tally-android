@@ -222,6 +222,7 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "Android");
         ReminderReceiver.channels(this); // listed in Android's settings from the start, one per kind of reminder
+        Lang.syncIfChanged(this); // the app's own language (Android 13+) changed: notices and widget follow
 
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
@@ -547,7 +548,7 @@ public class MainActivity extends Activity {
                 getContentResolver().takePersistableUriPermission(tree,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (SecurityException e) {
-                folderPicked("Tally can't keep access to that folder. Pick another one.");
+                folderPicked("keep_access");
                 return;
             }
             // remembered and marked not backed up yet: the first backup comes at the set time (Back up now: at once)
@@ -575,12 +576,12 @@ public class MainActivity extends Activity {
                 String head = text.startsWith("\uFEFF") ? text.substring(1).trim() : text.trim();
                 if (!head.startsWith("{") || head.indexOf('\u0000') >= 0) {
                     text = null;
-                    err = "That isn't a Tally backup file";
+                    err = "not_backup";
                 }
             } catch (IOException e) {
-                err = "too big".equals(e.getMessage()) ? "That file is too big to be a Tally backup" : "Couldn't read that file";
+                err = "too big".equals(e.getMessage()) ? "too_big" : "cant_read";
             } catch (Throwable e) { // SecurityException, or out of memory on a small phone
-                err = "Couldn't read that file";
+                err = "cant_read";
             }
             // quoted on this thread too: a backup of a few MB takes a moment
             final String arg = (text == null ? "null" : JSONObject.quote(text)) + "," + (err == null ? "null" : JSONObject.quote(err));
@@ -593,7 +594,7 @@ public class MainActivity extends Activity {
         deliver("window.tallyRestore&&window.tallyRestore(" + args + ")");
     }
 
-    /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem. */
+    /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem's code. */
     private void folderPicked(String err) {
         if (isDestroyed()) return;
         String arg = err == null ? "null" : JSONObject.quote(err);
@@ -800,7 +801,7 @@ public class MainActivity extends Activity {
                 try {
                     err = BackupReceiver.run(app, true);
                 } catch (Throwable e) { // out of memory on a small phone: still an answer
-                    err = "The backup couldn't be written.";
+                    err = BackupReceiver.E_WRITE;
                 }
                 deliver("window.tallyBackedUp&&window.tallyBackedUp(" + JSONObject.quote(err == null ? "" : err) + ","
                         + id + ")");
@@ -820,7 +821,7 @@ public class MainActivity extends Activity {
                 try {
                     json = BackupReceiver.readAuto(app);
                 } catch (Throwable e) {
-                    json = "{\"error\":\"The backup file can't be read.\"}";
+                    json = "{\"error\":\"" + BackupReceiver.E_READ + "\"}";
                 }
                 deliver("window.tallyAutoBackup&&window.tallyAutoBackup(" + json + "," + id + ")");
             }).start();
@@ -835,7 +836,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(i, PICK_RESTORE);
                 } catch (ActivityNotFoundException e) {
-                    restoreResult("null," + JSONObject.quote("No file picker on this phone"));
+                    restoreResult("null," + JSONObject.quote("no_picker"));
                 }
             });
         }
@@ -847,7 +848,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER);
                 } catch (ActivityNotFoundException e) {
-                    folderPicked("This phone has no folder picker, so auto backup can't be set up.");
+                    folderPicked("no_folder_picker");
                 }
             });
         }
@@ -872,7 +873,8 @@ public class MainActivity extends Activity {
         /**
          * Settings' Allow buttons. "notif": Android's own prompt while it can still show it, else Tally's notification
          * settings. "exact": Android's "Alarms & reminders" switch. "battery": Android's "Stop optimising battery
-         * usage?" popup. Anything else, or a phone without that screen: App info.
+         * usage?" popup. "lang": Android 13+'s language setting for Tally. Anything else, or a phone without that screen:
+         * App info.
          */
         @SuppressLint("BatteryLife") // on purpose: reminders and the backup must never be held back
         @JavascriptInterface
@@ -890,6 +892,8 @@ public class MainActivity extends Activity {
                     i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg);
                 } else if ("battery".equals(kind)) {
                     i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg);
+                } else if ("lang".equals(kind) && Build.VERSION.SDK_INT >= 33) {
+                    i = new Intent(Settings.ACTION_APP_LOCALE_SETTINGS, pkg);
                 } else {
                     i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg);
                 }
@@ -900,6 +904,12 @@ public class MainActivity extends Activity {
                     catch (ActivityNotFoundException ignored) { }
                 }
             });
+        }
+
+        /** True where Android has a language setting for each app (13+): Settings → Region then offers it. */
+        @JavascriptInterface
+        public boolean appLanguage() {
+            return Build.VERSION.SDK_INT >= 33;
         }
 
         /** The phone's text size (Settings → Display → Font size), 1 = default. A change restarts the activity. */

@@ -63,7 +63,7 @@ function syncReminders() {
             id: l.id,
             date: i.nextDue,
             kind: l.kind,
-            who: loanWho(l),
+            who: l.person || "", // none: the shell says "Someone" in the phone's language
             amount: money(i.dueAmt, i.cur),
             total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
           }));
@@ -242,6 +242,12 @@ function syncBackup() {
     Android.setBackup(JSON.stringify(Object.assign({ on: S.settings.backup.on }, hmObj(S.settings.backup.time))));
   } catch (e) {}
 }
+/* a problem the shell reports as a code (no_folder, not_backup, …: BackupReceiver.E_*, MainActivity), said in Tally's
+   language; a sentence an older Tally stored, or one the page made, is shown as it is */
+const nativeErr = x =>
+  /^[a-z_]+$/.test(x) && i18nGet("native.err." + x) != null
+    ? T("native.err." + x, { file: x === "saved_temp" ? "Tally backup (new).json" : "Tally backup.json" })
+    : String(x);
 /* {folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
 function backupStatus() {
   if (!canBackup()) return null;
@@ -283,7 +289,7 @@ function pickBackupFolder() {
 /* window.tallyFolder: null = cancelled (nothing changes), "" = folder saved, else what went wrong */
 function onFolderPicked(err) {
   if (err == null) return;
-  if (err) return snack(err);
+  if (err) return snack(nativeErr(err));
   folderCheck();
 }
 /* Before auto backup first writes into a folder: a Tally backup already there (after a reinstall, from another phone,
@@ -308,7 +314,7 @@ function folderCheck() {
       );
     askDialog(
       T("backup.badFile.title"),
-      (r.error || T("backup.badFile.cantRead")) + " " + T("backup.badFile.replaceQ"),
+      (r.error ? nativeErr(r.error) : T("backup.badFile.cantRead")) + " " + T("backup.badFile.replaceQ"),
       T("backup.found.replace"),
       backupOn,
       { cancel: T("common.notNow") }
@@ -358,7 +364,7 @@ function backupNow(then) {
 }
 function onBackedUp(err, id) {
   if (V.screen === "settings") render();
-  snack(err || T("backup.done"));
+  snack(err ? nativeErr(err) : T("backup.done"));
   shellAnswer(id, err || "");
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */

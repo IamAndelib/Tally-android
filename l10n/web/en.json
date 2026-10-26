@@ -712,5 +712,25 @@
     "title": "Delete all data?",
     "body": "Every account and entry on this phone. This can't be undone.",
     "done": "All data deleted"
+  },
+  "native": {
+    "err": {
+      "no_folder": "No folder is chosen.",
+      "not_ready": "Tally's copy of your data isn't ready yet. Try again in a moment.",
+      "nothing": "There's nothing to back up yet.",
+      "unwritable": "The folder can't be written to.",
+      "write_failed": "The backup couldn't be written.",
+      "saved_temp": "The backup was saved as \"{{file}}\".",
+      "no_access": "Tally can't open the backup folder any more.",
+      "folder_gone": "The backup folder can't be found.",
+      "no_file": "There's no \"{{file}}\" in the backup folder.",
+      "read_failed": "The backup file can't be read.",
+      "keep_access": "Tally can't keep access to that folder. Pick another one.",
+      "not_backup": "That isn't a Tally backup file",
+      "too_big": "That file is too big to be a Tally backup",
+      "cant_read": "Couldn't read that file",
+      "no_picker": "No file picker on this phone",
+      "no_folder_picker": "This phone has no folder picker, so auto backup can't be set up."
+    }
   }
 }

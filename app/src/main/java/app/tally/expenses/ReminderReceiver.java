@@ -61,15 +61,15 @@ public class ReminderReceiver extends BroadcastReceiver {
             JSONObject dl = config(ctx).optJSONObject("daily");
             if (dl != null && dl.optBoolean("on") && reached(dl, 21) && !t.equals(p.getString("lastEntry", ""))
                     && !t.equals(p.getString("shown:nudge", ""))) {
-                show(ctx, CH_NUDGE, DAILY_ID, "Nothing written in Tally today",
-                        "Take a minute to note what you spent.", openApp(ctx, null, DAILY_ID), null);
+                show(ctx, CH_NUDGE, DAILY_ID, ctx.getString(R.string.n_nudge_title),
+                        ctx.getString(R.string.n_nudge_text), openApp(ctx, null, DAILY_ID), null);
                 p.edit().putString("shown:nudge", t).apply();
             }
         } else if (A_CHECK.equals(a)) {
             JSONObject ck = config(ctx).optJSONObject("check");
             if (ck != null && ck.optBoolean("on") && reached(ck, 8) && !t.equals(ck.optString("checked"))
                     && !t.equals(p.getString("shown:check", ""))) {
-                show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
+                show(ctx, CH_CHECK, CHECK_ID, ctx.getString(R.string.n_check_title), ck.optString("text"),
                         openApp(ctx, "check", CHECK_ID), null);
                 p.edit().putString("shown:check", t).apply();
             }
@@ -234,18 +234,19 @@ public class ReminderReceiver extends BroadcastReceiver {
     private static void showDue(Context ctx, JSONObject d, boolean quiet) {
         String id = d.optString("id"), date = d.optString("date"), who = d.optString("who"), amount = d.optString("amount");
         String total = d.optString("total");
+        if (who.isEmpty()) who = ctx.getString(R.string.n_someone); // a loan without a name
         boolean lend = "lend".equals(d.optString("kind"));
         boolean dueToday = date.equals(today());
-        String title = lend ? who + " owes you " + amount : "You owe " + who + " " + amount;
+        String title = ctx.getString(lend ? R.string.n_owes_you : R.string.n_you_owe, who, amount);
         String text = (lend
-                ? (dueToday ? "Payback day is today" : "Payback was due " + pretty(ctx, date))
-                : (dueToday ? "Due today" : "Was due " + pretty(ctx, date)))
-                + (total.isEmpty() ? "" : " · " + total + " in all");
+                ? (dueToday ? ctx.getString(R.string.n_payback_today) : ctx.getString(R.string.n_payback_was, pretty(ctx, date)))
+                : (dueToday ? ctx.getString(R.string.n_due_today) : ctx.getString(R.string.n_due_was, pretty(ctx, date))))
+                + (total.isEmpty() ? "" : " · " + ctx.getString(R.string.n_in_all, total));
         int base = code(ctx, id);
         Notification.Action[] actions = {
-                action(ctx, "Record payment", openApp(ctx, "loan:" + id + ":pay", base + 1)),
-                action(ctx, "+1 day", extendIntent(ctx, id, 1, base + 2)),
-                action(ctx, "+1 week", extendIntent(ctx, id, 7, base + 3)),
+                action(ctx, ctx.getString(R.string.n_record), openApp(ctx, "loan:" + id + ":pay", base + 1)),
+                action(ctx, ctx.getString(R.string.n_plus_day), extendIntent(ctx, id, 1, base + 2)),
+                action(ctx, ctx.getString(R.string.n_plus_week), extendIntent(ctx, id, 7, base + 3)),
         };
         show(ctx, CH_DUES, base, title, text, openApp(ctx, "loan:" + id, base), actions, quiet);
         if (!quiet) prefs(ctx).edit().putString("shown:" + id, today()).apply();
@@ -271,7 +272,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         if (up.contains(CHECK_ID)) {
             JSONObject ck = cfg.optJSONObject("check");
             if (ck == null || !ck.optBoolean("on") || t.equals(ck.optString("checked"))) nm.cancel(CHECK_ID);
-            else show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
+            else show(ctx, CH_CHECK, CHECK_ID, ctx.getString(R.string.n_check_title), ck.optString("text"),
                     openApp(ctx, "check", CHECK_ID), null, true);
         }
         Set<Integer> due = new HashSet<>();
@@ -288,16 +289,25 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
     }
 
-    /** Creates (or renames) Tally's channels, so each kind can be silenced on its own in Android's settings. */
+    /** The notices on screen written again in the app's language (Lang.syncIfChanged), quietly. */
+    static void refreshShown(Context ctx) {
+        refreshShown(ctx, config(ctx));
+    }
+
+    /**
+     * Creates (or renames, in the app's language) Tally's channels, so each kind can be silenced on its own in
+     * Android's settings.
+     */
     static void channels(Context ctx) {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
+        int imp = NotificationManager.IMPORTANCE_DEFAULT;
         nm.createNotificationChannels(Arrays.asList(
-                new NotificationChannel(CH_NUDGE, "Evening nudge", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_CHECK, "Balance check", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_DUES, "Loan & lending due days", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_BACKUP, "Backup problems", NotificationManager.IMPORTANCE_DEFAULT)));
+                new NotificationChannel(CH_NUDGE, ctx.getString(R.string.ch_nudge), imp),
+                new NotificationChannel(CH_CHECK, ctx.getString(R.string.ch_check), imp),
+                new NotificationChannel(CH_DUES, ctx.getString(R.string.ch_dues), imp),
+                new NotificationChannel(CH_BACKUP, ctx.getString(R.string.ch_backup), imp)));
     }
 
     static void show(Context ctx, String channel, int nid, String title, String text, PendingIntent tap, Notification.Action[] actions) {
@@ -316,7 +326,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setAutoCancel(true).setContentIntent(tap).setOnlyAlertOnce(quiet)
                 // on a lock screen that hides sensitive content: which kind of reminder, never names or amounts
                 .setPublicVersion(builder(ctx, channel).setSmallIcon(R.drawable.ic_notif).setContentTitle("Tally")
-                        .setContentText(publicText(channel)).build());
+                        .setContentText(publicText(ctx, channel)).build());
         if (actions != null) for (Notification.Action a : actions) b.addAction(a);
         try { nm.notify(nid, b.build()); } catch (SecurityException ignored) { } // notifications not allowed
     }
@@ -326,12 +336,12 @@ public class ReminderReceiver extends BroadcastReceiver {
         return Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(ctx, channel) : new Notification.Builder(ctx);
     }
 
-    private static String publicText(String channel) {
+    private static String publicText(Context ctx, String channel) {
         switch (channel) {
-            case CH_CHECK: return "Balance check";
-            case CH_DUES: return "A loan or lending is due";
-            case CH_BACKUP: return "Backup problem";
-            default: return "Nothing written today";
+            case CH_CHECK: return ctx.getString(R.string.pub_check);
+            case CH_DUES: return ctx.getString(R.string.pub_dues);
+            case CH_BACKUP: return ctx.getString(R.string.pub_backup);
+            default: return ctx.getString(R.string.pub_nudge);
         }
     }
 

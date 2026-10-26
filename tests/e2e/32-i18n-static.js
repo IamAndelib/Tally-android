@@ -107,7 +107,8 @@ const unknown = [...new Set(asked.filter(k => !(k in en) && !enBase.has(k)))];
 ok(!unknown.length, "every text the code asks for is in English" + (unknown.length ? ": " + unknown : ""));
 // keys built from a prefix ("cat." + id) aren't seen above; the rest should all be used
 const PREFIXES = [...new Set([...src.matchAll(/\bTH?\(\s*"([\w.]+\.)"\s*\+/g)].map(m => m[1]))];
-const unused = [...enBase].filter(k => !asked.includes(k) && !PREFIXES.some(p => k.startsWith(p)));
+const quoted = new Set([...src.matchAll(/"([\w.]+)"/g)].map(m => m[1])); // T(a ? "x" : "y") too
+const unused = [...enBase].filter(k => !quoted.has(k) && !PREFIXES.some(p => k.startsWith(p)));
 if (unused.length) console.log("note: texts no code asks for by name: " + unused.join(", "));
 
 // ---- 3. the generated catalogue scripts match the catalogues
@@ -202,9 +203,24 @@ const allS = new Set(
     ...read(RES + "values/lang.xml").matchAll(/name="(\w+)"/g),
   ].map(m => m[1])
 );
-const usedS = [...new Set([...java.matchAll(/R\.string\.(\w+)/g)].map(m => m[1]))];
+const usedS = [...new Set([...java.matchAll(/R\.string\.(\w*[a-z0-9])\b/g)].map(m => m[1]))];
 const noS = usedS.filter(k => !allS.has(k));
 ok(!noS.length, "every R.string the Java code uses exists" + (noS.length ? ": " + noS : ""));
+
+// ---- 6. every problem code the shell can send has its text (bridge.js nativeErr)
+const codes2 = new Set([
+  ...[...java.matchAll(/\bE_[A-Z_]+ = "([a-z_]+)"/g)].map(m => m[1]),
+  ...[
+    ...read("app/src/main/java/app/tally/expenses/MainActivity.java").matchAll(
+      /(?:folderPicked\(|err = |quote\(|\? |: )"([a-z]+(?:_[a-z]+)+)"/g
+    ),
+  ].map(m => m[1]),
+]);
+const noErr = [...codes2].filter(c => !("native.err." + c in en));
+ok(
+  codes2.size >= 10 && !noErr.length,
+  "every problem code from the shell has a text (" + codes2.size + ")" + (noErr.length ? ": " + noErr : "")
+);
 
 console.log(fails ? fails + " FAILED" : "ALL PASSED");
 process.exitCode = fails ? 1 : 0;
