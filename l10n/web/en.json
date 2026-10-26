@@ -29,7 +29,10 @@
     "pickAccount": "Pick an account",
     "pickDate": "Pick a date",
     "delete": "Delete",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "back": "Back",
+    "previous": "Previous",
+    "next": "Next"
   },
   "day": {
     "today": "Today",
@@ -77,7 +80,8 @@
     "belowZeroQ": "Only credit cards usually go below zero. Save {{name}} at {{amount}}?",
     "deleteQ": "Delete this account?",
     "deleteBody": "It has no entries, so nothing else changes.",
-    "deleted": "Account deleted"
+    "deleted": "Account deleted",
+    "archivedSt": "Archived"
   },
   "asset": {
     "fallbackName": "Asset",
@@ -416,7 +420,29 @@
     "fullHistory": "Open full history"
   },
   "home": {
-    "nothingYet": "Nothing written down yet."
+    "nothingYet": "Nothing written down yet.",
+    "allArchived": "Every account is archived",
+    "allArchivedHint": "Bring one back from Assets, or add a new one.",
+    "showArchived": "Show archived accounts",
+    "addAccount": "Add an account",
+    "accounts": "Accounts",
+    "backToday": "Back to today",
+    "balance": "Balance",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "addOut": "Add spending",
+    "transferLabel": "Transfer between accounts",
+    "transfer": "Transfer",
+    "addIn": "Add money received",
+    "loan": "Loan",
+    "lend": "Lend",
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "checkQ": "Do these still match what you have?",
+    "checkYesterday": "Yesterday you spent {{amount}}.",
+    "fix": "Fix",
+    "allMatch": "All match"
   },
   "fix": {
     "title": "Balance fix",
@@ -424,10 +450,16 @@
     "delete": "Delete this fix"
   },
   "settings": {
-    "mainCur": "Main currency"
+    "mainCur": "Main currency",
+    "title": "Settings"
   },
   "welcome": {
-    "yourCur": "Your currency"
+    "yourCur": "Your currency",
+    "title": "Start your notebook",
+    "body": "Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.",
+    "notChosen": "not chosen yet",
+    "chooseCur": "Choose your currency",
+    "addFirst": "Add first account"
   },
   "category": {
     "example": "e.g. Coffee",
@@ -478,6 +510,63 @@
       "d": "Open this day on Home",
       "w": "Open this week on Home",
       "m": "Open this month on Home"
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "assets": "Assets",
+    "liabs": "Liabilities"
+  },
+  "assets": {
+    "dragTip": "Tip: hold a row and drag it up to the empty slot to bring it back.",
+    "netWorth": "Net worth",
+    "netWorthHint": "What you have and are owed, minus what you owe",
+    "noAccounts": "No accounts yet",
+    "dropShow": "Drop here to show it again",
+    "showArchived": "Show archived ({{count}})",
+    "hideArchived": "Hide archived ({{count}})",
+    "dropArchive": "Drop here to archive",
+    "owedToYou": "Owed to you",
+    "owedHint": "Money you lend shows here until it comes back.",
+    "lendBtn": "Lend money",
+    "other": "Other assets",
+    "otherHint": "Things you own that aren’t accounts, like gold or a laptop."
+  },
+  "loans": {
+    "dropActive": "Drop here to make it active again",
+    "dropCleared": "Drop here to mark it cleared",
+    "showCleared": "Show cleared ({{count}})",
+    "hideCleared": "Hide cleared ({{count}})"
+  },
+  "liabs": {
+    "owe": "You owe",
+    "loans": "Loans",
+    "loansHint": "Money you borrow shows here until it’s paid back.",
+    "borrowBtn": "Record a loan",
+    "cards": "Credit cards"
+  },
+  "tx": {
+    "lentTo": "Lent to {{who}}",
+    "borrowedFrom": "Borrowed from {{who}}",
+    "theyPaidBack": "{{who}} paid back",
+    "youPaidBack": "Paid back {{who}}",
+    "lending": "Lending",
+    "loan": "Loan",
+    "feeGotBack": "got back from {{who}}",
+    "feePaidBack": "paid back {{who}}"
+  },
+  "history": {
+    "stopSel": "Stop selecting",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "selAll": "Select all",
+    "delSel": "Delete selected",
+    "select": "Select entries",
+    "all": "All",
+    "none": {
+      "day": "Nothing written down that day.",
+      "month": "Nothing written down that month.",
+      "range": "Nothing written down in those days."
     }
   }
 }

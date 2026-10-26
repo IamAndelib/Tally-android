@@ -48,11 +48,11 @@ const i18nGet = k => {
 };
 let PLURALS = null,
   COUNT_NF = null;
-/* the text for key, with each {{name}} filled in from vars; with a numeric vars.count, the plural form the language
-   needs (key_one, key_few, key_other, …). A missing key shows as itself and is reported. */
+/* the text for key, with each {{name}} filled in from vars; with a numeric vars.count and plural forms, the one the
+   language needs (key_one, key_few, key_other, …). A missing key shows as itself and is reported. */
 function i18nText(key, vars, html) {
   let k = key;
-  if (vars && typeof vars.count === "number") {
+  if (vars && typeof vars.count === "number" && i18nGet(key + "_other") != null) {
     PLURALS = PLURALS || new Intl.PluralRules(LOC.ui);
     k = key + "_" + PLURALS.select(vars.count);
     if (i18nGet(k) == null) k = key + "_other";

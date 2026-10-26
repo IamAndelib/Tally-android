@@ -69,12 +69,12 @@ function drawScreen() {
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
       [
-        ["home", "Home", "home"],
-        ["assets", "Assets", "wallet"],
-        ["liabs", "Liabilities", "card"],
+        ["home", "home"],
+        ["assets", "wallet"],
+        ["liabs", "card"],
       ]
         .map(
-          ([k, l, i]) =>
+          ([k, i]) =>
             '<button data-act="tab" data-v="' +
             k +
             '"' +
@@ -82,7 +82,7 @@ function drawScreen() {
             '><span class="ind">' +
             (FLIP === k ? ic(i).replace('class="ic"', 'class="ic flip"') : ic(i)) +
             "</span>" +
-            l +
+            TH("nav." + k) +
             "</button>"
         )
         .join("") +
@@ -92,7 +92,9 @@ function drawScreen() {
 }
 function subBar(title) {
   return (
-    '<header class="appbar"><button class="icon" data-act="home" aria-label="Back">' +
+    '<header class="appbar"><button class="icon" data-act="home" aria-label="' +
+    TH("common.back") +
+    '">' +
     ic("back") +
     "</button><h1>" +
     esc(title) +
@@ -107,32 +109,48 @@ function homeView() {
       '<header class="appbar"><h1>Tally</h1>' +
       topIcons() +
       "</header>" +
-      '<div class="welcome"><div class="big">🗄️</div><h2>Every account is archived</h2><p>Bring one back from ' +
-      'Assets, or add a new one.</p><button class="btn tonal" data-act="show-arch">Show archived accounts</button>' +
+      '<div class="welcome"><div class="big">🗄️</div><h2>' +
+      TH("home.allArchived") +
+      "</h2><p>" +
+      TH("home.allArchivedHint") +
+      '</p><button class="btn tonal" data-act="show-arch">' +
+      TH("home.showArchived") +
+      "</button>" +
       '<div class="gap"></div><button class="btn" data-act="acc-form">' +
       ic("add") +
-      "Add an account</button></div>"
+      TH("home.addAccount") +
+      "</button></div>"
     );
   if (!act.length) {
     return (
       '<header class="appbar"><h1>Tally</h1>' +
       topIcons() +
       "</header>" +
-      '<div class="welcome"><div class="big">📒</div><h2>Start your notebook</h2><p>Choose your currency, then add the places your money lives — bank, mobile wallet, cash — with what each has right now.</p><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
-      esc("Currency: " + (S.settings.cur ? curLabel(S.settings.cur) : "not chosen yet")) +
+      '<div class="welcome"><div class="big">📒</div><h2>' +
+      TH("welcome.title") +
+      "</h2><p>" +
+      TH("welcome.body") +
+      '</p><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
+      TH("common.labelValue", {
+        label: T("common.currency"),
+        value: S.settings.cur ? curLabel(S.settings.cur) : T("welcome.notChosen"),
+      }) +
       '"><span>' +
-      esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose your currency") +
+      esc(S.settings.cur ? curLabel(S.settings.cur) : T("welcome.chooseCur")) +
       "</span>" +
       ic("down") +
       '</button><button class="btn" data-act="acc-form">' +
       ic("add") +
-      "Add first account</button></div>"
+      TH("welcome.addFirst") +
+      "</button></div>"
     );
   }
   const b = balances(),
     cur = viewCur();
   let h =
-    '<header class="appbar"><div class="pnav"><button class="icon" data-act="prev" aria-label="Previous">' +
+    '<header class="appbar"><div class="pnav"><button class="icon" data-act="prev" aria-label="' +
+    TH("common.previous") +
+    '">' +
     ic("left") +
     "</button>" +
     '<button class="plabel' +
@@ -142,7 +160,9 @@ function homeView() {
     "</span>" +
     ic("down") +
     "</button>" +
-    '<button class="icon" data-act="next" aria-label="Next"' +
+    '<button class="icon" data-act="next" aria-label="' +
+    TH("common.next") +
+    '"' +
     (canNext() ? "" : " disabled") +
     ">" +
     ic("right") +
@@ -155,11 +175,14 @@ function homeView() {
   if (checkDue()) side = checkCard(b, cur);
   else if (wide)
     side =
-      '<div class="sec">Accounts</div><div class="list">' +
+      '<div class="sec">' +
+      TH("home.accounts") +
+      '</div><div class="list">' +
       act.map(a => accRow(a, b)).join("") +
       '</div><button class="btn text" data-act="acc-form" style="margin-top:4px">' +
       ic("add") +
-      "Add account</button>";
+      TH("account.add") +
+      "</button>";
   else
     side =
       '<div class="strip">' +
@@ -177,7 +200,9 @@ function homeView() {
             "</span></button>"
         )
         .join("") +
-      '<button class="acc add" data-act="acc-form" aria-label="Add account">' +
+      '<button class="acc add" data-act="acc-form" aria-label="' +
+      TH("account.add") +
+      '">' +
       ic("add") +
       "</button></div>";
   /* one column: the balances (or the balance card) above the ring; two panes: beside it, with the period's entries */
@@ -188,7 +213,7 @@ function homeView() {
       '<div class="sec">' +
       esc(periodLabel()) +
       "</div>" +
-      (list.length ? dayGroups(list) : '<div class="empty">Nothing written down yet.</div>');
+      (list.length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>");
   }
   const top = h;
   h = "";
@@ -211,33 +236,47 @@ function homeView() {
   const n = periodTxns().length;
   if (!(V.period === "day" && V.anchor === today()))
     h +=
-      '<div class="todayrow"><button class="todaychip" data-act="go-today" aria-label="Back to today">' +
+      '<div class="todayrow"><button class="todaychip" data-act="go-today" aria-label="' +
+      TH("home.backToday") +
+      '">' +
       ic("reset") +
-      "Today</button></div>";
+      TH("day.today") +
+      "</button></div>";
   h +=
     '<button class="balbar" data-act="entries">' +
     ic("list") +
-    '<span class="l">Balance' +
-    (n ? " · " + n + " " + (n === 1 ? "entry" : "entries") : "") +
+    '<span class="l">' +
+    TH("home.balance") +
+    (n ? " · " + TH("home.entries", { count: n }) : "") +
     "</span><b>" +
     esc(money(total, cur)) +
     "</b></button>";
   h +=
-    '<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="Add spending">' +
+    '<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="' +
+    TH("home.addOut") +
+    '">' +
     ic("remove") +
     "</button>" +
-    '<button class="fab xfer" data-act="tr-new" aria-label="Transfer between accounts">' +
+    '<button class="fab xfer" data-act="tr-new" aria-label="' +
+    TH("home.transferLabel") +
+    '">' +
     ic("swap") +
-    "<span>Transfer</span></button>" +
-    '<button class="fab plus" data-act="add-in" aria-label="Add money received">' +
+    "<span>" +
+    TH("home.transfer") +
+    "</span></button>" +
+    '<button class="fab plus" data-act="add-in" aria-label="' +
+    TH("home.addIn") +
+    '">' +
     ic("add") +
     "</button></div>";
   h +=
     '<div class="loanbtns"><button class="fbtn loan" data-act="loan-new" data-v="borrow">' +
     emblem(LOAN_EMB.borrow) +
-    'Loan</button><button class="fbtn lend" data-act="loan-new" data-v="lend">' +
+    TH("home.loan") +
+    '</button><button class="fbtn lend" data-act="loan-new" data-v="lend">' +
     emblem(LOAN_EMB.lend) +
-    "Lend</button></div>";
+    TH("home.lend") +
+    "</button></div>";
   /* one column: ring, then the buttons; tablet: ring and buttons | the rest; sideways phone: the ring, the full height
      of the screen | the app bar, buttons and the rest, the ring staying in view while the right side scrolls */
   if (!wide) return top + ring + h;
@@ -257,14 +296,15 @@ function checkDue() {
 }
 function checkCard(b, cur) {
   const hr = new Date().getHours();
-  const hello = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+  const hello = T(hr < 12 ? "home.morning" : hr < 18 ? "home.afternoon" : "home.evening");
   const y = addDays(today(), -1);
   const ySpent = spentOn(y, cur);
   return (
     '<section class="check"><h2>' +
-    hello +
-    "</h2><p>Do these still match what you have?" +
-    (ySpent ? " Yesterday you spent " + esc(money(ySpent, cur)) + "." : "") +
+    esc(hello) +
+    "</h2><p>" +
+    TH("home.checkQ") +
+    (ySpent ? " " + TH("home.checkYesterday", { amount: money(ySpent, cur) }) : "") +
     "</p>" +
     activeAccounts()
       .map(
@@ -277,19 +317,26 @@ function checkCard(b, cur) {
           esc(a.name) +
           '</span></span><span class="ckv"><b>' +
           esc(money(b[a.id], a.currency)) +
-          '</b><span class="fx">Fix</span></span></button>'
+          '</b><span class="fx">' +
+          TH("home.fix") +
+          "</span></span></button>"
       )
       .join("") +
     '<button class="btn" data-act="check-ok">' +
     ic("check") +
-    "All match</button></section>"
+    TH("home.allMatch") +
+    "</button></section>"
   );
 }
 /* History + Settings, always one tap away in the top bar */
 const topIcons = () =>
-  '<button class="icon" data-act="go" data-v="history" aria-label="History">' +
+  '<button class="icon" data-act="go" data-v="history" aria-label="' +
+  TH("common.history") +
+  '">' +
   ic("history") +
-  '</button><button class="icon" data-act="go" data-v="settings" aria-label="Settings">' +
+  '</button><button class="icon" data-act="go" data-v="settings" aria-label="' +
+  TH("settings.title") +
+  '">' +
   ic("settings") +
   "</button>";
 function tabBar(title) {
@@ -356,7 +403,7 @@ function accRow(a, b, drag) {
     esc(typeName(a.type) + " · " + a.currency) +
     '</div></span><span class="a">' +
     esc(money(b[a.id], a.currency)) +
-    (a.archived ? '<small><span class="st">Archived</span></small>' : "") +
+    (a.archived ? '<small><span class="st">' + TH("account.archivedSt") + "</span></small>" : "") +
     "</span></button>"
   );
 }
@@ -365,41 +412,46 @@ const dropBox = (z, label, icon) =>
   '<div class="dropbox" data-zone="' + z + '">' + (icon ? ic(icon) : "") + esc(label) + "</div>";
 const zoneList = (z, rows) => '<div class="list" data-src="' + z + '">' + rows + "</div>";
 const dragTip = () =>
-  S.settings.dragTip
-    ? ""
-    : '<p class="hint" style="margin:8px 4px 0">Tip: hold a row and drag it up to the empty slot to bring it back.</p>';
+  S.settings.dragTip ? "" : '<p class="hint" style="margin:8px 4px 0">' + TH("assets.dragTip") + "</p>";
 function assetsView() {
   const b = balances();
   let h = "";
   h +=
-    '<div class="sumcard"><div class="t">Net worth</div>' +
+    '<div class="sumcard"><div class="t">' +
+    TH("assets.netWorth") +
+    "</div>" +
     curLines(netWorth()) +
-    '<div class="t small">What you have and are owed, minus what you owe</div></div>';
+    '<div class="t small">' +
+    TH("assets.netWorthHint") +
+    "</div></div>";
   const accs = activeAccounts().filter(a => a.type !== "card"),
     arch = S.accounts.filter(a => a.archived);
   h +=
-    '<div class="sec">Accounts</div>' +
+    '<div class="sec">' +
+    TH("home.accounts") +
+    "</div>" +
     (accs.length
       ? zoneList("acc", accs.map(a => accRow(a, b, true)).join(""))
-      : '<div class="empty">No accounts yet</div>') +
-    dropBox("acc", "Drop here to show it again", "reset") +
+      : '<div class="empty">' + TH("assets.noAccounts") + "</div>") +
+    dropBox("acc", T("assets.dropShow"), "reset") +
     '<button class="btn text" data-act="acc-form" style="margin-top:4px">' +
     ic("add") +
-    "Add account</button>";
+    TH("account.add") +
+    "</button>";
   if (arch.length)
     h +=
       '<button class="btn text" data-act="toggle-arch">' +
-      (V.showArchived ? "Hide" : "Show") +
-      " archived (" +
-      arch.length +
-      ")</button>";
+      TH(V.showArchived ? "assets.hideArchived" : "assets.showArchived", { count: arch.length }) +
+      "</button>";
   h +=
-    dropBox("arch", "Drop here to archive") +
+    dropBox("arch", T("assets.dropArchive")) +
     (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
   const left = h; // two panes: net worth and accounts | what you're owed and other assets
-  h = loanSection("lend", "Owed to you", "Money you lend shows here until it comes back.", "Lend money");
+  h = loanSection("lend", T("assets.owedToYou"), T("assets.owedHint"), T("assets.lendBtn"));
   h +=
-    '<div class="sec">Other assets</div>' +
+    '<div class="sec">' +
+    TH("assets.other") +
+    "</div>" +
     (S.assets.length
       ? '<div class="list">' +
         S.assets
@@ -417,11 +469,12 @@ function assetsView() {
           )
           .join("") +
         "</div>"
-      : '<p class="hint" style="margin:0 4px">Things you own that aren’t accounts, like gold or a laptop.</p>') +
+      : '<p class="hint" style="margin:0 4px">' + TH("assets.otherHint") + "</p>") +
     '<button class="btn text" data-act="asset-edit" style="margin-top:4px">' +
     ic("add") +
-    "Add asset</button>";
-  return tabBar("Assets") + panes(left, h);
+    TH("asset.add") +
+    "</button>";
+  return tabBar(T("nav.assets")) + panes(left, h);
 }
 /* one kind of loan on Assets (lend) or Liabilities (borrow): the open ones (or a hint) and a button for a new one, then
    the cleared ones behind "Show cleared"; open and cleared are drop zones, to drag a loan between them */
@@ -431,26 +484,24 @@ function loanSection(kind, title, none, add) {
     done = mine.filter(l => !loanInfo(l).open);
   let h =
     '<div class="sec">' +
-    title +
+    esc(title) +
     "</div>" +
     (open.length
       ? zoneList(kind + "-open", open.map(l => loanRow(l)).join(""))
-      : '<p class="hint" style="margin:0 4px">' + none + "</p>") +
-    dropBox(kind + "-open", "Drop here to make it active again", "reset") +
+      : '<p class="hint" style="margin:0 4px">' + esc(none) + "</p>") +
+    dropBox(kind + "-open", T("loans.dropActive"), "reset") +
     '<button class="btn text" data-act="loan-new" data-v="' +
     kind +
     '" style="margin-top:4px">' +
     ic("add") +
-    add +
+    esc(add) +
     "</button>" +
-    dropBox(kind + "-done", "Drop here to mark it cleared", "check");
+    dropBox(kind + "-done", T("loans.dropCleared"), "check");
   if (done.length) {
     h +=
       '<button class="btn text" data-act="toggle-cleared">' +
-      (V.showCleared ? "Hide" : "Show") +
-      " cleared (" +
-      done.length +
-      ")</button>";
+      TH(V.showCleared ? "loans.hideCleared" : "loans.showCleared", { count: done.length }) +
+      "</button>";
     if (V.showCleared) h += zoneList(kind + "-done", done.map(l => loanRow(l)).join("")) + dragTip();
   }
   return h;
@@ -469,13 +520,17 @@ function liabsView() {
       if (b[a.id] < 0) add(a.currency, -b[a.id]);
     });
   });
-  h += '<div class="sumcard owe"><div class="t">You owe</div>' + curLines(owed) + "</div>";
-  h += loanSection("borrow", "Loans", "Money you borrow shows here until it’s paid back.", "Record a loan");
+  h += '<div class="sumcard owe"><div class="t">' + TH("liabs.owe") + "</div>" + curLines(owed) + "</div>";
+  h += loanSection("borrow", T("liabs.loans"), T("liabs.loansHint"), T("liabs.borrowBtn"));
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length
-    ? '<div class="sec">Credit cards</div><div class="list">' + cards.map(a => accRow(a, b)).join("") + "</div>"
+    ? '<div class="sec">' +
+      TH("liabs.cards") +
+      '</div><div class="list">' +
+      cards.map(a => accRow(a, b)).join("") +
+      "</div>"
     : "";
-  return tabBar("Liabilities") + panes(h, right);
+  return tabBar(T("nav.liabs")) + panes(h, right);
 }
 function txLine(t) {
   const a = acc(t.account),
@@ -489,7 +544,7 @@ function txLine(t) {
     const to = acc(t.to);
     em = { i: "swap_horiz", c: "#5f7389" };
     cls = "xfer";
-    d = esc(t.note || "Transfer");
+    d = esc(t.note || T("transfer.title"));
     s = bdi(a ? a.name : "?") + " → " + bdi(to ? to.name : "?");
     amt =
       esc(money(t.amount, cur)) +
@@ -498,8 +553,8 @@ function txLine(t) {
         : "");
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = esc(t.note || "Balance fix");
-    s = "Balance fix · " + bdi(a ? a.name : "?");
+    d = esc(t.note || T("fix.title"));
+    s = TH("fix.title") + " · " + bdi(a ? a.name : "?");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -507,12 +562,10 @@ function txLine(t) {
       lend = l && l.kind === "lend",
       who = l ? loanWho(l) : "?";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
-    d = t.principal
-      ? (lend ? "Lent to " : "Borrowed from ") + bdi(who)
-      : lend
-        ? bdi(who) + " paid back"
-        : "Paid back " + bdi(who);
-    s = (lend ? "Lending" : "Loan") + " · " + bdi(a ? a.name : "?") + (t.note ? " · " + bdi(t.note) : "");
+    d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
+      who: { html: bdi(who) },
+    });
+    s = TH(lend ? "tx.lending" : "tx.loan") + " · " + bdi(a ? a.name : "?") + (t.note ? " · " + bdi(t.note) : "");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -524,12 +577,15 @@ function txLine(t) {
     if (l) {
       const lend = l.kind === "lend";
       em = LOAN_EMB[lend ? "lend" : "borrow"];
-      d = esc(t.note || "Payment fee");
-      s = bdi(a ? a.name : "?") + " · " + (lend ? "got back from " : "paid back ") + bdi(loanWho(l));
+      d = esc(t.note || T("loan.feeNote"));
+      s =
+        bdi(a ? a.name : "?") +
+        " · " +
+        TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } });
     } else {
       const to = acc(host.to);
       em = { i: "swap_horiz", c: "#5f7389" };
-      d = esc(t.note || "Transfer fee");
+      d = esc(t.note || T("transfer.feeNote"));
       s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
     }
   } else {
@@ -595,7 +651,7 @@ const rbLine = (name, bal, arrow) =>
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
-  return '<span class="st ' + r.ls + '">' + (r.ls === "cleared" ? "Cleared" : "Partly paid") + "</span> ";
+  return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
 function dayGroups(list) {
   let h = "",
@@ -650,36 +706,54 @@ function historyView() {
   if (V.sel) {
     const n = V.sel.size;
     h =
-      '<header class="appbar"><button class="icon" data-act="sel-cancel" aria-label="Stop selecting">' +
+      '<header class="appbar"><button class="icon" data-act="sel-cancel" aria-label="' +
+      TH("history.stopSel") +
+      '">' +
       ic("close") +
       "</button><h1>" +
-      n +
-      " selected</h1>" +
-      '<button class="icon" data-act="sel-all" aria-label="Select all">' +
+      TH("history.selected", { count: n }) +
+      "</h1>" +
+      '<button class="icon" data-act="sel-all" aria-label="' +
+      TH("history.selAll") +
+      '">' +
       ic("selectall") +
       "</button>" +
-      '<button class="icon" data-act="sel-del" aria-label="Delete selected"' +
+      '<button class="icon" data-act="sel-del" aria-label="' +
+      TH("history.delSel") +
+      '"' +
       (n ? "" : " disabled") +
       ">" +
       ic("delete") +
       "</button></header>";
   } else
     h =
-      '<header class="appbar"><button class="icon" data-act="home" aria-label="Back">' +
+      '<header class="appbar"><button class="icon" data-act="home" aria-label="' +
+      TH("common.back") +
+      '">' +
       ic("back") +
-      "</button><h1>History</h1>" +
+      "</button><h1>" +
+      TH("common.history") +
+      "</h1>" +
       (list.length
-        ? '<button class="icon" data-act="sel-start" aria-label="Select entries">' + ic("checkbox") + "</button>"
+        ? '<button class="icon" data-act="sel-start" aria-label="' +
+          TH("history.select") +
+          '">' +
+          ic("checkbox") +
+          "</button>"
         : "") +
       "</header>";
   h +=
-    '<div class="month"><button class="icon" data-act="hmon" data-v="-1" aria-label="Previous">' +
+    '<div class="month"><button class="icon" data-act="hmon" data-v="-1" aria-label="' +
+    TH("common.previous") +
+    '">' +
     ic("left") +
     '</button><button class="plabel" data-act="period-open" data-v="hist" aria-haspopup="dialog"><span>' +
     esc(periodLabel(HP)) +
     "</span>" +
     ic("down") +
-    '</button><button class="icon" data-act="hmon" data-v="1" aria-label="Next"' +
+    '</button><button class="icon" data-act="hmon" data-v="1" aria-label="' +
+    TH("common.next") +
+    '"' +
     (canNext(HP) ? "" : " disabled") +
     ">" +
     ic("right") +
@@ -689,7 +763,9 @@ function historyView() {
     h +=
       '<div class="strip" style="margin-top:8px"><button class="chip" data-act="hacc" data-v="" aria-pressed="' +
       !V.hAcc +
-      '">All</button>' +
+      '">' +
+      TH("history.all") +
+      "</button>" +
       accs
         .map(
           a =>
@@ -703,13 +779,7 @@ function historyView() {
         )
         .join("") +
       "</div>";
-  if (!list.length)
-    return (
-      h +
-      '<div class="empty">Nothing written down ' +
-      (HP.period === "day" ? "that day" : HP.period === "month" ? "that month" : "in those days") +
-      ".</div>"
-    );
+  if (!list.length) return h + '<div class="empty">' + TH("history.none." + HP.period) + "</div>";
   return h + dayGroups(list);
 }
 function catGrid(kind) {
@@ -730,9 +800,13 @@ function catGrid(kind) {
     h +
     '<button class="cat tile-add" data-act="cat-new" data-v="' +
     kind +
-    '" aria-label="Add category"><span class="ci">' +
+    '" aria-label="' +
+    TH("category.add") +
+    '"><span class="ci">' +
     ic("add") +
-    '</span><span class="cn">Add</span></button></div>'
+    '</span><span class="cn">' +
+    TH("common.add") +
+    "</span></button></div>"
   );
 }
 /* the vibration-strength slider (Material 3 discrete slider): 5 stops, a bar handle that reaches both ends, the
