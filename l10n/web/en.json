@@ -32,7 +32,8 @@
     "saveChanges": "Save changes",
     "back": "Back",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "change": "Change"
   },
   "day": {
     "today": "Today",
@@ -115,7 +116,15 @@
     "done": "Transferred {{amount}} to {{account}}"
   },
   "backup": {
-    "save": "Save backup"
+    "save": "Save backup",
+    "when": "{{day}}, {{time}}",
+    "offHint": "Every day, to a folder you pick",
+    "lost": "Can't reach the folder: choose it again",
+    "last": "Last backup: {{when}}",
+    "first": "First backup at {{time}}",
+    "auto": "Auto backup",
+    "noFolder": "No folder",
+    "now": "Back up now"
   },
   "data": {
     "saveFailed": {
@@ -126,6 +135,11 @@
       "title": "Couldn't open your saved data",
       "kept": "A copy is kept on this phone. Save it as a file so it's safe?",
       "notKept": "There isn't room to keep a copy on this phone. Save it as a file now, or it's gone once you add anything."
+    },
+    "kept": {
+      "title": "Unreadable data kept",
+      "body": "Saved data Tally couldn’t open is kept on this phone. Save it as a file to keep it, or delete it.",
+      "delete": "Delete it"
     }
   },
   "overdraw": {
@@ -451,7 +465,41 @@
   },
   "settings": {
     "mainCur": "Main currency",
-    "title": "Settings"
+    "title": "Settings",
+    "theme": "Theme",
+    "themes": {
+      "system": "Phone",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "feel": "Feel",
+    "vibration": "Vibration on tap",
+    "vibrationHint": "Taps, drags and saves",
+    "strength": "Strength",
+    "light": "Light",
+    "strong": "Strong",
+    "strengthLabel": "Vibration strength",
+    "region": "Region",
+    "choose": "Choose",
+    "week": "First day of week",
+    "clock": "Time format",
+    "h24": "24-hour",
+    "h12": "12-hour",
+    "reminders": "Reminders",
+    "outCats": "Spending categories",
+    "outCatsHint": "Laid out exactly like your home screen. Tap to edit, hold and drag to move.",
+    "addOutCat": "Add spending category",
+    "inCats": "Money-in categories",
+    "removedCats": "Removed · tap to bring back",
+    "data": "Your data",
+    "dataAuto": "Everything stays on this phone, with a daily copy in your backup folder.",
+    "dataLocal": "Everything stays on this phone. Uninstalling deletes it, so keep a backup.",
+    "export": "Export entries (CSV)",
+    "wipe": "Delete all data",
+    "about": "About",
+    "version": "Version {{version}}",
+    "by": "By {{name}}",
+    "source": "Source on GitHub"
   },
   "welcome": {
     "yourCur": "Your currency",
@@ -568,5 +616,19 @@
       "month": "Nothing written down that month.",
       "range": "Nothing written down in those days."
     }
+  },
+  "remind": {
+    "nudge": "Evening nudge",
+    "nudgeHint": "If nothing was written that day",
+    "check": "Balance check",
+    "checkHint": "Do your balances still match?",
+    "dues": "Loan & lending due days",
+    "duesHint": "On the day, with +1 day / +1 week"
+  },
+  "restore": {
+    "btn": "Restore from backup"
+  },
+  "perms": {
+    "title": "Permissions"
   }
 }

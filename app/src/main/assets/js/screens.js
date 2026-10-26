@@ -820,7 +820,9 @@ function sliderHtml(n, off) {
     (off ? " off" : "") +
     '" id="f-hlevel" role="slider" tabindex="' +
     (off ? "-1" : "0") +
-    '" aria-label="Vibration strength" aria-valuemin="1" aria-valuemax="5" aria-valuenow="' +
+    '" aria-label="' +
+    TH("settings.strengthLabel") +
+    '" aria-valuemin="1" aria-valuemax="5" aria-valuenow="' +
     n +
     '"' +
     (off ? ' aria-disabled="true"' : "") +
@@ -850,30 +852,49 @@ function fitWeekSeg() {
     });
 }
 function settingsView() {
-  let h = subBar("Settings");
+  let h = subBar(T("settings.title"));
   const th = S.settings.theme || "system";
   h +=
-    '<div class="sec">Theme</div><div class="seg">' +
-    [
-      ["system", "Phone"],
-      ["light", "Light"],
-      ["dark", "Dark"],
-    ]
+    '<div class="sec">' +
+    TH("settings.theme") +
+    '</div><div class="seg">' +
+    ["system", "light", "dark"]
       .map(
-        ([k, l]) => '<button data-act="theme" data-v="' + k + '" aria-pressed="' + (th === k) + '">' + l + "</button>"
+        k =>
+          '<button data-act="theme" data-v="' +
+          k +
+          '" aria-pressed="' +
+          (th === k) +
+          '">' +
+          TH("settings.themes." + k) +
+          "</button>"
       )
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">Feel</div><div class="list"><div class="setrow"><span class="mid"><div>Vibration on tap</div><div class="s">Taps, drags and saves</div></span>' +
+    '<div class="sec">' +
+    TH("settings.feel") +
+    '</div><div class="list"><div class="setrow"><span class="mid"><div>' +
+    TH("settings.vibration") +
+    '</div><div class="s">' +
+    TH("settings.vibrationHint") +
+    "</div></span>" +
     '<button class="sw" role="switch" data-act="haptics" aria-checked="' +
     (S.settings.haptics !== false) +
-    '" aria-label="Vibration on tap"></button></div>' +
+    '" aria-label="' +
+    TH("settings.vibration") +
+    '"></button></div>' +
     '<div class="setrow hlevel' +
     (S.settings.haptics === false ? " off" : "") +
-    '"><span class="mid"><div>Strength</div>' +
+    '"><span class="mid"><div>' +
+    TH("settings.strength") +
+    "</div>" +
     sliderHtml(S.settings.hapticLevel || 3, S.settings.haptics === false) +
-    '<div class="s hends"><span>Light</span><span>Strong</span></div></span></div></div>';
+    '<div class="s hends"><span>' +
+    TH("settings.light") +
+    "</span><span>" +
+    TH("settings.strong") +
+    "</span></div></span></div></div>";
   const seg = (act, cur, opts) =>
     '<div class="seg">' +
     opts
@@ -884,29 +905,40 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">Region</div><div class="lbl set">Main currency</div><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
-    esc("Main currency: " + (S.settings.cur ? curLabel(S.settings.cur) : "not chosen yet")) +
+    '<div class="sec">' +
+    TH("settings.region") +
+    '</div><div class="lbl set">' +
+    TH("settings.mainCur") +
+    '</div><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
+    TH("common.labelValue", {
+      label: T("settings.mainCur"),
+      value: S.settings.cur ? curLabel(S.settings.cur) : T("welcome.notChosen"),
+    }) +
     '"><span>' +
-    esc(S.settings.cur ? curLabel(S.settings.cur) : "Choose") +
+    esc(S.settings.cur ? curLabel(S.settings.cur) : T("settings.choose")) +
     "</span>" +
     ic("down") +
-    '</button><div class="lbl set">First day of week</div>' +
+    '</button><div class="lbl set">' +
+    TH("settings.week") +
+    "</div>" +
     seg(
       "week",
       String(S.settings.week),
       [1, 0, 6].map(d => [String(d), weekdayName(d, "long")])
     ) +
-    '<div class="lbl set">Time format</div>' +
+    '<div class="lbl set">' +
+    TH("settings.clock") +
+    "</div>" +
     seg("clock", S.settings.clock, [
-      ["24", "24-hour"],
-      ["12", "12-hour"],
+      ["24", T("settings.h24")],
+      ["12", T("settings.h12")],
     ]);
   const r = S.settings.remind,
     remRow = (k, act, title, sub, on, time) =>
       '<div class="setrow"><span class="mid"><div>' +
-      title +
+      esc(title) +
       '</div><div class="s">' +
-      sub +
+      esc(sub) +
       '</div></span><button class="fieldbtn tbtn" data-act="pick-time" data-v="' +
       k +
       '"' +
@@ -920,27 +952,36 @@ function settingsView() {
       '" aria-checked="' +
       on +
       '" aria-label="' +
-      title +
+      esc(title) +
       '"></button></div>';
   h +=
-    '<div class="sec">Reminders</div>' +
+    '<div class="sec">' +
+    TH("settings.reminders") +
+    "</div>" +
     healthCard() +
     '<div class="list">' +
-    remRow("nudge", "rem-daily", "Evening nudge", "If nothing was written that day", r.daily, r.time) +
-    remRow("check", "rem-check", "Balance check", "Do your balances still match?", r.check, r.checkTime) +
-    remRow("due", "rem-dues", "Loan &amp; lending due days", "On the day, with +1 day / +1 week", r.dues, r.dueTime) +
+    remRow("nudge", "rem-daily", T("remind.nudge"), T("remind.nudgeHint"), r.daily, r.time) +
+    remRow("check", "rem-check", T("remind.check"), T("remind.checkHint"), r.check, r.checkTime) +
+    remRow("due", "rem-dues", T("remind.dues"), T("remind.duesHint"), r.dues, r.dueTime) +
     "</div>";
   h +=
-    '<div class="sec">Spending categories</div><p class="hint" style="margin:0 4px 8px">Laid out exactly like your home screen. Tap to edit, hold and drag to move.</p>' +
+    '<div class="sec">' +
+    TH("settings.outCats") +
+    '</div><p class="hint" style="margin:0 4px 8px">' +
+    TH("settings.outCatsHint") +
+    "</p>" +
     ringHTML(outCats(), { mode: "edit" }) +
     '<div class="gap"></div><button class="btn tonal" data-act="cat-new" data-v="out">' +
     ic("add") +
-    "Add spending category</button>";
-  h += '<div class="sec">Money-in categories</div>' + catGrid("in");
+    TH("settings.addOutCat") +
+    "</button>";
+  h += '<div class="sec">' + TH("settings.inCats") + "</div>" + catGrid("in");
   const hid = S.cats.filter(c => c.hidden);
   if (hid.length)
     h +=
-      '<p class="hint" style="margin:14px 4px 8px">Removed · tap to bring back</p><div class="chips">' +
+      '<p class="hint" style="margin:14px 4px 8px">' +
+      TH("settings.removedCats") +
+      '</p><div class="chips">' +
       hid
         .map(
           c =>
@@ -958,27 +999,42 @@ function settingsView() {
   /* with auto backup on, Back up now replaces Save backup */
   const autoOn = canBackup() && S.settings.backup.on;
   h +=
-    '<div class="sec">Your data</div><p class="muted small" style="margin:0 4px 12px">' +
-    (autoOn
-      ? "Everything stays on this phone, with a daily copy in your backup folder."
-      : "Everything stays on this phone. Uninstalling deletes it, so keep a backup.") +
+    '<div class="sec">' +
+    TH("settings.data") +
+    '</div><p class="muted small" style="margin:0 4px 12px">' +
+    TH(autoOn ? "settings.dataAuto" : "settings.dataLocal") +
     "</p>" +
     autoBackupHtml() +
     (keptKeys().length
-      ? '<div class="card"><h3>Unreadable data kept</h3><p class="muted small" style="margin:0">Saved data Tally ' +
-        "couldn’t open is kept on this phone. Save it as a file to keep it, or delete it.</p>" +
-        '<div class="gap"></div><div class="row"><button class="btn tonal" data-act="kept-save">Save file</button>' +
-        '<button class="btn tonal" data-act="kept-del">Delete it</button></div></div><div class="gap"></div>'
+      ? '<div class="card"><h3>' +
+        TH("data.kept.title") +
+        '</h3><p class="muted small" style="margin:0">' +
+        TH("data.kept.body") +
+        "</p>" +
+        '<div class="gap"></div><div class="row"><button class="btn tonal" data-act="kept-save">' +
+        TH("common.saveFile") +
+        "</button>" +
+        '<button class="btn tonal" data-act="kept-del">' +
+        TH("data.kept.delete") +
+        '</button></div></div><div class="gap"></div>'
       : "") +
-    (autoOn ? "" : '<button class="btn tonal" data-act="backup">Save backup</button><div class="gap"></div>') +
+    (autoOn
+      ? ""
+      : '<button class="btn tonal" data-act="backup">' + TH("backup.save") + '</button><div class="gap"></div>') +
     (canRestore()
-      ? '<button class="btn tonal" data-act="restore">Restore from backup</button>'
-      : '<label class="btn tonal" style="position:relative">Restore from backup<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label>') +
+      ? '<button class="btn tonal" data-act="restore">' + TH("restore.btn") + "</button>"
+      : '<label class="btn tonal" style="position:relative">' +
+        TH("restore.btn") +
+        '<input type="file" id="restore-file" accept=".json,application/json" class="vh"></label>') +
     '<div class="gap"></div>' +
-    '<button class="btn tonal" data-act="export">Export entries (CSV)</button><div class="gap"></div>' +
+    '<button class="btn tonal" data-act="export">' +
+    TH("settings.export") +
+    '</button><div class="gap"></div>' +
     '<button class="btn danger" data-act="wipe"' +
     (noData ? " disabled" : "") +
-    ">Delete all data</button>";
+    ">" +
+    TH("settings.wipe") +
+    "</button>";
   const ver =
     window.Android && Android.getVersion
       ? (() => {
@@ -990,10 +1046,15 @@ function settingsView() {
         })()
       : "";
   h +=
-    '<div class="sec center">About</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
-    (ver ? " · Version " + esc(ver) : "") +
-    '<br>By <a href="https://github.com/IamAndelib">IamAndelib</a>' +
-    '<br><a href="https://github.com/IamAndelib/Tally-android">Source on GitHub</a></p>';
+    '<div class="sec center">' +
+    TH("settings.about") +
+    '</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
+    (ver ? " · " + TH("settings.version", { version: ver }) : "") +
+    "<br>" +
+    TH("settings.by", { name: { html: '<a href="https://github.com/IamAndelib">IamAndelib</a>' } }) +
+    '<br><a href="https://github.com/IamAndelib/Tally-android">' +
+    TH("settings.source") +
+    "</a></p>";
   return h;
 }
 /* Settings → Reminders: the permissions Android was denied, one row each with Allow (only while a reminder or the
@@ -1011,7 +1072,9 @@ function healthCard() {
         ICONS.warning[0] +
         '"/></svg>'
       : "") +
-    "<b>Permissions</b></div>" +
+    "<b>" +
+    TH("perms.title") +
+    "</b></div>" +
     rows.map(p => permRow(p, false)).join("") +
     "</section>"
   );
@@ -1020,7 +1083,7 @@ function healthCard() {
 function backupWhen(ms) {
   const d = new Date(ms),
     day = iso(d);
-  return dayName(day) + ", " + timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes()));
+  return T("backup.when", { day: dayName(day), time: timeLabel(pad(d.getHours()) + ":" + pad(d.getMinutes())) });
 }
 /* Settings → Your data: the daily automatic backup into one file in a folder the user picked (Android only) */
 function autoBackupHtml() {
@@ -1029,16 +1092,18 @@ function autoBackupHtml() {
   const b = S.settings.backup,
     lost = b.on && !bs.usable, // on, but its folder isn't reachable (a new phone, a reinstall)
     sub = !b.on
-      ? "Every day, to a folder you pick"
+      ? TH("backup.offHint")
       : lost
-        ? "Can't reach the folder: choose it again"
+        ? TH("backup.lost")
         : bs.error
           ? esc(bs.error)
           : bs.last
-            ? "Last backup: " + esc(backupWhen(bs.last))
-            : "First backup at " + esc(timeLabel(b.time));
+            ? TH("backup.last", { when: backupWhen(bs.last) })
+            : TH("backup.first", { time: timeLabel(b.time) });
   return (
-    '<div class="list" id="bk"><div class="setrow"><span class="mid"><div>Auto backup</div><div class="s' +
+    '<div class="list" id="bk"><div class="setrow"><span class="mid"><div>' +
+    TH("backup.auto") +
+    '</div><div class="s' +
     (b.on && (bs.error || lost) ? " err" : "") +
     '">' +
     sub +
@@ -1052,12 +1117,18 @@ function autoBackupHtml() {
       : "") +
     '<button class="sw" role="switch" data-act="bk-auto" aria-checked="' +
     b.on +
-    '" aria-label="Auto backup"></button></div>' +
+    '" aria-label="' +
+    TH("backup.auto") +
+    '"></button></div>' +
     (b.on
       ? '<div class="setrow"><span class="mid"><div>Tally backup.json</div><div class="s">' +
-        esc(bs.folder || "No folder") +
-        '</div></span><button class="btn text" data-act="bk-folder">Change</button></div>' +
-        '<div class="setrow"><button class="btn text" data-act="bk-now">Back up now</button></div>'
+        esc(bs.folder || T("backup.noFolder")) +
+        '</div></span><button class="btn text" data-act="bk-folder">' +
+        TH("common.change") +
+        "</button></div>" +
+        '<div class="setrow"><button class="btn text" data-act="bk-now">' +
+        TH("backup.now") +
+        "</button></div>"
       : "") +
     '</div><div class="gap"></div>'
   );
