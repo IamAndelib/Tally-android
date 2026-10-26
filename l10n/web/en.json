@@ -441,5 +441,43 @@
     "removed": "{{name}} removed",
     "max_one": "Up to {{count}} spending category",
     "max_other": "Up to {{count}} spending categories"
+  },
+  "summary": {
+    "title": "Spending",
+    "mode": {
+      "d": "Days",
+      "w": "Weeks",
+      "m": "Months"
+    },
+    "weekOf": "Week of {{date}}",
+    "spent": "spent",
+    "earlier": "Earlier",
+    "later": "Later",
+    "same": {
+      "d": "Same as the day before",
+      "w": "Same as last week",
+      "m": "Same as last month"
+    },
+    "up": {
+      "d": "↑ {{pct}} vs the day before",
+      "w": "↑ {{pct}} vs last week",
+      "m": "↑ {{pct}} vs last month"
+    },
+    "down": {
+      "d": "↓ {{pct}} vs the day before",
+      "w": "↓ {{pct}} vs last week",
+      "m": "↓ {{pct}} vs last month"
+    },
+    "avg": "Avg {{amount}} a day",
+    "none": {
+      "d": "Nothing spent that day.",
+      "w": "Nothing spent that week.",
+      "m": "Nothing spent in {{month}}."
+    },
+    "open": {
+      "d": "Open this day on Home",
+      "w": "Open this week on Home",
+      "m": "Open this month on Home"
+    }
   }
 }
