@@ -61,7 +61,7 @@ function emblem(o, cls) {
 }
 /* account types: the built-in five plus the user's own (S.types) */
 const ctype = k => (S.types || []).find(t => t.id === k);
-const typeName = k => TYPES[k] || (ctype(k) || {}).name || "Account";
+const typeName = k => (TYPES[k] ? T("type." + k) : (ctype(k) || {}).name || T("account.fallbackName"));
 const typeIcon = k => TYPE_ICON[k] || (ctype(k) || {}).i || "account_balance_wallet";
 const typeCol = k => TYPE_COL[k] || (ctype(k) || {}).c || "#5f7389";
 const accEmb = a => ({ i: a.i || (a.e ? "" : typeIcon(a.type)), e: a.e, c: a.c || typeCol(a.type) });
@@ -88,36 +88,37 @@ function normHex(v) {
       .join("");
   return /^[0-9a-f]{6}$/.test(h) ? "#" + h : null;
 }
-/* a colour's name for screen readers: the palette's own, else from its hue and lightness ("dark blue") */
+/* a colour's name for screen readers: the palette's own, else from its hue and lightness ("Dark blue"), each a whole
+   text of its own (color.*) */
 const COL_NAMES = {
-  "#15a06f": "Green",
-  "#c98500": "Amber",
-  "#0a91b8": "Cyan",
-  "#7c9a0d": "Olive",
-  "#a646c9": "Purple",
-  "#e0578c": "Pink",
-  "#4b5fd6": "Indigo",
-  "#e0504f": "Red",
-  "#2a78d6": "Blue",
-  "#df5f2b": "Orange",
-  "#00897b": "Teal",
-  "#b0671f": "Brown",
-  "#5f7389": "Slate grey",
-  "#c2185b": "Raspberry",
-  "#689f38": "Leaf green",
-  "#6a3fb5": "Violet",
-  "#0288d1": "Sky blue",
-  "#a1887f": "Taupe",
+  "#15a06f": "green",
+  "#c98500": "amber",
+  "#0a91b8": "cyan",
+  "#7c9a0d": "olive",
+  "#a646c9": "purple",
+  "#e0578c": "pink",
+  "#4b5fd6": "indigo",
+  "#e0504f": "red",
+  "#2a78d6": "blue",
+  "#df5f2b": "orange",
+  "#00897b": "teal",
+  "#b0671f": "brown",
+  "#5f7389": "slateGrey",
+  "#c2185b": "raspberry",
+  "#689f38": "leafGreen",
+  "#6a3fb5": "violet",
+  "#0288d1": "skyBlue",
+  "#a1887f": "taupe",
 };
 function colName(x) {
-  if (COL_NAMES[x]) return COL_NAMES[x];
+  if (COL_NAMES[x]) return T("color." + COL_NAMES[x]);
   const [r, g, b] = hexRgb(x).map(v => v / 255),
     max = Math.max(r, g, b),
     min = Math.min(r, g, b),
     l = (max + min) / 2,
     d = max - min;
-  const shade = l < 0.3 ? "Dark " : l > 0.7 ? "Light " : "";
-  if (d < 0.12) return l < 0.15 ? "Black" : l > 0.9 ? "White" : (shade + "grey").replace(/^g/, "G");
+  const shade = l < 0.3 ? "Dark" : l > 0.7 ? "Light" : "";
+  if (d < 0.12) return T(l < 0.15 ? "color.black" : l > 0.9 ? "color.white" : "color.grey" + shade);
   let h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
   h = (h * 60 + 360) % 360;
   const hue = [
@@ -131,8 +132,7 @@ function colName(x) {
     [335, "pink"],
     [360, "red"],
   ].find(x2 => h < x2[0])[1];
-  const n = shade + hue;
-  return n[0].toUpperCase() + n.slice(1);
+  return T("color." + hue + shade);
 }
 const colDot = (x, sel) =>
   '<button class="dot" data-act="f-col" data-v="' +
@@ -149,7 +149,7 @@ const LOAN_EMB = { borrow: { i: "handshake", c: "#6a3fb5" }, lend: { i: "volunte
 function iconSearch(q) {
   const words = q
       .toLowerCase()
-      .split(/[^a-z0-9]+/)
+      .split(/[^\p{L}\p{N}]+/u) // a word in another script matches no (English) name, rather than none being typed
       .filter(Boolean),
     names = Object.keys(ICONS);
   if (!words.length) return names;
@@ -176,10 +176,20 @@ function iconSearch(q) {
 let ICPICK = null;
 function iconPicker(cur, color, onPick) {
   openSheet2(
-    "Choose an emblem",
-    '<div class="qbar"><input id="ic-q" type="search" placeholder="Search: coffee, car, gift…" autocomplete="off" aria-label="Search emblems"></div>' +
-      '<div id="iclist" class="icgrid"></div><div id="ic-emo-box" hidden><label class="field"><span>Type an emoji</span><input id="ic-emo" maxlength="8" style="width:110px;text-align:center;font-size:1.5rem"></label><div class="gap"></div><button class="btn" data-act="ic-emo-ok">Use this emoji</button></div>' +
-      '<button class="btn text" data-act="ic-emoji" style="margin:8px auto 0;width:auto">Use an emoji instead</button>'
+    T("icon.title"),
+    '<div class="qbar"><input id="ic-q" type="search" placeholder="' +
+      TH("icon.search") +
+      '" autocomplete="off" aria-label="' +
+      TH("icon.searchLabel") +
+      '"></div>' +
+      '<div id="iclist" class="icgrid"></div><div id="ic-emo-box" hidden><label class="field"><span>' +
+      TH("icon.emoji") +
+      '</span><input id="ic-emo" maxlength="8" style="width:110px;text-align:center;font-size:1.5rem"></label><div class="gap"></div><button class="btn" data-act="ic-emo-ok">' +
+      TH("icon.useEmoji") +
+      "</button></div>" +
+      '<button class="btn text" data-act="ic-emoji" style="margin:8px auto 0;width:auto">' +
+      TH("icon.emojiInstead") +
+      "</button>"
   );
   ICPICK = { cur, color, onPick };
   icList("");
@@ -203,23 +213,28 @@ function icList(q) {
             "</button>"
         )
         .join("")
-    : '<div class="empty" style="grid-column:1/-1">Nothing called “' +
-      esc(q) +
-      "” yet. Pick a close one, or use an emoji.</div>";
+    : '<div class="empty" style="grid-column:1/-1">' + TH("icon.none", { query: q }) + "</div>";
 }
 /* form part shared by category / account / asset editors: big preview (tap to change) + colour swatches */
 function emblemEditor(o) {
   return (
-    '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 4px"><button class="cprevbtn" data-act="f-icon" aria-label="Change emblem"><span id="f-cprev">' +
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 4px"><button class="cprevbtn" data-act="f-icon" aria-label="' +
+    TH("icon.change") +
+    '"><span id="f-cprev">' +
     emblem(o, "cprev") +
     '</span></button><button class="btn text" data-act="f-icon" style="width:auto;height:36px">' +
     ic("edit") +
-    "Change emblem</button></div>" +
-    '<div class="lbl">Colour</div><div class="dots" id="f-dots">' +
+    TH("icon.change") +
+    "</button></div>" +
+    '<div class="lbl">' +
+    TH("color.label") +
+    '</div><div class="dots" id="f-dots">' +
     dotList(String(o.c || "").toLowerCase())
       .map(x => colDot(x, String(o.c || "").toLowerCase()))
       .join("") +
-    '<button class="dot addnew" data-act="col-new" aria-label="Add your own colour">' +
+    '<button class="dot addnew" data-act="col-new" aria-label="' +
+    TH("color.add") +
+    '">' +
     ic("add") +
     "</button></div>"
   );
@@ -238,10 +253,14 @@ const prevUpd = () => {
 };
 function typeDialog() {
   miniDialog(
-    "New account type",
-    '<label class="field"><span>Name</span><input id="nt-name" maxlength="20" placeholder="e.g. Crypto, Investment" autocomplete="off"></label><p class="hint" id="nt-err"></p>',
+    T("type.new"),
+    '<label class="field"><span>' +
+      TH("common.name") +
+      '</span><input id="nt-name" maxlength="20" placeholder="' +
+      TH("type.example") +
+      '" autocomplete="off"></label><p class="hint" id="nt-err"></p>',
     "nt-add",
-    "Add"
+    T("common.add")
   );
   setTimeout(() => {
     const el = $("#nt-name");
@@ -267,12 +286,12 @@ function addType() {
   if (!el) return;
   const name = el.value.trim().replace(/\s+/g, " ");
   if (!name) {
-    $("#nt-err").textContent = "Give it a name";
+    $("#nt-err").textContent = T("common.nameIt");
     return;
   }
   const same = Object.keys(TYPES)
     .concat(S.types.map(t => t.id))
-    .find(k => typeName(k).toLowerCase() === name.toLowerCase());
+    .find(k => [typeName(k), TYPES[k]].some(n => n && n.toLowerCase() === name.toLowerCase())); // English too
   closePop();
   if (same) {
     if ((S.settings.hiddenTypes || []).includes(same)) {
@@ -296,37 +315,32 @@ function addType() {
 }
 /* hold a colour dot: it leaves every picker (things already in that colour keep it; typing its hex brings it back) */
 function removeColour(c) {
-  askDialog(
-    "Remove this colour?",
-    "It leaves the colour list. Anything already in this colour keeps it.",
-    "Remove",
-    () => {
-      if (PALETTE.includes(c)) {
-        S.settings.hiddenCols = (S.settings.hiddenCols || []).filter(x => x !== c).concat(c);
-      } else S.settings.customCols = (S.settings.customCols || []).filter(x => x !== c);
-      save();
-      const d = $('#f-dots .dot[data-v="' + c + '"]');
-      if (d && !(F && F.col === c)) d.remove();
-      snack("Colour removed");
-    }
-  );
+  askDialog(T("color.remove.title"), T("color.remove.body"), T("common.remove"), () => {
+    if (PALETTE.includes(c)) {
+      S.settings.hiddenCols = (S.settings.hiddenCols || []).filter(x => x !== c).concat(c);
+    } else S.settings.customCols = (S.settings.customCols || []).filter(x => x !== c);
+    save();
+    const d = $('#f-dots .dot[data-v="' + c + '"]');
+    if (d && !(F && F.col === c)) d.remove();
+    snack(T("color.removed"));
+  });
 }
 function removeType(id) {
   const name = typeName(id),
     n = S.accounts.filter(a => a.type === id).length;
   if (!TYPES[id] && !ctype(id)) return;
   if (n) {
-    snack("“" + name + "” is used by " + n + (n === 1 ? " account" : " accounts"));
+    snack(T("type.inUse", { name, count: n }));
     return;
   }
-  askDialog("Remove “" + name + "”?", "It leaves the type list. You can add it again with + Add new.", "Remove", () => {
+  askDialog(T("type.remove.title", { name }), T("type.remove.body"), T("common.remove"), () => {
     if (TYPES[id]) S.settings.hiddenTypes = (S.settings.hiddenTypes || []).filter(k => k !== id).concat(id);
     else S.types = S.types.filter(x => x.id !== id);
     save();
     const chip = $('#sheet .chip[data-act="f-type"][data-v="' + id + '"]');
     if (chip) chip.remove();
     if (F && F.kind === "accf" && F.type === id) pickType(firstType());
-    snack("Type removed");
+    snack(T("type.removed"));
   });
 }
 const visTypes = keep =>
@@ -337,16 +351,18 @@ const firstType = () => visTypes()[0] || "bank";
 function hexDialog() {
   if (!F) return;
   miniDialog(
-    "Your own colour",
+    T("color.own"),
     '<div style="display:flex;align-items:center;gap:14px;margin-top:10px"><span id="hx-prev">' +
       emblem({ i: F.i, e: F.e, c: F.col }, "cprev") +
       "</span>" +
-      '<label class="field" style="flex:1;margin:0"><span>Hex code</span><input id="hx-in" maxlength="7" placeholder="#1E88E5" autocomplete="off" autocapitalize="off" spellcheck="false" value="' +
+      '<label class="field" style="flex:1;margin:0"><span>' +
+      TH("color.hex") +
+      '</span><input id="hx-in" maxlength="7" placeholder="#1E88E5" autocomplete="off" autocapitalize="off" spellcheck="false" value="' +
       esc(F.col || "") +
       '"></label></div>' +
       '<p class="hint" id="hx-err"></p>',
     "hx-ok",
-    "Use colour"
+    T("color.use")
   );
   setTimeout(() => {
     const el = $("#hx-in");
@@ -364,7 +380,7 @@ function hexPreview() {
 function useHex() {
   const c = normHex($("#hx-in") && $("#hx-in").value);
   if (!c) {
-    $("#hx-err").textContent = "Use a hex code like #1E88E5";
+    $("#hx-err").textContent = T("color.hexHint", { example: "#1E88E5" });
     return;
   }
   closePop();
