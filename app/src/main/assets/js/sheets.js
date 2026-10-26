@@ -10,7 +10,7 @@ function setArchived(id, on) {
   if (!a || a.archived === on) return;
   const go = () =>
     withUndo(
-      on ? a.name + " archived" : a.name + " is back",
+      T(on ? "account.archivedMsg" : "account.backMsg", { name: a.name }),
       () => {
         acc(id).archived = on;
       },
@@ -19,12 +19,9 @@ function setArchived(id, on) {
   const bal = balances()[id] || 0;
   if (!on || Math.abs(bal) < 0.0005) return go();
   askDialog(
-    "Archive " + a.name + "?",
-    "It still " +
-      (bal > 0 ? "has " : "owes ") +
-      money(Math.abs(bal), a.currency) +
-      ". Archived accounts are left out of your totals; their entries stay in History.",
-    "Archive",
+    T("account.archiveQ", { name: a.name }),
+    T(bal > 0 ? "account.archiveHas" : "account.archiveOwes", { amount: money(Math.abs(bal), a.currency) }),
+    T("account.archive"),
     go
   );
   render(); // a dragged row goes back to its place until the answer
@@ -38,35 +35,44 @@ function assetForm(id) {
   F = { kind: "assetf", id, cur: x.currency, i: x.i || "", e: x.e || "", col: x.c || "#a646c9" };
   let h =
     emblemEditor({ i: F.i, e: F.e, c: F.col }) +
-    '<label class="field"><span>Name</span><input id="f-aname" value="' +
+    '<label class="field"><span>' +
+    TH("common.name") +
+    '</span><input id="f-aname" value="' +
     esc(x.name) +
-    '" maxlength="30" placeholder="e.g. Gold ring"></label>';
+    '" maxlength="30" placeholder="' +
+    TH("asset.example") +
+    '"></label>';
   h +=
-    '<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-assetcur"><span>' +
+    '<div class="row"><div class="field"><span>' +
+    TH("common.currency") +
+    '</span><button class="fieldbtn" id="f-cur" data-act="pick-assetcur"><span>' +
     esc(x.currency) +
     "</span>" +
     ic("down") +
     "</button></div>" +
-    '<label class="field"><span>Worth about</span><input id="f-aval" inputmode="decimal" autocomplete="off" value="' +
+    '<label class="field"><span>' +
+    TH("asset.worth") +
+    '</span><input id="f-aval" inputmode="decimal" autocomplete="off" value="' +
     esc(x.value) +
     '" placeholder="0"></label></div>';
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="asset-save">' +
-    (id ? "Save" : "Add asset") +
+    TH(id ? "common.save" : "asset.add") +
     "</button>";
-  if (id) h += '<div class="gap"></div><button class="btn danger" data-act="asset-del">Delete</button>';
-  openSheet(id ? "Edit asset" : "New asset", h);
+  if (id)
+    h += '<div class="gap"></div><button class="btn danger" data-act="asset-del">' + TH("common.delete") + "</button>";
+  openSheet(T(id ? "asset.edit" : "asset.new"), h);
 }
 function saveAsset() {
   const name = $("#f-aname").value.trim(),
     raw = $("#f-aval").value.trim(),
     val = raw ? evalAmt(raw) : 0;
   if (!name) {
-    snack("Give it a name");
+    snack(T("common.nameIt"));
     return;
   }
   if (val == null) {
-    snack("That value isn't a number");
+    snack(T("asset.notNumber"));
     return;
   }
   const data = { name, i: F.i, e: F.e, c: F.col, value: val, currency: F.cur };
@@ -82,7 +88,7 @@ function saveAsset() {
 function deleteAsset() {
   const id = F.id;
   closeSheet();
-  withUndo("Asset deleted", () => {
+  withUndo(T("asset.deleted"), () => {
     S.assets = S.assets.filter(x => x.id !== id);
   });
 }
@@ -136,13 +142,13 @@ const catChipInner = k => emblem(k, "ci") + esc(k.name) + ic("down");
    also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
 function txSheet(id, type, catId, pre) {
   if (!id && !activeAccounts().length) {
-    snack("Add an account first");
+    snack(T("account.addFirst"));
     accForm();
     return;
   }
   const t = id ? S.txns.find(x => x.id === id) : null;
   if (id && !t) {
-    snack("That entry was deleted");
+    snack(T("entry.gone"));
     return;
   }
   if (t && t.type === "transfer") {
@@ -190,7 +196,9 @@ function txSheet(id, type, catId, pre) {
       "</button>" +
       '<div class="lbl" id="f-catlbl" style="margin-top:0"' +
       (k ? " hidden" : "") +
-      ">What was it for?</div>" +
+      ">" +
+      TH("entry.whatFor") +
+      "</div>" +
       '<div class="catgrid" id="f-catgrid" style="margin-top:8px"' +
       (k ? " hidden" : "") +
       ">" +
@@ -201,7 +209,7 @@ function txSheet(id, type, catId, pre) {
   });
   h +=
     '<div class="lbl">' +
-    (inc ? "Into" : "Paid from") +
+    TH(inc ? "entry.into" : "entry.paidFrom") +
     "</div>" +
     accChips(
       "f-acc",
@@ -210,18 +218,23 @@ function txSheet(id, type, catId, pre) {
       accChoices(F.account).filter(x => !pre || x.currency === pre.cur)
     );
   h +=
-    '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
+    '<div class="row notedate"><input id="f-note" placeholder="' +
+    TH("entry.notePh") +
+    '" maxlength="80" value="' +
     esc(t ? t.note : pre ? pre.note : "") +
-    '" aria-label="Note"><div class="nd-date">' +
+    '" aria-label="' +
+    TH("common.note") +
+    '"><div class="nd-date">' +
     dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
     ic("check") +
-    (id ? "Save changes" : "Save") +
+    TH(id ? "common.saveChanges" : "common.save") +
     "</button>";
-  if (id) h += '<div class="gap"></div><button class="btn danger" data-act="tx-del">Delete</button>';
-  openSheet(id ? (inc ? "Edit money in" : "Edit spending") : inc ? "Money in" : "Spent", h);
+  if (id)
+    h += '<div class="gap"></div><button class="btn danger" data-act="tx-del">' + TH("common.delete") + "</button>";
+  openSheet(T(id ? (inc ? "entry.editIn" : "entry.editOut") : inc ? "entry.newIn" : "entry.newOut"), h);
   if (!id && F.cat) focusAmt();
 }
 /* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
@@ -290,7 +303,7 @@ const feeField = (open, value, label, add) =>
 function trSheet(id) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
-    snack("Add a second account to transfer");
+    snack(T("transfer.needTwo"));
     accForm();
     return;
   }
@@ -300,32 +313,43 @@ function trSheet(id) {
   const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
   F = { kind: "tr", id, from: f, to, showFee: !!fee };
   const list = accChoices(f, to);
-  let h = '<div class="lbl" style="margin-top:4px">From</div>' + accChips("tr-from", F.from, null, list);
+  let h =
+    '<div class="lbl" style="margin-top:4px">' +
+    TH("transfer.from") +
+    "</div>" +
+    accChips("tr-from", F.from, null, list);
   h +=
-    '<div style="display:flex;justify-content:center;margin:4px 0 -8px"><button class="icon" data-act="tr-swap" aria-label="Swap from and to">' +
+    '<div style="display:flex;justify-content:center;margin:4px 0 -8px"><button class="icon" data-act="tr-swap" aria-label="' +
+    TH("transfer.swap") +
+    '">' +
     ic("swapv") +
     "</button></div>";
-  h += '<div class="lbl">To</div>' + accChips("tr-to", F.to, F.from, list);
-  h += amtField("f-amt", "", t ? String(t.amount) : "", { curId: "tr-cur", label: "Amount sent" });
+  h += '<div class="lbl">' + TH("transfer.to") + "</div>" + accChips("tr-to", F.to, F.from, list);
+  h += amtField("f-amt", "", t ? String(t.amount) : "", { curId: "tr-cur", label: T("transfer.sent") });
   h +=
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
     esc(t && t.toAmount != null ? String(t.toAmount) : "") +
     '"></label>';
-  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", "Add a fee (ATM, cash‑out)");
+  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", T("transfer.addFee"));
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
-    '<div class="row notedate"><input id="f-note" placeholder="Note (optional)" maxlength="80" value="' +
+    '<div class="row notedate"><input id="f-note" placeholder="' +
+    TH("entry.notePh") +
+    '" maxlength="80" value="' +
     esc(t ? t.note : "") +
-    '" aria-label="Note"><div class="nd-date">' +
+    '" aria-label="' +
+    TH("common.note") +
+    '"><div class="nd-date">' +
     dateField("f-date", t ? t.date : entryDate(), { max: today(), now: !t }) +
     "</div></div>";
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tr-save">' +
     ic("check") +
-    (id ? "Save changes" : "Transfer") +
+    TH(id ? "common.saveChanges" : "transfer.ok") +
     "</button>";
-  if (id) h += '<div class="gap"></div><button class="btn danger" data-act="tr-del">Delete</button>';
-  openSheet(id ? "Edit transfer" : "Transfer", h);
+  if (id)
+    h += '<div class="gap"></div><button class="btn danger" data-act="tr-del">' + TH("common.delete") + "</button>";
+  openSheet(T(id ? "transfer.edit" : "transfer.title"), h);
   trSync();
   if (!id) focusAmt();
 }
@@ -349,8 +373,8 @@ function trSync() {
     });
   $("#tr-cur").textContent = fa ? fa.currency : "";
   $("#recv-wrap").hidden = !diff;
-  if (diff) $("#recv-lbl").textContent = "Amount that arrived in " + ta.name + " (" + ta.currency + ")";
-  $("#fee-lbl").textContent = "Fee charged (" + (fa ? fa.currency : "") + ") · not counted as spending";
+  if (diff) $("#recv-lbl").textContent = T("transfer.arrived", { account: ta.name, cur: ta.currency });
+  $("#fee-lbl").textContent = T("fee.label", { cur: fa ? fa.currency : "" });
   trPreview();
 }
 function trPreview() {
@@ -379,7 +403,7 @@ function trPreview() {
     ta.name +
     " " +
     (got > 0 ? signed(got, ta.currency) : "+ ?");
-  if (fee > 0) s += "  (incl. " + money(fee, fa.currency) + " fee)";
+  if (fee > 0) s += "  " + T("transfer.inclFee", { amount: money(fee, fa.currency) });
   el.textContent = s;
 }
 /* view / delete a balance fix */
@@ -389,14 +413,18 @@ function adjSheet(id) {
   const a = acc(t.account);
   F = { kind: "adj", id };
   openSheet(
-    "Balance fix",
+    T("fix.title"),
     '<div class="hero"><div class="t">' +
       esc((a ? a.name : "?") + " · " + dayLabel(t.date)) +
       '</div><div class="v">' +
       esc(signed(t.amount, a ? a.currency : "")) +
       "</div></div>" +
-      '<p class="muted small" style="text-align:center">A correction so Tally matches what you really had. It isn’t counted as spending or income.</p>' +
-      '<button class="btn danger" data-act="adj-del">Delete this fix</button>'
+      '<p class="muted small" style="text-align:center">' +
+      TH("fix.about") +
+      "</p>" +
+      '<button class="btn danger" data-act="adj-del">' +
+      TH("fix.delete") +
+      "</button>"
   );
 }
 /* account: live balance, set actual balance, transfer, edit */
@@ -413,32 +441,42 @@ function accOpen(id) {
     esc(typeName(a.type)) +
     " · " +
     esc(a.currency) +
-    (a.archived ? " · archived" : "") +
+    (a.archived ? " · " + TH("account.archivedTag") : "") +
     '</div><div class="v">' +
     esc(money(bal, a.currency)) +
     "</div>" +
-    (start !== bal ? '<div class="t">Started today with ' + esc(money(start, a.currency)) + "</div>" : "") +
+    (start !== bal
+      ? '<div class="t">' + TH("account.startedWith", { amount: money(start, a.currency) }) + "</div>"
+      : "") +
     "</div>";
   h +=
-    '<div class="card"><h3>Doesn’t match?</h3><p class="muted small" style="margin:0">Type what you really have now. Tally records the difference as a balance fix.</p>' +
-    amtField("f-actual", a.currency, "", { label: "Actual balance", placeholder: groupDigits(rnd(bal)) }) +
-    '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">Update balance</button></div>';
+    '<div class="card"><h3>' +
+    TH("account.mismatch") +
+    '</h3><p class="muted small" style="margin:0">' +
+    TH("account.mismatchHint") +
+    "</p>" +
+    amtField("f-actual", a.currency, "", { label: T("account.actual"), placeholder: groupDigits(rnd(bal)) }) +
+    '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">' +
+    TH("account.update") +
+    "</button></div>";
   h +=
     '<div class="gap"></div><div class="row">' +
     (a.archived
-      ? '<button class="btn tonal" data-act="acc-unarch">' + ic("reset") + "Show again</button>"
-      : '<button class="btn tonal" data-act="acc-arch">' + ic("archive") + "Archive</button>") +
+      ? '<button class="btn tonal" data-act="acc-unarch">' + ic("reset") + TH("account.unarchive") + "</button>"
+      : '<button class="btn tonal" data-act="acc-arch">' + ic("archive") + TH("account.archive") + "</button>") +
     '<button class="btn tonal" data-act="hist-acc" data-v="' +
     a.id +
     '">' +
     ic("list") +
-    "History</button></div>";
+    TH("common.history") +
+    "</button></div>";
   h +=
     '<div class="gap"></div><button class="btn text" data-act="acc-form" data-v="' +
     a.id +
     '">' +
     ic("edit") +
-    "Edit account</button>";
+    TH("account.edit") +
+    "</button>";
   openSheet(a.name, h);
 }
 /* "Set actual balance": records the difference as a balance fix dated today */
@@ -446,23 +484,23 @@ function saveFix() {
   const a = acc(F.id),
     val = evalAmt($("#f-actual").value);
   if (val == null) {
-    snack("Type what you have now");
+    snack(T("account.typeNow"));
     return;
   }
   const d = rnd(val - balances()[F.id]);
   if (shown(d, a.currency) === 0) {
-    snack("Already matches");
+    snack(T("account.matches"));
     return;
   }
   const id = F.id,
     xid = newId(),
     ts = Date.now(),
     mutate = () => {
-      S.txns.push({ id: xid, ts, type: "adjust", amount: d, account: id, date: today(), note: "Balance fix" });
+      S.txns.push({ id: xid, ts, type: "adjust", amount: d, account: id, date: today(), note: T("fix.title") });
     };
   guardOverdraw(mutate, today(), () => {
     closeSheet();
-    withUndo(a.name + " set to " + money(val, a.currency), mutate, { row: id });
+    withUndo(T("account.setTo", { name: a.name, amount: money(val, a.currency) }), mutate, { row: id });
   });
 }
 function fixPreview() {
@@ -477,8 +515,8 @@ function fixPreview() {
   const d = rnd(v - balances()[F.id]);
   el.textContent =
     shown(d, a.currency) === 0
-      ? "Already matches."
-      : (d > 0 ? "Adds " : "Removes ") + money(Math.abs(d), a.currency) + " as a balance fix.";
+      ? T("account.matchesFull")
+      : T(d > 0 ? "account.fixAdds" : "account.fixRemoves", { amount: money(Math.abs(d), a.currency) });
 }
 /* the main currency: from Settings and the welcome card, and asked first when a new notebook's first account or
    asset is added before one was chosen */
@@ -491,7 +529,7 @@ function pickMainCur(next) {
       commit();
       if (next) next();
     },
-    S.settings.cur ? "Main currency" : "Your currency"
+    T(S.settings.cur ? "settings.mainCur" : "welcome.yourCur")
   );
 }
 function accForm(id) {
@@ -512,19 +550,28 @@ function accForm(id) {
   if (!F.i && !F.e) F.i = typeIcon(a.type);
   let h =
     emblemEditor({ i: F.i, e: F.e, c: F.col }) +
-    '<label class="field"><span>Name</span><input id="f-name" value="' +
+    '<label class="field"><span>' +
+    TH("common.name") +
+    '</span><input id="f-name" value="' +
     esc(a.name) +
-    '" placeholder="e.g. Main bank, Cash, Savings" maxlength="30"></label>';
+    '" placeholder="' +
+    TH("account.example") +
+    '" maxlength="30"></label>';
   h +=
-    '<div class="lbl">Type</div><div class="chips" id="f-types">' +
+    '<div class="lbl">' +
+    TH("account.type") +
+    '</div><div class="chips" id="f-types">' +
     visTypes(a.type)
       .map(k => typeChip(k, a.type))
       .join("") +
     '<button class="chip addnew" data-act="type-new">' +
     ic("add") +
-    "Add new</button></div>";
+    TH("type.addNew") +
+    "</button></div>";
   h +=
-    '<div class="row"><div class="field"><span>Currency</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"' +
+    '<div class="row"><div class="field"><span>' +
+    TH("common.currency") +
+    '</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"' +
     (used ? " disabled" : "") +
     "><span>" +
     esc(a.currency) +
@@ -532,33 +579,35 @@ function accForm(id) {
     ic("down") +
     "</button></div>" +
     '<label class="field"><span>' +
-    (id ? "Starting balance" : "Balance right now") +
+    TH(id ? "account.opening" : "account.balanceNow") +
     '</span><input id="f-open" inputmode="decimal" autocomplete="off" value="' +
     esc(a.opening === "" ? "" : a.opening) +
     '" placeholder="0"></label></div>';
   h +=
     '<p class="hint">' +
-    (id
-      ? "What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead."
-      : "Credit card? Enter what you owe as a negative number.") +
-    (used ? " Currency is locked because this account has entries." : "") +
+    TH(id ? "account.openingHint" : "account.cardHint") +
+    (used ? " " + TH("account.curLocked") : "") +
     "</p>";
-  h += '<div class="gap"></div><button class="btn" data-act="acc-save">' + (id ? "Save" : "Add account") + "</button>";
+  h +=
+    '<div class="gap"></div><button class="btn" data-act="acc-save">' +
+    TH(id ? "common.save" : "account.add") +
+    "</button>";
   if (id) {
-    if (!used) h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">Delete account</button>';
+    if (!used)
+      h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">' + TH("account.delete") + "</button>";
   }
-  openSheet(id ? "Edit account" : "New account", h);
+  openSheet(T(id ? "account.edit" : "account.new"), h);
 }
 function saveAccount() {
   const name = $("#f-name").value.trim();
   if (!name) {
-    snack("Give the account a name");
+    snack(T("account.nameIt"));
     return;
   }
   const raw = $("#f-open").value.trim(),
     o = raw ? evalAmt(raw) : 0;
   if (o == null) {
-    snack("That balance isn't a number");
+    snack(T("account.notNumber"));
     return;
   }
   const data = {
@@ -578,15 +627,15 @@ function saveAccount() {
     closeSheet();
     commit();
     if (first) scrollTo(0, 0); // the welcome page was scrolled: Home starts at its top
-    snack(was ? "Account saved" : name + " added");
+    snack(was ? T("account.saved") : T("account.added", { name }));
   };
   if (o < 0 && data.type !== "card" && !(was && acc(was).opening === o))
     askDialog(
-      "Start below zero?",
-      "Only credit cards usually go below zero. Save " + name + " at " + signed(o, data.currency) + "?",
-      "Save anyway",
+      T("account.belowZero"),
+      T("account.belowZeroQ", { name, amount: signed(o, data.currency) }),
+      T("common.saveAnyway"),
       go,
-      { cancel: "Go back" }
+      { cancel: T("common.goBack") }
     );
   else go();
 }
@@ -595,14 +644,14 @@ function deleteAccount() {
   const id = F.id;
   if (S.txns.some(t => t.account === id || t.to === id)) return;
   askDialog(
-    "Delete this account?",
-    "It has no entries, so nothing else changes.",
-    "Delete",
+    T("account.deleteQ"),
+    T("account.deleteBody"),
+    T("common.delete"),
     () => {
       S.accounts = S.accounts.filter(a => a.id !== id);
       closeSheet();
       commit();
-      snack("Account deleted");
+      snack(T("account.deleted"));
     },
     { danger: true }
   );
@@ -617,26 +666,30 @@ function catForm(id, kind) {
   F = { kind: "catf", id, ck: c.kind, col: c.c, i: c.i || "", e: c.e };
   let h = emblemEditor(c);
   h +=
-    '<label class="field"><span>Name</span><input id="f-cname" value="' +
+    '<label class="field"><span>' +
+    TH("common.name") +
+    '</span><input id="f-cname" value="' +
     esc(c.name) +
-    '" maxlength="16" placeholder="e.g. Coffee"></label>';
+    '" maxlength="16" placeholder="' +
+    TH("category.example") +
+    '"></label>';
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="cat-save">' +
-    (id ? "Save" : "Add category") +
+    TH(id ? "common.save" : "category.add") +
     "</button>";
   if (id)
     h +=
       '<div class="gap"></div><button class="btn danger" data-act="cat-del">' +
-      (c.hidden ? "Bring back" : "Remove") +
+      TH(c.hidden ? "category.bringBack" : "common.remove") +
       "</button>";
-  openSheet(id ? "Edit category" : c.kind === "in" ? "New money-in category" : "New spending category", h);
+  openSheet(T(id ? "category.edit" : c.kind === "in" ? "category.newIn" : "category.newOut"), h);
 }
 function saveCat() {
   const name = $("#f-cname").value.trim(),
     e = F.e || "🏷️",
     i = F.i;
   if (!name) {
-    snack("Give it a name");
+    snack(T("common.nameIt"));
     return;
   }
   if (F.id)
@@ -660,30 +713,30 @@ function removeCat() {
     c.hidden = false;
     closeSheet();
     commit();
-    snack(c.name + " is back");
+    snack(T("category.back", { name: c.name }));
     return;
   }
   if (S.cats.filter(x => x.kind === c.kind && !x.hidden).length <= 1) {
-    snack("Keep at least one category");
+    snack(T("category.keepOne"));
     return;
   }
   if (CATS.some(d => d.id === c.id) || S.txns.some(t => t.cat === c.id)) c.hidden = true;
   else S.cats = S.cats.filter(x => x !== c);
   closeSheet();
   commit();
-  snack(c.name + " removed");
+  snack(T("category.removed", { name: c.name }));
 }
 /* a hidden category's "bring back" chip in Settings */
 function restoreCat(id) {
   const c = S.cats.find(x => x.id === id);
   if (!c) return;
   if (c.kind === "out" && outCats().length >= 24) {
-    snack("Up to 24 spending categories");
+    snack(T("category.max", { count: 24 }));
     return;
   }
   c.hidden = false;
   commit();
-  snack(c.name + " is back");
+  snack(T("category.back", { name: c.name }));
 }
 function entriesSheet() {
   RBC = null;
@@ -691,32 +744,34 @@ function entriesSheet() {
   openSheet(
     periodLabel(),
     '<div id="ent-list"></div>' +
-      (list.length ? dayGroups(list) : '<div class="empty">Nothing written down yet.</div>') +
-      '<div class="gap"></div><button class="btn text" data-act="go" data-v="history">Open full history</button>'
+      (list.length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>") +
+      '<div class="gap"></div><button class="btn text" data-act="go" data-v="history">' +
+      TH("entries.fullHistory") +
+      "</button>"
   );
 }
 function saveTx() {
   const v = readVals(),
     amt = evalAmt(v.amount);
   if (!F.cat) {
-    snack("Pick a category");
+    snack(T("entry.pickCat"));
     return;
   }
   if (!(amt > 0)) {
-    snack("Enter an amount");
+    snack(T("common.enterAmount"));
     return;
   }
   if (!acc(F.account)) {
-    snack("Pick an account");
+    snack(T("common.pickAccount"));
     return;
   }
   if (!v.date) {
-    snack("Pick a date");
+    snack(T("common.pickDate"));
     return;
   }
   if (F.id && !S.txns.some(x => x.id === F.id)) {
     closeSheet();
-    snack("That entry was deleted");
+    snack(T("entry.gone"));
     return;
   }
   const t = { type: F.type, amount: amt, account: F.account, cat: F.cat, date: v.date, note: (v.note || "").trim() };
@@ -741,7 +796,7 @@ function saveTx() {
     buzz("confirm");
     withUndo(
       id
-        ? "Saved"
+        ? T("common.saved")
         : (pre.msg || "") + signed(t.type === "income" ? amt : -amt, acc(t.account).currency) + " · " + cat(t.cat).name,
       mutate,
       { row: id || nid, cat: t.cat }
@@ -753,16 +808,16 @@ function saveTr() {
     fa = acc(F.from),
     ta = acc(F.to);
   if (!fa || !ta) {
-    snack("Pick both accounts");
+    snack(T("transfer.pickBoth"));
     return;
   }
   if (F.from === F.to) {
-    snack("Pick two different accounts");
+    snack(T("transfer.pickTwo"));
     return;
   }
   const amt = evalAmt(v.amount);
   if (!(amt > 0)) {
-    snack("Enter the amount sent");
+    snack(T("transfer.enterSent"));
     return;
   }
   const diff = fa.currency !== ta.currency;
@@ -770,22 +825,22 @@ function saveTr() {
   if (diff) {
     got = evalAmt(v.toAmount);
     if (!(got > 0)) {
-      snack("Enter how much arrived in " + ta.currency);
+      snack(T("transfer.enterArrived", { cur: ta.currency }));
       return;
     }
   }
   const feeText = F.showFee ? String(v.fee || "").trim() : "",
     fee = feeText ? evalAmt(feeText) : 0;
   if (fee == null) {
-    snack("That fee isn't a number");
+    snack(T("fee.notNumber"));
     return;
   }
   if (fee < 0) {
-    snack("Fee can't be negative");
+    snack(T("transfer.feeNegative"));
     return;
   }
   if (!v.date) {
-    snack("Pick a date");
+    snack(T("common.pickDate"));
     return;
   }
   const id = F.id,
@@ -815,7 +870,7 @@ function saveTr() {
         account: from,
         cat: "fees",
         date,
-        note: "Transfer fee",
+        note: T("transfer.feeNote"),
         feeOf: t.id,
       });
       t.feeId = f.id;
@@ -826,6 +881,12 @@ function saveTr() {
   };
   guardOverdraw(mutate, date, () => {
     closeSheet();
-    withUndo(id ? "Saved" : "Transferred " + money(amt, fa.currency) + " to " + ta.name, mutate, { row: id || nid });
+    withUndo(
+      id ? T("common.saved") : T("transfer.done", { amount: money(amt, fa.currency), account: ta.name }),
+      mutate,
+      {
+        row: id || nid,
+      }
+    );
   });
 }

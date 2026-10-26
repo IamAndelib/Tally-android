@@ -27,7 +27,9 @@
     "history": "History",
     "enterAmount": "Enter an amount",
     "pickAccount": "Pick an account",
-    "pickDate": "Pick a date"
+    "pickDate": "Pick a date",
+    "delete": "Delete",
+    "saveChanges": "Save changes"
   },
   "day": {
     "today": "Today",
@@ -36,13 +38,77 @@
   },
   "account": {
     "fallbackName": "Account",
-    "addFirst": "Add an account first"
+    "addFirst": "Add an account first",
+    "archivedMsg": "{{name}} archived",
+    "backMsg": "{{name}} is back",
+    "archiveQ": "Archive {{name}}?",
+    "archiveHas": "It still has {{amount}}. Archived accounts are left out of your totals; their entries stay in History.",
+    "archiveOwes": "It still owes {{amount}}. Archived accounts are left out of your totals; their entries stay in History.",
+    "archive": "Archive",
+    "archivedTag": "archived",
+    "startedWith": "Started today with {{amount}}",
+    "mismatch": "Doesn’t match?",
+    "mismatchHint": "Type what you really have now. Tally records the difference as a balance fix.",
+    "actual": "Actual balance",
+    "update": "Update balance",
+    "unarchive": "Show again",
+    "edit": "Edit account",
+    "new": "New account",
+    "typeNow": "Type what you have now",
+    "matches": "Already matches",
+    "matchesFull": "Already matches.",
+    "setTo": "{{name}} set to {{amount}}",
+    "fixAdds": "Adds {{amount}} as a balance fix.",
+    "fixRemoves": "Removes {{amount}} as a balance fix.",
+    "example": "e.g. Main bank, Cash, Savings",
+    "type": "Type",
+    "opening": "Starting balance",
+    "balanceNow": "Balance right now",
+    "openingHint": "What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead.",
+    "cardHint": "Credit card? Enter what you owe as a negative number.",
+    "curLocked": "Currency is locked because this account has entries.",
+    "add": "Add account",
+    "delete": "Delete account",
+    "nameIt": "Give the account a name",
+    "notNumber": "That balance isn't a number",
+    "saved": "Account saved",
+    "added": "{{name}} added",
+    "belowZero": "Start below zero?",
+    "belowZeroQ": "Only credit cards usually go below zero. Save {{name}} at {{amount}}?",
+    "deleteQ": "Delete this account?",
+    "deleteBody": "It has no entries, so nothing else changes.",
+    "deleted": "Account deleted"
   },
   "asset": {
-    "fallbackName": "Asset"
+    "fallbackName": "Asset",
+    "example": "e.g. Gold ring",
+    "worth": "Worth about",
+    "add": "Add asset",
+    "edit": "Edit asset",
+    "new": "New asset",
+    "notNumber": "That value isn't a number",
+    "deleted": "Asset deleted"
   },
   "transfer": {
-    "untracked": "Transfer (not tracked)"
+    "untracked": "Transfer (not tracked)",
+    "needTwo": "Add a second account to transfer",
+    "from": "From",
+    "to": "To",
+    "swap": "Swap from and to",
+    "sent": "Amount sent",
+    "addFee": "Add a fee (ATM, cash‑out)",
+    "ok": "Transfer",
+    "title": "Transfer",
+    "edit": "Edit transfer",
+    "arrived": "Amount that arrived in {{account}} ({{cur}})",
+    "inclFee": "(incl. {{amount}} fee)",
+    "pickBoth": "Pick both accounts",
+    "pickTwo": "Pick two different accounts",
+    "enterSent": "Enter the amount sent",
+    "enterArrived": "Enter how much arrived in {{cur}}",
+    "feeNegative": "Fee can't be negative",
+    "feeNote": "Transfer fee",
+    "done": "Transferred {{amount}} to {{account}}"
   },
   "backup": {
     "save": "Save backup"
@@ -110,7 +176,8 @@
       "title": "Remove “{{name}}”?",
       "body": "It leaves the type list. You can add it again with + Add new."
     },
-    "removed": "Type removed"
+    "removed": "Type removed",
+    "addNew": "Add new"
   },
   "icon": {
     "title": "Choose an emblem",
@@ -332,5 +399,47 @@
       "writeOff": "Write it off",
       "forgive": "Mark as forgiven"
     }
+  },
+  "entry": {
+    "gone": "That entry was deleted",
+    "whatFor": "What was it for?",
+    "into": "Into",
+    "paidFrom": "Paid from",
+    "notePh": "Note (optional)",
+    "editIn": "Edit money in",
+    "editOut": "Edit spending",
+    "newIn": "Money in",
+    "newOut": "Spent",
+    "pickCat": "Pick a category"
+  },
+  "entries": {
+    "fullHistory": "Open full history"
+  },
+  "home": {
+    "nothingYet": "Nothing written down yet."
+  },
+  "fix": {
+    "title": "Balance fix",
+    "about": "A correction so Tally matches what you really had. It isn’t counted as spending or income.",
+    "delete": "Delete this fix"
+  },
+  "settings": {
+    "mainCur": "Main currency"
+  },
+  "welcome": {
+    "yourCur": "Your currency"
+  },
+  "category": {
+    "example": "e.g. Coffee",
+    "add": "Add category",
+    "bringBack": "Bring back",
+    "edit": "Edit category",
+    "newIn": "New money-in category",
+    "newOut": "New spending category",
+    "back": "{{name}} is back",
+    "keepOne": "Keep at least one category",
+    "removed": "{{name}} removed",
+    "max_one": "Up to {{count}} spending category",
+    "max_other": "Up to {{count}} spending categories"
   }
 }
