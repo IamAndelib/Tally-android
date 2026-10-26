@@ -62,23 +62,16 @@ function loanInfo(l) {
 }
 /* "Payback day · 29 Sep", with the amount when only part of the tab is due then */
 function dueHead(l, i) {
-  if (!i.nextDue) return "No due date yet";
+  if (!i.nextDue) return T("loan.noDueYet");
   return (
-    (l.kind === "lend" ? "Payback day · " : "Return by · ") +
-    dayLabel(i.nextDue) +
+    T(l.kind === "lend" ? "loan.paybackHead" : "loan.returnHead", { date: dayLabel(i.nextDue) }) +
     (i.dueAmt < i.left ? " · " + money(i.dueAmt, i.cur) : "")
   );
 }
 function stLabel(l, st) {
-  return {
-    active: "Active",
-    partly: "Partly paid",
-    overdue: "Overdue",
-    cleared: "Cleared",
-    writeoff: l.kind === "lend" ? "Written off" : "Forgiven",
-  }[st];
+  return T("loan.st." + (st === "writeoff" ? (l.kind === "lend" ? "writtenOff" : "forgiven") : st));
 }
-const loanWho = l => l.person || "Someone";
+const loanWho = l => l.person || T("loan.someone");
 /* where a payment goes by default: the loan's account, or (archived) the first active account in its currency */
 const payAccount = (l, i) => {
   const a = acc(l.account);
@@ -105,9 +98,8 @@ function loanBlock(ids) {
     const pays = i.pays.filter(t => !ids.has(t.id)),
       first = pays.map(t => t.date).sort()[0];
     if (sum(pays) - sum(keep) > Math.max(0, i.paid - i.total) + 0.0005)
-      return loanWho(l) + ": already paid back " + money(i.paid, i.cur);
-    if (first && first < keep[0].date)
-      return loanWho(l) + ": a payment on " + dayLabel(first) + " comes before the rest";
+      return T("loan.blockPaid", { who: loanWho(l), amount: money(i.paid, i.cur) });
+    if (first && first < keep[0].date) return T("loan.blockOrder", { who: loanWho(l), date: dayLabel(first) });
   }
   return "";
 }
@@ -122,7 +114,7 @@ function deleteLoanEntry(id) {
     return;
   }
   closeSheet();
-  withUndo(t.principal ? "Deleted" : "Payment deleted", () => {
+  withUndo(T(t.principal ? "common.deleted" : "loan.payDeleted"), () => {
     S.txns = S.txns.filter(x => x.id !== id && x.feeOf !== id); // a payment's fee goes with it
     relinkLoan(l.id);
   });
@@ -131,16 +123,17 @@ function loanRow(l) {
   const i = loanInfo(l),
     lend = l.kind === "lend";
   const a = acc(l.account),
-    src = (lend ? "From " : "Into ") + (a ? a.name : "?") + " · ";
+    date = dayLabel(i.open ? i.nextDue : l.date);
   const sub =
-    src +
+    T(lend ? "loan.from" : "loan.into", { account: a ? a.name : "?" }) +
+    " · " +
     (i.open
       ? i.nextDue
         ? i.dueAmt < i.left
-          ? money(i.dueAmt, i.cur) + " due " + dayLabel(i.nextDue)
-          : (lend ? "Payback " : "Return by ") + dayLabel(i.nextDue)
-        : "No due date"
-      : (lend ? "Lent " : "Borrowed ") + dayLabel(l.date));
+          ? T("loan.dueAmount", { amount: money(i.dueAmt, i.cur), date })
+          : T(lend ? "loan.paybackOn" : "loan.returnOn", { date })
+        : T("loan.noDue")
+      : T(lend ? "loan.lentOn" : "loan.borrowedOn", { date }));
   return (
     '<button class="tx' +
     (FX.row === l.id ? " flash" : "") +
@@ -216,18 +209,11 @@ function mergeHint() {
     add = evalAmt(($("#f-amt") || {}).value || "") || 0,
     tot = rnd(i.left + (add > 0 ? add : 0)); // what will be owed: what is still owed now, plus this
   el.hidden = false;
-  el.textContent =
-    "Adds to what you " +
-    (lend ? "lent " : "borrowed from ") +
-    l.person +
-    " — now " +
-    money(tot, i.cur) +
-    (lend ? " owed" : " you owe") +
-    ".";
+  el.textContent = T(lend ? "loan.mergeLend" : "loan.mergeBorrow", { who: l.person, amount: money(tot, i.cur) });
 }
 function loanForm(kind) {
   if (!activeAccounts().length) {
-    snack("Add an account first");
+    snack(T("account.addFirst"));
     accForm();
     return;
   }
@@ -237,28 +223,39 @@ function loanForm(kind) {
   F = { kind: "loanf", lk: kind, account: def, merge: null };
   let h =
     '<label class="field" style="margin-top:0"><span>' +
-    (lend ? "Lent to" : "Borrowed from") +
-    '</span><input id="f-person" placeholder="Name" maxlength="40" autocomplete="off"></label>';
+    TH(lend ? "loan.lentTo" : "loan.borrowedFrom") +
+    '</span><input id="f-person" placeholder="' +
+    TH("common.name") +
+    '" maxlength="40" autocomplete="off"></label>';
   h += '<div class="chips" id="f-person-sug" hidden></div>';
   h += amtField("f-amt", acc(def).currency, "", { curId: "amt-cur" });
   h += '<p class="hint" id="f-mergehint" hidden></p>';
-  h += '<div class="lbl">' + (lend ? "From account" : "Into account") + "</div>" + accChips("f-acc", F.account);
+  const dueLbl = T(lend ? "loan.paybackDay" : "loan.returnBy");
   h +=
-    '<div class="row" style="margin-top:4px"><div class="field"><span>Date</span>' +
+    '<div class="lbl">' + TH(lend ? "loan.fromAccount" : "loan.intoAccount") + "</div>" + accChips("f-acc", F.account);
+  h +=
+    '<div class="row" style="margin-top:4px"><div class="field"><span>' +
+    TH("common.date") +
+    "</span>" +
     dateField("f-date", entryDate(), { max: today(), now: true }) +
     "</div>" +
     '<div class="field"><span>' +
-    (lend ? "Payback day" : "Return by") +
+    esc(dueLbl) +
     "</span>" +
-    dateField("f-due", "", { min: today(), opt: true, none: "Pick a day", label: lend ? "Payback day" : "Return by" }) +
+    dateField("f-due", "", { min: today(), opt: true, none: T("loan.pickDay"), label: dueLbl }) +
     "</div></div>";
-  h += '<label class="field"><span>Note</span><input id="f-note" placeholder="Optional" maxlength="80"></label>';
+  h +=
+    '<label class="field"><span>' +
+    TH("common.note") +
+    '</span><input id="f-note" placeholder="' +
+    TH("common.optional") +
+    '" maxlength="80"></label>';
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="loan-save">' +
     ic("check") +
-    (lend ? "Save lending" : "Save loan") +
+    TH(lend ? "loan.saveLend" : "loan.saveBorrow") +
     "</button>";
-  openSheet(lend ? "Lend money" : "Borrowed money", h);
+  openSheet(T(lend ? "loan.newLend" : "loan.newBorrow"), h);
   personSuggest("");
   setTimeout(() => {
     const el = $("#f-person");
@@ -269,7 +266,7 @@ function loanOpen(id, focusPay) {
   RBC = null;
   const l = loan(id);
   if (!l) {
-    snack("That loan was deleted");
+    snack(T("loan.gone"));
     return;
   }
   const i = loanInfo(l),
@@ -282,11 +279,11 @@ function loanOpen(id, focusPay) {
   };
   const heroLine =
     i.draws.length <= 1
-      ? (lend ? "You lent from " : "You borrowed into ") +
-        esc((acc(l.account) || {}).name || "?") +
-        " · " +
-        dayLabel(l.date)
-      : esc(i.draws.length + (lend ? " lendings since " : " loans since ") + dayLabel(l.date));
+      ? TH(lend ? "loan.youLent" : "loan.youBorrowed", {
+          account: (acc(l.account) || {}).name || "?",
+          date: dayLabel(l.date),
+        })
+      : TH(lend ? "loan.lendingsSince" : "loan.loansSince", { count: i.draws.length, date: dayLabel(l.date) });
   let h =
     '<div class="hero"><div class="t">' +
     heroLine +
@@ -294,8 +291,9 @@ function loanOpen(id, focusPay) {
     esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) +
     "</div>" +
     '<div class="t">' +
-    (i.open ? "left of " : i.st === "writeoff" ? "of " : "") +
-    (i.open || i.st === "writeoff" ? esc(money(i.total, i.cur)) + " · " : "") +
+    (i.open || i.st === "writeoff"
+      ? TH(i.open ? "loan.leftOf" : "loan.ofTotal", { total: money(i.total, i.cur) }) + " · "
+      : "") +
     '<span class="st ' +
     i.st +
     '">' +
@@ -304,7 +302,9 @@ function loanOpen(id, focusPay) {
   h +=
     '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
     pct +
-    '" aria-label="Paid back"><span style="width:' +
+    '" aria-label="' +
+    TH("loan.paidBar") +
+    '"><span style="width:' +
     pct +
     '%"></span></div>';
   if (i.open) {
@@ -320,8 +320,8 @@ function loanOpen(id, focusPay) {
           dateField("f-due2", i.nextDue || "", {
             min: today(),
             opt: true,
-            none: "Pick a day",
-            label: "Change due date",
+            none: T("loan.pickDay"),
+            label: T("loan.changeDue"),
           }) +
           "</div>"
         : "") +
@@ -329,59 +329,64 @@ function loanOpen(id, focusPay) {
     const payAccs = activeAccounts().filter(a => a.currency === i.cur);
     h +=
       '<div class="card"><h3>' +
-      (lend ? "Got money back?" : "Paid some back?") +
-      '</h3><p class="muted small" style="margin:0">Part of it is fine too.</p>' +
+      TH(lend ? "loan.gotBackQ" : "loan.paidBackQ") +
+      '</h3><p class="muted small" style="margin:0">' +
+      TH("loan.partOk") +
+      "</p>" +
       amtField("f-amt", i.cur, String(i.nextDue && i.nextDue <= today() ? i.dueAmt : i.left)) +
       '<div class="lbl">' +
-      (lend ? "Into" : "From") +
+      TH(lend ? "loan.payInto" : "loan.payFrom") +
       "</div>" +
       (payAccs.length
         ? accChips("f-acc", F.account, null, payAccs)
-        : '<p class="hint">No account in ' +
-          esc(i.cur) +
-          " to record it: add one, or show an archived one again.</p>") +
+        : '<p class="hint">' + TH("loan.noPayAccount", { cur: i.cur }) + "</p>") +
       '<div style="margin-top:12px">' +
       dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today(), now: true }) +
       "</div>" +
-      feeField(false, "", "Fee charged (" + i.cur + ") · not counted as spending", "Add a fee (sending, cash‑out)") +
+      feeField(false, "", T("fee.label", { cur: i.cur }), T("loan.addFee")) +
       '<div class="gap"></div><button class="btn" data-act="loan-pay">' +
       ic("check") +
-      "Record payment</button></div>";
+      TH("loan.record") +
+      "</button></div>";
   }
   const hist = S.txns.filter(t => t.type === "loan" && t.loan === l.id).sort(byNewest);
   h +=
-    '<div class="sec">History</div><div class="list">' +
+    '<div class="sec">' +
+    TH("common.history") +
+    '</div><div class="list">' +
     hist
       .map(t => {
         const a = acc(t.account),
           f = t.feeId && S.txns.find(x => x.id === t.feeId);
         const r = runBal()[t.id] || {},
           canDel = !t.principal || i.draws.length > 1,
-          more = t.principal
-            ? (lend ? "Lent from " : "Borrowed into ") +
-              (a ? a.name : "?") +
-              " on " +
-              dayLabel(t.date) +
-              (t.due ? " · due " + dayLabel(t.due) : "") +
-              (i.open ? (i.rem[t.id] > 0 ? " · " + money(i.rem[t.id], i.cur) + " left" : " · paid off") : "") +
-              (t.note ? " · " + t.note : "")
-            : dayLabel(t.date) +
-              " · " +
-              (lend ? "into " : "from ") +
-              (a ? a.name : "?") +
-              (f ? " · " + money(f.amount, i.cur) + " fee" : "") +
-              " · " +
-              (r.ls === "cleared"
-                ? lend
-                  ? "this cleared the lending"
-                  : "this cleared the loan"
-                : money(r.left || 0, i.cur) + " left after this");
+          name = a ? a.name : "?",
+          more = (
+            t.principal
+              ? [
+                  T(lend ? "loan.drawLent" : "loan.drawBorrowed", { account: name, date: dayLabel(t.date) }),
+                  t.due && T("loan.dueOn", { date: dayLabel(t.due) }),
+                  i.open &&
+                    (i.rem[t.id] > 0 ? T("loan.leftAmt", { amount: money(i.rem[t.id], i.cur) }) : T("loan.paidOff")),
+                  t.note,
+                ]
+              : [
+                  dayLabel(t.date),
+                  T(lend ? "loan.intoAcc" : "loan.fromAcc", { account: name }),
+                  f && T("loan.feeAmt", { amount: money(f.amount, i.cur) }),
+                  r.ls === "cleared"
+                    ? T(lend ? "loan.clearedLend" : "loan.clearedBorrow")
+                    : T("loan.leftAfter", { amount: money(r.left || 0, i.cur) }),
+                ]
+          )
+            .filter(Boolean)
+            .join(" · ");
         return (
           /* the row's head is the button that opens its details (they hold buttons of their own) */
           '<div class="tx exp"><button class="txh" data-act="row-exp" aria-expanded="false">' +
           emblem(t.principal ? LOAN_EMB[l.kind] : { i: "paid", c: "#15a06f" }, "em") +
           '<span class="mid"><div class="d" dir="auto">' +
-          esc(t.principal ? (lend ? "Lent" : "Borrowed") : lend ? "Got back" : "Paid back") +
+          TH("loan.row." + (t.principal ? (lend ? "lent" : "borrowed") : lend ? "gotBack" : "paidBack")) +
           "</div>" +
           (t.principal ? "" : '<div class="s">' + loanPill(t) + "</div>") +
           "</span>" +
@@ -399,13 +404,14 @@ function loanOpen(id, focusPay) {
           t.id +
           '">' +
           ic("edit") +
-          "Edit</button>" +
+          TH("common.edit") +
+          "</button>" +
           (canDel
             ? '<button class="btn text dng" data-act="loanpay-del" data-v="' +
               t.id +
               '">' +
               ic("delete") +
-              (t.principal ? "Delete this entry" : "Delete this payment") +
+              TH(t.principal ? "loan.delEntry" : "loan.delPayment") +
               "</button>"
             : "") +
           "</div></div></div>"
@@ -419,13 +425,14 @@ function loanOpen(id, focusPay) {
     h +=
       '<button class="btn tonal" data-act="loan-reopen">' +
       ic("reset") +
-      'Reopen · undo last payment</button><div class="gap"></div>';
+      TH("loan.reopenUndo") +
+      '</button><div class="gap"></div>';
   if (i.st !== "cleared")
     h +=
       '<button class="btn tonal" data-act="loan-writeoff">' +
-      (l.status === "writeoff" ? "Reopen" : lend ? "Write off the rest" : "Mark as forgiven") +
+      TH(l.status === "writeoff" ? "loan.reopen" : lend ? "loan.writeOffRest" : "loan.forgive") +
       '</button><div class="gap"></div>';
-  h += '<button class="btn danger" data-act="loan-del">Delete ' + (lend ? "lending" : "loan") + "</button>";
+  h += '<button class="btn danger" data-act="loan-del">' + TH(lend ? "loan.delLend" : "loan.delBorrow") + "</button>";
   openSheet(loanWho(l), h);
   if (focusPay)
     setTimeout(() => {
@@ -448,17 +455,28 @@ function loanDrawEdit(txnId) {
   F.editAcc = t.account;
   const accs = activeAccounts().filter(a => a.currency === i.cur);
   let h = amtField("ed-amt", i.cur, String(t.amount));
-  h += '<div class="lbl">Account</div>' + accChips("ed-acc", t.account, null, accs);
+  h += '<div class="lbl">' + TH("common.account") + "</div>" + accChips("ed-acc", t.account, null, accs);
   /* a payment can't be older than the first draw */
   const first = !t.principal && i.draws.length ? i.draws[0].date : "";
-  h += '<div class="field"><span>Date</span>' + dateField("ed-date", t.date, { min: first, max: today() }) + "</div>";
+  h +=
+    '<div class="field"><span>' +
+    TH("common.date") +
+    "</span>" +
+    dateField("ed-date", t.date, { min: first, max: today() }) +
+    "</div>";
   if (t.principal)
     h +=
-      '<div class="field"><span>Due (optional)</span>' +
-      dateField("ed-due", t.due || "", { min: t.date, opt: true, none: "No due date" }) +
+      '<div class="field"><span>' +
+      TH("loan.dueOptional") +
+      "</span>" +
+      dateField("ed-due", t.due || "", { min: t.date, opt: true, none: T("loan.noDue") }) +
       "</div>";
-  h += '<div class="gap"></div><button class="btn" data-act="loandraw-save">' + ic("check") + "Save</button>";
-  openSheet2(t.principal ? (lend ? "Edit lending" : "Edit loan") : "Edit payment", h);
+  h +=
+    '<div class="gap"></div><button class="btn" data-act="loandraw-save">' +
+    ic("check") +
+    TH("common.save") +
+    "</button>";
+  openSheet2(T(t.principal ? (lend ? "loan.editLend" : "loan.editBorrow") : "loan.editPayment"), h);
 }
 function saveLoanDraw() {
   if (!F || !F.editTxn) return;
@@ -466,25 +484,25 @@ function saveLoanDraw() {
   if (!l) return;
   const amt = evalAmt(($("#ed-amt") || {}).value);
   if (!(amt > 0)) {
-    snack("Enter an amount");
+    snack(T("common.enterAmount"));
     return;
   }
   const acc2 = F.editAcc;
   if (!acc(acc2)) {
-    snack("Pick an account");
+    snack(T("common.pickAccount"));
     return;
   }
   const dateEl = $("#ed-date"),
     date2 = dateEl ? dateEl.dataset.v : "";
   if (!date2) {
-    snack("Pick a date");
+    snack(T("common.pickDate"));
     return;
   }
   const dueEl = $("#ed-due"),
     setDue = !!dueEl,
     due2 = dueEl ? dueEl.dataset.v || "" : "";
   if (setDue && due2 && due2 < date2) {
-    snack("That date is before the loan itself");
+    snack(T("loan.dueBefore"));
     return;
   }
   const txnId = F.editTxn,
@@ -495,7 +513,7 @@ function saveLoanDraw() {
   const i = loanInfo(l),
     firstPay = i.pays.map(t => t.date).sort()[0];
   if (t0.principal && firstPay && firstPay < i.draws.map(t => (t.id === txnId ? date2 : t.date)).sort()[0]) {
-    snack("A payment on " + dayLabel(firstPay) + " comes before that");
+    snack(T("loan.payBefore", { date: dayLabel(firstPay) }));
     return;
   }
   const total = rnd(i.total + (t0.principal ? amt - t0.amount : 0)),
@@ -503,8 +521,8 @@ function saveLoanDraw() {
   if (paid - total > Math.max(0, i.paid - i.total) + 0.0005) {
     snack(
       t0.principal
-        ? "Already paid back " + money(i.paid, i.cur)
-        : "Only " + money(rnd(i.left + t0.amount), i.cur) + " is left"
+        ? T("loan.alreadyPaid", { amount: money(i.paid, i.cur) })
+        : T("loan.onlyLeft", { amount: money(rnd(i.left + t0.amount), i.cur) })
     );
     return;
   }
@@ -526,7 +544,7 @@ function saveLoanDraw() {
   guardOverdraw(mutate, date2, () => {
     closeSheet2();
     closeSheet();
-    withUndo("Saved", mutate, { row: l.id });
+    withUndo(T("common.saved"), mutate, { row: l.id });
   });
 }
 function saveLoan() {
@@ -536,23 +554,23 @@ function saveLoan() {
     due = $("#f-due").dataset.v,
     lend = F.lk === "lend";
   if (!person) {
-    snack(lend ? "Who did you lend to?" : "Who lent you the money?");
+    snack(T(lend ? "loan.whoLend" : "loan.whoBorrow"));
     return;
   }
   if (!(amt > 0)) {
-    snack("Enter an amount");
+    snack(T("common.enterAmount"));
     return;
   }
   if (!acc(F.account)) {
-    snack("Pick an account");
+    snack(T("common.pickAccount"));
     return;
   }
   if (!v.date) {
-    snack("Pick a date");
+    snack(T("common.pickDate"));
     return;
   }
   if (due && due < v.date) {
-    snack("That date is before the loan itself");
+    snack(T("loan.dueBefore"));
     return;
   }
   const account = F.account,
@@ -588,9 +606,13 @@ function saveLoan() {
   guardOverdraw(mutate, date, () => {
     S.settings.lastAcc = account;
     closeSheet();
-    withUndo((lend ? "Lent " : "Borrowed ") + money(amt, acct.currency) + (lend ? " to " : " from ") + person, mutate, {
-      row: l.id,
-    });
+    withUndo(
+      T(lend ? "loan.msg.lent" : "loan.msg.borrowed", { amount: money(amt, acct.currency), who: person }),
+      mutate,
+      {
+        row: l.id,
+      }
+    );
     askNotify();
   });
 }
@@ -600,7 +622,7 @@ function writeOffLoan() {
   const lend = l.kind === "lend",
     back = l.status === "writeoff";
   closeSheet();
-  withUndo(back ? "Reopened" : lend ? "Written off" : "Marked as forgiven", () => {
+  withUndo(T(back ? "loan.msg.reopened" : lend ? "loan.msg.writtenOff" : "loan.msg.forgiven"), () => {
     const x = loan(l.id);
     x.status = back ? "open" : "writeoff";
   });
@@ -608,7 +630,7 @@ function writeOffLoan() {
 function deleteLoan() {
   const id = F.id;
   closeSheet();
-  withUndo("Deleted", () => {
+  withUndo(T("common.deleted"), () => {
     const gone = new Set(S.txns.filter(t => t.type === "loan" && t.loan === id).map(t => t.id));
     S.loans = S.loans.filter(l => l.id !== id);
     S.txns = S.txns.filter(t => !gone.has(t.id) && !gone.has(t.feeOf)); // the payments' fees go with them
@@ -638,7 +660,7 @@ function payTxns(l, pid, ts, amount, account, date, fee) {
     account,
     cat: "fees",
     date,
-    note: "Payment fee",
+    note: T("loan.feeNote"),
   };
   f.feeOf = p.id;
   p.feeId = f.id;
@@ -649,12 +671,12 @@ function readFee(v) {
   const text = F.showFee ? String(v.fee || "").trim() : "",
     fee = text ? evalAmt(text) : 0;
   if (fee == null || fee < 0) {
-    snack(fee == null ? "That fee isn't a number" : "A fee can't be negative");
+    snack(T(fee == null ? "fee.notNumber" : "loan.feeNegative"));
     return null;
   }
   return fee;
 }
-const plusFee = (fee, cur) => (fee > 0 ? " + " + money(fee, cur) + " fee" : "");
+const plusFee = (fee, cur) => (fee > 0 ? " + " + T("loan.feeAmt", { amount: money(fee, cur) }) : "");
 function payLoan() {
   const l = loan(F.id);
   if (!l) return;
@@ -663,11 +685,13 @@ function payLoan() {
     amt = evalAmt(v.amount),
     lend = l.kind === "lend";
   if (!(amt > 0)) {
-    snack("Enter an amount");
+    snack(T("common.enterAmount"));
     return;
   }
   if (!acc(F.account)) {
-    snack(activeAccounts().some(a => a.currency === i.cur) ? "Pick an account" : "No account in " + i.cur);
+    snack(
+      activeAccounts().some(a => a.currency === i.cur) ? T("common.pickAccount") : T("loan.noAccountIn", { cur: i.cur })
+    );
     return;
   }
   const fee = readFee(v);
@@ -689,7 +713,9 @@ function payLoan() {
   guardOverdraw(mutate, date, () => {
     closeSheet();
     withUndo(
-      (lend ? "Got back " : "Paid back ") + money(amt, i.cur) + plusFee(fee, i.cur) + (done ? " · all cleared" : ""),
+      T(lend ? "loan.msg.gotBack" : "loan.msg.paidBack", { amount: money(amt, i.cur) }) +
+        plusFee(fee, i.cur) +
+        (done ? " · " + T("loan.msg.allCleared") : ""),
       mutate,
       { row: id }
     );
@@ -743,9 +769,7 @@ function overpay(l, i, amt, account, date, fee) {
           note: "",
         });
       },
-      lend
-        ? who + "’s lending cleared · you owe " + who + " " + money(extra, cur)
-        : "Loan cleared · " + who + " owes you " + money(extra, cur),
+      T(lend ? "loan.over.lendToLoan" : "loan.over.loanToLend", { who, amount: money(extra, cur) }),
       nid
     );
   const asIncome = () =>
@@ -754,33 +778,25 @@ function overpay(l, i, amt, account, date, fee) {
       cur,
       account,
       date,
-      note: "Extra from " + who,
+      note: T("loan.over.extraNote", { who }),
       also: clear,
-      msg: who + "’s lending cleared · ",
+      msg: T("loan.over.lendCleared", { who }) + " · ",
       back: l.id,
     });
-  const asFee = () => book(() => clear(extra), "Loan cleared · " + money(rnd(fee + extra), cur) + " as its fee", l.id);
+  const asFee = () => book(() => clear(extra), T("loan.over.asFeeMsg", { amount: money(rnd(fee + extra), cur) }), l.id);
   const left = i.left > 0;
+  const v = { who, amount: money(extra, cur) };
   askDialog(
-    lend ? who + " paid " + money(extra, cur) + " more" : "You paid " + money(extra, cur) + " more",
-    lend
-      ? "What is the extra " +
-          money(extra, cur) +
-          "? A loan from " +
-          who +
-          " (you now owe it)" +
-          (left ? ", or income, such as a fee they covered." : ".")
-      : "What is the extra " +
-          money(extra, cur) +
-          "? A lending to " +
-          who +
-          " (they owe you)" +
-          (left ? ", or a fee on this payment, such as a sending charge or interest." : "."),
-    lend ? "Track as loan" : "Track as lending",
+    T(lend ? "loan.over.theyPaid" : "loan.over.youPaid", v),
+    T("loan.over." + (lend ? "askLend" : "askBorrow") + (left ? "Or" : ""), v),
+    T(lend ? "loan.over.asLoan" : "loan.over.asLend"),
     asLoan,
     left
-      ? { alt: [lend ? "Track as income" : "Track as a fee", lend ? asIncome : asFee], cancel: "Go back" }
-      : { cancel: "Go back" }
+      ? {
+          alt: [T(lend ? "loan.over.asIncome" : "loan.over.asFee"), lend ? asIncome : asFee],
+          cancel: T("common.goBack"),
+        }
+      : { cancel: T("common.goBack") }
   );
 }
 /* dropped on Cleared: ask how it was cleared, because one way moves money */
@@ -796,7 +812,7 @@ function clearLoan(id) {
     ts = Date.now();
   const paid = () => {
     if (!account) {
-      snack("No account in " + i.cur + " to record it");
+      snack(T("loan.noAccountRecord", { cur: i.cur }));
       return;
     }
     const mutate = () => {
@@ -804,13 +820,19 @@ function clearLoan(id) {
     };
     guardOverdraw(mutate, today(), () => {
       V.showCleared = true;
-      withUndo((lend ? "Got back " : "Paid back ") + money(i.left, i.cur) + " · all cleared", mutate, { row: id });
+      withUndo(
+        T(lend ? "loan.msg.gotBack" : "loan.msg.paidBack", { amount: money(i.left, i.cur) }) +
+          " · " +
+          T("loan.msg.allCleared"),
+        mutate,
+        { row: id }
+      );
     });
   };
   const off = () => {
     V.showCleared = true;
     withUndo(
-      lend ? "Written off" : "Marked as forgiven",
+      T(lend ? "loan.msg.writtenOff" : "loan.msg.forgiven"),
       () => {
         loan(id).status = "writeoff";
       },
@@ -818,17 +840,16 @@ function clearLoan(id) {
     );
   };
   /* with no account in the loan's currency, a payment can't be recorded: only writing it off is offered */
+  const v = { who, amount: money(i.left, i.cur), account: account ? acc(account).name : "", cur: i.cur },
+    offText = T(lend ? "loan.clear.writeOff" : "loan.clear.forgive");
   askDialog(
-    lend ? "Clear " + who + "’s lending?" : "Clear the loan from " + who + "?",
-    (lend ? who + " still owes " : "You still owe " + who + " ") +
-      money(i.left, i.cur) +
-      "." +
-      (account
-        ? (lend ? " Got back into " : " Paid from ") + acc(account).name + "."
-        : " There's no account in " + i.cur + " to record a payment."),
-    account ? (lend ? "Got it all back" : "Paid it all back") : lend ? "Write it off" : "Mark as forgiven",
+    T(lend ? "loan.clear.titleLend" : "loan.clear.titleBorrow", v),
+    T(lend ? "loan.clear.owesYou" : "loan.clear.youOwe", v) +
+      " " +
+      T(account ? (lend ? "loan.clear.into" : "loan.clear.from") : "loan.clear.noAccount", v),
+    account ? T(lend ? "loan.clear.gotAll" : "loan.clear.paidAll") : offText,
     account ? paid : off,
-    account ? { alt: [lend ? "Write it off" : "Mark as forgiven", off] } : undefined
+    account ? { alt: [offText, off] } : undefined
   );
 }
 /* back to open: a written-off one just reopens; a fully paid one drops its latest payment (the user's choice) */
@@ -840,7 +861,7 @@ function reopenLoan(id) {
     who = loanWho(l);
   if (i.st === "writeoff") {
     withUndo(
-      (lend ? who + " owes you " : "You owe " + who + " ") + money(i.left, i.cur) + " again",
+      T(lend ? "loan.msg.owesAgain" : "loan.msg.oweAgain", { who, amount: money(i.left, i.cur) }),
       () => {
         loan(id).status = "open";
       },
@@ -853,7 +874,7 @@ function reopenLoan(id) {
   const last = i.pays.slice().sort(byNewest)[0];
   if (!last) return;
   withUndo(
-    (lend ? who + " owes you " : "You owe " + who + " ") + money(last.amount, i.cur) + " again",
+    T(lend ? "loan.msg.owesAgain" : "loan.msg.oweAgain", { who, amount: money(last.amount, i.cur) }),
     () => {
       S.txns = S.txns.filter(t => t.id !== last.id && t.feeOf !== last.id); // with its fee
       loan(id).status = "open";
