@@ -52,7 +52,9 @@ Other fixed choices: emblem → *ikon*; Home → *Beranda*; Settings → *Pengat
 - **Home buttons *Pinjam* / *Pinjamkan*** (borrow / lend) differ only by the suffix; check they’re clear enough at a
   glance.
 - **Good afternoon → *Selamat siang***: the app shows it from 12:00 to 18:00, which covers both *siang* and *sore*.
-- **Groceries → *Belanja dapur***, next to Shopping → *Belanja*. *Sembako* is shorter but narrower.
+- **Groceries → *Dapur*** (as in *uang dapur*), next to Shopping → *Belanja*; **Eating out → *Jajan*** (as in
+  *uang jajan*). Short enough for the category tiles on small phones at large text; *Belanja dapur* and *Makan di luar*
+  were cut.
 - **Teal → *Toska***, pink → *Merah jambu*, light red → *Merah terang* (not *merah muda*, which means pink).
 - **Calculator “Decimal point” → *Tanda desimal***: Indonesian writes a decimal comma, so “titik” would be wrong.
 - **Short store description** says *Pengeluaran sekali ketuk* (“one-tap spending”) to fit 80 characters.
