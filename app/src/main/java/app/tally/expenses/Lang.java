@@ -4,6 +4,7 @@ import android.app.LocaleManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.icu.util.ULocale;
 import android.os.Build;
 import android.os.LocaleList;
 
@@ -34,12 +35,12 @@ final class Lang {
             try {
                 LocaleManager lm = ctx.getSystemService(LocaleManager.class);
                 LocaleList app = lm == null ? null : lm.getApplicationLocales();
-                // Tally's own language, written the phone's way: the phone's locale when it's the same language (a
-                // Mexican phone set to Español keeps 1,234.50, regional preferences included), else that language
-                // with the phone's region (a German phone set to English writes en-DE's 1.234,50)
+                // Tally's own language, written the phone's way: the phone's locale when it's the same language and
+                // script (a Mexican phone set to Español keeps 1,234.50, regional preferences included), else that
+                // language with the phone's region (a German phone set to English writes en-DE's 1.234,50)
                 if (app != null && !app.isEmpty()) {
                     Locale a = app.get(0);
-                    if (a.getLanguage().equals(phone.getLanguage())) return phone;
+                    if (langScript(a).equals(langScript(phone))) return phone;
                     if (a.getCountry().isEmpty() && !phone.getCountry().isEmpty())
                         return new Locale.Builder().setLocale(a).setRegion(phone.getCountry()).build();
                     return a;
@@ -47,6 +48,12 @@ final class Lang {
             } catch (RuntimeException ignored) { } // IllformedLocaleException is one
         }
         return phone;
+    }
+
+    /** A locale's language and script, the likely one filled in: zh-Hans and a zh-TW phone's zh-Hant aren't the same. */
+    private static String langScript(Locale l) {
+        ULocale u = ULocale.addLikelySubtags(ULocale.forLocale(l));
+        return u.getLanguage() + "-" + u.getScript();
     }
 
     /**

@@ -356,7 +356,7 @@ function perCur(add) {
    is set smaller the same way, then breaks the word as a last resort. */
 function fitFigures(root) {
   root
-    .querySelectorAll(".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style]")
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style], .cat .cn[style]")
     .forEach(el => el.removeAttribute("style"));
   const shrink = (el, over) => {
     if (!over()) return;
@@ -376,6 +376,13 @@ function fitFigures(root) {
     const over = () => el.scrollWidth > el.clientWidth + 1;
     shrink(el, over);
     if (over()) el.style.overflowWrap = "anywhere";
+  });
+  /* a category name too wide for its tile (a long word, large text): a little smaller, down to 10px (a ring's 9px, as
+     in a full one), and only then its ellipsis */
+  root.querySelectorAll(".cat .cn").forEach(el => {
+    const min = el.closest(".rt") ? 9 : 10;
+    for (let px = parseFloat(getComputedStyle(el).fontSize) - 0.5; px >= min && el.scrollWidth > el.clientWidth + 1; px -= 0.5)
+      el.style.fontSize = px + "px";
   });
 }
 const curLines = m =>

@@ -255,6 +255,9 @@ function inspect() {
         tiny[1].textContent.trim().slice(0, 20) +
         "'"
     );
+  // 9. a category name cut to an ellipsis (fitFigures makes it a little smaller first)
+  for (const e of layer.querySelectorAll(".cat .cn"))
+    if (vis(e) && e.scrollWidth > e.clientWidth + 1) out.push("name cut " + name(e) + " '" + e.textContent + "'");
   // 3. controls overlapping, 4. tap targets too small
   const ctl = all.filter(
     e =>
