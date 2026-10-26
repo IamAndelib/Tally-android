@@ -765,10 +765,14 @@ public class MainActivity extends Activity {
             BackupReceiver.setConfig(MainActivity.this, json);
         }
 
-        /** Every save (state.js save()): the shell's own copy, on disk at once (see SavedCopy). */
+        /**
+         * Every save (state.js save()): the shell's own copy, on disk at once (see SavedCopy). False when the last
+         * write failed.
+         */
         @JavascriptInterface
-        public void keepState(int seq, String json) {
+        public boolean keepState(int seq, String json) {
             SavedCopy.keep(MainActivity.this, seq, json);
+            return !SavedCopy.failed;
         }
 
         /** That copy, for the page's start-up: the save number, a line break and the data; "" when there is none. */

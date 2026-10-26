@@ -394,10 +394,14 @@ function loadState() {
 /* a save that fails (the phone's storage for Tally is full or blocked) is said in a dialog, which the change's own
    message can't cover, every time: the change may be lost when Tally closes unless it's saved as a file */
 function save() {
-  savedJson = JSON.stringify(S);
+  /* while the saved data can't be read, the blank stand-in isn't stored over it: the text found stays as it was, so
+     the next start asks again (Undo of a restore leads back here too), until something is added: a new notebook */
+  const standIn = unreadable && !S.accounts.length && !S.txns.length && !S.loans.length && !S.assets.length;
+  savedJson = standIn ? unreadable : JSON.stringify(S);
   saveSeq++;
+  let kept = false; // the shell's copy has this save (its last write didn't fail)
   try {
-    if (window.Android && Android.keepState) Android.keepState(saveSeq, savedJson);
+    if (window.Android && Android.keepState) kept = Android.keepState(saveSeq, savedJson) !== false;
   } catch (e) {}
   try {
     localStorage.setItem(LS, savedJson);
@@ -405,7 +409,7 @@ function save() {
   } catch (e) {
     /* localStorage is full (a notebook of tens of thousands of entries) or blocked: with the shell's copy, which has
        this save and wins at the next start (its number is higher), nothing is lost; without it, say so */
-    if (!(window.Android && Android.keepState))
+    if (!kept)
       setTimeout(() =>
         askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
           cancel: T("common.notNow"),

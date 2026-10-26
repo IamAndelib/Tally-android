@@ -4,6 +4,8 @@
 //    leaves auto backup on; a full localStorage with the shell's copy raises no alarm
 //  - picking the auto backup's folder again keeps auto backup on; a damaged file in a picked folder offers Replace;
 //    while the saved data can't be read, Restore offers the auto backup and a restore never switches it off
+//  - while the saved data can't be read, a setting changed doesn't store the blank stand-in over it (the next start
+//    asks again); a full localStorage with the shell's copy failing too says so
 //  - notes Tally writes itself (balance fix, fees) show in today's language and aren't stored; a day inside a
 //    sentence is a date, never a capitalised "Yesterday"; standalone date headings start with a capital
 //  - the first account doesn't bring the balance check at once; a transfer, entry or loan that needed an account
@@ -28,7 +30,10 @@ const ok = (c, m) => {
           setReminders: j => (window.__native.reminders = j),
           setBackup: j => window.__native.backup.push(j),
           setBackupData() {},
-          keepState: () => (window.__native.kept = (window.__native.kept || 0) + 1),
+          keepState: () => {
+            window.__native.kept = (window.__native.kept || 0) + 1;
+            return !window.__native.keepFails;
+          },
           pickBackupFolder() {},
           backupStatus: () => JSON.stringify(window.__native.status || { folder: "x", usable: true, last: 1 }),
           readAutoBackup: id => {
@@ -146,6 +151,53 @@ const ok = (c, m) => {
       return new Promise(res => setTimeout(() => res(!!$("#pop").innerHTML), 50));
     });
     ok(!d, "a full localStorage with the shell's copy shows no dialog");
+    await ctx.close();
+  }
+
+  // ---- saved data that can't be read stays found until something is added
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => localStorage.setItem(LS, "{broken"));
+    const start = async () => {
+      await page.reload();
+      return page.evaluate(() => ({ unreadable, dialog: $("#pop h3") ? $("#pop h3").textContent : "" }));
+    };
+    let r = await start();
+    ok(
+      r.unreadable === "{broken" && r.dialog === "Couldn't open your saved data",
+      "start-up says the data can't be read"
+    );
+    await page.evaluate(() => {
+      closePop();
+      S.settings.theme = "dark";
+      save();
+    });
+    r = await start();
+    ok(r.unreadable === "{broken" && r.dialog, "after a setting changed, the next start still says so: " + r.dialog);
+    await page.evaluate(() => {
+      closePop();
+      S.settings.cur = "USD";
+      S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 0, archived: false });
+      save();
+    });
+    r = await start();
+    ok(!r.unreadable && !r.dialog, "once an account is added, that's a new notebook");
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({}, true);
+    await seed(page);
+    const d = await page.evaluate(() => {
+      window.__native.keepFails = true;
+      const set = Storage.prototype.setItem;
+      Storage.prototype.setItem = () => {
+        throw new Error("QuotaExceededError");
+      };
+      save();
+      Storage.prototype.setItem = set;
+      return new Promise(res => setTimeout(() => res($("#pop h3") ? $("#pop h3").textContent : ""), 50));
+    });
+    ok(d === "Couldn't save on this phone", "a full localStorage with the shell's copy failing too says so: " + d);
     await ctx.close();
   }
 
