@@ -162,5 +162,21 @@
     "pinkDark": "Dark pink",
     "pinkLight": "Light pink",
     "yellow": "Yellow"
+  },
+  "ring": {
+    "add": "Add {{cat}}",
+    "addShare": "Add {{cat}}, {{share}} of spending",
+    "tapCat": "Tap a category",
+    "summary": "Spending summary: spent {{spent}}",
+    "summaryGot": "Spending summary: spent {{spent}}, received {{got}}",
+    "switchCur": "Showing {{cur}}. Switch to {{next}}"
+  },
+  "donut": {
+    "label": "What the middle of the donut shows",
+    "tap": "Tap to change",
+    "out": "Spending",
+    "in": "Income",
+    "both": "Spending + income",
+    "none": "No stats"
   }
 }

@@ -217,6 +217,9 @@ function money(n, cur, short) {
   }
   return fmtSym(f, toDp(n, f.dp));
 }
+/* a whole percentage the phone's way: 12%, 12 %, %12 */
+let PCT_NF = null;
+const percent = n => (PCT_NF = PCT_NF || new Intl.NumberFormat(LOC.fmt, { style: "percent" })).format(n / 100);
 /* n rounded to 1/dp the way Intl shows it: halves away from zero, past float error (1.005 → 1.01), and −0 as 0 */
 const toDp = (n, dp) => (Math.sign(n) * Math.round(Math.abs(n) * dp + 1e-7)) / dp + 0;
 /* n as money() shows it in that currency: ¥666.667 is 667, $0.004 is 0 */
