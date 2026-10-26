@@ -522,17 +522,17 @@ function withUndo(msg, change, fx) {
 function guardOverdraw(mutate, date, proceed) {
   const b0 = balances(),
     d0 = balances(addDays(date, 1)),
-    T = S.txns,
+    txs = S.txns,
     L = S.loans;
   let b1, d1;
-  S.txns = JSON.parse(JSON.stringify(T));
+  S.txns = JSON.parse(JSON.stringify(txs));
   S.loans = JSON.parse(JSON.stringify(L));
   try {
     mutate();
     b1 = balances();
     d1 = balances(addDays(date, 1));
   } finally {
-    S.txns = T;
+    S.txns = txs;
     S.loans = L;
   }
   const low = (n, o) => n < -0.0005 && n < o - 0.0005;

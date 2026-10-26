@@ -238,8 +238,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         boolean dueToday = date.equals(today());
         String title = lend ? who + " owes you " + amount : "You owe " + who + " " + amount;
         String text = (lend
-                ? (dueToday ? "Payback day is today" : "Payback was due " + pretty(date))
-                : (dueToday ? "Due today" : "Was due " + pretty(date)))
+                ? (dueToday ? "Payback day is today" : "Payback was due " + pretty(ctx, date))
+                : (dueToday ? "Due today" : "Was due " + pretty(ctx, date)))
                 + (total.isEmpty() ? "" : " · " + total + " in all");
         int base = code(ctx, id);
         Notification.Action[] actions = {
@@ -436,10 +436,10 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     /** "Mon, Jun 15" / "Mon 15 Jun" / "6月15日(月)": weekday, day and month in the phone's own order */
-    private static String pretty(String s) {
+    private static String pretty(Context ctx, String s) {
         Calendar c = parse(s);
         if (c == null) return s;
-        Locale loc = Locale.getDefault();
+        Locale loc = Lang.fmt(ctx);
         return new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEdMMM"), loc)
                 .format(c.getTime());
     }

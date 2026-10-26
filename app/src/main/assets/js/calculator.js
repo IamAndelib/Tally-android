@@ -127,7 +127,7 @@ function calcMirrorSync(id) {
   const res = $("#cr-" + id);
   if (res) {
     const v = /[+−×÷]/.test(CALC.expr.slice(1)) ? calcEval(CALC.expr) : null;
-    res.textContent = v == null ? "" : "= " + v.toLocaleString(undefined, { maximumFractionDigits: 3 });
+    res.textContent = v == null ? "" : "= " + v.toLocaleString(LOC.fmt, { maximumFractionDigits: 3 });
   }
 }
 /* keeps the caret in view: as the expression grows the display slides left, like a calculator's */

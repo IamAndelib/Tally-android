@@ -43,6 +43,7 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -722,6 +723,17 @@ public class MainActivity extends Activity {
             if (p.getBoolean("intro", false)) return false;
             p.edit().putBoolean("intro", true).apply();
             return true;
+        }
+
+        /** {"ui": the language of Tally's words, "fmt": the locale for numbers and dates}; see {@link Lang}. */
+        @JavascriptInterface
+        public String getLocale() {
+            try {
+                return new JSONObject().put("ui", Lang.ui(MainActivity.this))
+                        .put("fmt", Lang.fmt(MainActivity.this).toLanguageTag()).toString();
+            } catch (JSONException e) {
+                return "{}";
+            }
         }
 
         @JavascriptInterface

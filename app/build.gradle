@@ -25,6 +25,9 @@ android {
         targetSdk 35
         versionCode Integer.parseInt(project.property('tallyVersionCode'))
         versionName project.property('tallyVersion')
+        // only the languages Tally is translated into (l10n/web/), so the libraries' own translations (AndroidX
+        // ships dozens) never make Android pick a language Tally can't show; checked by tests/e2e/32-i18n-static.js
+        resourceConfigurations += ['en']
     }
 
     // BuildConfig.VERSION_NAME is read by the JS bridge (Bridge.getVersion()) for Settings' About footer

@@ -203,14 +203,14 @@ function money(n, cur, short) {
       }
     }
     try {
-      f = new Intl.NumberFormat(undefined, o);
+      f = new Intl.NumberFormat(LOC.fmt, o);
       /* a currency sign this phone has no font for (e.g. the Kyrgyz som ⃀) would show as a box: use the code */
       const sym = (f.formatToParts(0).find(p => p.type === "currency") || {}).value;
-      if (sym && !canDraw(sym)) f = new Intl.NumberFormat(undefined, Object.assign(o, { currencyDisplay: "code" }));
+      if (sym && !canDraw(sym)) f = new Intl.NumberFormat(LOC.fmt, Object.assign(o, { currencyDisplay: "code" }));
       else if (sym === cur && LOCAL_SYM[cur]) f.sym = LOCAL_SYM[cur];
     } catch (e) {
       /* no currency chosen yet (a new notebook), or one this phone doesn't know */
-      return (cur ? cur + " " : "") + rnd(n).toLocaleString();
+      return (cur ? cur + " " : "") + rnd(n).toLocaleString(LOC.fmt);
     }
     f.dp = 10 ** f.resolvedOptions().maximumFractionDigits;
     NF.set(k, f);
@@ -250,7 +250,7 @@ const gregorian = loc => {
 };
 const DATE_LOC = (() => {
   try {
-    return gregorian(new Intl.DateTimeFormat().resolvedOptions().locale);
+    return gregorian(new Intl.DateTimeFormat(LOC.fmt).resolvedOptions().locale);
   } catch (e) {
     return undefined;
   }
@@ -281,7 +281,7 @@ function dayLabel(d) {
   return x.toLocaleDateString(DATE_LOC, o);
 }
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
-const dayName = d => (d === today() ? "Today" : d === addDays(today(), -1) ? "Yesterday" : dayLabel(d));
+const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));
 /* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
    months: whole months ("Apr – Sep") */
 function rangeLabel(a, b, months) {
@@ -302,7 +302,7 @@ function rangeLabel(a, b, months) {
 const NUMSEP = (() => {
   let p = [];
   try {
-    p = new Intl.NumberFormat(undefined, { numberingSystem: "latn" }).formatToParts(12345.6);
+    p = new Intl.NumberFormat(LOC.fmt, { numberingSystem: "latn" }).formatToParts(12345.6);
   } catch (e) {}
   const get = t => (p.find(x => x.type === t) || {}).value;
   const dec = get("decimal") || ".",
@@ -318,7 +318,7 @@ let GROUPER = null;
 function groupInt(n) {
   if (!n || n[0] === "0" || n.length > 15) return n;
   try {
-    GROUPER = GROUPER || new Intl.NumberFormat(undefined, { numberingSystem: "latn", maximumFractionDigits: 0 });
+    GROUPER = GROUPER || new Intl.NumberFormat(LOC.fmt, { numberingSystem: "latn", maximumFractionDigits: 0 });
     const out = GROUPER.formatToParts(+n)
       .map(x => (x.type === "integer" ? x.value : x.type === "group" ? NUMSEP.grp : ""))
       .join("");
@@ -461,7 +461,7 @@ function snack(msg, undo) {
     '<div class="snack" role="status"><span>' +
     esc(msg) +
     "</span>" +
-    (undo ? '<button data-act="undo">Undo</button>' : "") +
+    (undo ? '<button data-act="undo">' + TH("common.undo") + "</button>" : "") +
     "</div>";
   clearTimeout(snackT);
   snackT = setTimeout(
@@ -496,9 +496,9 @@ const buzz = kind => {
 /* short label for date fields: Today / Yesterday / Tomorrow / 22 Sep (year only if not this year) */
 function shortDay(d) {
   const t = today();
-  if (d === t) return "Today";
-  if (d === addDays(t, -1)) return "Yesterday";
-  if (d === addDays(t, 1)) return "Tomorrow";
+  if (d === t) return T("day.today");
+  if (d === addDays(t, -1)) return T("day.yesterday");
+  if (d === addDays(t, 1)) return T("day.tomorrow");
   const x = parseISO(d),
     o = { day: "numeric", month: "short" };
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";

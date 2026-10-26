@@ -95,6 +95,15 @@ jobs:
             -alias tally -keyalg RSA -keysize 4096 -sigalg SHA384withRSA -validity 1 -dname "CN=Tally CI throwaway"
           gradle assembleDebug assembleRelease --no-daemon
           rm -f "$TALLY_KEYSTORE"
+      # exactly Tally's languages in the APK besides English (the default folder, '--_--'): one per values-xx folder
+      # with a lang.xml, none of the libraries' own, none dropped by the build (resourceConfigurations, app/build.gradle)
+      - name: Check the APK's languages
+        run: |
+          want=$(ls -d app/src/main/res/values-*/lang.xml 2>/dev/null | wc -l)
+          line=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep '^locales:')
+          echo "$line"
+          got=$(echo "$line" | grep -o "'[^']*'" | grep -vc "'--_--'" || true)
+          [ "$got" = "$want" ] || { echo "::error::the APK has $got languages, Tally has $want"; exit 1; }
       - name: Remove the debug key
         if: always()
         run: rm -f app/debug.keystore

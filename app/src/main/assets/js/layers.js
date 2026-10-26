@@ -264,7 +264,7 @@ function phoneClock() {
     const h24 =
       window.Android && Android.is24h
         ? !!Android.is24h()
-        : !/^h1[12]$/.test(new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hourCycle);
+        : !/^h1[12]$/.test(new Intl.DateTimeFormat(LOC.fmt, { hour: "numeric" }).resolvedOptions().hourCycle);
     return h24 ? "24" : "12";
   } catch (e) {
     return "24";
@@ -273,7 +273,7 @@ function phoneClock() {
 const timeLabel = hm => {
   const [h, m] = hm.split(":").map(Number),
     h24 = is24h();
-  return new Date(2024, 0, 1, h, m).toLocaleTimeString(undefined, {
+  return new Date(2024, 0, 1, h, m).toLocaleTimeString(LOC.fmt, {
     hour: h24 ? "2-digit" : "numeric",
     minute: "2-digit",
     hourCycle: h24 ? "h23" : "h12",
@@ -555,7 +555,7 @@ const curSyms = {};
 /* the name in the phone's language, else Tally's English one (Android's web view has names for few currencies) */
 function curName(c) {
   try {
-    curDN = curDN || new Intl.DisplayNames(undefined, { type: "currency" });
+    curDN = curDN || new Intl.DisplayNames(LOC.fmt, { type: "currency" });
     const n = curDN.of(c);
     if (n && n !== c) return n;
   } catch (e) {}
@@ -565,7 +565,7 @@ function curSym(c) {
   if (c in curSyms) return curSyms[c];
   let s = "";
   try {
-    const p = new Intl.NumberFormat(undefined, { style: "currency", currency: c, currencyDisplay: "narrowSymbol" })
+    const p = new Intl.NumberFormat(LOC.fmt, { style: "currency", currency: c, currencyDisplay: "narrowSymbol" })
       .formatToParts(0)
       .find(x => x.type === "currency");
     if (p && p.value === c) s = LOCAL_SYM[c] || "";
@@ -587,7 +587,7 @@ function curCountries(c) {
   return curRegionsOf(c).map(r => {
     let n = "";
     try {
-      regDN = regDN || new Intl.DisplayNames(undefined, { type: "region" });
+      regDN = regDN || new Intl.DisplayNames(LOC.fmt, { type: "region" });
       n = regDN.of(r);
     } catch (e) {}
     return (n && n !== r ? n + "|" : "") + REGIONS[r][0];
@@ -604,7 +604,7 @@ function allCurs() {
       if (Intl.supportedValuesOf) l = [...new Set(Intl.supportedValuesOf("currency").concat(l))];
     } catch (e) {}
     const name = new Map(l.map(c => [c, curName(c) || c])),
-      coll = new Intl.Collator();
+      coll = new Intl.Collator(LOC.fmt);
     const rest = l.filter(c => !MAJOR.includes(c)).sort((a, b) => coll.compare(name.get(a), name.get(b)));
     curAll = MAJOR.concat(rest);
   }

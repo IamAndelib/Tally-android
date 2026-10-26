@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The languages Tally is translated into, for Android 13+'s per-app language setting. Keep in step with
+     l10n/web/ and resourceConfigurations in app/build.gradle (tests/e2e/32-i18n-static.js checks). -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+</locale-config>

@@ -1,0 +1,10 @@
+{
+  "common": {
+    "undo": "Undo"
+  },
+  "day": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow"
+  }
+}

@@ -9,7 +9,7 @@ let SM = null;
 let COMPACT = null;
 const compact = n => {
   try {
-    COMPACT = COMPACT || new Intl.NumberFormat(undefined, { notation: "compact", maximumSignificantDigits: 3 });
+    COMPACT = COMPACT || new Intl.NumberFormat(LOC.fmt, { notation: "compact", maximumSignificantDigits: 3 });
     return COMPACT.format(n);
   } catch (e) {
     return String(Math.round(n));
