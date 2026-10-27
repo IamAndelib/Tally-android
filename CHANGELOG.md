@@ -5,6 +5,54 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.2] — 2026-10-27
+
+### Added
+
+- Tally speaks Spanish, Brazilian Portuguese, French, German, Russian, Simplified Chinese, Indonesian and Turkish,
+  following the phone's language: every screen, notification and the widget, and the store listing. On Android 13
+  and later, Settings → Region shows the language and opens Android's setting to pick one just for Tally. Numbers,
+  dates and money keep the phone's own format, also on phones in a language Tally isn't translated into. The
+  translations are drafts, to be reviewed by native speakers.
+
+- A "Paid to" box beside the picked category when spending, and "Received from" when money comes in, offering names
+  used before as you type. Entries show it as their title, and the CSV export has it as its last column (`payee`).
+- Add a category or an account right from the entry form: the dashed Add tile and chip open the same form as in
+  Settings, and the entry comes back with everything typed and the new one picked.
+
+### Changed
+
+- Account chips are a little narrower, so more fit on a row, and a picked one shows a check in its emblem instead of
+  growing, so the chips no longer move when one is tapped.
+- The example in a new category's name box fits its kind: spending or money in.
+- Saved data and backups are version 7 (for the payee); an older Tally warns before restoring a newer backup.
+- Shares and comparisons are written the phone's way (12 %, %12), and counts of a thousand or more are grouped.
+- The time picker writes AM and PM the way the phone's language does.
+- A search for a person finds names whatever their accents or Turkish dotted and dotless i.
+- An emblem search in a script other than Latin finds nothing, instead of listing every emblem.
+- Long lists (History over months, a busy notebook) open and scroll faster, and saving an entry in a large notebook
+  takes less time.
+
+### Fixed
+
+- Picking the auto backup's folder again no longer turns auto backup off, and a damaged backup in a newly picked
+  folder offers to replace it.
+- While saved data can't be read, changing a setting no longer hides the problem at the next start or turns auto
+  backup off, Restore offers the auto backup first, and restoring a file keeps auto backup on.
+- A daily backup missed because the phone was off or Tally was stopped runs a minute later, not a day later.
+- A backup file saved by an editor with a byte-order mark restores.
+- A loan payment counts only against what was borrowed or lent by its day, so a later loan keeps its due date.
+- A name typed in another case adds to that person's open loan instead of starting a second one.
+- A payback day can't be set to yesterday after midnight passes with the form open.
+- An amount that rounds to nothing in its currency ($0.004) is no longer saved as $0.00.
+- Going back from the low-balance question no longer changes the account offered next time.
+- The focus stays on screen when a button turns itself off (Next reaching today), for TalkBack and keyboards.
+- A long list (History, a day's entries) keeps the entry you were looking at in place after a save, an Undo or going
+  back to it.
+- History keeps only listed entries selected, so Delete never removes one out of sight (after midnight, or an Undo).
+- The evening nudge and the balance check still come, a minute late, when the phone was off at their time.
+- A save that both of the phone's stores refuse is said even the first time.
+
 ## [1.4.1] — 2026-10-20
 
 ### Fixed
@@ -432,6 +480,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.2
 [1.4.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.1
 [1.4.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.0
 [1.3.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.3.2

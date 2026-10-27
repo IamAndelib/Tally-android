@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally hoje</string>
+    <string name="w_desc">Saldo e gastos de hoje, com um + rápido</string>
+    <string name="w_label">Tally · Hoje</string>
+    <string name="w_spent">Gasto hoje</string>
+    <string name="w_open">Abrir o Tally</string>
+    <string name="w_add">Adição rápida</string>
+    <string name="qa_title">Adição rápida</string>
+    <string name="qa_out">Gasto</string>
+    <string name="qa_in">Entrada</string>
+    <string name="qa_tr">Transferir</string>
+    <string name="page_stopped">A tela do Tally está parando. Tudo o que você salvou está guardado.</string>
+    <string name="try_again">Tentar de novo</string>
+    <string name="no_webview">O Tally precisa do Android System WebView, que está faltando ou sendo atualizado agora. Tente de novo daqui a pouco.</string>
+
+    <!-- notificações (ReminderReceiver) -->
+    <string name="ch_nudge">Lembrete da noite</string>
+    <string name="ch_check">Conferir saldos</string>
+    <string name="ch_dues">Vencimentos de dívidas e empréstimos</string>
+    <string name="ch_backup">Problemas no backup</string>
+    <string name="n_nudge_title">Nada anotado no Tally hoje</string>
+    <string name="n_nudge_text">Tire um minuto para anotar o que você gastou.</string>
+    <string name="n_check_title">Seus saldos ainda conferem?</string>
+    <!-- %1$s: a pessoa, %2$s: o valor devido -->
+    <string name="n_owes_you">%1$s deve %2$s a você</string>
+    <string name="n_you_owe">Você deve %2$s a %1$s</string>
+    <string name="n_payback_today">Hoje é dia de receber</string>
+    <!-- %1$s: uma data, como "seg., 15 de jun." -->
+    <string name="n_payback_was">Era para receber em %1$s</string>
+    <string name="n_due_today">Vence hoje</string>
+    <string name="n_due_was">Venceu em %1$s</string>
+    <!-- %1$s: o valor total ainda devido -->
+    <string name="n_in_all">%1$s no total</string>
+    <string name="n_record">Registrar pagamento</string>
+    <string name="n_plus_day">+1 dia</string>
+    <string name="n_plus_week">+1 semana</string>
+    <string name="n_someone">Alguém</string>
+    <!-- na tela de bloqueio que oculta o conteúdo das notificações: só o tipo -->
+    <string name="pub_check">Conferir saldos</string>
+    <string name="pub_dues">Uma dívida ou um empréstimo vence</string>
+    <string name="pub_backup">Problema no backup</string>
+    <string name="pub_nudge">Nada anotado hoje</string>
+
+    <!-- backup automático (BackupReceiver) -->
+    <string name="bk_failed">O Tally não conseguiu fazer o backup</string>
+    <string name="bk_tap_folder">Toque para escolher a pasta de novo.</string>
+    <string name="bk_tap_settings">Toque para abrir as Configurações.</string>
+    <string name="bk_err_no_folder">Nenhuma pasta foi escolhida.</string>
+    <string name="bk_err_not_ready">A cópia dos seus dados no Tally ainda não está pronta. Tente de novo daqui a pouco.</string>
+    <string name="bk_err_nothing">Ainda não há nada para fazer backup.</string>
+    <string name="bk_err_unwritable">Não é possível gravar na pasta.</string>
+    <string name="bk_err_write_failed">Não foi possível gravar o backup.</string>
+    <!-- %1$s: o nome do arquivo, "Tally backup (new).json" -->
+    <string name="bk_err_saved_temp">O backup foi salvo como “%1$s”.</string>
+    <string name="bk_err_no_access">O Tally não consegue mais abrir a pasta de backup.</string>
+    <string name="bk_err_folder_gone">A pasta de backup não foi encontrada.</string>
+    <!-- %1$s: o nome do arquivo, "Tally backup.json" -->
+    <string name="bk_err_no_file">Não há “%1$s” na pasta de backup.</string>
+    <string name="bk_err_read_failed">Não é possível ler o arquivo de backup.</string>
+    <!-- onde fica a pasta de backup, nas Configurações -->
+    <string name="bk_folder_phone">Armazenamento do celular</string>
+    <string name="bk_folder_docs">Documentos</string>
+    <string name="bk_folder_docs_path">Documentos/%1$s</string>
+    <string name="bk_folder_sd">Cartão SD</string>
+    <!-- %1$s: o caminho da pasta no cartão, como "Backups" -->
+    <string name="bk_folder_sd_path">Cartão SD/%1$s</string>
+    <string name="bk_folder_other">Pasta escolhida</string>
+</resources>

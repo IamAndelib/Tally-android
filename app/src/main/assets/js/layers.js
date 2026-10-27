@@ -21,21 +21,27 @@ function calGrid(m, o) {
   const w = S.settings.week,
     off = (parseISO(first).getDay() - w + 7) % 7,
     rows = Math.ceil((off + monthDays(m)) / 7);
+  const long = x =>
+    parseISO(x).toLocaleDateString(DATE_LOC, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const has = new Set(S.txns.map(x => x.date)),
     minM = o.min ? o.min.slice(0, 7) : "",
     maxM = o.max ? o.max.slice(0, 7) : "";
   let h =
     '<div class="cal-h"><button class="icon" data-act="' +
     o.monAct +
-    '" data-v="-1" aria-label="Previous month"' +
+    '" data-v="-1" aria-label="' +
+    TH("picker.prevMonth") +
+    '"' +
     (minM && m <= minM ? " disabled" : "") +
     ">" +
     ic("left") +
     "</button><b>" +
-    esc(monthLabel(m, true)) +
+    esc(capFirst(monthLabel(m, true))) +
     '</b><button class="icon" data-act="' +
     o.monAct +
-    '" data-v="1" aria-label="Next month"' +
+    '" data-v="1" aria-label="' +
+    TH("picker.nextMonth") +
+    '"' +
     (maxM && m >= maxM ? " disabled" : "") +
     ">" +
     ic("right") +
@@ -67,14 +73,7 @@ function calGrid(m, o) {
         d +
         /* read out as the whole date, with today and the chosen day marked */
         '" aria-label="' +
-        esc(
-          parseISO(d).toLocaleDateString(DATE_LOC, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }) + (has.has(d) ? ", has entries" : "")
-        ) +
+        (has.has(d) ? TH("picker.dayEntries", { date: long(d) }) : esc(long(d))) +
         '"' +
         (d === t ? ' aria-current="date"' : "") +
         (o.sel && d === o.sel ? ' aria-pressed="true"' : "") +
@@ -111,12 +110,12 @@ function askDialog(title, text, okText, onOk, o) {
         '</button><button class="btn text" data-act="ask-alt">' +
         esc(o.alt[0]) +
         '</button><button class="btn text" data-act="pd-close">' +
-        esc(o.cancel || "Cancel") +
+        esc(o.cancel || T("common.cancel")) +
         "</button></div></div></div>"
       : '<div class="dlg-act"><button class="btn text" data-act="' +
         (o.no ? "ask-alt" : "pd-close") +
         '">' +
-        esc(o.cancel || "Cancel") +
+        esc(o.cancel || T("common.cancel")) +
         "</button>" +
         '<button class="btn text' +
         (o.danger ? " dng" : "") +
@@ -132,34 +131,36 @@ const miniDialog = (label, body, okAct, okText) => {
     esc(label) +
     "</div></div>" +
     body +
-    '<div class="dlg-act"><button class="btn text" data-act="pd-close">Cancel</button><button class="btn text" data-act="' +
+    '<div class="dlg-act"><button class="btn text" data-act="pd-close">' +
+    TH("common.cancel") +
+    '</button><button class="btn text" data-act="' +
     okAct +
     '">' +
     esc(okText) +
     "</button></div></div></div>";
 };
 /* a date button; o.now: a new entry's "today", which moves to the new day at midnight until a date is picked
-   (catchUpToday). Screen readers hear its label and the date. */
+   (catchUpToday); o.min "today": no day before today, also after midnight. Screen readers hear its label and the date. */
 function dateField(id, val, o) {
   o = o || {};
-  const shownAs = val ? shortDay(val) : o.none || "No date",
-    label = o.label || "Date";
+  const shownAs = val ? shortDay(val) : o.none || T("picker.noDate"),
+    label = o.label || T("common.date");
   return (
     '<button class="fieldbtn datefld" id="' +
     id +
     '" data-act="pick-date" data-v="' +
     esc(val || "") +
     '"' +
-    (o.min ? ' data-min="' + o.min + '"' : "") +
+    (o.min ? ' data-min="' + (o.min === "today" ? today() + '" data-min-today="1' : o.min) + '"' : "") +
     (o.max ? ' data-max="' + o.max + '"' : "") +
     (o.opt ? ' data-opt="1"' : "") +
     (o.now && val === today() ? ' data-now="1"' : "") +
     ' data-none="' +
-    esc(o.none || "No date") +
+    esc(o.none || T("picker.noDate")) +
     '" data-label="' +
     esc(label) +
     '" aria-label="' +
-    esc(label + ": " + shownAs) +
+    TH("common.labelValue", { label, value: shownAs }) +
     '"><span>' +
     esc(shownAs) +
     "</span>" +
@@ -183,7 +184,11 @@ function refocus(root, k) {
       : k.act
         ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
         : "",
-    el = sel && root.querySelector(sel);
+    usable = b => !b.disabled && b.getClientRects().length > 0;
+  let el = sel && root.querySelector(sel);
+  /* a button that just turned itself off (Next reaching today, Later at the newest period): its neighbour in the same
+     bar takes the focus, so it isn't lost to the page */
+  if (el && !usable(el)) el = [...el.parentElement.querySelectorAll("button")].find(usable) || null;
   if (el) el.focus({ preventScroll: true });
   return !!el;
 }
@@ -191,7 +196,7 @@ function setDateField(el, v, keepNow) {
   const shownAs = v ? shortDay(v) : el.dataset.none;
   el.dataset.v = v || "";
   el.firstChild.textContent = shownAs;
-  el.setAttribute("aria-label", el.dataset.label + ": " + shownAs);
+  el.setAttribute("aria-label", T("common.labelValue", { label: el.dataset.label, value: shownAs }));
   if (!keepNow) delete el.dataset.now;
 }
 let DP = null;
@@ -202,9 +207,19 @@ function datePicker(el) {
   let ref = v || today();
   if (mx && ref > mx) ref = mx;
   if (mn && ref < mn) ref = mn;
-  DP = { id: el.id, month: ref.slice(0, 7), sel: v, min: mn, max: mx, opt: !!el.dataset.opt };
+  DP = {
+    id: el.id,
+    month: ref.slice(0, 7),
+    sel: v,
+    min: mn,
+    max: mx,
+    opt: !!el.dataset.opt,
+    minToday: !!el.dataset.minToday,
+  };
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="dp" role="dialog" aria-modal="true" aria-label="Pick a date"></div></div>';
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="dp" role="dialog" aria-modal="true" aria-label="' +
+    TH("picker.date") +
+    '"></div></div>';
   dpRender();
 }
 function dpRender() {
@@ -216,19 +231,25 @@ function drawDp() {
   const t = today(),
     tOk = !((DP.max && t > DP.max) || (DP.min && t < DP.min));
   el.innerHTML =
-    '<div class="dp-h"><div class="t">Pick a date</div><div class="big">' +
-    esc(DP.sel ? dayLabel(DP.sel) : "No date") +
+    '<div class="dp-h"><div class="t">' +
+    TH("picker.date") +
+    '</div><div class="big">' +
+    esc(DP.sel ? dayLabel(DP.sel) : T("picker.noDate")) +
     "</div></div>" +
     calGrid(DP.month, { act: "dp-day", monAct: "dp-mon", sel: DP.sel, min: DP.min, max: DP.max }) +
     '<div class="dlg-act">' +
     (DP.opt && DP.sel
-      ? '<button class="btn text" data-act="dp-set" data-v="">Clear</button>'
+      ? '<button class="btn text" data-act="dp-set" data-v="">' + TH("picker.clear") + "</button>"
       : '<button class="btn text" data-act="dp-set" data-v="' +
         t +
         '"' +
         (tOk ? "" : " disabled") +
-        ">Today</button>") +
-    '<button class="btn text" data-act="pd-close">Cancel</button></div>';
+        ">" +
+        TH("day.today") +
+        "</button>") +
+    '<button class="btn text" data-act="pd-close">' +
+    TH("common.cancel") +
+    "</button></div>";
   fitCal(el);
 }
 function dpSet(v) {
@@ -264,7 +285,7 @@ function phoneClock() {
     const h24 =
       window.Android && Android.is24h
         ? !!Android.is24h()
-        : !/^h1[12]$/.test(new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hourCycle);
+        : !/^h1[12]$/.test(new Intl.DateTimeFormat(LOC.fmt, { hour: "numeric" }).resolvedOptions().hourCycle);
     return h24 ? "24" : "12";
   } catch (e) {
     return "24";
@@ -273,12 +294,22 @@ function phoneClock() {
 const timeLabel = hm => {
   const [h, m] = hm.split(":").map(Number),
     h24 = is24h();
-  return new Date(2024, 0, 1, h, m).toLocaleTimeString(undefined, {
+  return new Date(2024, 0, 1, h, m).toLocaleTimeString(LOC.fmt, {
     hour: h24 ? "2-digit" : "numeric",
     minute: "2-digit",
     hourCycle: h24 ? "h23" : "h12",
   });
 };
+/* "AM" / "PM" as the phone's language writes them ("a. m.", "上午", "ص") */
+function dayPeriod(v) {
+  try {
+    const p = new Intl.DateTimeFormat(LOC.fmt, { hour: "numeric", hourCycle: "h12" })
+      .formatToParts(new Date(2024, 0, 1, v === "PM" ? 15 : 9))
+      .find(x => x.type === "dayPeriod");
+    if (p) return p.value;
+  } catch (e) {}
+  return v;
+}
 /* The time picker: scroll wheels like the phone's own clock (hours : minutes, plus AM/PM with Settings → Region's
    12-hour time), the centre row bold, its neighbours faded. Each wheel is a scroll-snap list with one blank row above
    and below, so row i is centred at scrollTop = i·W_ROW. Hours and minutes wrap around: they are listed three times
@@ -292,19 +323,19 @@ function timePicker(title, cur, onPick) {
   const cols = [
     {
       id: "h",
-      label: "Hour",
+      label: T("picker.hour"),
       vals: h24 ? [...Array(24).keys()] : [12, ...Array.from({ length: 11 }, (_, i) => i + 1)],
     },
-    { id: "m", label: "Minute", vals: [...Array(60).keys()] },
+    { id: "m", label: T("picker.minute"), vals: [...Array(60).keys()] },
   ];
-  if (!h24) cols.push({ id: "ap", label: "AM or PM", vals: ["AM", "PM"] });
+  if (!h24) cols.push({ id: "ap", label: T("picker.ampm"), vals: ["AM", "PM"] });
   cols.forEach(c => {
     c.loop = c.id !== "ap";
     c.copies = c.loop ? 3 : 1;
     const v = c.id === "h" ? (h24 ? h : h % 12 || 12) : c.id === "m" ? m : h < 12 ? "AM" : "PM";
     c.idx = (c.loop ? c.vals.length : 0) + c.vals.indexOf(v);
   });
-  const txt = (c, v) => (c.id === "ap" ? v : c.id === "h" && !h24 ? String(v) : pad(v));
+  const txt = (c, v) => (c.id === "ap" ? dayPeriod(v) : c.id === "h" && !h24 ? String(v) : pad(v));
   TP = { cols, onPick, txt };
   const col = c => {
     let rows = "";
@@ -326,7 +357,7 @@ function timePicker(title, cur, onPick) {
       c.id +
       /* a spin button for screen readers: ↑/↓ (or TalkBack's adjust) step it, the value is read out */
       '" tabindex="0" role="spinbutton" aria-label="' +
-      c.label +
+      esc(c.label) +
       '" ' +
       wheelAria(c) +
       '><div class="wpad"></div>' +
@@ -335,7 +366,7 @@ function timePicker(title, cur, onPick) {
     );
   };
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog tp" role="dialog" aria-modal="true" aria-label="' +
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="' +
     esc(title) +
     '"><div class="dp-h"><div class="t">' +
     esc(title) +
@@ -343,8 +374,12 @@ function timePicker(title, cur, onPick) {
     col(cols[0]) +
     '<span class="wsep">:</span>' +
     cols.slice(1).map(col).join("") +
-    '</div><div class="dlg-act"><button class="btn text" data-act="pd-close">Cancel</button>' +
-    '<button class="btn text" data-act="tp-ok">OK</button></div></div></div>';
+    '</div><div class="dlg-act"><button class="btn text" data-act="pd-close">' +
+    TH("common.cancel") +
+    "</button>" +
+    '<button class="btn text" data-act="tp-ok">' +
+    TH("common.ok") +
+    "</button></div></div></div>";
   cols.forEach(c => {
     const el = $("#tp-" + c.id);
     el.scrollTop = c.idx * W_ROW;
@@ -428,19 +463,31 @@ const closePop = () => {
   ASK = null;
   ASK_ALT = null;
 };
-function openSheet(title, body) {
-  $("#sheet").innerHTML =
-    '<div class="sheet" data-act="sheet-bg"><div class="p" role="dialog" aria-modal="true" aria-label="' +
+/* a sheet in its layer (#sheet, or #sheet2 for pickers opened from inside one): handle, title, ✕ and body */
+function showSheet(layer, cls, bgAct, closeAct, title, body) {
+  const el = $(layer);
+  el.innerHTML =
+    '<div class="' +
+    cls +
+    '" data-act="' +
+    bgAct +
+    '"><div class="p" role="dialog" aria-modal="true" aria-label="' +
     esc(title) +
     '"><div class="handle"></div><div class="h"><h2>' +
     esc(title) +
-    '</h2><button class="icon" data-act="close" aria-label="Close">' +
+    '</h2><button class="icon" data-act="' +
+    closeAct +
+    '" aria-label="' +
+    TH("common.close") +
+    '">' +
     ic("close") +
     "</button></div>" +
     body +
     "</div></div>";
-  groupAmountInputs($("#sheet"));
+  groupAmountInputs(el);
+  fitFigures(el);
 }
+const openSheet = (title, body) => showSheet("#sheet", "sheet", "sheet-bg", "close", title, body);
 /* amounts already in a new sheet (editing an entry, a loan's balance) show grouped like typed ones */
 function groupAmountInputs(root) {
   root.querySelectorAll('input[inputmode="decimal"]').forEach(i => (i.value = groupDigits(i.value)));
@@ -464,19 +511,7 @@ function closeSheet() {
   }
 }
 /* second layer, for pickers opened from inside a sheet */
-function openSheet2(title, body) {
-  $("#sheet2").innerHTML =
-    '<div class="sheet s2" data-act="sheet2-bg"><div class="p" role="dialog" aria-modal="true" aria-label="' +
-    esc(title) +
-    '"><div class="handle"></div><div class="h"><h2>' +
-    esc(title) +
-    '</h2><button class="icon" data-act="close2" aria-label="Close">' +
-    ic("close") +
-    "</button></div>" +
-    body +
-    "</div></div>";
-  groupAmountInputs($("#sheet2"));
-}
+const openSheet2 = (title, body) => showSheet("#sheet2", "sheet s2", "sheet2-bg", "close2", title, body);
 function closeSheet2() {
   $("#sheet2").innerHTML = "";
   CURPICK = null;
@@ -555,7 +590,7 @@ const curSyms = {};
 /* the name in the phone's language, else Tally's English one (Android's web view has names for few currencies) */
 function curName(c) {
   try {
-    curDN = curDN || new Intl.DisplayNames(undefined, { type: "currency" });
+    curDN = curDN || new Intl.DisplayNames(LOC.fmt, { type: "currency" });
     const n = curDN.of(c);
     if (n && n !== c) return n;
   } catch (e) {}
@@ -565,7 +600,7 @@ function curSym(c) {
   if (c in curSyms) return curSyms[c];
   let s = "";
   try {
-    const p = new Intl.NumberFormat(undefined, { style: "currency", currency: c, currencyDisplay: "narrowSymbol" })
+    const p = new Intl.NumberFormat(LOC.fmt, { style: "currency", currency: c, currencyDisplay: "narrowSymbol" })
       .formatToParts(0)
       .find(x => x.type === "currency");
     if (p && p.value === c) s = LOCAL_SYM[c] || "";
@@ -587,7 +622,7 @@ function curCountries(c) {
   return curRegionsOf(c).map(r => {
     let n = "";
     try {
-      regDN = regDN || new Intl.DisplayNames(undefined, { type: "region" });
+      regDN = regDN || new Intl.DisplayNames(LOC.fmt, { type: "region" });
       n = regDN.of(r);
     } catch (e) {}
     return (n && n !== r ? n + "|" : "") + REGIONS[r][0];
@@ -604,7 +639,7 @@ function allCurs() {
       if (Intl.supportedValuesOf) l = [...new Set(Intl.supportedValuesOf("currency").concat(l))];
     } catch (e) {}
     const name = new Map(l.map(c => [c, curName(c) || c])),
-      coll = new Intl.Collator();
+      coll = new Intl.Collator(LOC.fmt);
     const rest = l.filter(c => !MAJOR.includes(c)).sort((a, b) => coll.compare(name.get(a), name.get(b)));
     curAll = MAJOR.concat(rest);
   }
@@ -669,15 +704,31 @@ function curMatch(c, q) {
 }
 function curPicker(current, onPick, title) {
   openSheet2(
-    title || "Currency",
-    '<div class="qbar"><input id="cur-q" type="search" placeholder="Search name, code or country" autocomplete="off" aria-label="Search currency"></div><div id="curlist" data-cur="' +
+    title || T("common.currency"),
+    '<div class="qbar"><input id="cur-q" type="search" placeholder="' +
+      TH("picker.curSearch") +
+      '" autocomplete="off" aria-label="' +
+      TH("picker.curSearchLabel") +
+      '"></div><div id="curlist" data-cur="' +
       esc(current) +
       '"></div>'
   );
   CURPICK = onPick;
   curList("");
   // the first search builds every currency's search text: do it while the list is only being looked at
-  if (window.requestIdleCallback) requestIdleCallback(() => allCurs().forEach(curText));
+  requestIdleCallback(() => allCurs().forEach(curText));
+}
+/* the currencies of the phone's country (its region setting), main one first: offered first when picking */
+let HOME_CURS = null;
+function homeCurs() {
+  if (!HOME_CURS) {
+    let r = "";
+    try {
+      r = new Intl.Locale(new Intl.DateTimeFormat(LOC.fmt).resolvedOptions().locale).maximize().region || "";
+    } catch (e) {}
+    HOME_CURS = REGIONS[r] ? REGIONS[r][1].split(" ").filter(c => allCurs().includes(c)) : [];
+  }
+  return HOME_CURS;
 }
 function curList(q) {
   const box = $("#curlist");
@@ -707,21 +758,19 @@ function curList(q) {
     /* best match first (curMatch): "Panama" lists the balboa, then the US dollar; Enter picks the first */
     const rank = new Map([...new Set(inUse.concat(all))].map(c => [c, curMatch(c, q)]));
     sec(
-      "Results",
+      TH("picker.results"),
       [...rank.keys()].filter(c => rank.get(c)).sort((a, b) => rank.get(b) - rank.get(a))
     );
   } else {
-    sec("In use", inUse);
+    const popular = [...new Set(homeCurs().concat(MAJOR))].filter(c => !inUse.includes(c));
+    sec(TH("picker.inUse"), inUse);
+    sec(TH("picker.popular"), popular);
     sec(
-      "Popular",
-      MAJOR.filter(c => !inUse.includes(c))
-    );
-    sec(
-      "All currencies",
-      all.filter(c => !MAJOR.includes(c) && !inUse.includes(c))
+      TH("picker.allCurs"),
+      all.filter(c => !popular.includes(c) && !inUse.includes(c))
     );
   }
-  box.innerHTML = h || '<div class="empty">No currency found</div>';
+  box.innerHTML = h || '<div class="empty">' + TH("picker.noCur") + "</div>";
 }
 /* where closing the sheet goes back to, {screen, open} (see closeSheet) */
 let BACKTO = null;

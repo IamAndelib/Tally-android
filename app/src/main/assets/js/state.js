@@ -8,7 +8,7 @@
 const LS = "tally:v1";
 function blank() {
   return {
-    v: 6,
+    v: 7, // 7: entries may have a payee (an older Tally restoring a backup warns it's newer, see restoreText)
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
          times show as 24-hour (ISO 8601) until changed in Settings → Region */
@@ -30,6 +30,22 @@ function blank() {
     assets: [],
   };
 }
+/* a note Tally wrote itself on a balance fix or a fee (1.4.1 and earlier wrote "Balance fix", "Transfer fee", "Payment
+   fee"; 1.4.2 writes none), in any language: never one the user typed */
+let AUTO_NOTES = null;
+const autoNote = n =>
+  !!n &&
+  (AUTO_NOTES =
+    AUTO_NOTES ||
+    new Set(
+      ["Balance fix", "Transfer fee", "Payment fee"].concat(
+        ...Object.keys(window.I18N || {}).map(c =>
+          ["fix.title", "transfer.feeNote", "loan.feeNote"].map(k => i18nCat(c)[k])
+        )
+      )
+    )).has(n);
+/* an entry's note as shown: a balance fix's or a fee's own name (key) in today's language, unless the user wrote one */
+const noteShown = (t, key) => (!t.note || autoNote(t.note) ? T(key) : t.note);
 /* Brings any saved state or backup (old or new format) to the current shape without changing any balance.
    A backup can come from anywhere, so ids, currencies, colours and numbers are checked here, once. */
 function migrate(o) {
@@ -47,9 +63,15 @@ function migrate(o) {
       const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? +v : NaN;
       return Number.isFinite(n) && n > 0 && n < 8.64e15 ? Math.round(n) : 0;
     },
+    /* each distinct date read once (thousands of entries fall on a few hundred days) */
+    days = new Map(),
+    day = v => {
+      let d = days.get(v);
+      if (d === undefined) days.set(v, (d = iso(parseISO(v))));
+      return d;
+    },
     /* a date of years 1000–9999 that stays one once read (2024-02-30 is 2024-03-01; 9999-12-32 would be year 10000) */
-    isDay = v => typeof v === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(v) && /^[1-9]\d{3}-/.test(iso(parseISO(v))),
-    day = v => iso(parseISO(v)),
+    isDay = v => typeof v === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(v) && /^[1-9]\d{3}-/.test(day(v)),
     /* the first of each id keeps it, later ones (a hand-made or damaged backup) get their own */
     uniq = list => {
       const seen = new Set();
@@ -141,7 +163,7 @@ function migrate(o) {
       const type = own(TYPES, a.type) ? a.type : sid(a.type);
       return {
         id: sid(a.id),
-        name: str(a.name) || "Account",
+        name: str(a.name) || T("account.fallbackName"),
         type: own(TYPES, type) || s.types.some(t => t.id === type) ? type : "bank",
         currency: curOf(a.currency),
         opening: num(a.opening),
@@ -220,13 +242,17 @@ function migrate(o) {
           // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
           t.type = "adjust";
           t.amount = t0.type === "expense" ? -Math.abs(t.amount) : Math.abs(t.amount);
-          if (!t.note) t.note = "Transfer (not tracked)";
+          if (!t.note) t.note = T("transfer.untracked");
         } else {
           let c = t0.cat ? sid(t0.cat) : t0.type === "income" ? "income" : "other";
           if (t0.type === "income" && c === "family") c = "gift";
           if (t0.type === "income" && c === "other") c = "otherin";
           t.cat = c;
           if (t0.feeOf) t.feeOf = sid(t0.feeOf);
+          else {
+            const p = str(t0.payee); // who was paid, or who paid: kept as written, only when there is one
+            if (p.trim()) t.payee = p;
+          }
         }
       } else return null;
       return t;
@@ -247,11 +273,11 @@ function migrate(o) {
     if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
   });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
-  const newestDraw = id =>
-    s.txns
-      .filter(t => t.type === "loan" && t.principal && t.loan === id)
-      .sort((x, y) => x.date.localeCompare(y.date) || x.ts - y.ts)
-      .pop();
+  const drawsOf = new Map();
+  s.txns.forEach(t => {
+    if (t.type === "loan" && t.principal) drawsOf.set(t.loan, (drawsOf.get(t.loan) || []).concat(t));
+  });
+  const newestDraw = id => (drawsOf.get(id) || []).slice().sort(byOldest).pop();
   s.loans = (Array.isArray(o.loans) ? o.loans : [])
     .filter(l => l && l.id && (l.kind === "borrow" || l.kind === "lend") && (ver >= 6 || okNum(l.amount)))
     .map(l => {
@@ -283,7 +309,7 @@ function migrate(o) {
     .filter(x => x && x.id)
     .map(x => ({
       id: sid(x.id),
-      name: str(x.name) || "Asset",
+      name: str(x.name) || T("asset.fallbackName"),
       e: x.e && x.e !== "💎" ? str(x.e) : "",
       i: own(ICONS, x.i) ? x.i : !x.e || x.e === "💎" ? "diamond" : "",
       c: hex(x.c) ? x.c : "#a646c9",
@@ -330,7 +356,7 @@ function shellCopy() {
 /* a saved notebook's text read through migrate(), or null when it isn't one (not JSON, or not an object) */
 function readNotebook(t) {
   try {
-    const o = JSON.parse(t);
+    const o = JSON.parse(String(t).replace(/^\uFEFF/, "")); // a byte-order mark from an editor
     return o && typeof o === "object" && !Array.isArray(o) ? migrate(o) : null;
   } catch (e) {
     return null;
@@ -378,27 +404,39 @@ function loadState() {
 /* a save that fails (the phone's storage for Tally is full or blocked) is said in a dialog, which the change's own
    message can't cover, every time: the change may be lost when Tally closes unless it's saved as a file */
 function save() {
-  savedJson = JSON.stringify(S);
+  /* while the saved data can't be read, the blank stand-in isn't stored over it: the text found stays as it was, so
+     the next start asks again (Undo of a restore leads back here too), until something is added: a new notebook */
+  const standIn = unreadable && !S.accounts.length && !S.txns.length && !S.loans.length && !S.assets.length;
+  savedJson = standIn ? unreadable : JSON.stringify(S);
   saveSeq++;
+  const shell = !!(window.Android && Android.keepState);
   try {
-    if (window.Android && Android.keepState) Android.keepState(saveSeq, savedJson);
+    if (shell) Android.keepState(saveSeq, savedJson);
   } catch (e) {}
   try {
     localStorage.setItem(LS, savedJson);
     localStorage.setItem(LS + ":seq", String(saveSeq)); // after the data: a number never claims data that didn't fit
   } catch (e) {
-    setTimeout(() =>
-      askDialog(
-        "Couldn't save on this phone",
-        "Tally's storage on this phone is full or blocked, so this change may be lost when Tally closes. Save a backup " +
-          "file now to keep everything.",
-        "Save backup",
-        () => saveBackup(),
-        { cancel: "Not now" }
-      )
-    );
+    /* localStorage is full (a notebook of tens of thousands of entries) or blocked: with the shell's copy, which gets
+       this save moments later and wins at the next start (its number is higher), nothing is lost; if that write
+       fails too, or there is no shell, say so */
+    if (shell) whenKept(saveSeq, 0);
+    else setTimeout(saveFailed);
   }
   mirrorSoon();
+}
+const saveFailed = () =>
+  askDialog(T("data.saveFailed.title"), T("data.saveFailed.body"), T("backup.save"), () => saveBackup(), {
+    cancel: T("common.notNow"),
+  });
+/* the shell writes its copy on a thread of its own: asked again until it says written (1) or failed (-1), for 5 s */
+function whenKept(seq, tries) {
+  let st = -1;
+  try {
+    st = Android.keptStatus(seq);
+  } catch (e) {}
+  if (st === 0 && tries < 25) setTimeout(() => whenKept(seq, tries + 1), 200);
+  else if (st !== 1) saveFailed();
 }
 function commit() {
   dropUndo(); // an Undo still on screen would restore its snapshot over this newer change
@@ -406,6 +444,13 @@ function commit() {
   render();
   syncReminders();
   syncWidget();
+}
+/* an entry by its id, from a map kept while S.txns stays the same list (as loanEntries) */
+let TXIX = null;
+function entry(id) {
+  if (!TXIX || TXIX.list !== S.txns || TXIX.n !== S.txns.length)
+    TXIX = { list: S.txns, n: S.txns.length, m: new Map(S.txns.map(t => [t.id, t])) };
+  return TXIX.m.get(id);
 }
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
@@ -428,6 +473,13 @@ const balanceIn = (cur, b) =>
       .reduce((q, a) => q + b[a.id], 0)
   );
 const outCats = () => S.cats.filter(c => c.kind === "out" && !c.hidden);
+/* the ring has room for 24 spending categories: true (and said) when one more of that kind wouldn't fit */
+const MAX_OUT_CATS = 24;
+function catsFull(kind) {
+  if (kind !== "out" || outCats().length < MAX_OUT_CATS) return false;
+  snack(T("category.max", { count: MAX_OUT_CATS }));
+  return true;
+}
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
 /* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment
    left the loan partly paid or cleared. Cached until the next render. */
@@ -449,7 +501,7 @@ function runBal() {
   });
   S.txns
     .slice()
-    .sort((x, y) => x.date.localeCompare(y.date) || (x.ts || 0) - (y.ts || 0))
+    .sort(byOldest)
     .forEach(t => {
       if (!applyEntry(b, t)) return;
       const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
@@ -497,42 +549,46 @@ function applyEntry(b, t) {
 function currencies() {
   return [...new Set(activeAccounts().map(a => a.currency))];
 }
-/* Every add/edit/delete of entries goes through here: snapshot entries, loans and accounts, apply the change,
-   save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. */
-/* msg may be a function, read after the change */
+/* Every add/edit/delete of entries goes through here: snapshot entries, loans, accounts and assets, apply the change,
+   save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. msg may be
+   a function, read after the change. */
 function withUndo(msg, change, fx) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
-  const before = JSON.stringify({ txns: S.txns, loans: S.loans, accounts: S.accounts, assets: S.assets });
+  const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
+    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) };
   change();
   FX = fx || {};
   commit();
   FX = {};
   snack(typeof msg === "function" ? msg() : msg, () => {
-    const o = JSON.parse(before);
-    S.txns = o.txns;
-    S.loans = o.loans;
-    S.accounts = o.accounts;
-    S.assets = o.assets;
+    Object.assign(S, before);
     commit();
-    snack("Undone");
+    snack(T("common.undone"));
   });
 }
+/* a form's save: the low-balance question when it applies, then the form closes and the change is made with its Undo */
+const saveChecked = (mutate, date, msg, fx) =>
+  guardOverdraw(mutate, date, () => {
+    closeSheet();
+    withUndo(msg, mutate, fx);
+  });
 /* Money sources (not credit cards) shouldn't go below zero. Try the change on a copy first; if it would take an account
    below zero (now, or at the end of that day) and lower than it already was, ask before saving. */
 function guardOverdraw(mutate, date, proceed) {
   const b0 = balances(),
     d0 = balances(addDays(date, 1)),
-    T = S.txns,
+    txs = S.txns,
     L = S.loans;
   let b1, d1;
-  S.txns = JSON.parse(JSON.stringify(T));
-  S.loans = JSON.parse(JSON.stringify(L));
+  /* entries and loans are flat objects: copying each is a deep copy, ~10x quicker than a JSON round trip */
+  S.txns = txs.map(t => ({ ...t }));
+  S.loans = L.map(l => ({ ...l }));
   try {
     mutate();
     b1 = balances();
     d1 = balances(addDays(date, 1));
   } finally {
-    S.txns = T;
+    S.txns = txs;
     S.loans = L;
   }
   const low = (n, o) => n < -0.0005 && n < o - 0.0005;
@@ -544,21 +600,13 @@ function guardOverdraw(mutate, date, proceed) {
   const now = low(b1[bad.id], b0[bad.id]),
     had = now ? b0[bad.id] : d0[bad.id],
     will = now ? b1[bad.id] : d1[bad.id];
+  const v = { account: bad.name, had: money(had, bad.currency), will: signed(will, bad.currency), day: dayLabel(date) };
   askDialog(
-    "Not enough in " + bad.name,
-    now
-      ? bad.name + " has " + money(had, bad.currency) + ". This would make it " + signed(will, bad.currency) + "."
-      : bad.name +
-          " had " +
-          money(had, bad.currency) +
-          " at the end of " +
-          shortDay(date) +
-          ". This would make it " +
-          signed(will, bad.currency) +
-          " that day.",
-    "Save anyway",
+    T("overdraw.title", v),
+    now ? T("overdraw.now", v) : T("overdraw.thatDay", v),
+    T("common.saveAnyway"),
     proceed,
-    { cancel: "Go back" }
+    { cancel: T("common.goBack") }
   );
 }
 /* delete entries by id, keeping transfers + fees and loans + their payments consistent: a loan goes (with its

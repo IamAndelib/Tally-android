@@ -10,6 +10,11 @@
 //   TALLY_TODAY    the date the suites run on (default 2026-06-17, a mid-month Wednesday), e.g. 2026-10-01 to
 //                  check the first of a month
 //
+// Language: every page shows Tally's English texts unless a context asks for others with `uiLang` (the browser's
+// languages, e.g. { uiLang: "de" } or { uiLang: ["nb", "de"] }); the context's `locale` still sets how numbers and
+// dates are written, as on a phone whose language Tally isn't translated into. A text missing from the catalogue fails
+// the suite.
+//
 // Test clock: so results don't depend on the day they run, both the suites (Node) and every page see TALLY_TODAY as
 // today, at the real time of day. Only the date moves; time still passes normally.
 
@@ -48,14 +53,31 @@ function shiftDate(ms) {
 shiftDate(shift);
 const clockScript = "(" + shiftDate.toString() + ")(" + shift + ")";
 
-/* playwright's chromium, with the test clock in every browser context */
+/* a missing text or value reported by js/i18n.js fails the suite, whatever its own checks said */
+let i18nErrors = 0;
+process.on("exit", () => {
+  if (i18nErrors) process.exitCode = 1;
+});
+
+/* playwright's chromium, with the test clock and the texts' language in every browser context */
 const chromium = {
   async launch(opts) {
     const browser = await playwright.chromium.launch(opts);
     const newContext = browser.newContext.bind(browser);
-    browser.newContext = async o => {
-      const ctx = await newContext(o);
+    browser.newContext = async (o = {}) => {
+      const { uiLang = "en", ...rest } = o;
+      const ctx = await newContext(rest);
       await ctx.addInitScript(clockScript);
+      await ctx.addInitScript(l => {
+        Object.defineProperty(Navigator.prototype, "languages", { get: () => l, configurable: true });
+        Object.defineProperty(Navigator.prototype, "language", { get: () => l[0], configurable: true });
+      }, [].concat(uiLang));
+      ctx.on("console", m => {
+        if (m.type() === "error" && m.text().startsWith("i18n: ")) {
+          i18nErrors++;
+          console.log("FAIL " + m.text());
+        }
+      });
       return ctx;
     };
     return browser;

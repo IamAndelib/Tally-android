@@ -61,15 +61,15 @@ public class ReminderReceiver extends BroadcastReceiver {
             JSONObject dl = config(ctx).optJSONObject("daily");
             if (dl != null && dl.optBoolean("on") && reached(dl, 21) && !t.equals(p.getString("lastEntry", ""))
                     && !t.equals(p.getString("shown:nudge", ""))) {
-                show(ctx, CH_NUDGE, DAILY_ID, "Nothing written in Tally today",
-                        "Take a minute to note what you spent.", openApp(ctx, null, DAILY_ID), null);
+                show(ctx, CH_NUDGE, DAILY_ID, ctx.getString(R.string.n_nudge_title),
+                        ctx.getString(R.string.n_nudge_text), openApp(ctx, null, DAILY_ID), null);
                 p.edit().putString("shown:nudge", t).apply();
             }
         } else if (A_CHECK.equals(a)) {
             JSONObject ck = config(ctx).optJSONObject("check");
             if (ck != null && ck.optBoolean("on") && reached(ck, 8) && !t.equals(ck.optString("checked"))
                     && !t.equals(p.getString("shown:check", ""))) {
-                show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
+                show(ctx, CH_CHECK, CHECK_ID, ctx.getString(R.string.n_check_title), ck.optString("text"),
                         openApp(ctx, "check", CHECK_ID), null);
                 p.edit().putString("shown:check", t).apply();
             }
@@ -87,7 +87,7 @@ public class ReminderReceiver extends BroadcastReceiver {
      * say "Nothing written today" about a day that has just begun; it only re-arms.
      */
     private static boolean reached(JSONObject o, int defH) {
-        Calendar c = dayAt(0, o == null ? defH : o.optInt("h", defH), o == null ? 0 : o.optInt("m", 0));
+        Calendar c = dayAt(0, o.optInt("h", defH), o.optInt("m", 0));
         return System.currentTimeMillis() >= c.getTimeInMillis() - 60_000; // a minute's slack for clock drift
     }
 
@@ -166,12 +166,14 @@ public class ReminderReceiver extends BroadcastReceiver {
         long now = System.currentTimeMillis();
 
         // nothing until the page has said what's on (a widget can arm this before Tally was ever opened)
-        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, false);
-        armDaily(ctx, am, cfg.optJSONObject("check"), A_CHECK, CHECK_ID, 8, false);
+        String t = today();
+        JSONObject ck = cfg.optJSONObject("check");
+        armDaily(ctx, am, cfg.optJSONObject("daily"), A_DAILY, DAILY_ID, 21, "nudge",
+                !t.equals(prefs(ctx).getString("lastEntry", "")));
+        armDaily(ctx, am, ck, A_CHECK, CHECK_ID, 8, "check", ck != null && !t.equals(ck.optString("checked")));
 
         JSONObject at = cfg.optJSONObject("duesAt");
-        int dh = Math.max(0, Math.min(23, at == null ? 9 : at.optInt("h", 9)));
-        int dm = Math.max(0, Math.min(59, at == null ? 0 : at.optInt("m", 0)));
+        int dh = at == null ? 9 : at.optInt("h", 9), dm = at == null ? 0 : at.optInt("m", 0); // dayAt clamps them
         SharedPreferences p = prefs(ctx);
         try {
             JSONArray armed = new JSONArray(p.getString("armed", "[]"));
@@ -180,7 +182,6 @@ public class ReminderReceiver extends BroadcastReceiver {
         JSONArray nowArmed = new JSONArray();
         Set<String> keep = new HashSet<>(Arrays.asList("shown:nudge", "shown:check"));
         JSONArray dues = cfg.optJSONArray("dues");
-        String t = today();
         for (int i = 0; dues != null && i < dues.length(); i++) {
             JSONObject d = dues.optJSONObject(i);
             if (d == null) continue;
@@ -189,24 +190,15 @@ public class ReminderReceiver extends BroadcastReceiver {
             if (id.isEmpty() || c == null) continue;
             long when;
             if (date.compareTo(t) > 0) {
-                c.set(Calendar.HOUR_OF_DAY, dh);
-                c.set(Calendar.MINUTE, dm);
+                c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, dh)));
+                c.set(Calendar.MINUTE, Math.max(0, Math.min(59, dm)));
                 when = c.getTimeInMillis();
             } else if (!t.equals(p.getString("shown:" + id, ""))) {
                 // due today or overdue and not shown yet today: at the set time, or in a minute if that has passed
-                Calendar c2 = Calendar.getInstance();
-                c2.set(Calendar.HOUR_OF_DAY, dh);
-                c2.set(Calendar.MINUTE, dm);
-                c2.set(Calendar.SECOND, 0);
-                when = Math.max(c2.getTimeInMillis(), now + 60_000);
+                when = Math.max(dayAt(0, dh, dm).getTimeInMillis(), now + 60_000);
             } else {
                 // already reminded today: again tomorrow at the set time while it stays open
-                Calendar c2 = Calendar.getInstance();
-                c2.add(Calendar.DAY_OF_MONTH, 1);
-                c2.set(Calendar.HOUR_OF_DAY, dh);
-                c2.set(Calendar.MINUTE, dm);
-                c2.set(Calendar.SECOND, 0);
-                when = c2.getTimeInMillis();
+                when = dayAt(1, dh, dm).getTimeInMillis();
             }
             arm(am, when, broadcast(ctx, A_DUE, id, code(ctx, id)));
             nowArmed.put(id);
@@ -220,12 +212,29 @@ public class ReminderReceiver extends BroadcastReceiver {
         e.apply();
     }
 
-    /** A once-a-day notice (the nudge, the balance check): armed at its h:m while on, cancelled when off. */
-    private static void armDaily(Context ctx, AlarmManager am, JSONObject o, String action, int req, int defH, boolean defOn) {
+    /**
+     * A once-a-day notice (the nudge, the balance check): armed at its h:m while on, cancelled when off. Its time
+     * passing today without the alarm (the phone was off, or re-arming replaced an inexact one still waiting) brings
+     * it a minute later, while it still applies (applies: nothing written today / balances not confirmed today) and
+     * hasn't shown today; switching it on after its time doesn't (only a time it was armed for counts).
+     */
+    private static void armDaily(Context ctx, AlarmManager am, JSONObject o, String action, int req, int defH,
+                                 String kind, boolean applies) {
         PendingIntent pi = broadcast(ctx, action, null, req);
-        if (o == null) o = new JSONObject();
-        if (o.optBoolean("on", defOn)) arm(am, nextAt(o.optInt("h", defH), o.optInt("m", 0)), pi);
-        else am.cancel(pi);
+        SharedPreferences p = prefs(ctx);
+        if (o == null || !o.optBoolean("on")) {
+            am.cancel(pi);
+            p.edit().remove("due:" + kind).remove("late:" + kind).apply();
+            return;
+        }
+        long now = System.currentTimeMillis(), was = p.getLong("due:" + kind, 0);
+        String t = today();
+        boolean owed = was > 0 && t.equals(fmt().format(new Date(was))) && applies
+                && !t.equals(p.getString("shown:" + kind, ""));
+        boolean late = owed && (was <= now || p.getBoolean("late:" + kind, false)); // missed, or its catch-up waiting
+        long at = !late ? nextAt(o.optInt("h", defH), o.optInt("m", 0)) : was <= now ? now + 60_000 : was;
+        arm(am, at, pi);
+        p.edit().putLong("due:" + kind, at).putBoolean("late:" + kind, late).apply();
     }
 
     // ---------- notifications ----------
@@ -234,18 +243,19 @@ public class ReminderReceiver extends BroadcastReceiver {
     private static void showDue(Context ctx, JSONObject d, boolean quiet) {
         String id = d.optString("id"), date = d.optString("date"), who = d.optString("who"), amount = d.optString("amount");
         String total = d.optString("total");
+        if (who.isEmpty()) who = ctx.getString(R.string.n_someone); // a loan without a name
         boolean lend = "lend".equals(d.optString("kind"));
         boolean dueToday = date.equals(today());
-        String title = lend ? who + " owes you " + amount : "You owe " + who + " " + amount;
+        String title = ctx.getString(lend ? R.string.n_owes_you : R.string.n_you_owe, who, amount);
         String text = (lend
-                ? (dueToday ? "Payback day is today" : "Payback was due " + pretty(date))
-                : (dueToday ? "Due today" : "Was due " + pretty(date)))
-                + (total.isEmpty() ? "" : " · " + total + " in all");
+                ? (dueToday ? ctx.getString(R.string.n_payback_today) : ctx.getString(R.string.n_payback_was, pretty(ctx, date)))
+                : (dueToday ? ctx.getString(R.string.n_due_today) : ctx.getString(R.string.n_due_was, pretty(ctx, date))))
+                + (total.isEmpty() ? "" : " · " + ctx.getString(R.string.n_in_all, total));
         int base = code(ctx, id);
         Notification.Action[] actions = {
-                action(ctx, "Record payment", openApp(ctx, "loan:" + id + ":pay", base + 1)),
-                action(ctx, "+1 day", extendIntent(ctx, id, 1, base + 2)),
-                action(ctx, "+1 week", extendIntent(ctx, id, 7, base + 3)),
+                action(ctx, ctx.getString(R.string.n_record), openApp(ctx, "loan:" + id + ":pay", base + 1)),
+                action(ctx, ctx.getString(R.string.n_plus_day), extendIntent(ctx, id, 1, base + 2)),
+                action(ctx, ctx.getString(R.string.n_plus_week), extendIntent(ctx, id, 7, base + 3)),
         };
         show(ctx, CH_DUES, base, title, text, openApp(ctx, "loan:" + id, base), actions, quiet);
         if (!quiet) prefs(ctx).edit().putString("shown:" + id, today()).apply();
@@ -267,11 +277,15 @@ public class ReminderReceiver extends BroadcastReceiver {
             return; // some ROMs refuse this; the notices then just stay as they were
         }
         String t = today();
-        if (up.contains(DAILY_ID) && t.equals(cfg.optString("lastEntry"))) nm.cancel(DAILY_ID);
+        if (up.contains(DAILY_ID)) {
+            if (t.equals(cfg.optString("lastEntry"))) nm.cancel(DAILY_ID);
+            else show(ctx, CH_NUDGE, DAILY_ID, ctx.getString(R.string.n_nudge_title), ctx.getString(R.string.n_nudge_text),
+                    openApp(ctx, null, DAILY_ID), null, true); // the same, in the app's language now
+        }
         if (up.contains(CHECK_ID)) {
             JSONObject ck = cfg.optJSONObject("check");
             if (ck == null || !ck.optBoolean("on") || t.equals(ck.optString("checked"))) nm.cancel(CHECK_ID);
-            else show(ctx, CH_CHECK, CHECK_ID, "Do your balances still match?", ck.optString("text"),
+            else show(ctx, CH_CHECK, CHECK_ID, ctx.getString(R.string.n_check_title), ck.optString("text"),
                     openApp(ctx, "check", CHECK_ID), null, true);
         }
         Set<Integer> due = new HashSet<>();
@@ -288,16 +302,25 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
     }
 
-    /** Creates (or renames) Tally's channels, so each kind can be silenced on its own in Android's settings. */
+    /** The notices on screen written again in the app's language (Lang.syncIfChanged), quietly. */
+    static void refreshShown(Context ctx) {
+        refreshShown(ctx, config(ctx));
+    }
+
+    /**
+     * Creates (or renames, in the app's language) Tally's channels, so each kind can be silenced on its own in
+     * Android's settings.
+     */
     static void channels(Context ctx) {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
+        int imp = NotificationManager.IMPORTANCE_DEFAULT;
         nm.createNotificationChannels(Arrays.asList(
-                new NotificationChannel(CH_NUDGE, "Evening nudge", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_CHECK, "Balance check", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_DUES, "Loan & lending due days", NotificationManager.IMPORTANCE_DEFAULT),
-                new NotificationChannel(CH_BACKUP, "Backup problems", NotificationManager.IMPORTANCE_DEFAULT)));
+                new NotificationChannel(CH_NUDGE, ctx.getString(R.string.ch_nudge), imp),
+                new NotificationChannel(CH_CHECK, ctx.getString(R.string.ch_check), imp),
+                new NotificationChannel(CH_DUES, ctx.getString(R.string.ch_dues), imp),
+                new NotificationChannel(CH_BACKUP, ctx.getString(R.string.ch_backup), imp)));
     }
 
     static void show(Context ctx, String channel, int nid, String title, String text, PendingIntent tap, Notification.Action[] actions) {
@@ -309,14 +332,14 @@ public class ReminderReceiver extends BroadcastReceiver {
                      Notification.Action[] actions, boolean quiet) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
-        if (Build.VERSION.SDK_INT >= 26) channels(ctx);
+        channels(ctx);
         Notification.Builder b = builder(ctx, channel);
         b.setSmallIcon(R.drawable.ic_notif).setContentTitle(title).setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setAutoCancel(true).setContentIntent(tap).setOnlyAlertOnce(quiet)
                 // on a lock screen that hides sensitive content: which kind of reminder, never names or amounts
                 .setPublicVersion(builder(ctx, channel).setSmallIcon(R.drawable.ic_notif).setContentTitle("Tally")
-                        .setContentText(publicText(channel)).build());
+                        .setContentText(publicText(ctx, channel)).build());
         if (actions != null) for (Notification.Action a : actions) b.addAction(a);
         try { nm.notify(nid, b.build()); } catch (SecurityException ignored) { } // notifications not allowed
     }
@@ -326,12 +349,12 @@ public class ReminderReceiver extends BroadcastReceiver {
         return Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(ctx, channel) : new Notification.Builder(ctx);
     }
 
-    private static String publicText(String channel) {
+    private static String publicText(Context ctx, String channel) {
         switch (channel) {
-            case CH_CHECK: return "Balance check";
-            case CH_DUES: return "A loan or lending is due";
-            case CH_BACKUP: return "Backup problem";
-            default: return "Nothing written today";
+            case CH_CHECK: return ctx.getString(R.string.pub_check);
+            case CH_DUES: return ctx.getString(R.string.pub_dues);
+            case CH_BACKUP: return ctx.getString(R.string.pub_backup);
+            default: return ctx.getString(R.string.pub_nudge);
         }
     }
 
@@ -436,10 +459,10 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     /** "Mon, Jun 15" / "Mon 15 Jun" / "6月15日(月)": weekday, day and month in the phone's own order */
-    private static String pretty(String s) {
+    private static String pretty(Context ctx, String s) {
         Calendar c = parse(s);
         if (c == null) return s;
-        Locale loc = Locale.getDefault();
+        Locale loc = Lang.fmt(ctx);
         return new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEdMMM"), loc)
                 .format(c.getTime());
     }

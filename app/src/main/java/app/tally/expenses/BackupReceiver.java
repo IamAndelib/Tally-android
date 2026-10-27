@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * The daily automatic backup: one file, "Tally backup.json", in a folder the user picked once (kept after Tally is
@@ -38,16 +39,28 @@ import java.util.Arrays;
 public class BackupReceiver extends BroadcastReceiver {
     static final String A_BACKUP = "app.tally.expenses.BACKUP";
     static final String NAME = "Tally backup.json", TEMP = "Tally backup (new).json";
+    /**
+     * What went wrong, as a code: kept in prefs and handed to the page, which says it in its language (native.err.*);
+     * the notification says it with R.string.bk_err_*. Never a sentence, so a language change finds no stale English.
+     */
+    static final String E_NO_FOLDER = "no_folder", E_NOT_READY = "not_ready", E_NOTHING = "nothing",
+            E_UNWRITABLE = "unwritable", E_WRITE = "write_failed", E_TEMP = "saved_temp", E_NO_ACCESS = "no_access",
+            E_GONE = "folder_gone", E_NO_FILE = "no_file", E_READ = "read_failed";
+    /** the problems that need the folder picked again (the notification says so) */
+    private static final List<String> FOLDER_ERRORS = Arrays.asList(E_NO_FOLDER, E_UNWRITABLE, E_NO_ACCESS, E_GONE);
     private static final String PREFS = "tally_backup";
     private static final int REQ = 3, NOTE_ID = 3;
-    /** The largest backup read back (Restore, checks): far above any real one (a few hundred KB after years). */
-    static final int MAX = 10 * 1024 * 1024; // a Tally backup is well under 1 MB; more is not one
+    /** The largest notebook mirrored or backup read back: at about 130 bytes an entry, far past years of daily
+     *  entries (a real one is a few hundred KB); anything larger isn't a notebook. */
+    static final int MAX = 64 * 1024 * 1024;
     /** snapshot.json and its "dirty" mark: held only for quick file work, so a save never waits on a slow folder */
     private static final Object DATA = new Object();
     /** one write (and read-back) of the backup file, or read of it, at a time */
     private static final Object RUN = new Object();
     /** bumped by every setData that changed the snapshot: a save during a backup's write stays "not backed up" */
     private static int gen;
+    /** What snapshot.json holds, once read or written (under DATA): compared in memory, not re-read at every save. */
+    private static String held;
 
     @Override
     public void onReceive(Context ctx, Intent in) {
@@ -57,13 +70,14 @@ public class BackupReceiver extends BroadcastReceiver {
         new Thread(() -> {
             try {
                 // the next one first: if Android ends this process mid-write, tomorrow's backup is still armed
+                prefs(app).edit().putLong("ran", System.currentTimeMillis()).apply();
                 schedule(app);
                 String err = run(app, false);
                 if (err != null) {
                     // a lost folder needs a new pick; otherwise (e.g. kept in the temp file) Settings says what happened
-                    boolean folder = err.contains("folder");
-                    ReminderReceiver.show(app, ReminderReceiver.CH_BACKUP, NOTE_ID, "Tally couldn't back up",
-                            err + (folder ? " Tap to choose the folder again." : " Tap to open Settings."),
+                    boolean folder = FOLDER_ERRORS.contains(err);
+                    ReminderReceiver.show(app, ReminderReceiver.CH_BACKUP, NOTE_ID, app.getString(R.string.bk_failed),
+                            errorText(app, err) + " " + app.getString(folder ? R.string.bk_tap_folder : R.string.bk_tap_settings),
                             ReminderReceiver.openApp(app, "backup", NOTE_ID), null);
                 }
             } catch (Throwable ignored) { // out of memory on a small phone: never a crash; tomorrow's is armed
@@ -79,10 +93,16 @@ public class BackupReceiver extends BroadcastReceiver {
     static void setConfig(Context ctx, String json) {
         try {
             JSONObject o = new JSONObject(json);
-            prefs(ctx).edit().putBoolean("on", o.optBoolean("on")).putInt("h", o.optInt("h", 23)).putInt("m", o.optInt("m", 0)).apply();
+            SharedPreferences p = prefs(ctx);
+            SharedPreferences.Editor e = p.edit().putBoolean("on", o.optBoolean("on")).putInt("h", o.optInt("h", 23))
+                    .putInt("m", o.optInt("m", 0));
+            // just switched on: the first backup comes at the set time, not at once (see schedule)
+            if (o.optBoolean("on") && !p.getBoolean("on", false)) e.putLong("ran", System.currentTimeMillis());
+            e.apply();
             if (!o.optBoolean("on")) {
                 synchronized (DATA) {
                     snapshot(ctx).delete();
+                    held = null;
                 }
             }
         } catch (JSONException ignored) { }
@@ -94,13 +114,15 @@ public class BackupReceiver extends BroadcastReceiver {
         if (json == null || json.length() > MAX) return; // never a real notebook: a backup couldn't be read back anyway
         synchronized (DATA) {
             File f = snapshot(ctx), tmp = new File(f.getPath() + ".tmp");
-            if (json.equals(read(f))) return; // unchanged (e.g. every app start): nothing new to back up, no write
+            if (held == null) held = read(f);
+            if (json.equals(held)) return; // unchanged (e.g. every app start): nothing new to back up, no write
             try (OutputStream os = new FileOutputStream(tmp)) {
                 os.write(json.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 return;
             }
             if (tmp.renameTo(f)) {
+                held = json;
                 gen++;
                 prefs(ctx).edit().putBoolean("dirty", true).apply();
             }
@@ -117,8 +139,8 @@ public class BackupReceiver extends BroadcastReceiver {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (SecurityException ignored) { }
         }
-        SharedPreferences.Editor e = p.edit().putString("tree", tree.toString()).putString("label", label(ctx, tree))
-                .putBoolean("dirty", true).remove("error");
+        SharedPreferences.Editor e = p.edit().putString("tree", tree.toString()).putString("label", providerName(ctx, tree))
+                .putBoolean("dirty", true).putLong("ran", System.currentTimeMillis()).remove("error");
         // another folder: nothing of this install's is in it yet (the page asks before writing over what is there)
         if (old == null || !old.equals(tree.toString())) e.remove("last");
         e.apply();
@@ -133,7 +155,7 @@ public class BackupReceiver extends BroadcastReceiver {
     }
 
     /**
-     * {folder, usable, last (ms, 0 = never), error} for Settings. The folder is remembered while auto backup is off;
+     * {on, folder, usable, last (ms, 0 = never), error} for Settings and Restore. The folder is remembered while auto backup is off;
      * usable = Tally still holds its write permission, so switching auto backup back on needs no new pick.
      */
     static String status(Context ctx) {
@@ -144,7 +166,7 @@ public class BackupReceiver extends BroadcastReceiver {
             if (tree != null && u.isWritePermission() && tree.equals(u.getUri().toString())) usable = true;
         }
         try {
-            return new JSONObject().put("folder", p.getString("label", "")).put("usable", usable)
+            return new JSONObject().put("on", p.getBoolean("on", false)).put("folder", folderLabel(ctx, p)).put("usable", usable)
                     .put("last", p.getLong("last", 0)).put("error", p.getString("error", "")).toString();
         } catch (JSONException e) {
             return "{}";
@@ -160,7 +182,14 @@ public class BackupReceiver extends BroadcastReceiver {
         Intent i = new Intent(ctx, BackupReceiver.class).setAction(A_BACKUP);
         PendingIntent pi = PendingIntent.getBroadcast(ctx, REQ, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (p.getBoolean("on", false) && p.getString("tree", null) != null) {
-            ReminderReceiver.arm(am, ReminderReceiver.nextAt(p.getInt("h", 23), p.getInt("m", 0)), pi);
+            int h = p.getInt("h", 23), m = p.getInt("m", 0);
+            long now = System.currentTimeMillis(), at = ReminderReceiver.nextAt(h, m),
+                    due = ReminderReceiver.dayAt(0, h, m).getTimeInMillis();
+            if (due > now) due = ReminderReceiver.dayAt(-1, h, m).getTimeInMillis();
+            // the backup time passed without a run (the phone was off, or re-arming at a start or a reboot replaced an
+            // alarm still waiting, e.g. an inexact one), with changes not backed up: in a minute, not a day later
+            if (p.getBoolean("dirty", false) && p.getLong("ran", now) < due) at = now + 60_000;
+            ReminderReceiver.arm(am, at, pi);
         } else {
             am.cancel(pi);
         }
@@ -174,16 +203,16 @@ public class BackupReceiver extends BroadcastReceiver {
         synchronized (RUN) {
             SharedPreferences p = prefs(ctx);
             String tree = p.getString("tree", null);
-            if (tree == null) return "No folder is chosen.";
+            if (tree == null) return E_NO_FOLDER;
             String data;
             int g;
             synchronized (DATA) {
                 data = read(snapshot(ctx));
                 g = gen;
             }
-            if (data == null) return force ? "Tally's copy of your data isn't ready yet. Try again in a moment." : null;
+            if (data == null) return force ? E_NOT_READY : null;
             if (!force && !p.getBoolean("dirty", false)) return null;
-            if (!worthKeeping(data)) return force ? "There's nothing to back up yet." : null;
+            if (!worthKeeping(data)) return force ? E_NOTHING : null;
             String err = write(ctx, Uri.parse(tree), data.getBytes(StandardCharsets.UTF_8));
             synchronized (DATA) {
                 SharedPreferences.Editor e = p.edit();
@@ -210,18 +239,18 @@ public class BackupReceiver extends BroadcastReceiver {
             Uri dir = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
             Uri tmp = find(cr, tree, TEMP);
             if (tmp == null) tmp = DocumentsContract.createDocument(cr, dir, "application/json", TEMP);
-            if (tmp == null) return "The folder can't be written to.";
-            if (!put(cr, tmp, bytes)) return "The backup couldn't be written.";
+            if (tmp == null) return E_UNWRITABLE;
+            if (!put(cr, tmp, bytes)) return E_WRITE;
             Uri main = find(cr, tree, NAME);
             if (main == null) main = DocumentsContract.createDocument(cr, dir, "application/json", NAME);
-            if (main == null || !put(cr, main, bytes)) return "The backup was saved as \"" + TEMP + "\".";
+            if (main == null || !put(cr, main, bytes)) return E_TEMP;
             // the backup is written and checked: a temp file the provider won't delete is no failure
             try { DocumentsContract.deleteDocument(cr, tmp); } catch (Exception ignored) { }
             return null;
         } catch (SecurityException e) {
-            return "Tally can't open the backup folder any more.";
+            return E_NO_ACCESS;
         } catch (Exception e) { // FileNotFoundException, IllegalArgumentException: the folder or card is gone
-            return "The backup folder can't be found.";
+            return E_GONE;
         }
     }
 
@@ -279,7 +308,7 @@ public class BackupReceiver extends BroadcastReceiver {
 
     /**
      * The auto backup file's text for Settings → Restore and a newly picked folder, read straight from the folder:
-     * {text, when (ms, the last backup), folder} or {error}, with none: true when the folder holds no backup file.
+     * {text, when (ms, the last backup)} or {error}, with none: true when the folder holds no backup file.
      */
     static String readAuto(Context ctx) {
         synchronized (RUN) { // never half-way through a backup's rewrite of the file
@@ -293,18 +322,17 @@ public class BackupReceiver extends BroadcastReceiver {
         JSONObject o = new JSONObject();
         try {
             try {
-                if (tree == null) return o.put("error", "No folder is chosen.").toString();
+                if (tree == null) return o.put("error", E_NO_FOLDER).toString();
                 Uri doc = find(ctx.getContentResolver(), Uri.parse(tree), NAME);
                 if (doc == null) {
-                    return o.put("none", true).put("error", "There's no \"" + NAME + "\" in the backup folder.").toString();
+                    return o.put("none", true).put("error", E_NO_FILE).toString();
                 }
                 byte[] b = readDoc(ctx.getContentResolver(), doc, MAX);
-                return o.put("text", new String(b, StandardCharsets.UTF_8)).put("when", p.getLong("last", 0))
-                        .put("folder", p.getString("label", "")).toString();
+                return o.put("text", new String(b, StandardCharsets.UTF_8)).put("when", p.getLong("last", 0)).toString();
             } catch (SecurityException e) {
-                return o.put("error", "Tally can't open the backup folder any more.").toString();
+                return o.put("error", E_NO_ACCESS).toString();
             } catch (Exception e) {
-                return o.put("error", "The backup file can't be read.").toString();
+                return o.put("error", E_READ).toString();
             }
         } catch (JSONException e) {
             return "{}";
@@ -323,23 +351,75 @@ public class BackupReceiver extends BroadcastReceiver {
         return null;
     }
 
-    /** "Documents/Tally" for phone storage, "SD card/Backups" for a card, else the folder's own name. */
-    private static String label(Context ctx, Uri tree) {
+    /**
+     * The folder as Settings names it, in the app's language at the time it's read: "Documents/Tally" for phone
+     * storage, "SD card/Backups" for a card, else the folder's own name from its app (remembered when it was picked).
+     */
+    private static String folderLabel(Context ctx, SharedPreferences p) {
+        String t = p.getString("tree", null);
+        if (t == null) return "";
         try {
+            Uri tree = Uri.parse(t);
             String id = DocumentsContract.getTreeDocumentId(tree);
             int colon = id.indexOf(':');
             if ("com.android.externalstorage.documents".equals(tree.getAuthority()) && colon >= 0) {
                 String path = id.substring(colon + 1);
-                if (id.startsWith("primary:")) return path.isEmpty() ? "Phone storage" : path;
-                return path.isEmpty() ? "SD card" : "SD card/" + path;
+                if (id.startsWith("primary:")) return path.isEmpty() ? ctx.getString(R.string.bk_folder_phone) : path;
+                // Android 7-10's "Documents" root in the picker (phone storage too)
+                if (id.startsWith("home:"))
+                    return path.isEmpty() ? ctx.getString(R.string.bk_folder_docs) : ctx.getString(R.string.bk_folder_docs_path, path);
+                return path.isEmpty() ? ctx.getString(R.string.bk_folder_sd) : ctx.getString(R.string.bk_folder_sd_path, path);
             }
-            Uri doc = DocumentsContract.buildDocumentUriUsingTree(tree, id);
+        } catch (Exception ignored) { }
+        String name = p.getString("label", "");
+        // "Chosen folder": what Tally 1.4.1 and earlier stored when the folder's app gave no name
+        return name.isEmpty() || "Chosen folder".equals(name) ? ctx.getString(R.string.bk_folder_other) : name;
+    }
+
+    /** The folder's own name, from the app it lives in (a cloud drive's folder), or "" when it has none. */
+    private static String providerName(Context ctx, Uri tree) {
+        try {
+            Uri doc = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
             String[] cols = {DocumentsContract.Document.COLUMN_DISPLAY_NAME};
             try (Cursor c = ctx.getContentResolver().query(doc, cols, null, null, null)) {
                 if (c != null && c.moveToFirst() && c.getString(0) != null) return c.getString(0);
             }
         } catch (Exception ignored) { }
-        return "Chosen folder";
+        return "";
+    }
+
+    /** The "couldn't back up" notice, still on screen after a language change, said again in the new one, quietly. */
+    static void refreshNotice(Context ctx) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        String err = prefs(ctx).getString("error", null);
+        if (nm == null || err == null) return;
+        try {
+            for (android.service.notification.StatusBarNotification s : nm.getActiveNotifications()) {
+                if (s.getId() == NOTE_ID) {
+                    ReminderReceiver.show(ctx, ReminderReceiver.CH_BACKUP, NOTE_ID, ctx.getString(R.string.bk_failed),
+                            errorText(ctx, err) + " " + ctx.getString(FOLDER_ERRORS.contains(err) ? R.string.bk_tap_folder
+                                    : R.string.bk_tap_settings), ReminderReceiver.openApp(ctx, "backup", NOTE_ID), null, true);
+                    return;
+                }
+            }
+        } catch (RuntimeException ignored) { } // some ROMs refuse to list notifications
+    }
+
+    /** A problem's code said in the app's language; a sentence an older Tally stored is shown as it is. */
+    static String errorText(Context ctx, String code) {
+        switch (code) {
+            case E_NO_FOLDER: return ctx.getString(R.string.bk_err_no_folder);
+            case E_NOT_READY: return ctx.getString(R.string.bk_err_not_ready);
+            case E_NOTHING: return ctx.getString(R.string.bk_err_nothing);
+            case E_UNWRITABLE: return ctx.getString(R.string.bk_err_unwritable);
+            case E_WRITE: return ctx.getString(R.string.bk_err_write_failed);
+            case E_TEMP: return ctx.getString(R.string.bk_err_saved_temp, TEMP);
+            case E_NO_ACCESS: return ctx.getString(R.string.bk_err_no_access);
+            case E_GONE: return ctx.getString(R.string.bk_err_folder_gone);
+            case E_NO_FILE: return ctx.getString(R.string.bk_err_no_file, NAME);
+            case E_READ: return ctx.getString(R.string.bk_err_read_failed);
+            default: return code;
+        }
     }
 
     /**

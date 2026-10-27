@@ -11,7 +11,9 @@ const globals = require("globals");
 
 const ASSETS = path.resolve(__dirname, "../app/src/main/assets");
 const html = fs.readFileSync(path.join(ASSETS, "index.html"), "utf8");
-const files = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]).filter(f => f !== "js/icons.js");
+const files = [...html.matchAll(/<script src="([^"]+)"/g)]
+  .map(m => m[1])
+  .filter(f => f !== "js/icons.js" && !f.startsWith("js/i18n/"));
 
 // one text, plus where each file starts in it
 let text = "";
@@ -57,6 +59,11 @@ const where = line => {
   const [result] = await eslint.lintText(text);
   for (const m of result.messages) console.log(`${where(m.line)}:${m.column}  ${m.message}  (${m.ruleId})`);
   let errors = result.messages.length;
+  // numbers, dates and names in the locale Tally chose (LOC.fmt), never the web view's default (see js/i18n.js)
+  text.split("\n").forEach((l, i) => {
+    if (/toLocale\w*String\(\s*(\)|undefined)|new Intl\.\w+\(\s*(\)|undefined)/.test(l) && ++errors)
+      console.log(`${where(i + 1)}  a locale is needed here: LOC.fmt`);
+  });
   // selectors newer than the oldest supported WebView (87): it drops a whole rule over one it can't read
   for (const m of html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)) {
     const css = fs

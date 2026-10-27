@@ -56,6 +56,13 @@ const OLD_DEFAULT_IDS = [
   "transfer",
 ];
 const ICONS = window.TALLY_ICONS || {};
+/* a category's name as shown: a built-in one still called by its English default speaks Tally's language (cat.<id>);
+   one the user named shows as typed. The stored name stays the English default, so a backup reads the same in every
+   version and language. */
+const catName = c => {
+  const d = CATS.find(x => x.id === c.id);
+  return d && c.name === d.name ? T("cat." + c.id) : c.name;
+};
 const TYPES = { bank: "Bank", wallet: "Mobile wallet", cash: "Cash", card: "Credit card", savings: "Savings" };
 const P = {
   left: "M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z",
@@ -203,20 +210,23 @@ function money(n, cur, short) {
       }
     }
     try {
-      f = new Intl.NumberFormat(undefined, o);
+      f = new Intl.NumberFormat(LOC.fmt, o);
       /* a currency sign this phone has no font for (e.g. the Kyrgyz som ⃀) would show as a box: use the code */
       const sym = (f.formatToParts(0).find(p => p.type === "currency") || {}).value;
-      if (sym && !canDraw(sym)) f = new Intl.NumberFormat(undefined, Object.assign(o, { currencyDisplay: "code" }));
+      if (sym && !canDraw(sym)) f = new Intl.NumberFormat(LOC.fmt, Object.assign(o, { currencyDisplay: "code" }));
       else if (sym === cur && LOCAL_SYM[cur]) f.sym = LOCAL_SYM[cur];
     } catch (e) {
       /* no currency chosen yet (a new notebook), or one this phone doesn't know */
-      return (cur ? cur + " " : "") + rnd(n).toLocaleString();
+      return (cur ? cur + " " : "") + rnd(n).toLocaleString(LOC.fmt);
     }
     f.dp = 10 ** f.resolvedOptions().maximumFractionDigits;
     NF.set(k, f);
   }
   return fmtSym(f, toDp(n, f.dp));
 }
+/* a whole percentage the phone's way: 12%, 12 %, %12 */
+let PCT_NF = null;
+const percent = n => (PCT_NF = PCT_NF || new Intl.NumberFormat(LOC.fmt, { style: "percent" })).format(n / 100);
 /* n rounded to 1/dp the way Intl shows it: halves away from zero, past float error (1.005 → 1.01), and −0 as 0 */
 const toDp = (n, dp) => (Math.sign(n) * Math.round(Math.abs(n) * dp + 1e-7)) / dp + 0;
 /* n as money() shows it in that currency: ¥666.667 is 667, $0.004 is 0 */
@@ -250,7 +260,7 @@ const gregorian = loc => {
 };
 const DATE_LOC = (() => {
   try {
-    return gregorian(new Intl.DateTimeFormat().resolvedOptions().locale);
+    return gregorian(new Intl.DateTimeFormat(LOC.fmt).resolvedOptions().locale);
   } catch (e) {
     return undefined;
   }
@@ -268,20 +278,28 @@ function shiftMonth(m, d) {
   }
   return y + "-" + pad(mo);
 }
+/* a date label standing on its own starts with a capital, as a heading does ("Июнь 2026 г.", "Lun. 15 juin") */
+const capFirst = s => (s ? s.charAt(0).toLocaleUpperCase(LOC.fmt) + s.slice(1) : s);
 function monthLabel(m, always) {
   const [y, mo] = m.split("-").map(Number);
   const o = { month: "long" };
   if (always || y !== new Date().getFullYear()) o.year = "numeric";
   return new Date(y, mo - 1, 1).toLocaleDateString(DATE_LOC, o);
 }
+/* toLocaleDateString builds a formatter on every call (History calls this once per day shown): built once instead */
+const DAY_DTF = {};
 function dayLabel(d) {
-  const x = parseISO(d);
-  const o = { weekday: "short", day: "numeric", month: "short" };
-  if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
-  return x.toLocaleDateString(DATE_LOC, o);
+  const x = parseISO(d),
+    y = x.getFullYear() !== new Date().getFullYear() ? "y" : "n";
+  if (!DAY_DTF[y]) {
+    const o = { weekday: "short", day: "numeric", month: "short" };
+    if (y === "y") o.year = "numeric";
+    DAY_DTF[y] = new Intl.DateTimeFormat(DATE_LOC, o);
+  }
+  return isNaN(x) ? "" : DAY_DTF[y].format(x); // no date (an open loan without a due day): nothing to write
 }
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
-const dayName = d => (d === today() ? "Today" : d === addDays(today(), -1) ? "Yesterday" : dayLabel(d));
+const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));
 /* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
    months: whole months ("Apr – Sep") */
 function rangeLabel(a, b, months) {
@@ -302,7 +320,7 @@ function rangeLabel(a, b, months) {
 const NUMSEP = (() => {
   let p = [];
   try {
-    p = new Intl.NumberFormat(undefined, { numberingSystem: "latn" }).formatToParts(12345.6);
+    p = new Intl.NumberFormat(LOC.fmt, { numberingSystem: "latn" }).formatToParts(12345.6);
   } catch (e) {}
   const get = t => (p.find(x => x.type === t) || {}).value;
   const dec = get("decimal") || ".",
@@ -318,7 +336,7 @@ let GROUPER = null;
 function groupInt(n) {
   if (!n || n[0] === "0" || n.length > 15) return n;
   try {
-    GROUPER = GROUPER || new Intl.NumberFormat(undefined, { numberingSystem: "latn", maximumFractionDigits: 0 });
+    GROUPER = GROUPER || new Intl.NumberFormat(LOC.fmt, { numberingSystem: "latn", maximumFractionDigits: 0 });
     const out = GROUPER.formatToParts(+n)
       .map(x => (x.type === "integer" ? x.value : x.type === "group" ? NUMSEP.grp : ""))
       .join("");
@@ -461,7 +479,7 @@ function snack(msg, undo) {
     '<div class="snack" role="status"><span>' +
     esc(msg) +
     "</span>" +
-    (undo ? '<button data-act="undo">Undo</button>' : "") +
+    (undo ? '<button data-act="undo">' + TH("common.undo") + "</button>" : "") +
     "</div>";
   clearTimeout(snackT);
   snackT = setTimeout(
@@ -496,14 +514,17 @@ const buzz = kind => {
 /* short label for date fields: Today / Yesterday / Tomorrow / 22 Sep (year only if not this year) */
 function shortDay(d) {
   const t = today();
-  if (d === t) return "Today";
-  if (d === addDays(t, -1)) return "Yesterday";
-  if (d === addDays(t, 1)) return "Tomorrow";
+  if (d === t) return T("day.today");
+  if (d === addDays(t, -1)) return T("day.yesterday");
+  if (d === addDays(t, 1)) return T("day.tomorrow");
   const x = parseISO(d),
     o = { day: "numeric", month: "short" };
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(DATE_LOC, o);
 }
+/* ISO dates (YYYY-MM-DD) sort as plain strings; localeCompare runs ICU collation on every comparison */
+const cmpDay = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+/* oldest first: by day, then by when written (the order balances add entries up in) */
+const byOldest = (a, b) => cmpDay(a.date, b.date) || (a.ts || 0) - (b.ts || 0);
 /* newest first; a fee saved with its transfer's own time (before 1.4) comes just above it, as balances count it */
-const byNewest = (a, b) =>
-  b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);
+const byNewest = (a, b) => cmpDay(b.date, a.date) || (b.ts || 0) - (a.ts || 0) || (b.feeOf ? 1 : 0) - (a.feeOf ? 1 : 0);

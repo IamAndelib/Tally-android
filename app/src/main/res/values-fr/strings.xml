@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally aujourd’hui</string>
+    <string name="w_desc">Solde et dépenses du jour, avec un + rapide</string>
+    <string name="w_label">Tally · Aujourd’hui</string>
+    <string name="w_spent">Dépensé aujourd’hui</string>
+    <string name="w_open">Ouvrir Tally</string>
+    <string name="w_add">Ajout rapide</string>
+    <string name="qa_title">Ajout rapide</string>
+    <string name="qa_out">Dépense</string>
+    <string name="qa_in">Rentrée</string>
+    <string name="qa_tr">Virement</string>
+    <string name="page_stopped">L’écran de Tally s’arrête sans cesse. Tout ce que vous avez enregistré est conservé.</string>
+    <string name="try_again">Réessayer</string>
+    <string name="no_webview">Tally a besoin d’Android System WebView, qui est absent ou en cours de mise à jour. Réessayez dans un instant.</string>
+
+    <!-- notifications (ReminderReceiver) -->
+    <string name="ch_nudge">Rappel du soir</string>
+    <string name="ch_check">Point sur les soldes</string>
+    <string name="ch_dues">Échéances des prêts et emprunts</string>
+    <string name="ch_backup">Problèmes de sauvegarde</string>
+    <string name="n_nudge_title">Rien de noté dans Tally aujourd’hui</string>
+    <string name="n_nudge_text">Prenez une minute pour noter vos dépenses.</string>
+    <string name="n_check_title">Vos soldes correspondent-ils toujours ?</string>
+    <!-- %1$s : la personne, %2$s : le montant dû -->
+    <string name="n_owes_you">%1$s vous doit %2$s</string>
+    <string name="n_you_owe">Vous devez %2$s à %1$s</string>
+    <string name="n_payback_today">Retour prévu aujourd’hui</string>
+    <!-- %1$s : une date, comme « lun. 15 juin » -->
+    <string name="n_payback_was">Retour attendu depuis le %1$s</string>
+    <string name="n_due_today">À rembourser aujourd’hui</string>
+    <string name="n_due_was">À rembourser depuis le %1$s</string>
+    <!-- %1$s : tout ce qui reste dû -->
+    <string name="n_in_all">%1$s au total</string>
+    <string name="n_record">Noter le remboursement</string>
+    <string name="n_plus_day">+1 jour</string>
+    <string name="n_plus_week">+1 semaine</string>
+    <string name="n_someone">Quelqu’un</string>
+    <!-- sur un écran de verrouillage qui masque le contenu des notifications : seulement le type -->
+    <string name="pub_check">Point sur les soldes</string>
+    <string name="pub_dues">Un prêt ou un emprunt arrive à échéance</string>
+    <string name="pub_backup">Problème de sauvegarde</string>
+    <string name="pub_nudge">Rien de noté aujourd’hui</string>
+
+    <!-- sauvegarde auto (BackupReceiver) -->
+    <string name="bk_failed">Tally n’a pas pu faire la sauvegarde</string>
+    <string name="bk_tap_folder">Touchez pour choisir à nouveau le dossier.</string>
+    <string name="bk_tap_settings">Touchez pour ouvrir les paramètres.</string>
+    <string name="bk_err_no_folder">Aucun dossier n’est choisi.</string>
+    <string name="bk_err_not_ready">La copie de vos données dans Tally n’est pas encore prête. Réessayez dans un instant.</string>
+    <string name="bk_err_nothing">Il n’y a encore rien à sauvegarder.</string>
+    <string name="bk_err_unwritable">Impossible d’écrire dans ce dossier.</string>
+    <string name="bk_err_write_failed">La sauvegarde n’a pas pu être écrite.</string>
+    <!-- %1$s : le nom du fichier, « Tally backup (new).json » -->
+    <string name="bk_err_saved_temp">La sauvegarde a été enregistrée sous « %1$s ».</string>
+    <string name="bk_err_no_access">Tally ne peut plus ouvrir le dossier de sauvegarde.</string>
+    <string name="bk_err_folder_gone">Le dossier de sauvegarde est introuvable.</string>
+    <!-- %1$s : le nom du fichier, « Tally backup.json » -->
+    <string name="bk_err_no_file">Aucun fichier « %1$s » dans le dossier de sauvegarde.</string>
+    <string name="bk_err_read_failed">Le fichier de sauvegarde est illisible.</string>
+    <!-- où se trouve le dossier de sauvegarde, dans les paramètres -->
+    <string name="bk_folder_phone">Stockage du téléphone</string>
+    <string name="bk_folder_docs">Documents</string>
+    <string name="bk_folder_docs_path">Documents/%1$s</string>
+    <string name="bk_folder_sd">Carte SD</string>
+    <!-- %1$s : le chemin du dossier sur la carte, comme « Backups » -->
+    <string name="bk_folder_sd_path">Carte SD/%1$s</string>
+    <string name="bk_folder_other">Dossier choisi</string>
+</resources>

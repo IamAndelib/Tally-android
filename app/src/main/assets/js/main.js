@@ -16,24 +16,18 @@ syncBackup();
 mirrorNow();
 if (unreadable)
   askDialog(
-    "Couldn't open your saved data",
-    unreadableKept
-      ? "A copy is kept on this phone. Save it as a file so it's safe?"
-      : "There isn't room to keep a copy on this phone. Save it as a file now, or it's gone once you add anything.",
-    "Save file",
+    T("data.unreadable.title"),
+    unreadableKept ? T("data.unreadable.kept") : T("data.unreadable.notKept"),
+    T("common.saveFile"),
     () => saveOut("tally-unreadable-" + today() + ".json", "application/json", unreadable),
-    { cancel: "Not now" }
+    { cancel: T("common.notNow") }
   );
 else if (!permsIntro()) backupNudge();
 /* follow the phone's light/dark switch */
-{
-  const mq = matchMedia("(prefers-color-scheme: dark)");
-  if (mq.addEventListener)
-    mq.addEventListener("change", () => {
-      applyTheme();
-      render();
-    });
-}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  applyTheme();
+  render();
+});
 /* hooks the Android shell (MainActivity.java) calls, installed last so they never run before the app is ready */
 Object.assign(window, {
   tallyBack: goBack,

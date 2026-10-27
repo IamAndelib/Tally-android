@@ -48,11 +48,15 @@ function syncReminders() {
     now = today();
   /* the last day something was written: the day of its writing (an entry dated ahead counts on that day, never past
      today; an old one without a time on its date) */
-  const last = S.txns.reduce((m, t) => {
-    const c = t.ts ? iso(new Date(t.ts)) : t.date,
-      d = c < now ? c : now;
-    return d > m ? d : m;
-  }, "");
+  let maxTs = 0,
+    maxDate = "";
+  S.txns.forEach(t => {
+    if (t.ts) maxTs = Math.max(maxTs, t.ts);
+    else if (t.date > maxDate) maxDate = t.date;
+  });
+  const c = maxTs ? iso(new Date(maxTs)) : "",
+    newest = c > maxDate ? c : maxDate,
+    last = newest < now ? newest : now;
   const dues =
     r.dues === false
       ? []
@@ -63,7 +67,7 @@ function syncReminders() {
             id: l.id,
             date: i.nextDue,
             kind: l.kind,
-            who: loanWho(l),
+            who: l.person || "", // none: the shell says "Someone" in the phone's language
             amount: money(i.dueAmt, i.cur),
             total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
           }));
@@ -114,10 +118,10 @@ function pickTime(k) {
   const r = S.settings.remind,
     b = S.settings.backup,
     c = {
-      nudge: ["Evening nudge at", r.time, v => (r.time = v)],
-      check: ["Balance check at", r.checkTime, v => (r.checkTime = v)],
-      due: ["Due-day reminders at", r.dueTime, v => (r.dueTime = v)],
-      backup: ["Back up every day at", b.time, v => (b.time = v)],
+      nudge: [T("remind.nudgeAt"), r.time, v => (r.time = v)],
+      check: [T("remind.checkAt"), r.checkTime, v => (r.checkTime = v)],
+      due: [T("remind.duesAt"), r.dueTime, v => (r.dueTime = v)],
+      backup: [T("backup.at"), b.time, v => (b.time = v)],
     }[k];
   if (!c) return;
   timePicker(c[0], c[1], v => {
@@ -135,26 +139,22 @@ function askNotify() {
     if (window.Android && Android.requestNotifications) Android.requestNotifications();
   } catch (e) {}
 }
-/* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind, name, why] */
-const PERM_ROWS = [
-  ["notif", "Notifications", "Reminders can't show without them"],
-  ["battery", "Unrestricted battery", "So reminders and the backup come on time"],
-  ["exact", "Alarms &amp; reminders", "So reminders come on time"],
-];
+/* the permissions reminders need, shared by Settings' card and the first-open dialog: [kind] (texts perms.<kind>) */
+const PERM_ROWS = [["notif"], ["battery"], ["exact"]];
 /* the rows to offer: Android counts unrestricted battery as allowing alarms & reminders, so that row only shows on a
    phone where it's still off although battery is already allowed */
 const permRows = h => PERM_ROWS.filter(([k]) => k !== "exact" || (h.battery !== false && h.exact === false));
 /* one permission: Allow (the shell opens Android's prompt, popup or switch screen), or a quiet "Allowed" */
-function permRow([k, t, why], ok) {
+function permRow([k], ok) {
   return (
     '<div class="setrow"><span class="mid"><div>' +
-    t +
+    TH("perms." + k) +
     '</div><div class="s">' +
-    why +
+    TH("perms." + k + "Why") +
     "</div></span>" +
     (ok
-      ? '<span class="pok">' + ic("check") + "Allowed</span>"
-      : '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">Allow</button>') +
+      ? '<span class="pok">' + ic("check") + TH("perms.allowed") + "</span>"
+      : '<button class="btn tonal" data-act="rem-fix" data-v="' + k + '">' + TH("perms.allow") + "</button>") +
     "</div>"
   );
 }
@@ -169,12 +169,20 @@ function permsIntro() {
   const h = first && reminderHealth();
   if (!h || permRows(h).every(([k]) => h[k] !== false)) return false;
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="Permissions">' +
-    '<h3 class="dlg-t">Permissions</h3><p class="dlg-x">For reminders and the daily backup.</p><div id="pp-rows">' +
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="' +
+    TH("perms.title") +
+    '">' +
+    '<h3 class="dlg-t">' +
+    TH("perms.title") +
+    '</h3><p class="dlg-x">' +
+    TH("perms.intro") +
+    '</p><div id="pp-rows">' +
     permRows(h)
       .map(r => permRow(r, h[r[0]] !== false))
       .join("") +
-    '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">Done</button></div></div></div>';
+    '</div><div class="dlg-act end"><button class="btn text" data-act="pd-close">' +
+    TH("common.done") +
+    "</button></div></div></div>";
   return true;
 }
 /* window.tallyPerms / resume: a permission may have changed; the open dialog's rows and Settings' card follow at once
@@ -210,6 +218,8 @@ function applyNativeActions() {
   }
 }
 /* ---- daily auto backup (BackupReceiver.java): the shell keeps a copy of S and writes it to the picked folder ---- */
+/* the auto backup's file in the folder picked (BackupReceiver.NAME) */
+const BACKUP_FILE = "Tally backup.json";
 const canBackup = () => !!(window.Android && Android.setBackupData && Android.pickBackupFolder);
 let mirrorT = 0;
 /* after every save while auto backup is on, hand the shell the data (debounced: a drag saves many times) */
@@ -238,7 +248,13 @@ function syncBackup() {
     Android.setBackup(JSON.stringify(Object.assign({ on: S.settings.backup.on }, hmObj(S.settings.backup.time))));
   } catch (e) {}
 }
-/* {folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
+/* a problem the shell reports as a code (no_folder, not_backup, …: BackupReceiver.E_*, MainActivity), said in Tally's
+   language; a sentence an older Tally stored, or one the page made, is shown as it is */
+const nativeErr = x =>
+  /^[a-z_]+$/.test(x) && i18nGet("native.err." + x) != null
+    ? T("native.err." + x, { file: x === "saved_temp" ? "Tally backup (new).json" : BACKUP_FILE })
+    : String(x);
+/* {on, folder, usable, last, error} from the shell (usable: Tally can still write there), or null in a browser */
 function backupStatus() {
   if (!canBackup()) return null;
   try {
@@ -269,7 +285,7 @@ function backupOn() {
   save();
   syncBackup();
   if (V.screen === "settings") render();
-  snack("Auto backup on · daily at " + timeLabel(S.settings.backup.time));
+  snack(T("backup.on", { time: timeLabel(S.settings.backup.time) }));
 }
 function pickBackupFolder() {
   try {
@@ -279,7 +295,9 @@ function pickBackupFolder() {
 /* window.tallyFolder: null = cancelled (nothing changes), "" = folder saved, else what went wrong */
 function onFolderPicked(err) {
   if (err == null) return;
-  if (err) return snack(err);
+  if (err) return snack(nativeErr(err));
+  // the same folder picked again: its backup is this install's own (the shell keeps `last` only then), nothing to ask
+  if ((backupStatus() || {}).last > 0) return backupOn();
   folderCheck();
 }
 /* Before auto backup first writes into a folder: a Tally backup already there (after a reinstall, from another phone,
@@ -294,26 +312,26 @@ function folderCheck() {
       syncBackup();
       if (V.screen === "settings") render();
     }
-    if (typeof r.text === "string" && r.text.trim())
+    if (typeof r.text === "string" && backupData(r.text))
       return askDialog(
-        "This folder already has a Tally backup",
-        "Restore it on this phone, or replace it with this phone's data from now on?",
-        "Restore it",
+        T("backup.found.title"),
+        T("backup.found.body"),
+        T("backup.found.restore"),
         () => restoreText(r.text, null, backupOn),
-        { alt: ["Replace it", backupOn], cancel: "Not now" }
+        { alt: [T("backup.found.replace"), backupOn], cancel: T("common.notNow") }
       );
     askDialog(
-      "Couldn't read this folder's backup",
-      (r.error || "The backup file can't be read.") + " Replace it with this phone's data from now on?",
-      "Replace it",
+      T("backup.badFile.title"),
+      sentences(r.error ? nativeErr(r.error) : T("backup.badFile.cantRead"), T("backup.badFile.replaceQ")),
+      T("backup.found.replace"),
       backupOn,
-      { cancel: "Not now" }
+      { cancel: T("common.notNow") }
     );
   });
 }
 /* Answers from the shell's own threads (a slow folder can't freeze the page), each matched to its request by number,
    so two in a row never trade answers */
-let shellAsks = 0;
+let shellAsks = Date.now() % 1e9; // per page: an answer to the page before a recreate never matches (fits Java's int)
 const shellThen = {};
 function askShell(call, then, fail) {
   const id = ++shellAsks;
@@ -329,13 +347,13 @@ function shellAnswer(id, v) {
   delete shellThen[id];
   if (then) then(v);
 }
-/* the auto backup's file (window.tallyAutoBackup): `then` gets {text, when, folder}, or {error}, with none: true when
+/* the auto backup's file (window.tallyAutoBackup): `then` gets {text, when}, or {error}, with none: true when
    the folder holds no backup */
 function readAutoBackup(then) {
   askShell(
     id => Android.readAutoBackup(id),
     then,
-    id => onAutoBackup({ error: "Backup isn't available here" }, id)
+    id => onAutoBackup({ error: T("backup.unavailable") }, id)
   );
 }
 function onAutoBackup(r, id) {
@@ -345,16 +363,16 @@ function onAutoBackup(r, id) {
    the problem, "" when done */
 function backupNow(then) {
   mirrorNow();
-  snack("Backing up…");
+  snack(T("backup.running"));
   askShell(
     id => Android.backupNow(id),
     then,
-    id => onBackedUp("Backup isn't available here", id)
+    id => onBackedUp(T("backup.unavailable"), id)
   );
 }
 function onBackedUp(err, id) {
   if (V.screen === "settings") render();
-  snack(err || "Backed up");
+  snack(err ? nativeErr(err) : T("backup.done"));
   shellAnswer(id, err || "");
 }
 /* ---- what may keep reminders from arriving on time (Settings → Reminders shows a card with the fixes) ---- */
@@ -367,18 +385,19 @@ function reminderHealth() {
   }
 }
 /* an Allow button on the permissions card; "notif": the shell shows Android's prompt while it still can, else the
-   settings page; "exact": the Alarms & reminders switch; "battery": Android's battery popup */
+   settings page; "exact": the Alarms & reminders switch; "battery": Android's battery popup; and "lang": Android's
+   language setting for Tally (Settings → Region) */
 function fixReminders(kind) {
   try {
     Android.openSetting(kind);
   } catch (e) {}
 }
-/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
-   "backup" from a failed auto backup (window.tallyOpen) */
 /* the first-open permissions dialog stays up when Tally was first opened from the widget (it shows once per install) */
 const keepPermsUp = () => {
   if (!$("#pp-rows")) closePop();
 };
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
+   "backup" from a failed auto backup (window.tallyOpen) */
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
   if (k === "add") {
@@ -436,7 +455,7 @@ function saveOut(name, mime, text, then) {
   const bridged = !!(window.Android && Android.saveFile);
   AFTER_SAVE = bridged ? then || null : null;
   if (bridged) Android.saveFile(name, mime, text);
-  else snack("Saving isn't available here");
+  else snack(T("data.noSaving"));
 }
 /* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),
    then a selection, then another screen goes Home. False when there is nothing left to close (then the app closes). */
@@ -487,7 +506,7 @@ function onFileSaved(ok) {
   const then = AFTER_SAVE;
   AFTER_SAVE = null;
   /* what waited on the file (Delete all data) goes on only once it landed */
-  snack(ok ? "Saved" : then ? "Not saved, so nothing was deleted" : "Not saved");
+  snack(T(ok ? "data.fileSaved" : then ? "data.notSavedKept" : "data.notSaved"));
   if (then && ok) then();
 }
 /* Auto backup is off but there's something worth keeping (3+ entries): now and then (at start or on return, at most
@@ -501,19 +520,11 @@ function backupNudge() {
   s.backupAsk = today();
   save();
   if (lost)
-    askDialog(
-      "Auto backup can't reach its folder",
-      "On a new phone, or after reinstalling, Tally needs the backup folder picked again. Until then nothing is backed up.",
-      "Choose folder",
-      pickBackupFolder,
-      { cancel: "Not now" }
-    );
+    askDialog(T("backup.lostAsk.title"), T("backup.lostAsk.body"), T("backup.lostAsk.ok"), pickBackupFolder, {
+      cancel: T("common.notNow"),
+    });
   else
-    askDialog(
-      "Keep your data safe?",
-      "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
-      "Turn on",
-      toggleAutoBackup,
-      { cancel: "Not now" }
-    );
+    askDialog(T("backup.nudge.title"), T("backup.nudge.body"), T("backup.nudge.ok"), toggleAutoBackup, {
+      cancel: T("common.notNow"),
+    });
 }

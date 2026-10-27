@@ -31,6 +31,10 @@ YOUR DATA STAYS YOURS
 No account, no ads, no tracking, no internet needed. Everything is stored on your phone. Back up to a file whenever
 you like, restore it on a new phone, or export all entries as CSV.
 
+IN YOUR LANGUAGE
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia and Türkçe: Tally follows
+your phone's language, and writes numbers, dates and money the way your phone does.
+
 Follows your phone's Material You colours, in light and dark.
 
 Open source (MIT): https://github.com/IamAndelib/Tally-android

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_name">Tally heute</string>
+    <string name="w_desc">Stand und Ausgaben von heute, mit schnellem +</string>
+    <string name="w_label">Tally · Heute</string>
+    <string name="w_spent">Heute ausgegeben</string>
+    <string name="w_open">Tally öffnen</string>
+    <string name="w_add">Schnelleintrag</string>
+    <string name="qa_title">Schnelleintrag</string>
+    <string name="qa_out">Ausgabe</string>
+    <string name="qa_in">Einnahme</string>
+    <string name="qa_tr">Umbuchung</string>
+    <string name="page_stopped">Tallys Bildschirm stürzt immer wieder ab. Alles Gespeicherte bleibt erhalten.</string>
+    <string name="try_again">Erneut versuchen</string>
+    <string name="no_webview">Tally braucht Android System WebView, das fehlt oder gerade aktualisiert wird. Bitte versuch es gleich noch mal.</string>
+
+    <!-- Benachrichtigungen (ReminderReceiver) -->
+    <string name="ch_nudge">Abend-Erinnerung</string>
+    <string name="ch_check">Kontostand-Check</string>
+    <string name="ch_dues">Fällige Rückzahlungen</string>
+    <string name="ch_backup">Backup-Probleme</string>
+    <string name="n_nudge_title">Heute nichts in Tally notiert</string>
+    <string name="n_nudge_text">Nimm dir kurz Zeit und notier, was du ausgegeben hast.</string>
+    <string name="n_check_title">Stimmen deine Kontostände noch?</string>
+    <!-- %1$s: die Person, %2$s: der fällige Betrag -->
+    <string name="n_owes_you">%1$s schuldet dir %2$s</string>
+    <string name="n_you_owe">Du schuldest %1$s %2$s</string>
+    <string name="n_payback_today">Heute ist Rückzahlung</string>
+    <!-- %1$s: ein Datum, etwa „Mo., 15. Juni“ -->
+    <string name="n_payback_was">Rückzahlung war am %1$s fällig</string>
+    <string name="n_due_today">Heute fällig</string>
+    <string name="n_due_was">War am %1$s fällig</string>
+    <!-- %1$s: der gesamte noch offene Betrag -->
+    <string name="n_in_all">Insgesamt %1$s</string>
+    <string name="n_record">Zahlung erfassen</string>
+    <string name="n_plus_day">+1 Tag</string>
+    <string name="n_plus_week">+1 Woche</string>
+    <string name="n_someone">Jemand</string>
+    <!-- auf einem Sperrbildschirm, der Inhalte verbirgt: nur die Art -->
+    <string name="pub_check">Kontostand-Check</string>
+    <string name="pub_dues">Eine Rückzahlung ist fällig</string>
+    <string name="pub_backup">Backup-Problem</string>
+    <string name="pub_nudge">Heute nichts notiert</string>
+
+    <!-- Auto-Backup (BackupReceiver) -->
+    <string name="bk_failed">Tally konnte nicht sichern</string>
+    <string name="bk_tap_folder">Tippe, um den Ordner neu zu wählen.</string>
+    <string name="bk_tap_settings">Tippe, um die Einstellungen zu öffnen.</string>
+    <string name="bk_err_no_folder">Es ist kein Ordner gewählt.</string>
+    <string name="bk_err_not_ready">Tallys Kopie deiner Daten ist noch nicht bereit. Versuch es gleich noch mal.</string>
+    <string name="bk_err_nothing">Es gibt noch nichts zu sichern.</string>
+    <string name="bk_err_unwritable">In den Ordner kann nicht geschrieben werden.</string>
+    <string name="bk_err_write_failed">Das Backup konnte nicht geschrieben werden.</string>
+    <!-- %1$s: der Dateiname, „Tally backup (new).json“ -->
+    <string name="bk_err_saved_temp">Das Backup wurde als „%1$s“ gespeichert.</string>
+    <string name="bk_err_no_access">Tally kann den Backup-Ordner nicht mehr öffnen.</string>
+    <string name="bk_err_folder_gone">Der Backup-Ordner ist nicht auffindbar.</string>
+    <!-- %1$s: der Dateiname, „Tally backup.json“ -->
+    <string name="bk_err_no_file">„%1$s“ fehlt im Backup-Ordner.</string>
+    <string name="bk_err_read_failed">Die Backup-Datei kann nicht gelesen werden.</string>
+    <!-- wo der Backup-Ordner liegt, in den Einstellungen -->
+    <string name="bk_folder_phone">Interner Speicher</string>
+    <string name="bk_folder_docs">Dokumente</string>
+    <string name="bk_folder_docs_path">Dokumente/%1$s</string>
+    <string name="bk_folder_sd">SD-Karte</string>
+    <!-- %1$s: der Pfad des Ordners auf der Karte, etwa „Backups“ -->
+    <string name="bk_folder_sd_path">SD-Karte/%1$s</string>
+    <string name="bk_folder_other">Gewählter Ordner</string>
+</resources>

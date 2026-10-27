@@ -167,7 +167,7 @@ const ok = (c, m) => {
   let S = await state();
   const cr = S.types.find(x => x.name === "Crypto"),
     bn = S.accounts.find(x => x.name === "Binance");
-  ok(cr && bn && bn.type === cr.id && S.v === 6, "account saved with the custom type (v6)");
+  ok(cr && bn && bn.type === cr.id && S.v === 7, "account saved with the custom type (v7)");
   ok((await page.textContent(`[data-v="${bn.id}"]`)).includes("Crypto"), "row shows the type name");
   await page.reload();
   S = await state();

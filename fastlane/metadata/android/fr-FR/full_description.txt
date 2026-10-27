@@ -1,0 +1,42 @@
+Tally fonctionne comme un carnet de poche pour votre argent. Chaque matin, vos soldes sont en haut de la page, vous
+notez vos dépenses de la journée d’une seule touche, et tout est reporté au lendemain.
+
+UNE TOUCHE PAR DÉPENSE
+Vos catégories de dépenses entourent un anneau qui montre les dépenses du jour. Touchez une catégorie, saisissez le
+montant, enregistrez. Une calculatrice intégrée fait les petits calculs comme 12 + 4,50.
+
+TOUS VOS COMPTES, TOUTES LES DEVISES
+Comptes bancaires, portefeuilles mobiles, espèces, cartes de crédit et épargne, chacun dans sa propre devise : toutes
+les devises du monde.
+
+DES VIREMENTS QUI NE COMPTENT JAMAIS COMME DÉPENSES
+Déplacez de l’argent entre vos propres comptes, même d’une devise à l’autre, et ajoutez des frais de distributeur ou
+de retrait s’il y en a.
+
+CORRIGEZ UN SOLDE EN QUELQUES SECONDES
+Si un compte ne correspond pas à ce que vous avez vraiment, saisissez le vrai montant et Tally enregistre l’écart.
+
+EMPRUNTS ET PRÊTS
+Suivez l’argent que vous avez emprunté ou prêté : plusieurs montants par personne, échéances, remboursements partiels
+(avec leurs frais), rappels et abandons de créance. Voyez votre patrimoine net dans les onglets Avoirs et Dettes.
+
+UN COUP D’ŒIL EN ARRIÈRE
+L’historique de n’importe quel jour, période ou mois, avec le solde de chaque compte après chaque opération. Touchez
+l’anneau pour voir vos 7 derniers jours, 8 dernières semaines ou un mois par catégorie.
+
+RAPPELS ET WIDGET
+Un rappel le soir si vous n’avez rien noté dans la journée, des rappels d’échéance pour vos prêts et emprunts, et un
+widget d’écran d’accueil avec le solde du jour, les dépenses du jour et un ajout rapide.
+
+VOS DONNÉES RESTENT À VOUS
+Pas de compte à créer, pas de pub, pas de pistage, pas besoin d’internet. Tout est stocké sur votre téléphone.
+Sauvegardez dans un fichier quand vous voulez, restaurez-le sur un nouveau téléphone, ou exportez toutes vos opérations
+en CSV.
+
+DANS VOTRE LANGUE
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia et Türkçe : Tally suit la
+langue de votre téléphone, et écrit les nombres, les dates et les montants comme lui.
+
+Suit les couleurs Material You de votre téléphone, en clair et en sombre.
+
+Open source (MIT) : https://github.com/IamAndelib/Tally-android

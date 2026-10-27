@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Which language this folder's texts are in: tells the page and the notifications which translation Android picked
+     (Lang.java). One per language folder, never translated. -->
+<resources>
+    <string name="lang" translatable="false">fr</string>
+</resources>

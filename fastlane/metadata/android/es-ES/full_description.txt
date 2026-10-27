@@ -1,0 +1,42 @@
+Tally funciona como un cuaderno de bolsillo para tu dinero. Cada mañana tus saldos están arriba de la página, anotas
+los gastos del día con un solo toque y todo pasa al día siguiente.
+
+UN TOQUE POR GASTO
+Tus categorías de gasto rodean un gráfico circular con lo que gastaste hoy. Toca una categoría, escribe la cantidad y
+guarda. La calculadora integrada resuelve sumas rápidas como 12 + 4,50.
+
+TODAS TUS CUENTAS, CUALQUIER MONEDA
+Cuentas bancarias, billeteras móviles, efectivo, tarjetas de crédito y ahorros, cada uno en su moneda: cualquiera de
+las monedas del mundo.
+
+TRANSFERENCIAS QUE NUNCA CUENTAN COMO GASTO
+Mueve dinero entre tus propias cuentas, incluso entre monedas, y añade la comisión del cajero o del retiro cuando la
+haya.
+
+AJUSTA UN SALDO EN SEGUNDOS
+Si una cuenta no coincide con lo que tienes de verdad, escribe la cantidad real y Tally anota la diferencia.
+
+PRÉSTAMOS Y DEUDAS
+Lleva la cuenta del dinero que te prestaron o que prestaste: varias cantidades por persona, fechas de pago, pagos
+parciales (con sus comisiones), recordatorios y préstamos dados por perdidos. Consulta tu patrimonio en las pestañas
+Activos y Pasivos.
+
+MIRA ATRÁS
+Historial de cualquier día, rango de fechas o mes, con el saldo de cada cuenta después de cada movimiento. Toca el
+gráfico para ver tus últimos 7 días, 8 semanas o un mes por categoría.
+
+RECORDATORIOS Y UN WIDGET
+Un aviso por la noche si hoy no anotaste nada, recordatorios de las fechas de pago y un widget para la pantalla de
+inicio con el saldo de hoy, los gastos de hoy y un botón para añadir rápido.
+
+TUS DATOS SON TUYOS
+Sin cuenta, sin anuncios, sin rastreo y sin necesidad de internet. Todo se guarda en tu teléfono. Haz una copia en un
+archivo cuando quieras, restáurala en un teléfono nuevo o exporta todos los movimientos como CSV.
+
+EN TU IDIOMA
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia y Türkçe: Tally sigue el
+idioma de tu teléfono y escribe los números, las fechas y el dinero como lo hace tu teléfono.
+
+Usa los colores Material You de tu teléfono, en modo claro y oscuro.
+
+Código abierto (MIT): https://github.com/IamAndelib/Tally-android

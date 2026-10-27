@@ -585,7 +585,10 @@ const stub = () => {
   ok(/9:00 a\.m\.|9:00 AM/i.test(await page.textContent('[data-act="pick-time"][data-v="due"]')), "12-hour labels");
   await act("pick-time", "check");
   await settle(300);
-  ok((await page.$$("#pop .wcol")).length === 3 && (await selText("ap")) === "AM", "12-hour: an AM/PM wheel");
+  ok(
+    (await page.$$("#pop .wcol")).length === 3 && /^(AM|a\.m\.)$/.test(await selText("ap")),
+    "12-hour: an AM/PM wheel, as the phone writes it"
+  );
   await page.screenshot({ path: OUT + "/wheel-12h.png" });
   await setWheel("h", 7);
   await setWheel("m", 45);
@@ -667,7 +670,7 @@ const stub = () => {
   ok(
     dlg.includes("Restore Tally backup.json?") &&
       dlg.includes("2 accounts and 1 entry") &&
-      dlg.includes("saved Today") &&
+      /saved [A-Z][a-z]{2}, [A-Z][a-z]{2} \d+, \d\d:\d\d/.test(dlg) && // a date inside the sentence, not "Today"
       dlg.includes("Choose another file"),
     "Restore offers the auto backup with its counts and date: " + dlg
   );

@@ -473,8 +473,9 @@ document.addEventListener(
   { passive: true }
 );
 document.addEventListener("mousedown", e => {
-  if (e.button === 0 && !fromTouch()) pressOn(e.target, e.clientX, e.clientY);
-  if (e.button === 0 && !fromTouch()) pressStart(e.clientX, e.clientY, e.target);
+  if (e.button !== 0 || fromTouch()) return;
+  pressOn(e.target, e.clientX, e.clientY);
+  pressStart(e.clientX, e.clientY, e.target);
 });
 document.addEventListener("mousemove", e => {
   if (LP && !fromTouch()) pressMove(e.clientX, e.clientY, e);

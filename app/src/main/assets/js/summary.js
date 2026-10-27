@@ -9,7 +9,7 @@ let SM = null;
 let COMPACT = null;
 const compact = n => {
   try {
-    COMPACT = COMPACT || new Intl.NumberFormat(undefined, { notation: "compact", maximumSignificantDigits: 3 });
+    COMPACT = COMPACT || new Intl.NumberFormat(LOC.fmt, { notation: "compact", maximumSignificantDigits: 3 });
     return COMPACT.format(n);
   } catch (e) {
     return String(Math.round(n));
@@ -22,16 +22,18 @@ function summarySheet() {
     t = today();
   SM = { mode: V.period === "month" ? "m" : "d", end: e > t ? t : e, sel: null, cur: viewCur() };
   openSheet(
-    "Spending" + (currencies().length > 1 ? " · " + SM.cur : ""),
+    T("summary.title") + (currencies().length > 1 ? " · " + SM.cur : ""),
     '<div class="seg">' +
-      [
-        ["d", "Days"],
-        ["w", "Weeks"],
-        ["m", "Months"],
-      ]
+      ["d", "w", "m"]
         .map(
-          ([k, l]) =>
-            '<button data-act="sm-mode" data-v="' + k + '" aria-pressed="' + (SM.mode === k) + '">' + l + "</button>"
+          k =>
+            '<button data-act="sm-mode" data-v="' +
+            k +
+            '" aria-pressed="' +
+            (SM.mode === k) +
+            '">' +
+            TH("summary.mode." + k) +
+            "</button>"
         )
         .join("") +
       '</div><div id="sm"></div>'
@@ -49,7 +51,7 @@ function smBuckets() {
       out.push({
         s: d,
         e: d,
-        x: parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" }),
+        x: capFirst(parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" })),
         full: dayName(d),
       });
     }
@@ -61,7 +63,9 @@ function smBuckets() {
         s,
         e: addDays(s, 6),
         x: parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
-        full: "Week of " + parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
+        full: T("summary.weekOf", {
+          date: parseISO(s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
+        }),
       });
     }
   } else {
@@ -71,8 +75,8 @@ function smBuckets() {
       out.push({
         s: m + "-01",
         e: monthEnd(m),
-        x: parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }),
-        full: monthLabel(m),
+        x: capFirst(parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" })),
+        full: capFirst(monthLabel(m)),
       });
     }
   }
@@ -116,7 +120,7 @@ function smDonut(split, total) {
       '" stroke-dashoffset="' +
       (-off).toFixed(2) +
       '"><title>' +
-      esc(cat(k).name) +
+      esc(catName(cat(k))) +
       "</title></circle>";
     off += (v / total) * C;
   });
@@ -128,7 +132,9 @@ function smDonut(split, total) {
     "</g></svg>" +
     '<div class="c"><b>' +
     esc(total ? compact(total) : "0") +
-    "</b><span>spent</span></div></div>"
+    "</b><span>" +
+    TH("summary.spent") +
+    "</span></div></div>"
   );
 }
 function smRender() {
@@ -150,11 +156,15 @@ function drawSm() {
     cur = SM.cur;
   const later = bars[n - 1].e < t;
   let h =
-    '<div class="cal-h"><button class="icon" data-act="sm-nav" data-v="-1" aria-label="Earlier">' +
+    '<div class="cal-h"><button class="icon" data-act="sm-nav" data-v="-1" aria-label="' +
+    TH("summary.earlier") +
+    '">' +
     ic("left") +
     "</button><b>" +
-    esc(M ? monthLabel(b.s.slice(0, 7), true) : smSpan(bars)) +
-    '</b><button class="icon" data-act="sm-nav" data-v="1" aria-label="Later"' +
+    esc(capFirst(M ? monthLabel(b.s.slice(0, 7), true) : smSpan(bars))) +
+    '</b><button class="icon" data-act="sm-nav" data-v="1" aria-label="' +
+    TH("summary.later") +
+    '"' +
     (later ? "" : " disabled") +
     ">" +
     ic("right") +
@@ -177,7 +187,7 @@ function drawSm() {
             '"' +
             (future ? " disabled" : "") +
             ' aria-label="' +
-            esc(x.full + ": " + money(x.v, cur)) +
+            TH("common.labelValue", { label: x.full, value: money(x.v, cur) }) +
             '">' +
             '<span class="v">' +
             (x.v ? esc(compact(x.v)) : "") +
@@ -204,7 +214,7 @@ function drawSm() {
             '" data-act="sm-pick" data-v="' +
             k +
             '" aria-label="' +
-            esc(x.full + ": " + money(x.v, cur)) +
+            TH("common.labelValue", { label: x.full, value: money(x.v, cur) }) +
             '">' +
             '<span class="x">' +
             esc(rangeLabel(x.s, x.e)) +
@@ -219,16 +229,15 @@ function drawSm() {
       "</div>";
   else h += '<div class="smchart">' + smDonut(split, b.v) + "</div>";
   /* details for the chosen bar */
-  const unit = { d: "the day before", w: "last week", m: "last month" }[SM.mode];
   /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
   const len = x => daysBetween(x.s, x.e) + 1,
     part = SM.mode !== "d" && b.days < len(b);
   let cmp = "";
   if (prev && prev.v > 0 && b.days > 0) {
     const p = Math.round(part ? (b.v / b.days / (prev.v / len(prev)) - 1) * 100 : ((b.v - prev.v) / prev.v) * 100);
-    cmp = p === 0 ? "Same as " + unit : (p > 0 ? "↑ " : "↓ ") + Math.abs(p) + "% vs " + unit;
+    cmp = T("summary." + (p === 0 ? "same" : p > 0 ? "up" : "down") + "." + SM.mode, { pct: percent(Math.abs(p)) });
   }
-  const avg = SM.mode !== "d" && b.days > 0 && b.v ? "Avg " + money(rnd(b.v / b.days), cur) + " a day" : "";
+  const avg = SM.mode !== "d" && b.days > 0 && b.v ? T("summary.avg", { amount: money(rnd(b.v / b.days), cur) }) : "";
   const top = M ? split : split.slice(0, 3);
   h +=
     '<div class="smd">' +
@@ -249,8 +258,10 @@ function drawSm() {
             '<div class="tx">' +
             emblem(c, "em") +
             '<span class="mid"><div class="d" dir="auto">' +
-            esc(c.name) +
-            (M ? ' <span class="muted small">' + (p < 1 ? "<1" : Math.round(p)) + "%</span>" : "") +
+            esc(catName(c)) +
+            (M
+              ? ' <span class="muted small">' + esc(p < 1 ? "<" + percent(1) : percent(Math.round(p))) + "</span>"
+              : "") +
             '</div><span class="pbar"><span style="width:' +
             p.toFixed(1) +
             "%;background:" +
@@ -264,13 +275,13 @@ function drawSm() {
       "</div>";
   else
     h +=
-      '<div class="empty" style="padding:16px">Nothing spent ' +
-      { d: "that day", w: "that week", m: "in " + monthLabel(b.s.slice(0, 7)) }[SM.mode] +
-      ".</div>";
+      '<div class="empty" style="padding:16px">' +
+      TH("summary.none." + SM.mode, { month: monthLabel(b.s.slice(0, 7)) }) +
+      "</div>";
   h +=
-    '<div class="gap"></div><button class="btn tonal" data-act="sm-open">Open ' +
-    { d: "this day", w: "this week", m: "this month" }[SM.mode] +
-    " on Home</button>";
+    '<div class="gap"></div><button class="btn tonal" data-act="sm-open">' +
+    TH("summary.open." + SM.mode) +
+    "</button>";
   el.innerHTML = h;
 }
 /* "18 – 24 Sep", "3 Aug – 27 Sep", "Apr – Sep" (year added when it isn't this year) */

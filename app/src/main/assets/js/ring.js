@@ -39,7 +39,6 @@ let RE = null; /* the Settings preview's layout + order while it is on screen */
 /* what the middle of the Home donut shows (settings.donut, always one of these: migrate()); tapping the Settings
    donut steps through them in order */
 const DONUT_MODES = ["out", "in", "both", "none"];
-const DONUT_LABEL = { out: "Spending", in: "Income", both: "Spending + income", none: "No stats" };
 function cycleDonut() {
   S.settings.donut = DONUT_MODES[(DONUT_MODES.indexOf(S.settings.donut) + 1) % DONUT_MODES.length];
   save();
@@ -103,17 +102,19 @@ function ringHTML(cats, o) {
       '"' +
       (home
         ? ' aria-label="' +
-          esc("Add " + p.c.name + (v ? ", " + Math.max(1, Math.round((v / o.spent) * 100)) + "% of spending" : "")) +
+          (v
+            ? TH("ring.addShare", { cat: catName(p.c), share: percent(Math.max(1, Math.round((v / o.spent) * 100))) })
+            : TH("ring.add", { cat: catName(p.c) })) +
           '"'
         : "") +
       ">" +
       emblem(p.c, "ci") +
-      (names ? '<span class="cn" dir="auto">' + esc(p.c.name) + "</span>" : "") +
+      (names ? '<span class="cn" dir="auto">' + esc(catName(p.c)) + "</span>" : "") +
       (home
         ? '<span class="cp" style="color:' +
           inkOn(p.c.c) + // the category's colour, readable on the surface
           '">' +
-          (v ? Math.max(1, Math.round((v / o.spent) * 100)) + "%" : "") +
+          (v ? esc(percent(Math.max(1, Math.round((v / o.spent) * 100)))) : "") +
           "</span>"
         : "") +
       "</button>"
@@ -265,16 +266,16 @@ function ringHTML(cats, o) {
       esc(money(n, o.cur, true)) +
       "</div>";
     let mid = "";
-    if (mode === "out") mid = big(o.spent, "") + (!o.spent ? '<div class="hint">Tap a category</div>' : "");
+    if (mode === "out") mid = big(o.spent, "") + (!o.spent ? '<div class="hint">' + TH("ring.tapCat") + "</div>" : "");
     else if (mode === "in") mid = big(o.got, " in", "+");
     else if (mode === "both")
       mid =
         (o.got ? '<div class="g">+' + esc(money(o.got, o.cur, true)) + "</div>" : "") +
         big(o.spent, "") +
-        (!o.spent && !o.got ? '<div class="hint">Tap a category</div>' : "");
+        (!o.spent && !o.got ? '<div class="hint">' + TH("ring.tapCat") + "</div>" : "");
     center =
       '<button class="dwrap" data-act="summary" aria-label="' +
-      esc("Spending summary: spent " + money(o.spent, o.cur) + (o.got ? ", received " + money(o.got, o.cur) : "")) +
+      TH(o.got ? "ring.summaryGot" : "ring.summary", { spent: money(o.spent, o.cur), got: money(o.got, o.cur) }) +
       '" style="' +
       box +
       '">' +
@@ -285,22 +286,24 @@ function ringHTML(cats, o) {
       "</div></button>" +
       /* the same switch for screen readers and keyboards, as a button of its own (not one inside the donut's) */
       (cs.length > 1
-        ? '<button class="vh" data-act="cur-next">Showing ' +
-          esc(o.cur) +
-          ". Switch to " +
-          esc(cs[(cs.indexOf(o.cur) + 1) % cs.length]) +
+        ? '<button class="vh" data-act="cur-next">' +
+          TH("ring.switchCur", { cur: o.cur, next: cs[(cs.indexOf(o.cur) + 1) % cs.length] }) +
           "</button>"
         : "");
   } else {
     RE = { L, order: cats.map(c => c.id) };
     center =
-      '<button class="dwrap" data-act="donut-mode" aria-label="What the middle of the donut shows" style="' +
+      '<button class="dwrap" data-act="donut-mode" aria-label="' +
+      TH("donut.label") +
+      '" style="' +
       box +
       '">' +
       donut +
       '<div class="dcenter"><span class="dhole"></span><div class="dmode">' +
-      DONUT_LABEL[S.settings.donut] +
-      '</div><div class="hint">Tap to change</div></div></button>';
+      TH("donut." + S.settings.donut) +
+      '</div><div class="hint">' +
+      TH("donut.tap") +
+      "</div></div></button>";
   }
   return (
     '<div class="ring' +

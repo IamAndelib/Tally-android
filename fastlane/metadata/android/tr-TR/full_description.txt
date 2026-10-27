@@ -1,0 +1,41 @@
+Tally, paran için bir cep defteri gibi çalışır. Her sabah bakiyelerin sayfanın en üstünde durur, gün boyunca
+harcamalarını tek dokunuşla yazarsın ve her şey ertesi güne devreder.
+
+HER HARCAMAYA TEK DOKUNUŞ
+Harcama kategorilerin, bugünkü harcamalarını gösteren bir halkanın etrafında durur. Kategoriye dokun, tutarı yaz,
+kaydet. Yerleşik hesap makinesi 12 + 4,50 gibi hızlı toplamları halleder.
+
+HER HESAP, HER PARA BİRİMİ
+Banka hesapları, mobil cüzdanlar, nakit, kredi kartları ve birikimler, her biri kendi para biriminde: dünyadaki
+tüm para birimleri desteklenir.
+
+HARCAMAYA HİÇ SAYILMAYAN TRANSFERLER
+Kendi hesapların arasında, farklı para birimleri arasında bile para aktar; varsa ATM ya da para çekme masrafını da
+ekle.
+
+BAKİYEYİ SANİYELER İÇİNDE DÜZELT
+Bir hesap elindekiyle tutmuyorsa gerçek tutarı yaz, Tally farkı kaydetsin.
+
+BORÇLAR VE ALACAKLAR
+Aldığın ve verdiğin borçları takip et: kişi başına birden çok tutar, vadeler, kısmi ödemeler (masraflarıyla
+birlikte), hatırlatmalar ve vazgeçilen alacaklar. Net varlığını Varlıklar ve Borçlar sekmelerinde gör.
+
+GERİYE BAK
+Herhangi bir gün, tarih aralığı ya da ay için geçmiş; her kayıttan sonra her hesabın bakiyesiyle. Son 7 günü,
+8 haftayı ya da bir ayı kategoriye göre görmek için halkaya dokun.
+
+HATIRLATMALAR VE WIDGET
+Bugün hiçbir şey yazmadıysan bir akşam hatırlatması, borç vadesi hatırlatmaları ve bugünün bakiyesini, bugünün
+harcamasını ve hızlı ekleme düğmesini gösteren bir ana ekran widget’ı.
+
+VERİLERİN SENDE KALIR
+Hesap açmak yok, reklam yok, takip yok, internet gerekmez. Her şey telefonunda saklanır. İstediğin zaman bir dosyaya
+yedekle, yeni telefonda geri yükle ya da tüm kayıtları CSV olarak dışa aktar.
+
+SENİN DİLİNDE
+English, Español, Português (Brasil), Français, Deutsch, Русский, 简体中文, Bahasa Indonesia ve Türkçe: Tally
+telefonunun dilini kullanır; sayıları, tarihleri ve parayı telefonun nasıl yazıyorsa öyle yazar.
+
+Telefonunun Material You renklerine uyar, açık ve koyu temada.
+
+Açık kaynak (MIT): https://github.com/IamAndelib/Tally-android

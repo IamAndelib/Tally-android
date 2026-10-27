@@ -32,6 +32,9 @@ function range(p = V) {
   return [m + "-01", monthEnd(m)];
 }
 function periodLabel(p = V) {
+  return capFirst(periodText(p));
+}
+function periodText(p) {
   const t = today(),
     [s, e] = range(p);
   if (p.period === "day") return dayName(p.anchor);
@@ -58,9 +61,8 @@ const canNext = (p = V) => range(p)[1] < today();
 /* the date a new entry gets: the day being looked at (today when it is in view) */
 function entryDate() {
   const t = today(),
-    [s, e] = range();
-  if (t >= s && t <= e) return V.period === "day" ? V.anchor : t;
-  return V.period === "day" ? V.anchor : e;
+    [s, e] = range(); // a day: both are that day
+  return t >= s && t <= e ? t : e;
 }
 /* A new day, at midnight with the app open or on coming back to it. Home jumps to today (a range ending on the day
    that ended moves to end today), History leaves that day's month for this one, and an open form's dates move too:
@@ -87,11 +89,13 @@ function catchUpToday() {
   }
   document.querySelectorAll(".datefld").forEach(el => {
     if (el.dataset.max === was) el.dataset.max = t;
+    if (el.dataset.minToday) el.dataset.min = t;
     if (el.dataset.now) setDateField(el, t, true);
   });
-  /* an open date or period picker: today's ring, its Today button and the latest day it allows */
+  /* an open date or period picker: today's ring, its Today button and the first and latest days it allows */
   if (DP && $("#dp")) {
     if (DP.max === was) DP.max = t;
+    if (DP.minToday) DP.min = t;
     dpRender();
   }
   if (PD && $("#pd")) pdRender();
@@ -119,7 +123,9 @@ function periodDialog(p) {
   const ref = p.period === "range" ? p.re : p.anchor;
   PD = { p, tab: p.period, month: ref.slice(0, 7), year: +ref.slice(0, 4), pick: null };
   $("#pop").innerHTML =
-    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="pd" role="dialog" aria-modal="true" aria-label="Choose what to show"></div></div>';
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="pd" role="dialog" aria-modal="true" aria-label="' +
+    TH("period.title") +
+    '"></div></div>';
   pdRender();
 }
 function pdRender() {
@@ -132,24 +138,30 @@ function drawPd() {
     tm = t.slice(0, 7);
   let h =
     '<div class="seg">' +
-    [
-      ["day", "Day"],
-      ["range", "Range"],
-      ["month", "Month"],
-    ]
+    ["day", "range", "month"]
       .map(
-        ([k, l]) =>
-          '<button data-act="pd-tab" data-v="' + k + '" aria-pressed="' + (PD.tab === k) + '">' + l + "</button>"
+        k =>
+          '<button data-act="pd-tab" data-v="' +
+          k +
+          '" aria-pressed="' +
+          (PD.tab === k) +
+          '">' +
+          TH("period." + k) +
+          "</button>"
       )
       .join("") +
     "</div>";
   if (PD.tab === "month") {
     h +=
-      '<div class="cal-h"><button class="icon" data-act="pd-year" data-v="-1" aria-label="Previous year">' +
+      '<div class="cal-h"><button class="icon" data-act="pd-year" data-v="-1" aria-label="' +
+      TH("period.prevYear") +
+      '">' +
       ic("left") +
       "</button><b>" +
       PD.year +
-      '</b><button class="icon" data-act="pd-year" data-v="1" aria-label="Next year"' +
+      '</b><button class="icon" data-act="pd-year" data-v="1" aria-label="' +
+      TH("period.nextYear") +
+      '"' +
       (PD.year >= +t.slice(0, 4) ? " disabled" : "") +
       ">" +
       ic("right") +
@@ -169,7 +181,7 @@ function drawPd() {
           '"' +
           (m > tm ? " disabled" : "") +
           ">" +
-          esc(new Date(PD.year, i, 1).toLocaleDateString(DATE_LOC, { month: "short" })) +
+          esc(capFirst(new Date(PD.year, i, 1).toLocaleDateString(DATE_LOC, { month: "short" }))) +
           "</button>"
         );
       }).join("") +
@@ -179,11 +191,15 @@ function drawPd() {
       calendar() +
       (PD.tab === "range"
         ? '<p class="hint" id="pd-hint" style="text-align:center">' +
-          (PD.pick ? "Now tap the end day" : "Drag across days, or tap start then end") +
+          (PD.pick ? TH("period.rangeEnd") : TH("period.rangeHint")) +
           "</p>"
         : "");
   h +=
-    '<div class="dlg-act"><button class="btn text" data-act="pd-today">Today</button><button class="btn text" data-act="pd-close">Cancel</button></div>';
+    '<div class="dlg-act"><button class="btn text" data-act="pd-today">' +
+    TH("day.today") +
+    '</button><button class="btn text" data-act="pd-close">' +
+    TH("common.cancel") +
+    "</button></div>";
   el.innerHTML = h;
   el.classList.toggle("rg", PD.tab === "range"); // dragging across days: the calendar doesn't scroll
   fitCal(el);

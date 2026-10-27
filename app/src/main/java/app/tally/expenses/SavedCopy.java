@@ -18,6 +18,8 @@ final class SavedCopy {
     private static String next; // the newest save not written yet
     private static int nextSeq;
     private static boolean writing;
+    /** The save numbers last written and last refused (a full disk, out of memory), for {@link #status}. */
+    private static volatile int okSeq, failSeq;
 
     private SavedCopy() { }
 
@@ -54,7 +56,16 @@ final class SavedCopy {
                 writing = false;
                 LOCK.notifyAll();
             }
+            failSeq = seq;
         }
+    }
+
+    /**
+     * Whether save {@code seq} is on disk: 1 written (or a newer one that has it), -1 refused, 0 not yet. The page asks
+     * when localStorage refused a save (state.js save()), so a save in neither copy is said.
+     */
+    static int status(int seq) {
+        return okSeq >= seq ? 1 : failSeq >= seq ? -1 : 0;
     }
 
     /** The copy, once any write under way has finished (2 s at most); null when there is none. */
@@ -81,9 +92,14 @@ final class SavedCopy {
             os.getFD().sync();
         } catch (Throwable e) { // a full disk, or out of memory: the old copy stays, its lower number loses to localStorage
             tmp.delete();
+            failSeq = seq;
             return;
         }
-        if (!tmp.renameTo(f)) tmp.delete();
+        if (tmp.renameTo(f)) okSeq = seq;
+        else {
+            tmp.delete();
+            failSeq = seq;
+        }
     }
 
     private static File file(Context ctx) { return new File(ctx.getFilesDir(), "saved.json"); }

@@ -1,0 +1,3 @@
+- Tally kini tersedia dalam bahasa Spanyol, Portugis Brasil, Prancis, Jerman, Rusia, Mandarin Sederhana, Indonesia, dan Turki, mengikuti bahasa ponselmu. Di Android 13 ke atas, kamu juga bisa memilih bahasa khusus untuk Tally.
+- Angka, tanggal, dan uang tetap mengikuti format ponselmu.
+- Kolom "Dibayar ke" / "Diterima dari", juga di ekspor CSV. Tambah kategori atau akun langsung dari formulir catatan.

@@ -19,9 +19,10 @@ Tally is a native Android shell around a web page.
 - **`MainActivity.java`** hosts a WebView that loads `assets/index.html` from
   `https://appassets.androidplatform.net/assets/` (`WebViewAssetLoader`) and exposes a small bridge, `window.Android`:
   `ready` (ends the launch screen), `haptic`, `saveFile`, `getColors` (Material You palette), `setBars`,
-  `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `is24h`, `fontScale`, `reminderHealth` /
-  `openSetting` / `permsIntro` (permissions), `keepState` / `keptState` (the shell's own copy of every save,
-  `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
+  `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `getLocale` / `appLanguage`
+  (`Lang.java`: the texts' language and the number format), `is24h`, `fontScale`, `reminderHealth` /
+  `openSetting` / `permsIntro` (permissions), `keepState` / `keptStatus` / `keptState` (the shell's own copy
+  of every save, `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
   `backupNow`, and Restore's `readAutoBackup` / `pickRestoreFile`. In the other direction it calls the page's hooks
   `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`, `tallyFolder`,
   `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that
@@ -38,6 +39,7 @@ Tally is a native Android shell around a web page.
 
 | File | What's in it |
 | --- | --- |
+| `js/i18n.js` | the language (`LOC`) and the text lookup: `T()` plain text, `TH()` HTML; texts in `js/i18n/<code>.js` |
 | `js/core.js` | built-in categories and account types, inline icons, DOM/date/number helpers, money formatting, snackbar |
 | `js/currencies.js` | every currency's English name and the countries using each (Unicode CLDR), for the currency picker |
 | `js/state.js` | the data `S`, `migrate()`, load/save, balances, `withUndo()`, `guardOverdraw()`, `deleteEntries()` |
@@ -63,7 +65,8 @@ All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
 the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (see `save()` in `js/state.js`).
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
-  `income` (with `cat`), `transfer` (with `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
+  `income` (with `cat`, and an optional `payee`: who was paid or who paid, stored only when filled), `transfer` (with
+  `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
   `loan` (money moving for a loan: `dir`, `loan`, and `principal` + optional `due` for a draw). `ts` is when it was
   written (`Date.now()`, so not an amount: `migrate()` reads it with `stamp()`) and orders a day's entries, newest
   first. A transfer's or loan payment's fee is an `expense` linked both ways (`feeOf` on the fee, `feeId` on the
@@ -71,6 +74,8 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
 - A **loan** is a person tab, `{id, kind: "borrow" | "lend", person, account, date, note, status}`. Its amounts, what's
   left and its status are always derived from its entries by `loanInfo()`, never stored.
 - Balances are never stored either: `balances()` adds every entry to each account's opening balance.
+- A built-in category keeps its English default `name` until the user renames it; `catName()` shows such a name in
+  Tally's language. Stored text is never translated.
 - **Changing the shape of the data** means bumping `v` in `blank()` and teaching `migrate()` to upgrade older saves
   *and* older backup files without changing any balance. Add a test that loads the old shape.
 
@@ -86,8 +91,33 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
 - The calculator's minus key is the Unicode minus `−` (U+2212); any regex over keys or expressions must include it.
 - No inline scripts or `on…=` attributes: the page's Content-Security-Policy blocks them.
 - Formatting is Prettier's (`npm run format`); `npm run lint` must pass (it also refuses CSS selectors newer than
-  WebView 87, such as `:is()`, which would drop the whole rule there).
+  WebView 87, such as `:is()`, which would drop the whole rule there). Its `tests/dead-code.js` refuses what nothing
+  uses: a function or constant no running code reaches, a click action without an element or a handler, a bridge
+  method or page hook one side lacks, a CSS class nothing writes, a text no code asks for, an Android resource nothing
+  names, a parameter every call passes the same. Delete the leftover, or add it to its `ALLOW` with the reason.
 - Java: keep the bridge small; anything the page can compute, it computes.
+- **Every text a person sees goes through the catalogue** (see Translations): `T("area.key", {values})` for plain
+  text (`snack()`, `askDialog()`, `textContent`), `TH()` inside HTML. A whole sentence is one key with `{{values}}`,
+  never words joined in English order; counts use plural keys (`_one`, `_other`). Numbers, dates and names use
+  `LOC.fmt` (lint refuses the web view's default locale). The shell sends codes and data; it writes its own sentences
+  only for notifications and the widget, from `res/values*/strings.xml`.
+
+## Translations
+
+Tally follows the phone's language (or, on Android 13+, the one picked for Tally in Android's settings). The texts
+live in `l10n/`: `web/<code>.json` for the page (i18next JSON, English in `en.json`) and the Android string files
+`app/src/main/res/values*/strings.xml` for notifications and the widget; `l10n/GLOSSARY.md` and `l10n/glossary/`
+guide translators. `tools/gen_i18n.py` turns the JSON into `app/src/main/assets/js/i18n/<code>.js` (never edit those).
+
+Two locales are kept apart (`Lang.java`, `LOC` in `js/i18n.js`): `ui`, the language Android picked for Tally's texts
+(each `values-xx` folder names it in `lang.xml`), and `fmt`, the phone's own locale for numbers and dates, so a phone
+in a language Tally isn't translated into still writes numbers its own way.
+
+**Adding a language:** `l10n/web/<code>.json` and `values-xx/strings.xml` with every text, `values-xx/lang.xml`, its
+script tag in `index.html`, `res/xml/locales_config.xml`, `resourceConfigurations` in `app/build.gradle` and a store
+listing in `fastlane/metadata/android/`; run `python3 tools/gen_i18n.py`. `tests/e2e/32-i18n-static.js` checks that
+all of these agree, that every text has the same `{{values}}` and plural forms, and that every key the code asks for
+exists. Translations marked as drafts in `l10n/glossary/<code>.md` await a native speaker's review.
 
 ## Design principles
 

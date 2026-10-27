@@ -4,9 +4,12 @@
  */
 "use strict";
 
-/* A second tap right where a tap just closed a sheet or dialog (a double tap on Save) would land on whatever was
-   underneath it: such a tap is dropped. Keyboard and script clicks (detail 0) always go through. */
-let ghostTap = null;
+/* A second tap right where a tap just closed a sheet or dialog (a double tap on Save), or swapped the sheet for another
+   (Add category from the entry form, and back), would land on whatever is there now: such a tap is dropped. Keyboard
+   and script clicks (detail 0) always go through. */
+let ghostTap = null,
+  tapLayers = 0, // layers open when the tap began
+  sheetSwap = false; // this tap swapped the entry form for Add category / Add account, or back (txQuickAdd)
 const layersUp = () => ["#sheet", "#sheet2", "#pop"].filter(id => $(id).innerHTML).length;
 document.addEventListener(
   "click",
@@ -20,10 +23,10 @@ document.addEventListener(
       return;
     }
     tapLayers = layersUp();
+    sheetSwap = false;
   },
   true
 );
-let tapLayers = 0;
 document.addEventListener("click", ev => {
   if (swallowClick) {
     swallowClick = false;
@@ -236,7 +239,7 @@ document.addEventListener("click", ev => {
     case "check-ok":
       S.settings.lastCheck = today();
       commit();
-      snack("Page started for today");
+      snack(T("home.checked"));
       break;
     case "entries":
       entriesSheet();
@@ -281,6 +284,12 @@ document.addEventListener("click", ev => {
     case "f-cat":
       pickCat(v);
       break;
+    case "f-cat-new":
+      txQuickAdd("cat");
+      break;
+    case "f-acc-new":
+      txQuickAdd("acc");
+      break;
     case "f-acc":
       pickAccount(v);
       break;
@@ -297,7 +306,7 @@ document.addEventListener("click", ev => {
     case "tr-del": {
       const id = F.id;
       closeSheet();
-      withUndo("Deleted", () => deleteEntries([id]));
+      withUndo(T("common.deleted"), () => deleteEntries([id]));
       break;
     }
     case "tr-new":
@@ -331,7 +340,7 @@ document.addEventListener("click", ev => {
     case "adj-del": {
       const id = F.id;
       closeSheet();
-      withUndo("Fix deleted", () => deleteEntries([id]));
+      withUndo(T("fix.deleted"), () => deleteEntries([id]));
       break;
     }
     case "acc-open":
@@ -393,7 +402,7 @@ document.addEventListener("click", ev => {
     case "ic-emo-ok": {
       const e = $("#ic-emo").value.trim();
       if (!e) {
-        snack("Type an emoji");
+        snack(T("icon.emoji"));
         return;
       }
       const f = ICPICK && ICPICK.onPick;
@@ -449,16 +458,11 @@ document.addEventListener("click", ev => {
     case "acc-save":
       saveAccount();
       break;
-    case "acc-arch": {
-      const a = acc(F.id);
-      closeSheet();
-      if (a) setArchived(a.id, !a.archived);
-      break;
-    }
+    case "acc-arch":
     case "acc-unarch": {
       const id = F.id;
       closeSheet();
-      setArchived(id, false);
+      setArchived(id, act === "acc-arch");
       break;
     }
     case "loan-reopen": {
@@ -500,8 +504,10 @@ document.addEventListener("click", ev => {
     case "sel-toggle":
       if (V.sel.has(v)) V.sel.delete(v);
       else V.sel.add(v);
-      if (!V.sel.size) V.sel = null;
-      render();
+      if (!V.sel.size) {
+        V.sel = null;
+        render();
+      } else selSync(el);
       break;
     case "sel-all": {
       const ids = historyList().map(t => t.id);
@@ -519,7 +525,7 @@ document.addEventListener("click", ev => {
       }
       let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
       withUndo(
-        () => "Deleted " + n + " " + (n === 1 ? "entry" : "entries"),
+        () => T("history.deleted", { count: n }),
         () => {
           n = S.txns.length;
           deleteEntries(ids);
@@ -539,11 +545,7 @@ document.addEventListener("click", ev => {
       catForm(v);
       break;
     case "cat-new":
-      if (v === "out" && outCats().length >= 24) {
-        snack("Up to 24 spending categories");
-        return;
-      }
-      catForm(null, v);
+      if (!catsFull(v)) catForm(null, v);
       break;
     case "cat-back":
       restoreCat(v);
@@ -566,12 +568,16 @@ document.addEventListener("click", ev => {
     case "calc-key":
       calcKey(v);
       break;
+    case "f-payee-pick":
+      pickPayee(v);
+      break;
     case "f-person-pick": {
       const el2 = $("#f-person");
       if (el2) el2.value = (loan(v) || {}).person || "";
       F.merge = v;
       $("#f-person-sug").hidden = true;
       mergeHint();
+      if (el2) el2.focus({ preventScroll: true }); // the chips are gone: back to the name, now filled in
       break;
     }
     case "cat-save":
@@ -595,11 +601,14 @@ document.addEventListener("click", ev => {
       });
       break;
     }
+    case "lang-open":
+      fixReminders("lang"); // Android's language setting for Tally
+      break;
     case "kept-del":
       askDialog(
-        "Delete the kept data?",
-        "Only do this once it's saved as a file, or you're sure you don't need it.",
-        "Delete",
+        T("data.kept.deleteQ"),
+        T("data.kept.deleteBody"),
+        T("common.delete"),
         () => {
           keptKeys().forEach(k => localStorage.removeItem(k));
           render();
@@ -617,8 +626,9 @@ document.addEventListener("click", ev => {
 });
 /* after the tap has been handled (this listener comes after the one above): did it close a layer? */
 document.addEventListener("click", ev => {
-  if (ev.detail && layersUp() < tapLayers) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
+  if (ev.detail && (layersUp() < tapLayers || sheetSwap)) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
   tapLayers = 0;
+  sheetSwap = false;
 });
 document.addEventListener("input", ev => {
   const id = ev.target.id;
@@ -631,13 +641,14 @@ document.addEventListener("input", ev => {
   else if (id === "f-person" && F && F.kind === "loanf") {
     /* a name typed out in full that has an open tab (same kind and currency) adds to it, as picking it would: the
        hint says so, and changing the name undoes it */
-    const name = ev.target.value.trim().toLowerCase(),
+    const name = curFold(ev.target.value.trim()), // any case, any script's (Turkish İrem / irem / IREM)
       cur = (acc(F.account) || {}).currency,
-      same = name && cur ? personCandidates(F.lk, cur, name).find(l => l.person.toLowerCase() === name) : null;
+      same = name && cur ? personCandidates(F.lk, cur, ev.target.value).find(l => curFold(l.person) === name) : null;
     F.merge = same ? same.id : null;
     mergeHint();
     personSuggest(ev.target.value);
-  } else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
+  } else if (id === "f-payee" && F && F.kind === "tx") payeeSuggest(ev.target.value);
+  else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
 });
 document.addEventListener("change", ev => {
   if (ev.target.id === "restore-file") restoreFile(ev.target);

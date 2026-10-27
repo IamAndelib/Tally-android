@@ -43,6 +43,7 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -51,6 +52,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
@@ -78,6 +80,10 @@ public class MainActivity extends Activity {
     /** The page's surface colour from setBars, applied to root once the page is showing (so the logo stays until then). */
     private Integer pageColor;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** For answers from other threads (deliver), whichever activity is on screen then. */
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    /** What the permission prompts remember (the notification prompt asked once, the first-open dialog shown). */
+    private static final String PERMS_PREFS = "tally_perms";
     /** Renderer losses (onRenderProcessGone) in the minute since goneSince; static, since each loss recreates this. */
     private static long goneSince;
     private static int goneCount;
@@ -110,7 +116,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         live = this;
-        queued.addAll(orphans);
+        // answers that arrived while the activity was being recreated; a fresh launch (Tally was closed) drops them
+        if (savedInstanceState != null) queued.addAll(orphans);
         orphans.clear();
         dropOldSaves();
         try {
@@ -206,7 +213,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(java.util.Locale.ROOT);
+                String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(Locale.ROOT);
                 // only the app's own https assets stay in the WebView (WebViewAssetLoader serves nothing over http)
                 if ("https".equals(scheme) && HOST.equals(u.getHost())) return false;
                 // web links (the About footer) open in the browser; anything else (intent:, content:, file:…) is dropped
@@ -221,6 +228,7 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "Android");
         ReminderReceiver.channels(this); // listed in Android's settings from the start, one per kind of reminder
+        Lang.syncIfChanged(this); // the language changed while Tally wasn't running: notices and widget follow
 
         // only a fresh launch opens a form: relaunched from Recents (or recreated), the task's old intent would
         // reopen the quick-add form or payment sheet it once asked for
@@ -321,7 +329,7 @@ public class MainActivity extends Activity {
         }
         if (asking) return true; // its prompt is already up: one Allow, one prompt
         asking = true;
-        getSharedPreferences("tally_perms", MODE_PRIVATE).edit().putBoolean("notif", true).apply();
+        getSharedPreferences(PERMS_PREFS, MODE_PRIVATE).edit().putBoolean("notif", true).apply();
         requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIF_REQ);
         return true;
     }
@@ -329,7 +337,7 @@ public class MainActivity extends Activity {
     /** Android 13+'s prompt can still show: never asked on this install, or refused only once so far. */
     private boolean canPromptNotif() {
         return Build.VERSION.SDK_INT >= 33
-                && (!getSharedPreferences("tally_perms", MODE_PRIVATE).getBoolean("notif", false)
+                && (!getSharedPreferences(PERMS_PREFS, MODE_PRIVATE).getBoolean("notif", false)
                     || shouldShowRequestPermissionRationale("android.permission.POST_NOTIFICATIONS"));
     }
 
@@ -410,7 +418,7 @@ public class MainActivity extends Activity {
      * then reaches the page even if the activity was recreated meanwhile (renderer lost, text size changed).
      */
     static void deliver(String js) {
-        new Handler(Looper.getMainLooper()).post(() -> {
+        MAIN.post(() -> {
             MainActivity a = live;
             if (a != null && !a.isDestroyed()) a.callPage(js);
             else orphans.add(js);
@@ -480,7 +488,7 @@ public class MainActivity extends Activity {
                     sb.append(",\"").append(names[p]).append("\":[");
                     for (int i = 0; i < ids[p].length; i++) {
                         if (i > 0) sb.append(',');
-                        sb.append('"').append(String.format("#%06X", 0xFFFFFF & getColor(ids[p][i]))).append('"');
+                        sb.append('"').append(String.format(Locale.ROOT, "#%06X", 0xFFFFFF & getColor(ids[p][i]))).append('"');
                     }
                     sb.append(']');
                 }
@@ -546,7 +554,7 @@ public class MainActivity extends Activity {
                 getContentResolver().takePersistableUriPermission(tree,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (SecurityException e) {
-                folderPicked("Tally can't keep access to that folder. Pick another one.");
+                folderPicked("keep_access");
                 return;
             }
             // remembered and marked not backed up yet: the first backup comes at the set time (Back up now: at once)
@@ -574,12 +582,12 @@ public class MainActivity extends Activity {
                 String head = text.startsWith("\uFEFF") ? text.substring(1).trim() : text.trim();
                 if (!head.startsWith("{") || head.indexOf('\u0000') >= 0) {
                     text = null;
-                    err = "That isn't a Tally backup file";
+                    err = "not_backup";
                 }
             } catch (IOException e) {
-                err = "too big".equals(e.getMessage()) ? "That file is too big to be a Tally backup" : "Couldn't read that file";
+                err = "too big".equals(e.getMessage()) ? "too_big" : "cant_read";
             } catch (Throwable e) { // SecurityException, or out of memory on a small phone
-                err = "Couldn't read that file";
+                err = "cant_read";
             }
             // quoted on this thread too: a backup of a few MB takes a moment
             final String arg = (text == null ? "null" : JSONObject.quote(text)) + "," + (err == null ? "null" : JSONObject.quote(err));
@@ -592,7 +600,7 @@ public class MainActivity extends Activity {
         deliver("window.tallyRestore&&window.tallyRestore(" + args + ")");
     }
 
-    /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem. */
+    /** Tells the page how picking a backup folder went: null = cancelled, "" = picked, else the problem's code. */
     private void folderPicked(String err) {
         if (isDestroyed()) return;
         String arg = err == null ? "null" : JSONObject.quote(err);
@@ -718,10 +726,21 @@ public class MainActivity extends Activity {
         /** True only the first time on this install: the page then shows its Permissions dialog (once, never again). */
         @JavascriptInterface
         public boolean permsIntro() {
-            SharedPreferences p = getSharedPreferences("tally_perms", MODE_PRIVATE);
+            SharedPreferences p = getSharedPreferences(PERMS_PREFS, MODE_PRIVATE);
             if (p.getBoolean("intro", false)) return false;
             p.edit().putBoolean("intro", true).apply();
             return true;
+        }
+
+        /** {"ui": the language of Tally's words, "fmt": the locale for numbers and dates}; see {@link Lang}. */
+        @JavascriptInterface
+        public String getLocale() {
+            try {
+                return new JSONObject().put("ui", Lang.ui(MainActivity.this))
+                        .put("fmt", Lang.fmt(MainActivity.this).toLanguageTag()).toString();
+            } catch (JSONException e) {
+                return "{}";
+            }
         }
 
         @JavascriptInterface
@@ -757,6 +776,12 @@ public class MainActivity extends Activity {
             SavedCopy.keep(MainActivity.this, seq, json);
         }
 
+        /** Whether that copy has save {@code seq}: 1 yes, -1 its write failed, 0 not written yet (SavedCopy.status). */
+        @JavascriptInterface
+        public int keptStatus(int seq) {
+            return SavedCopy.status(seq);
+        }
+
         /** That copy, for the page's start-up: the save number, a line break and the data; "" when there is none. */
         @JavascriptInterface
         public String keptState() {
@@ -770,7 +795,7 @@ public class MainActivity extends Activity {
             BackupReceiver.setData(MainActivity.this, json);
         }
 
-        /** {folder, usable, last, error} for Settings. */
+        /** {on, folder, usable, last, error} for Settings and Restore (BackupReceiver.status). */
         @JavascriptInterface
         public String backupStatus() {
             return BackupReceiver.status(MainActivity.this);
@@ -788,7 +813,7 @@ public class MainActivity extends Activity {
                 try {
                     err = BackupReceiver.run(app, true);
                 } catch (Throwable e) { // out of memory on a small phone: still an answer
-                    err = "The backup couldn't be written.";
+                    err = BackupReceiver.E_WRITE;
                 }
                 deliver("window.tallyBackedUp&&window.tallyBackedUp(" + JSONObject.quote(err == null ? "" : err) + ","
                         + id + ")");
@@ -796,9 +821,9 @@ public class MainActivity extends Activity {
         }
 
         /**
-         * The auto backup's file (request {@code id}), for Settings → Restore and a newly picked folder: {text, when,
-         * folder} or {error}, read on a thread of its own and handed to window.tallyAutoBackup(it, id) (as an object:
-         * it is JSON).
+         * The auto backup's file (request {@code id}), for Settings → Restore and a newly picked folder: {text, when}
+         * or {error}, read on a thread of its own and handed to window.tallyAutoBackup(it, id) (as an object: it is
+         * JSON).
          */
         @JavascriptInterface
         public void readAutoBackup(final int id) {
@@ -808,7 +833,7 @@ public class MainActivity extends Activity {
                 try {
                     json = BackupReceiver.readAuto(app);
                 } catch (Throwable e) {
-                    json = "{\"error\":\"The backup file can't be read.\"}";
+                    json = "{\"error\":\"" + BackupReceiver.E_READ + "\"}";
                 }
                 deliver("window.tallyAutoBackup&&window.tallyAutoBackup(" + json + "," + id + ")");
             }).start();
@@ -823,7 +848,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(i, PICK_RESTORE);
                 } catch (ActivityNotFoundException e) {
-                    restoreResult("null," + JSONObject.quote("No file picker on this phone"));
+                    restoreResult("null," + JSONObject.quote("no_picker"));
                 }
             });
         }
@@ -835,7 +860,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER);
                 } catch (ActivityNotFoundException e) {
-                    folderPicked("This phone has no folder picker, so auto backup can't be set up.");
+                    folderPicked("no_folder_picker");
                 }
             });
         }
@@ -860,7 +885,8 @@ public class MainActivity extends Activity {
         /**
          * Settings' Allow buttons. "notif": Android's own prompt while it can still show it, else Tally's notification
          * settings. "exact": Android's "Alarms & reminders" switch. "battery": Android's "Stop optimising battery
-         * usage?" popup. Anything else, or a phone without that screen: App info.
+         * usage?" popup. "lang": Android 13+'s language setting for Tally. Anything else, or a phone without that screen:
+         * App info.
          */
         @SuppressLint("BatteryLife") // on purpose: reminders and the backup must never be held back
         @JavascriptInterface
@@ -878,6 +904,8 @@ public class MainActivity extends Activity {
                     i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg);
                 } else if ("battery".equals(kind)) {
                     i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg);
+                } else if ("lang".equals(kind) && Build.VERSION.SDK_INT >= 33) {
+                    i = new Intent(Settings.ACTION_APP_LOCALE_SETTINGS, pkg);
                 } else {
                     i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg);
                 }
@@ -888,6 +916,12 @@ public class MainActivity extends Activity {
                     catch (ActivityNotFoundException ignored) { }
                 }
             });
+        }
+
+        /** True where Android has a language setting for each app (13+): Settings → Region then offers it. */
+        @JavascriptInterface
+        public boolean appLanguage() {
+            return Build.VERSION.SDK_INT >= 33;
         }
 
         /** The phone's text size (Settings → Display → Font size), 1 = default. A change restarts the activity. */
