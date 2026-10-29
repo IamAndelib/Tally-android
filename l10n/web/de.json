@@ -534,6 +534,7 @@
     "export": "Einträge exportieren (CSV)",
     "wipe": "Alle Daten löschen",
     "about": "Über Tally",
+    "support": "Spendier mir einen Kaffee",
     "version": "Version {{version}}",
     "by": "Von {{name}}",
     "source": "Quellcode auf GitHub",

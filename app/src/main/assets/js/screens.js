@@ -1144,7 +1144,13 @@ function settingsView() {
   h +=
     '<div class="sec center">' +
     TH("settings.about") +
-    '</div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
+    '</div><a class="btn tonal" href="' +
+    DONATE_URL +
+    '"><svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' +
+    ICONS.local_cafe[0] +
+    '"/></svg>' +
+    TH("settings.support") +
+    '</a><div class="gap"></div><p class="muted small" style="margin:0 4px;text-align:center">Tally' +
     (ver ? " · " + TH("settings.version", { version: ver }) : "") +
     "<br>" +
     TH("settings.by", { name: { html: '<a href="https://github.com/IamAndelib">IamAndelib</a>' } }) +
@@ -1153,6 +1159,9 @@ function settingsView() {
     "</a></p>";
   return h;
 }
+/* where "Buy me a coffee" (Settings → About) leads: Tally's Ko-fi page, opened in the browser (MainActivity sends web
+   links there), so Tally itself stays offline; the repository's Sponsor button (.github/FUNDING.yml) leads there too */
+const DONATE_URL = "https://ko-fi.com/iamandelib";
 /* Settings → Region → Language, where Android has a language setting for each app (13+): the language Tally shows,
    and the way to Android's screen to change it. Elsewhere Tally simply follows the phone's language. */
 function langRow() {

@@ -538,6 +538,7 @@
     "export": "Exportar movimientos (CSV)",
     "wipe": "Eliminar todos los datos",
     "about": "Acerca de",
+    "support": "Invítame a un café",
     "version": "Versión {{version}}",
     "by": "Por {{name}}",
     "source": "Código en GitHub",

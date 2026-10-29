@@ -1,0 +1,1 @@
+- Configurações → Sobre → Me paga um café abre a página do Tally no Ko-fi no navegador, para quem quiser apoiar o desenvolvimento. O Tally continua sem nunca acessar a internet.

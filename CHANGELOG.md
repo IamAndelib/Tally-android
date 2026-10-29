@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.3] — 2026-10-29
+
+### Added
+
+- **Settings → About → Buy me a coffee** opens Tally's Ko-fi page in the browser, for anyone who wants to support its
+  development. Tally itself still never goes online.
+
 ## [1.4.2] — 2026-10-27
 
 ### Added
@@ -480,6 +487,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.3
 [1.4.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.2
 [1.4.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.1
 [1.4.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.0

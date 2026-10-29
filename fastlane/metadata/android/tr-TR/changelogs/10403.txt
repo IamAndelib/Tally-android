@@ -1,0 +1,1 @@
+- Ayarlar → Hakkında → Bana bir kahve ısmarla, Tally'nin Ko-fi sayfasını tarayıcıda açar; geliştirmeyi desteklemek isteyenler için. Tally'nin kendisi yine hiçbir zaman internete bağlanmaz.

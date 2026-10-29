@@ -1,0 +1,1 @@
+- Paramètres → À propos → Offrez-moi un café ouvre la page Ko-fi de Tally dans le navigateur, pour qui veut soutenir son développement. Tally lui-même ne se connecte toujours jamais.

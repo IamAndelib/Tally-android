@@ -1,6 +1,6 @@
 # Tally — Privacy Policy
 
-_Last updated: 17 October 2026_
+_Last updated: 29 October 2026_
 
 Tally is a personal expense tracker made by IamAndelib. This policy explains what happens to your information.
 
@@ -16,6 +16,8 @@ Tally is a personal expense tracker made by IamAndelib. This policy explains wha
 - **Android backup:** if you have turned on your phone's own backup (Google backup), Android may include Tally's data
   in it, but only when that backup is end-to-end encrypted; an unencrypted copy (such as "adb backup") never
   includes it. That backup is handled by Google under your Google account settings, not by Tally.
+- **Links:** "Buy me a coffee" in Settings → About opens Tally's Ko-fi page, and the About links open GitHub, in your
+  browser. Tally itself sends nothing; what you do on those sites is covered by their own privacy policies.
 - **Uninstalling** Tally deletes its data from your phone.
 
 **Permissions**

@@ -17,6 +17,7 @@
   <a href="https://github.com/IamAndelib/Tally-android/actions/workflows/build-apk.yml"><img alt="Build" src="https://github.com/IamAndelib/Tally-android/actions/workflows/build-apk.yml/badge.svg"></a>
   <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3ddc84?logo=android&logoColor=white">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <a href="https://ko-fi.com/iamandelib"><img alt="Buy me a coffee on Ko-fi" src="https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-ff5e5b?logo=kofi&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -256,6 +257,12 @@ Tally is on [F-Droid](https://f-droid.org/packages/app.tally.expenses), which sh
 release (reproducible builds, checked by CI on every push); new releases reach it by themselves (see
 [docs/FDROID.md](docs/FDROID.md)). The guide for [Google Play](docs/PLAY_STORE.md)
 covers publishing there. Store texts and screenshots live in `fastlane/metadata/android/en-US/`.
+
+## Support
+
+Tally is free, with no ads and nothing to sign up for. If it helps you, you can buy me a coffee on
+[Ko-fi](https://ko-fi.com/iamandelib). **Settings → About → Buy me a coffee** opens the same page in your browser; Tally
+itself still sends nothing anywhere.
 
 ## License
 
