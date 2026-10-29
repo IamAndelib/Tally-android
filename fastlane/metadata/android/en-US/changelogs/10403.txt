@@ -1,0 +1,1 @@
+- Settings → About → Buy me a coffee opens Tally's Ko-fi page in your browser, for anyone who wants to support Tally's development. Tally itself still never goes online.

@@ -1,0 +1,1 @@
+- Ajustes → Acerca de → Invítame a un café abre la página de Ko-fi de Tally en el navegador, para quien quiera apoyar su desarrollo. Tally sigue sin conectarse nunca a internet.

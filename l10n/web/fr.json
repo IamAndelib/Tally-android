@@ -538,6 +538,7 @@
     "export": "Exporter les opérations (CSV)",
     "wipe": "Supprimer toutes les données",
     "about": "À propos",
+    "support": "Offrez-moi un café",
     "version": "Version {{version}}",
     "by": "Par {{name}}",
     "source": "Code source sur GitHub",

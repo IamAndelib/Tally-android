@@ -534,6 +534,7 @@
     "export": "Kayıtları dışa aktar (CSV)",
     "wipe": "Tüm verileri sil",
     "about": "Hakkında",
+    "support": "Bana bir kahve ısmarla",
     "version": "Sürüm {{version}}",
     "by": "Geliştiren: {{name}}",
     "source": "GitHub’da kaynak kodu",

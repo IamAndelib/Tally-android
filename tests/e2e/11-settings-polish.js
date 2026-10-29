@@ -127,7 +127,8 @@ const ok = (c, m) => {
   // ---- 3. About footer: version + links
   const about = await page.evaluate(() => {
     const links = [...document.querySelectorAll(".sec")].find(s => s.textContent.trim() === "About");
-    const p = links ? links.nextElementSibling : null;
+    let p = links ? links.nextElementSibling : null; // the paragraph under the heading (past Buy me a coffee)
+    while (p && p.tagName !== "P") p = p.nextElementSibling;
     return p ? { text: p.textContent, hrefs: [...p.querySelectorAll("a")].map(a => a.getAttribute("href")) } : null;
   });
   ok(
@@ -152,7 +153,9 @@ const ok = (c, m) => {
   await settle();
   const about2 = await page.evaluate(() => {
     const sec = [...document.querySelectorAll(".sec")].find(s => s.textContent.trim() === "About");
-    return sec ? sec.nextElementSibling.textContent : null;
+    let p = sec ? sec.nextElementSibling : null;
+    while (p && p.tagName !== "P") p = p.nextElementSibling;
+    return p ? p.textContent : null;
   });
   ok(
     about2 && !/undefined/i.test(about2) && !/Version/.test(about2),

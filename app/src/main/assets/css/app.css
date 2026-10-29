@@ -659,6 +659,12 @@ body.hist #app {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
 }
+/* Settings → About → Buy me a coffee: Ko-fi's coral in every theme, so it stands out; near-black text, since white on
+   it would fail WCAG AA (5.7:1 instead of 3:1) */
+.btn.kofi {
+  background: #ff5e5b;
+  color: #1b1b1f;
+}
 .btn.text {
   background: transparent;
   color: var(--primary);

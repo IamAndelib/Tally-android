@@ -534,6 +534,7 @@
     "export": "Export entries (CSV)",
     "wipe": "Delete all data",
     "about": "About",
+    "support": "Buy me a coffee",
     "version": "Version {{version}}",
     "by": "By {{name}}",
     "source": "Source on GitHub",

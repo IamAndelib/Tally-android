@@ -530,6 +530,7 @@
     "export": "导出记录（CSV）",
     "wipe": "删除所有数据",
     "about": "关于",
+    "support": "请我喝杯咖啡",
     "version": "版本 {{version}}",
     "by": "作者：{{name}}",
     "source": "GitHub 上的源代码",

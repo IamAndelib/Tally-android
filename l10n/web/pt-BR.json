@@ -538,6 +538,7 @@
     "export": "Exportar lançamentos (CSV)",
     "wipe": "Excluir todos os dados",
     "about": "Sobre",
+    "support": "Me paga um café",
     "version": "Versão {{version}}",
     "by": "Por {{name}}",
     "source": "Código no GitHub",
