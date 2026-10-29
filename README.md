@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://f-droid.org/packages/app.tally.expenses"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80"></a>
+  <a href="https://f-droid.org/packages/app.tally.expenses"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80" align="middle"></a>
+  <a href="https://ko-fi.com/iamandelib"><img src="https://storage.ko-fi.com/cdn/kofi2.png?v=6" alt="Buy Me a Coffee at ko-fi.com" height="54" align="middle"></a>
 </p>
 
 <p align="center">
@@ -17,7 +18,6 @@
   <a href="https://github.com/IamAndelib/Tally-android/actions/workflows/build-apk.yml"><img alt="Build" src="https://github.com/IamAndelib/Tally-android/actions/workflows/build-apk.yml/badge.svg"></a>
   <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3ddc84?logo=android&logoColor=white">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
-  <a href="https://ko-fi.com/iamandelib"><img alt="Buy me a coffee on Ko-fi" src="https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-ff5e5b?logo=kofi&logoColor=white"></a>
 </p>
 
 <p align="center">
