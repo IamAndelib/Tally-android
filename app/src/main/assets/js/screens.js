@@ -1144,7 +1144,7 @@ function settingsView() {
   h +=
     '<div class="sec center">' +
     TH("settings.about") +
-    '</div><a class="btn tonal" href="' +
+    '</div><a class="btn kofi" href="' +
     DONATE_URL +
     '"><svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' +
     ICONS.local_cafe[0] +
