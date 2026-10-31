@@ -3,7 +3,8 @@ auf der Seite, über den Tag notierst du Ausgaben mit einem Tipp, und alles wird
 
 EIN TIPP PRO AUSGABE
 Deine Ausgabenkategorien liegen rund um einen Ring mit den heutigen Ausgaben. Kategorie antippen, Betrag eingeben,
-speichern. Ein eingebauter Rechner erledigt schnelle Summen wie 12 + 4,50.
+speichern. Ein eingebauter Rechner erledigt schnelle Summen wie 12 + 4,50. Notiere, wen du bezahlt oder von wem du
+Geld erhalten hast; schon benutzte Namen werden beim Tippen vorgeschlagen.
 
 ALLE KONTEN, JEDE WÄHRUNG
 Bankkonten, E-Wallets, Bargeld, Kreditkarten und Sparkonten, jedes in seiner eigenen Währung: jede Währung der Welt.

@@ -3,7 +3,8 @@ notez vos dépenses de la journée d’une seule touche, et tout est reporté au
 
 UNE TOUCHE PAR DÉPENSE
 Vos catégories de dépenses entourent un anneau qui montre les dépenses du jour. Touchez une catégorie, saisissez le
-montant, enregistrez. Une calculatrice intégrée fait les petits calculs comme 12 + 4,50.
+montant, enregistrez. Une calculatrice intégrée fait les petits calculs comme 12 + 4,50. Notez qui vous avez payé
+ou de qui vous avez reçu de l'argent ; les noms déjà utilisés sont proposés pendant la saisie.
 
 TOUS VOS COMPTES, TOUTES LES DEVISES
 Comptes bancaires, portefeuilles mobiles, espèces, cartes de crédit et épargne, chacun dans sa propre devise : toutes

@@ -3,7 +3,8 @@ você anota os gastos ao longo do dia com um toque, e tudo passa para o dia segu
 
 UM TOQUE POR GASTO
 Suas categorias de gasto ficam em volta de um gráfico com os gastos de hoje. Toque em uma categoria, digite o valor,
-salve. Uma calculadora embutida resolve contas rápidas como 12 + 4,50.
+salve. Uma calculadora embutida resolve contas rápidas como 12 + 4,50. Anote para quem você pagou ou de quem recebeu;
+nomes que você já usou aparecem enquanto digita.
 
 TODAS AS CONTAS, TODAS AS MOEDAS
 Contas bancárias, carteiras digitais, dinheiro vivo, cartões de crédito e poupança, cada um na sua moeda: qualquer

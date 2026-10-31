@@ -3,7 +3,8 @@ los gastos del día con un solo toque y todo pasa al día siguiente.
 
 UN TOQUE POR GASTO
 Tus categorías de gasto rodean un gráfico circular con lo que gastaste hoy. Toca una categoría, escribe la cantidad y
-guarda. La calculadora integrada resuelve sumas rápidas como 12 + 4,50.
+guarda. La calculadora integrada resuelve sumas rápidas como 12 + 4,50. Anota a quién pagaste o quién te pagó; los
+nombres que ya usaste aparecen mientras escribes.
 
 TODAS TUS CUENTAS, CUALQUIER MONEDA
 Cuentas bancarias, billeteras móviles, efectivo, tarjetas de crédito y ahorros, cada uno en su moneda: cualquiera de

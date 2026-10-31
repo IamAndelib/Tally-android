@@ -3,7 +3,8 @@ pengeluaran sepanjang hari dengan satu ketukan, dan semuanya berlanjut ke hari b
 
 SATU KETUKAN PER PENGELUARAN
 Kategori pengeluaranmu mengelilingi donat pengeluaran hari ini. Ketuk kategori, ketik jumlahnya, simpan. Kalkulator
-bawaan siap untuk hitungan cepat seperti 12 + 4,50.
+bawaan siap untuk hitungan cepat seperti 12 + 4,50. Catat kepada siapa kamu membayar atau dari siapa kamu menerima
+uang; nama yang pernah dipakai muncul saat kamu mengetik.
 
 SEMUA AKUN, SEMUA MATA UANG
 Rekening bank, dompet digital, uang tunai, kartu kredit, dan tabungan, masing-masing dengan mata uangnya sendiri:
