@@ -1,9 +1,9 @@
 # CLAUDE.md
 
-Guidance for Claude Code working in this repository. Read [README.md](README.md) (features, build, releasing) and
-[CONTRIBUTING.md](CONTRIBUTING.md) (architecture, data model, conventions, design principles, tests) first; this file
-only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying what
-lives in it, and the code comments explain the rest: keep facts in one place and update that place.
+Guidance for Claude Code working in this repository. Read [README.md](README.md) (features, install, privacy) and
+[CONTRIBUTING.md](CONTRIBUTING.md) (architecture, data model, conventions, design principles, tests, releasing) first;
+this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
+what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 
 ## Working rules
 
@@ -153,7 +153,7 @@ spending either.
     (versionCode one below the release's, versionName `X.Y.Z-preview.<run>`, a draft with no tag) and keeps only the
     newest preview.
 - Releasing: in a PR, bump `tallyVersion` + `tallyVersionCode` (the patch for a small release, the minor only for a
-  feature update: README → Releasing), add the `CHANGELOG.md` section and
+  feature update: CONTRIBUTING → Releasing), add the `CHANGELOG.md` section and
   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, then merge into `main`; CI creates the tag (this
   environment can't push tags). F-Droid picks up new tags by itself (see [docs/FDROID.md](docs/FDROID.md)).
 
@@ -161,3 +161,5 @@ spending either.
 
 `cd tests && npm ci`, then `npm run lint` and `npm test` (`npm test -- 15` runs one suite). Here, use
 `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Add or extend a suite for every fix and feature.
+When the interface changes visibly, `npm run media` remakes the store screenshots, feature graphic and social preview
+(the README shows the same screenshots).

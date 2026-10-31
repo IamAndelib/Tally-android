@@ -4,6 +4,7 @@
   "description": "Checks for the Tally web app: end-to-end tests in headless Chromium, lint and formatting",
   "scripts": {
     "test": "node e2e/run.js",
+    "media": "node media.js",
     "lint": "node lint.js && node dead-code.js && prettier --check --ignore-path ../.prettierignore ../app/src/main/assets .",
     "format": "prettier --write --ignore-path ../.prettierignore ../app/src/main/assets ."
   },

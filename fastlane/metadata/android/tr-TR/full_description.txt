@@ -3,7 +3,8 @@ harcamalarını tek dokunuşla yazarsın ve her şey ertesi güne devreder.
 
 HER HARCAMAYA TEK DOKUNUŞ
 Harcama kategorilerin, bugünkü harcamalarını gösteren bir halkanın etrafında durur. Kategoriye dokun, tutarı yaz,
-kaydet. Yerleşik hesap makinesi 12 + 4,50 gibi hızlı toplamları halleder.
+kaydet. Yerleşik hesap makinesi 12 + 4,50 gibi hızlı toplamları halleder. Kime ödediğini ya da kimden para aldığını
+yaz; daha önce kullandığın adlar yazarken önerilir.
 
 HER HESAP, HER PARA BİRİMİ
 Banka hesapları, mobil cüzdanlar, nakit, kredi kartları ve birikimler, her biri kendi para biriminde: dünyadaki

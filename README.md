@@ -20,16 +20,17 @@
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/home.png" width="200" alt="Home: categories around the day's spending">
-  <img src="docs/screenshots/add.png" width="200" alt="Adding an expense with the built-in calculator">
-  <img src="docs/screenshots/assets.png" width="200" alt="Assets and net worth">
-  <img src="docs/screenshots/history.png" width="200" alt="History">
-</p>
-
 Tally works like a paper notebook: each morning the balance of every money source sits at the top of the page, spending
 is written down through the day by category and account, and the balances roll over to the next day. It's built to be
 small, calm and fast — no budgets, no charts you have to study, no sign-up.
+
+## Highlights
+
+| | | |
+|:-:|:-:|:-:|
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee and the balance after it |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week or month, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Money in"><br>**Money in**: with who it came from |  |
 
 ## Features
 
@@ -161,8 +162,8 @@ content.
 
 ## Build from source
 
-You need **JDK 17 or newer** (releases are built with 21) and the **Android SDK** with platform 35 and build-tools
-35.0.0 (Android Studio includes both).
+You need **JDK 17 or newer** (releases are built with 21, as on F-Droid) and the **Android SDK** with platform 35 and
+build-tools 35.0.0 (Android Studio includes both).
 
 ```sh
 git clone https://github.com/IamAndelib/Tally-android.git
@@ -170,93 +171,17 @@ cd Tally-android
 ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk ("Tally Dev")
 ```
 
-Or open the folder in Android Studio and run it. Debug builds install as *Tally Dev* (`app.tally.expenses.dev`), next
-to the release, signed with your own machine's debug key (CI signs its test builds with a key kept in a repository
-secret; no key is in the repository).
+Debug builds install as *Tally Dev*, next to the release, with their own data. The interface itself is plain HTML, CSS
+and JavaScript in `app/src/main/assets` (no framework, no build step) and runs in a desktop browser too.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the rest: working in the browser, the tests, how the app is put together,
+translations and releasing.
 
-A release build (`./gradlew assembleRelease`) is signed only when `TALLY_KEYSTORE` and `TALLY_KEYSTORE_PASSWORD`
-point at a keystore; otherwise it comes out unsigned.
+## Contributing
 
-### The app in a browser
-
-The whole interface is plain HTML, CSS and JavaScript in `app/src/main/assets` (no framework, no build step), so you can
-work on it in a desktop browser:
-
-```sh
-cd app/src/main/assets && python3 -m http.server 8000   # then open http://localhost:8000
-```
-
-Without the Android shell there are no notifications, widget or file saving, and the colours are the baseline scheme.
-
-### Tests and checks
-
-```sh
-cd tests
-npm ci
-npx playwright install chromium   # once
-npm test                          # end-to-end suites in headless Chromium
-npm run lint                      # ESLint across the scripts in load order + Prettier check
-npm run format                    # apply Prettier
-```
-
-CI runs the same checks on every push, builds the APKs, and publishes the latest test build of each branch to the
-[`builds`](https://github.com/IamAndelib/Tally-android/tree/builds) branch.
-
-## Project layout
-
-```
-app/src/main/
-  assets/                 the app itself (a web page shown in a WebView)
-    index.html            page shell: loads the styles and the scripts below, in order
-    css/colors.css        Material 3 colour roles (light/dark baseline)
-    css/app.css           all other styles
-    js/                   plain scripts sharing one global scope, one file per area:
-                          i18n, core, state, theme, period, layers, emblems, calculator, ring,
-                          loans, sheets, summary, screens, bridge, backup, gestures, events, main
-    js/icons.js           Material Symbols subset (generated by tools/gen_icons.py)
-    js/currencies.js      currency and country names, Unicode CLDR (generated by tools/gen_currencies.py)
-    js/i18n/              the texts in each language (generated by tools/gen_i18n.py from l10n/web/)
-    fonts/                Onest (bundled, SIL OFL)
-  java/app/tally/expenses/
-    MainActivity.java     the WebView shell and the window.Android bridge
-    ReminderReceiver.java notifications and alarms;  BootReceiver.java re-arms them
-    BackupReceiver.java   the daily auto backup into the folder you picked
-    TallyWidget.java      home-screen widget;        QuickAddActivity.java its + dialog
-    OpenActivity.java     opens the app from a widget tap
-    SavedCopy.java        a copy of every save, on disk at once (WebView stores its own seconds later)
-    Lang.java             the texts' language and the phone's number and date format
-  res/values*/            Android texts (notifications, widget) in each language
-l10n/                     the page's texts (web/<code>.json), the translators' glossary
-tests/                    end-to-end tests (Playwright) and lint
-tools/gen_icons.py        regenerates js/icons.js
-tools/gen_currencies.py   regenerates js/currencies.js
-tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how the pieces fit together and how to propose changes.
-
-## Releasing
-
-1. In a pull request, bump `tallyVersion` and `tallyVersionCode` in `gradle.properties`, add the version's section to
-   `CHANGELOG.md` and its short notes to `fastlane/metadata/android/<locale>/changelogs/<tallyVersionCode>.txt`
-   (English, and each translated listing). A small
-   release (fixes and small touches) bumps the patch number (1.4.0 → 1.4.1); only a feature update bumps the minor
-   (→ 1.5.0), and a major change the major.
-2. Try it as users will get it. On the pull request's branch, CI makes a **preview**: a draft release
-   `preview-X.Y.Z` (only people with write access see drafts) whose APK, signed with the release key, installs over
-   the current release and keeps its data. The release itself updates over it later.
-3. Merge it into `main`. When `main` carries a version that has no release yet, CI builds and signs the release (key
-   from the `RELEASE_KEYSTORE_BASE64` and `RELEASE_KEYSTORE_PASSWORD` repository secrets), verifies the signature,
-   and publishes the GitHub Release `vX.Y.Z` — tag, APK, SHA-256 and the changelog section as notes.
-
-Pushing a tag `vX.Y.Z` that matches the version does the same.
-
-## Stores
-
-Tally is on [F-Droid](https://f-droid.org/packages/app.tally.expenses), which ships the same signed APK as the GitHub
-release (reproducible builds, checked by CI on every push); new releases reach it by themselves (see
-[docs/FDROID.md](docs/FDROID.md)). The guide for [Google Play](docs/PLAY_STORE.md)
-covers publishing there. Store texts and screenshots live in `fastlane/metadata/android/en-US/`.
+Bug reports, ideas, translations and pull requests are welcome: open an
+[issue](https://github.com/IamAndelib/Tally-android/issues) or read [CONTRIBUTING.md](CONTRIBUTING.md). Tally stays small
+on purpose, so new features are weighed against one tap per expense. Security problems go privately through
+[SECURITY.md](SECURITY.md).
 
 ## Support
 
