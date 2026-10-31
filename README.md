@@ -20,23 +20,17 @@
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
-<p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="180" alt="Home: today's spending by category around a donut, balances on top">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="180" alt="Writing down an expense: category, who was paid, the calculator and the account">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="180" alt="History: every entry with its payee and the account's balance after it">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="180" alt="Spending summary: the last seven days by category">
-</p>
-
-<p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="180" alt="Assets: net worth per currency, accounts and money owed to you">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="180" alt="A loan: what is left, the next due date and a payment">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="180" alt="Home in the dark theme">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="180" alt="Money in, with who it came from, in the dark theme">
-</p>
-
 Tally works like a paper notebook: each morning the balance of every money source sits at the top of the page, spending
 is written down through the day by category and account, and the balances roll over to the next day. It's built to be
 small, calm and fast — no budgets, no charts you have to study, no sign-up.
+
+## Highlights
+
+| | | |
+|:-:|:-:|:-:|
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee and the balance after it |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week or month, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Money in"><br>**Money in**: with who it came from |  |
 
 ## Features
 
