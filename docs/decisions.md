@@ -26,3 +26,4 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-03 · P2 · Default colour for credit card accounts becomes purple, so cards no longer look like banks; an account's own chosen colour is untouched · maintainer's choice
 - 2026-11-03 · P2 · Delete wording confirmed: "Delete this entry? Should its amount go back to the account, or the balance stay as it is?" · "Delete and update the balance" / "Delete, keep the balance" · maintainer
 - 2026-11-03 · P2 · Grouped search confirmed (Paid to, Received from, Categories, Accounts, People, Entries) · maintainer
+- 2026-11-03 · P2 · Summary Year chart: 12 monthly bars that swipe sideways (short month names, whole amounts on top, faded edges where more months are), opening centred on this month; the bars are for looking, not tapping · maintainer, from the demo

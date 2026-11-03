@@ -114,6 +114,20 @@ function calcEval(expr) {
   return amtOk(rnd(tot));
 }
 let CALC = null;
+/* CALC.expr is the keypad's own text (the phone's decimal separator, no grouping); it is shown with every number
+   grouped the phone's way ("1,250+300", "1.250+300"). Shown text only adds group separators, so a caret position maps
+   across by skipping them. */
+const calcShown = expr => groupDigits(expr.split(NUMSEP.dec).join("."));
+function calcShownPos(shown, expr, pos) {
+  let i = 0,
+    j = 0;
+  while (i < pos && j < shown.length) {
+    if (shown[j] === expr[i]) i++;
+    j++;
+  }
+  return j;
+}
+const calcExprPos = (shown, at) => [...shown.slice(0, at)].filter(ch => !NUMSEP.grp || ch !== NUMSEP.grp).length;
 /* the calculator's amount field is readOnly (so it can't show a native caret) — this mirrors its text with a
    blinking synthetic one on top while the calculator is open */
 function calcMirrorSync(id) {
@@ -125,8 +139,9 @@ function calcMirrorSync(id) {
     if (res) res.textContent = "";
     return;
   }
-  const p = Math.max(0, Math.min(CALC.expr.length, CALC.pos));
-  mirror.innerHTML = esc(CALC.expr.slice(0, p)) + '<span class="blink"></span>' + esc(CALC.expr.slice(p));
+  const shown = calcShown(CALC.expr),
+    p = calcShownPos(shown, CALC.expr, Math.max(0, Math.min(CALC.expr.length, CALC.pos)));
+  mirror.innerHTML = esc(shown.slice(0, p)) + '<span class="blink"></span>' + esc(shown.slice(p));
   calcCaretIntoView(mirror);
   const res = $("#cr-" + id);
   if (res) {
@@ -157,14 +172,14 @@ function calcDragCaret(mirror, x) {
     calcMirrorSync(CALC.id);
   }
 }
-/* maps a tap's screen point to a character offset in CALC.expr, via the mirror's own text nodes */
+/* maps a tap's screen point to a character offset in CALC.expr, via the mirror's own (grouped) text nodes */
 function calcPosFromPoint(mirror, x, y) {
   if (!document.caretRangeFromPoint) return null;
   const r = document.caretRangeFromPoint(x, y);
   if (!r || !mirror.contains(r.startContainer)) return null;
   let pos = 0;
   for (const n of mirror.childNodes) {
-    if (n === r.startContainer) return pos + r.startOffset;
+    if (n === r.startContainer) return calcExprPos(mirror.textContent, pos + r.startOffset);
     pos += n.nodeType === 3 ? n.textContent.length : 0;
   }
   return CALC ? CALC.expr.length : 0;
@@ -174,7 +189,7 @@ function calcOpen(id, btn) {
   document
     .querySelectorAll('[data-act="calc-toggle"][aria-expanded="true"]')
     .forEach(b => b.setAttribute("aria-expanded", "false"));
-  /* the expression is shown with the phone's decimal separator and no grouping */
+  /* the expression keeps the phone's decimal separator and no grouping (calcShown groups it on screen) */
   const inp = $("#" + id),
     start = inp
       ? amtCanon(inp.value)
@@ -318,7 +333,7 @@ function calcKey(k) {
   }
   const inp = $("#" + CALC.id);
   if (inp) {
-    inp.value = CALC.expr;
+    inp.value = calcShown(CALC.expr);
     inp.dispatchEvent(new Event("input", { bubbles: true }));
   }
   calcMirrorSync(CALC.id);

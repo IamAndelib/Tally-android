@@ -104,24 +104,27 @@ const ok = (c, m) => {
   await act("calc-toggle", "f-amt");
   await settle();
   await type(["1", "2", "0", "3", "4", "5"]);
-  ok((await page.inputValue("#f-amt")) === "120345", "typed 120345: " + (await page.inputValue("#f-amt")));
-  await tapAtOffset("f-amt", 3); // between "120" and "345"
+  ok(
+    (await page.inputValue("#f-amt")) === "120,345",
+    "typed 120345, shown grouped: " + (await page.inputValue("#f-amt"))
+  );
+  await tapAtOffset("f-amt", 3); // between "120" and ",345"
   await type(["9"]);
   ok(
-    (await page.inputValue("#f-amt")) === "1209345",
+    (await page.inputValue("#f-amt")) === "1,209,345",
     "tapping mid-value then typing 9 inserts there, not at the end: " + (await page.inputValue("#f-amt"))
   );
 
   // ---- 2. backspace at a repositioned cursor removes the char just before it, not the last char overall
   await type(["⌫"]);
   ok(
-    (await page.inputValue("#f-amt")) === "120345",
+    (await page.inputValue("#f-amt")) === "120,345",
     "backspace after the mid-insert removes that inserted digit, restoring 120345: " + (await page.inputValue("#f-amt"))
   );
   await tapAtOffset("f-amt", 3);
   await type(["⌫"]);
   ok(
-    (await page.inputValue("#f-amt")) === "12345",
+    (await page.inputValue("#f-amt")) === "12,345",
     'backspace with the cursor mid-string removes the char before it (the "0"), not the last char: ' +
       (await page.inputValue("#f-amt"))
   );
@@ -130,7 +133,7 @@ const ok = (c, m) => {
   await clearAll("f-amt");
   ok((await page.inputValue("#f-amt")) === "", "cleared back to empty");
   await type(["1", "2", "3", "4", "5"]);
-  await tapAtOffset("f-amt", 3); // between "123" and "45"
+  await tapAtOffset("f-amt", 4); // between "12,3" and "45" (the comma is only shown)
   await type(["+"]);
   ok(
     (await page.inputValue("#f-amt")) === "123+45",
