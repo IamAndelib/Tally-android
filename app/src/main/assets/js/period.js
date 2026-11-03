@@ -262,6 +262,7 @@ function drawPd() {
   el.innerHTML = h;
   el.classList.toggle("rg", PD.tab === "range"); // dragging across days: the calendar doesn't scroll
   fitCal(el);
+  fitFigures(el); // its four tabs on a small phone at a large text size
 }
 function calendar() {
   const rg = PD.tab === "range",

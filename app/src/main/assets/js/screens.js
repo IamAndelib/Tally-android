@@ -396,11 +396,14 @@ function perCur(add) {
 /* a figure too wide for its place (a long balance at a large text size on a small phone) is set smaller, a tenth at a
    time down to 60%, rather than cut: the summary cards' totals, and a row's amount where the row can't hold it (its
    balance lines are sized in em, so they shrink with it). Still too wide, a total wraps. Measured again once the font
-   has loaded. A button beside another whose label is one word too long for it (German, French at a large text size)
-   is set smaller the same way, then breaks the word as a last resort. */
+   has loaded. A button beside another whose label is one word too long for it (German, French at a large text size),
+   and a segment of a segmented button ("Semanas" among four on a small phone), is set smaller the same way, then
+   breaks the word as a last resort. */
 function fitFigures(root) {
   root
-    .querySelectorAll(".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style], .cat .cn[style]")
+    .querySelectorAll(
+      ".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style], .seg > button[style], .cat .cn[style]"
+    )
     .forEach(el => el.removeAttribute("style"));
   const shrink = (el, over) => {
     if (!over()) return;
@@ -441,7 +444,7 @@ function fitFigures(root) {
   root.querySelectorAll(".tx .a").forEach(el => {
     if (!el.closest("[data-far]")) fitRow(el);
   });
-  root.querySelectorAll(".row > .btn, .fbtn").forEach(el => {
+  root.querySelectorAll(".row > .btn, .fbtn, .seg > button").forEach(el => {
     const over = () => el.scrollWidth > el.clientWidth + 1;
     shrink(el, over);
     if (over()) el.style.overflowWrap = "anywhere";
