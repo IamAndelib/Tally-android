@@ -241,6 +241,23 @@ const ok = (c, m) => {
     "weeks fit at 360px"
   );
   await page.screenshot({ path: OUT + "/weeks-360.png" });
+  /* Days: today's column says Today (not its weekday, which a week back is the same), and the picked day is bold */
+  const days = await page.evaluate(() => {
+    SM.end = today();
+    SM.sel = null;
+    setPressed("sm-mode", "d");
+    SM.mode = "d";
+    smRender();
+    const xs = [...document.querySelectorAll("#sm .smcol .x")].map(x => x.textContent);
+    smNav(-1);
+    const back = [...document.querySelectorAll("#sm .smcol .x")].map(x => x.textContent);
+    return { xs, back };
+  });
+  ok(
+    days.xs[6] === "Today" && days.xs.filter(x => x === "Today").length === 1,
+    "this week: Today under today: " + days.xs
+  );
+  ok(!days.back.includes("Today"), "a week back: weekdays only: " + days.back);
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

@@ -28,3 +28,4 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-03 · P2 · Grouped search confirmed (Paid to, Received from, Categories, Accounts, People, Entries) · maintainer
 - 2026-11-03 · P2 · Summary Year chart: 12 monthly bars that swipe sideways (short month names, whole amounts on top, faded edges where more months are), opening centred on this month; the bars are for looking, not tapping · maintainer, from the demo
 - 2026-11-04 · P3 · Summary Year chart: five months in view, this month at the right edge (replaces "centred") · maintainer, after trying round B on a phone
+- 2026-11-04 · P3 · Summary Days tab: today's column is labelled "Today" instead of its weekday, so it can't be mistaken for the same weekday a week earlier; the picked day stays bold · maintainer's pick (A) of three concepts (label, dot, ring)

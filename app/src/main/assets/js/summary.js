@@ -198,7 +198,7 @@ function drawSm() {
             '</span><span class="bw"><span class="b" style="height:' +
             (x.v ? Math.max(2, pct) : 0).toFixed(1) +
             '%"></span></span><span class="x">' +
-            esc(x.x) +
+            esc(x.s === t ? T("day.today") : x.x) + // today can't pass for the same weekday a week back
             "</span></button>"
           );
         })
@@ -287,6 +287,11 @@ function drawSm() {
     TH("summary.open." + SM.mode) +
     "</button>";
   el.innerHTML = h;
+  /* a label wider than its day's column ("Aujourd'hui" at a large text size): smaller, down to 60% */
+  el.querySelectorAll(".smcol .x").forEach(x => {
+    const f = parseFloat(getComputedStyle(x).fontSize);
+    for (let k = 0.9; k > 0.55 && x.offsetWidth > x.parentNode.clientWidth; k -= 0.1) x.style.fontSize = f * k + "px";
+  });
 }
 /* the Year tab: a year's 12 months as bars that swipe sideways (opening on this month), the year's spending against the
    year before (this year: against the same days of last year), and its categories. The bars are for looking only. */
