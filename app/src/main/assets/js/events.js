@@ -180,6 +180,13 @@ document.addEventListener("click", ev => {
     case "pd-month":
       setPeriod({ period: "month", anchor: v + "-01" });
       break;
+    case "pd-years":
+      PD.yEnd += +v;
+      pdRender();
+      break;
+    case "pd-yr":
+      setPeriod({ period: "year", anchor: v + "-01-01" });
+      break;
     case "pd-today":
       setPeriod({ period: "day", anchor: today() }); // always today's figures, whichever tab is open
       break;
@@ -199,8 +206,7 @@ document.addEventListener("click", ev => {
       break;
     }
     case "go-today":
-      V.period = "day";
-      V.anchor = today();
+      homePeriod();
       render();
       break;
     case "prev":
@@ -447,6 +453,11 @@ document.addEventListener("click", ev => {
       break;
     case "clock":
       S.settings.clock = v === "12" ? "12" : "24";
+      commit();
+      break;
+    case "home-opens":
+      S.settings.home = ["month", "year"].includes(v) ? v : "day";
+      homePeriod(); // Home shows it as soon as you go back
       commit();
       break;
     case "cur-pick": {

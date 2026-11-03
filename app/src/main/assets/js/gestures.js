@@ -43,7 +43,7 @@ function pressStart(x, y, target) {
   swallowClick = false;
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
-  smSw = target.closest("#sm .smchart") ? { x, y } : null;
+  smSw = target.closest("#sm .smchart:not(.smy)") ? { x, y } : null; // the year's bars scroll sideways instead
   /* History: a sideways swipe on the page (not on the chip strip, which scrolls) moves between account filters */
   hsw = !layer && V.screen === "history" && !V.sel && !target.closest(".strip") ? { x, y } : null;
   /* holding the calculator's ⌫ keeps deleting (a quick tap is still one delete, through the click) */

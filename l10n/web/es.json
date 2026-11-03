@@ -187,8 +187,11 @@
     "day": "Día",
     "range": "Rango",
     "month": "Mes",
+    "year": "Año",
     "prevYear": "Año anterior",
     "nextYear": "Año siguiente",
+    "earlierYears": "Años anteriores",
+    "laterYears": "Años siguientes",
     "rangeEnd": "Ahora toca el último día",
     "rangeHint": "Arrastra por los días, o toca el inicio y luego el final"
   },
@@ -523,6 +526,12 @@
     "region": "Región",
     "choose": "Elegir",
     "week": "Primer día de la semana",
+    "opensOn": "Inicio abre en",
+    "opens": {
+      "day": "Hoy",
+      "month": "Este mes",
+      "year": "Este año"
+    },
     "clock": "Formato de hora",
     "h24": "24 horas",
     "h12": "12 horas",
@@ -571,37 +580,47 @@
     "mode": {
       "d": "Días",
       "w": "Semanas",
-      "m": "Meses"
+      "m": "Meses",
+      "y": "Año"
     },
     "weekOf": "Semana del {{date}}",
+    "soFar": "{{year}} hasta hoy",
     "spent": "gastado",
     "earlier": "Antes",
     "later": "Después",
     "same": {
       "d": "Igual que el día anterior",
       "w": "Igual que la semana pasada",
-      "m": "Igual que el mes pasado"
+      "m": "Igual que el mes pasado",
+      "y": "Igual que {{year}}",
+      "yp": "Igual que los mismos meses de {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} frente al día anterior",
       "w": "↑ {{pct}} frente a la semana pasada",
-      "m": "↑ {{pct}} frente al mes pasado"
+      "m": "↑ {{pct}} frente al mes pasado",
+      "y": "↑ {{pct}} frente a {{year}}",
+      "yp": "↑ {{pct}} frente a los mismos meses de {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} frente al día anterior",
       "w": "↓ {{pct}} frente a la semana pasada",
-      "m": "↓ {{pct}} frente al mes pasado"
+      "m": "↓ {{pct}} frente al mes pasado",
+      "y": "↓ {{pct}} frente a {{year}}",
+      "yp": "↓ {{pct}} frente a los mismos meses de {{year}}"
     },
     "avg": "Promedio: {{amount}} al día",
     "none": {
       "d": "No gastaste nada ese día.",
       "w": "No gastaste nada esa semana.",
-      "m": "No gastaste nada en {{month}}."
+      "m": "No gastaste nada en {{month}}.",
+      "y": "No gastaste nada en {{year}}."
     },
     "open": {
       "d": "Abrir este día en Inicio",
       "w": "Abrir esta semana en Inicio",
-      "m": "Abrir este mes en Inicio"
+      "m": "Abrir este mes en Inicio",
+      "y": "Abrir este año en Inicio"
     }
   },
   "nav": {
@@ -659,7 +678,8 @@
     "none": {
       "day": "No anotaste nada ese día.",
       "month": "No anotaste nada ese mes.",
-      "range": "No anotaste nada en esos días."
+      "range": "No anotaste nada en esos días.",
+      "year": "No anotaste nada ese año."
     },
     "deleted_one": "Se eliminó {{count}} movimiento",
     "deleted_many": "Se eliminaron {{count}} movimientos",

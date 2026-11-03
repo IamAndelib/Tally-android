@@ -187,8 +187,11 @@
     "day": "Tag",
     "range": "Zeitraum",
     "month": "Monat",
+    "year": "Jahr",
     "prevYear": "Voriges Jahr",
     "nextYear": "Nächstes Jahr",
+    "earlierYears": "Frühere Jahre",
+    "laterYears": "Spätere Jahre",
     "rangeEnd": "Tippe jetzt auf den letzten Tag",
     "rangeHint": "Über die Tage ziehen oder Anfang und Ende antippen"
   },
@@ -519,6 +522,12 @@
     "region": "Region",
     "choose": "Wählen",
     "week": "Erster Wochentag",
+    "opensOn": "Start zeigt zuerst",
+    "opens": {
+      "day": "Heute",
+      "month": "Dieser Monat",
+      "year": "Dieses Jahr"
+    },
     "clock": "Zeitformat",
     "h24": "24 Stunden",
     "h12": "12 Stunden",
@@ -566,37 +575,47 @@
     "mode": {
       "d": "Tage",
       "w": "Wochen",
-      "m": "Monate"
+      "m": "Monate",
+      "y": "Jahr"
     },
     "weekOf": "Woche ab {{date}}",
+    "soFar": "{{year}} bisher",
     "spent": "ausgegeben",
     "earlier": "Früher",
     "later": "Später",
     "same": {
       "d": "Wie am Vortag",
       "w": "Wie in der Vorwoche",
-      "m": "Wie im Vormonat"
+      "m": "Wie im Vormonat",
+      "y": "Wie {{year}}",
+      "yp": "Wie in denselben Monaten {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} zum Vortag",
       "w": "↑ {{pct}} zur Vorwoche",
-      "m": "↑ {{pct}} zum Vormonat"
+      "m": "↑ {{pct}} zum Vormonat",
+      "y": "↑ {{pct}} zu {{year}}",
+      "yp": "↑ {{pct}} zu denselben Monaten {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} zum Vortag",
       "w": "↓ {{pct}} zur Vorwoche",
-      "m": "↓ {{pct}} zum Vormonat"
+      "m": "↓ {{pct}} zum Vormonat",
+      "y": "↓ {{pct}} zu {{year}}",
+      "yp": "↓ {{pct}} zu denselben Monaten {{year}}"
     },
     "avg": "Ø {{amount}} pro Tag",
     "none": {
       "d": "An diesem Tag nichts ausgegeben.",
       "w": "In dieser Woche nichts ausgegeben.",
-      "m": "Im {{month}} nichts ausgegeben."
+      "m": "Im {{month}} nichts ausgegeben.",
+      "y": "{{year}} nichts ausgegeben."
     },
     "open": {
       "d": "Diesen Tag auf Start öffnen",
       "w": "Diese Woche auf Start öffnen",
-      "m": "Diesen Monat auf Start öffnen"
+      "m": "Diesen Monat auf Start öffnen",
+      "y": "Dieses Jahr auf Start öffnen"
     }
   },
   "nav": {
@@ -653,7 +672,8 @@
     "none": {
       "day": "An diesem Tag nichts notiert.",
       "month": "In diesem Monat nichts notiert.",
-      "range": "In diesem Zeitraum nichts notiert."
+      "range": "In diesem Zeitraum nichts notiert.",
+      "year": "In diesem Jahr nichts notiert."
     },
     "deleted_one": "{{count}} Eintrag gelöscht",
     "deleted_other": "{{count}} Einträge gelöscht"

@@ -15,6 +15,7 @@ function blank() {
       cur: "",
       week: 1,
       clock: "24",
+      home: "day", // what Home opens on: "day" (today), "month" (this month) or "year" (this year)
       theme: "system",
       haptics: true,
       hapticLevel: 3,
@@ -112,6 +113,7 @@ function migrate(o) {
     s.settings.cur = accs.map(a => str(a.currency).trim().toUpperCase()).find(isCur) || (accs.length ? "USD" : "");
   }
   s.settings.week = Number.isInteger(os.week) && os.week >= 0 && os.week <= 6 ? os.week : 1;
+  if (!["day", "month", "year"].includes(s.settings.home)) s.settings.home = "day";
   /* saves from before the Time format setting keep what the phone showed them */
   s.settings.clock = os.clock === "12" || os.clock === "24" ? os.clock : phoneClock();
   if (!["system", "light", "dark"].includes(s.settings.theme)) s.settings.theme = "system";

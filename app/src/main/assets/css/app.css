@@ -829,6 +829,46 @@ body.hist #app {
 .smchart {
   touch-action: pan-y;
 }
+/* the Year tab's 12 months: wide columns that scroll sideways, the edges fading where more months are (.fl / .fr) */
+.smchart.smy {
+  display: flex;
+  gap: 4px;
+  height: 200px;
+  margin: 4px 0 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.smy::-webkit-scrollbar {
+  display: none;
+}
+.smy.fl {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4rem);
+  mask-image: linear-gradient(to right, transparent, #000 4rem);
+}
+.smy.fr {
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 4rem);
+  mask-image: linear-gradient(to left, transparent, #000 4rem);
+}
+.smy.fl.fr {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
+}
+.smy .smcol {
+  flex: 0 0 4.75rem;
+  padding: 8px 0;
+}
+.smy .smcol .v {
+  font-size: 0.78rem;
+}
+.smy .smcol .x {
+  font-size: 0.82rem;
+}
+.smy .smcol .b {
+  width: 1.75rem;
+}
 .smrows {
   display: flex;
   flex-direction: column;
@@ -2449,6 +2489,11 @@ body.lock {
   height: 48px;
   border-radius: 24px;
   font-weight: 500;
+}
+/* a year with nothing written down in it (Year tab): quieter, still readable and tappable */
+.mgrid button.dim {
+  color: var(--on-surface-variant);
+  font-weight: 400;
 }
 .mgrid button.now {
   box-shadow: inset 0 0 0 1px var(--primary);

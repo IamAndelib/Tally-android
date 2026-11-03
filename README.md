@@ -62,10 +62,10 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 **Looking back**
 
-- **History** for any day, date range or month, filtered by account, with each account's running balance under every
-  entry; swipe sideways to move between accounts. Hold an entry to select several and delete them together.
-- **Spending summary:** tap the donut for the last 7 days, 8 weeks, or a month by category, compared with the period
-  before.
+- **Home and History** for any day, date range, month or year; History filtered by account, with each account's
+  running balance under every entry; swipe sideways to move between accounts. Hold an entry to select several and delete them together.
+- **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month, or a year's 12 months by category,
+  compared with the period before.
 
 **Around the phone**
 
@@ -81,7 +81,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   every category, account and asset. Choose what the middle of the donut shows.
 - **Phones, foldables and tablets:** the layout adapts from small phones to tablets (a side rail and two panes on
   wide screens), and follows the phone's text size.
-- **Region settings:** your main currency, the first day of the week and 12- or 24-hour time.
+- **Region settings:** your main currency, what Home opens on (today, this month or this year), the first day of the
+  week and 12- or 24-hour time.
 - **In your language:** English, Spanish, Brazilian Portuguese, French, German, Russian, Simplified Chinese,
   Indonesian and Turkish, following the phone's language (or the one picked for Tally on Android 13+), with numbers,
   dates and money always written the phone's way. Translations other than English are drafts awaiting native

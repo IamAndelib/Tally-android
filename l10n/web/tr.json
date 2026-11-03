@@ -187,8 +187,11 @@
     "day": "Gün",
     "range": "Aralık",
     "month": "Ay",
+    "year": "Yıl",
     "prevYear": "Önceki yıl",
     "nextYear": "Sonraki yıl",
+    "earlierYears": "Önceki yıllar",
+    "laterYears": "Sonraki yıllar",
     "rangeEnd": "Şimdi bitiş gününe dokun",
     "rangeHint": "Günlerin üzerinde sürükle ya da önce başlangıca, sonra bitişe dokun"
   },
@@ -519,6 +522,12 @@
     "region": "Bölge",
     "choose": "Seç",
     "week": "Haftanın ilk günü",
+    "opensOn": "Ana sayfa açılınca",
+    "opens": {
+      "day": "Bugün",
+      "month": "Bu ay",
+      "year": "Bu yıl"
+    },
     "clock": "Saat biçimi",
     "h24": "24 saat",
     "h12": "12 saat",
@@ -566,37 +575,47 @@
     "mode": {
       "d": "Günler",
       "w": "Haftalar",
-      "m": "Aylar"
+      "m": "Aylar",
+      "y": "Yıl"
     },
     "weekOf": "{{date}} haftası",
+    "soFar": "{{year}} şu ana kadar",
     "spent": "harcandı",
     "earlier": "Önceki",
     "later": "Sonraki",
     "same": {
       "d": "Önceki günle aynı",
       "w": "Geçen haftayla aynı",
-      "m": "Geçen ayla aynı"
+      "m": "Geçen ayla aynı",
+      "y": "{{year}} ile aynı",
+      "yp": "{{year}} yılının aynı aylarıyla aynı"
     },
     "up": {
       "d": "↑ {{pct}}, önceki güne göre",
       "w": "↑ {{pct}}, geçen haftaya göre",
-      "m": "↑ {{pct}}, geçen aya göre"
+      "m": "↑ {{pct}}, geçen aya göre",
+      "y": "↑ {{pct}}, {{year}} yılına göre",
+      "yp": "↑ {{pct}}, {{year}} yılının aynı aylarına göre"
     },
     "down": {
       "d": "↓ {{pct}}, önceki güne göre",
       "w": "↓ {{pct}}, geçen haftaya göre",
-      "m": "↓ {{pct}}, geçen aya göre"
+      "m": "↓ {{pct}}, geçen aya göre",
+      "y": "↓ {{pct}}, {{year}} yılına göre",
+      "yp": "↓ {{pct}}, {{year}} yılının aynı aylarına göre"
     },
     "avg": "Günde ort. {{amount}}",
     "none": {
       "d": "O gün hiç harcama yok.",
       "w": "O hafta hiç harcama yok.",
-      "m": "{{month}}: hiç harcama yok."
+      "m": "{{month}}: hiç harcama yok.",
+      "y": "{{year}}: hiç harcama yok."
     },
     "open": {
       "d": "Bu günü Ana sayfada aç",
       "w": "Bu haftayı Ana sayfada aç",
-      "m": "Bu ayı Ana sayfada aç"
+      "m": "Bu ayı Ana sayfada aç",
+      "y": "Bu yılı Ana sayfada aç"
     }
   },
   "nav": {
@@ -653,7 +672,8 @@
     "none": {
       "day": "O gün hiçbir şey yazılmamış.",
       "month": "O ay hiçbir şey yazılmamış.",
-      "range": "O günlerde hiçbir şey yazılmamış."
+      "range": "O günlerde hiçbir şey yazılmamış.",
+      "year": "O yıl hiçbir şey yazılmamış."
     },
     "deleted_one": "{{count}} kayıt silindi",
     "deleted_other": "{{count}} kayıt silindi"

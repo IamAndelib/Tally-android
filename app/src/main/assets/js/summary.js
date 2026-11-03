@@ -20,11 +20,11 @@ const weekStart = d => addDays(d, -((parseISO(d).getDay() - S.settings.week + 7)
 function summarySheet() {
   const [, e] = range(),
     t = today();
-  SM = { mode: V.period === "month" ? "m" : "d", end: e > t ? t : e, sel: null, cur: viewCur() };
+  SM = { mode: { month: "m", year: "y" }[V.period] || "d", end: e > t ? t : e, sel: null, cur: viewCur() };
   openSheet(
     T("summary.title") + (currencies().length > 1 ? " · " + SM.cur : ""),
     '<div class="seg">' +
-      ["d", "w", "m"]
+      ["d", "w", "m", "y"]
         .map(
           k =>
             '<button data-act="sm-mode" data-v="' +
@@ -143,6 +143,10 @@ function smRender() {
 function drawSm() {
   const el = $("#sm");
   if (!el || !SM) return;
+  if (SM.mode === "y") {
+    drawSmYear(el);
+    return;
+  }
   const all = smBuckets(),
     bars = all.slice(1),
     n = bars.length,
@@ -284,6 +288,110 @@ function drawSm() {
     "</button>";
   el.innerHTML = h;
 }
+/* the Year tab: a year's 12 months as bars that swipe sideways (opening on this month), the year's spending against the
+   year before (this year: against the same days of last year), and its categories. The bars are for looking only. */
+function drawSmYear(el) {
+  const t = today(),
+    y = +SM.end.slice(0, 4),
+    cur = SM.cur,
+    part = y === +t.slice(0, 4),
+    sp = S.txns.filter(x => isSpend(x) && inCur(x, cur)),
+    sum = list => rnd(list.reduce((q, x) => q + x.amount, 0)),
+    months = Array.from({ length: 12 }, (_, i) => y + "-" + pad(i + 1)),
+    vals = months.map(m => sum(sp.filter(x => x.date.startsWith(m)))),
+    max = Math.max(...vals, 0),
+    list = sp.filter(x => x.date.startsWith(y + "-")),
+    tot = sum(list),
+    was = sum(sp.filter(x => x.date >= y - 1 + "-01-01" && x.date <= y - 1 + (part ? t.slice(4) : "-12-31")));
+  let cmp = "";
+  if (was > 0 && tot > 0) {
+    const p = Math.round(((tot - was) / was) * 100);
+    cmp = T("summary." + (p === 0 ? "same" : p > 0 ? "up" : "down") + "." + (part ? "yp" : "y"), {
+      pct: percent(Math.abs(p)),
+      year: y - 1,
+    });
+  }
+  let h =
+    '<div class="cal-h"><button class="icon" data-act="sm-nav" data-v="-1" aria-label="' +
+    TH("summary.earlier") +
+    '">' +
+    ic("left") +
+    "</button><b>" +
+    y +
+    '</b><button class="icon" data-act="sm-nav" data-v="1" aria-label="' +
+    TH("summary.later") +
+    '"' +
+    (part ? " disabled" : "") +
+    ">" +
+    ic("right") +
+    "</button></div>" +
+    '<div class="smchart smy" id="smy">' +
+    months
+      .map((m, k) => {
+        const v = vals[k],
+          label = capFirst(parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }));
+        return (
+          '<div class="smcol' +
+          (m === t.slice(0, 7) ? " on" : "") +
+          '" role="img" aria-label="' +
+          TH("common.labelValue", { label: capFirst(monthLabel(m)), value: money(v, cur) }) +
+          '"><span class="v">' +
+          (v ? esc(money(v, cur, "whole")) : "") +
+          '</span><span class="bw"><span class="b" style="height:' +
+          (v ? Math.max(2, (v / max) * 100) : 0).toFixed(1) +
+          '%"></span></span><span class="x">' +
+          esc(label) +
+          "</span></div>"
+        );
+      })
+      .join("") +
+    "</div>" +
+    '<div class="smd"><div class="muted small">' +
+    esc(part ? T("summary.soFar", { year: y }) : String(y)) +
+    '</div><div class="big spent">' +
+    esc(money(tot, cur)) +
+    "</div>" +
+    (cmp ? '<div class="muted small">' + esc(cmp) + "</div>" : "") +
+    "</div>";
+  const split = catSplit(list);
+  h += split.length
+    ? '<div class="list smtop">' +
+      split
+        .map(([k, v]) => {
+          const c = cat(k),
+            p = (v / tot) * 100;
+          return (
+            '<div class="tx">' +
+            emblem(c, "em") +
+            '<span class="mid"><div class="d" dir="auto">' +
+            esc(catName(c)) +
+            ' <span class="muted small">' +
+            esc(p < 1 ? "<" + percent(1) : percent(Math.round(p))) +
+            '</span></div><span class="pbar"><span style="width:' +
+            p.toFixed(1) +
+            "%;background:" +
+            c.c +
+            '"></span></span></span><span class="a">' +
+            esc(money(v, cur)) +
+            "</span></div>"
+          );
+        })
+        .join("") +
+      "</div>"
+    : '<div class="empty" style="padding:16px">' + TH("summary.none.y", { year: y }) + "</div>";
+  h += '<div class="gap"></div><button class="btn tonal" data-act="sm-open">' + TH("summary.open.y") + "</button>";
+  el.innerHTML = h;
+  /* this month in the middle (a past year: December at the end); the edges fade where more months are */
+  const ch = $("#smy"),
+    on = ch.querySelector(".on"),
+    fade = () => {
+      ch.classList.toggle("fl", ch.scrollLeft > 2);
+      ch.classList.toggle("fr", ch.scrollLeft < ch.scrollWidth - ch.clientWidth - 2);
+    };
+  ch.scrollLeft = on ? on.offsetLeft - (ch.clientWidth - on.offsetWidth) / 2 : ch.scrollWidth;
+  fade();
+  ch.addEventListener("scroll", fade, { passive: true });
+}
 /* "18 – 24 Sep", "3 Aug – 27 Sep", "Apr – Sep" (year added when it isn't this year) */
 const smSpan = bars => rangeLabel(bars[0].s, bars[bars.length - 1].e, SM.mode === "m");
 function smNav(d) {
@@ -291,12 +399,20 @@ function smNav(d) {
   let e = SM.end;
   if (SM.mode === "d") e = addDays(e, 7 * d);
   else if (SM.mode === "w") e = addDays(e, 56 * d);
+  else if (SM.mode === "y") e = +e.slice(0, 4) + d + "-12-31";
   else e = monthEnd(shiftMonth(e.slice(0, 7), d));
   SM.end = e > t ? t : e;
   SM.sel = null;
   smRender();
 }
 function smOpen() {
+  if (SM.mode === "y") {
+    V.period = "year";
+    V.anchor = SM.end.slice(0, 4) + "-01-01";
+    closeSheet();
+    render();
+    return;
+  }
   const b = smBuckets().slice(1)[SM.sel],
     t = today();
   if (!b) return;

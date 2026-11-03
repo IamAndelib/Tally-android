@@ -187,8 +187,11 @@
     "day": "Day",
     "range": "Range",
     "month": "Month",
+    "year": "Year",
     "prevYear": "Previous year",
     "nextYear": "Next year",
+    "earlierYears": "Earlier years",
+    "laterYears": "Later years",
     "rangeEnd": "Now tap the end day",
     "rangeHint": "Drag across days, or tap start then end"
   },
@@ -519,6 +522,12 @@
     "region": "Region",
     "choose": "Choose",
     "week": "First day of week",
+    "opensOn": "Home opens on",
+    "opens": {
+      "day": "Today",
+      "month": "This month",
+      "year": "This year"
+    },
     "clock": "Time format",
     "h24": "24-hour",
     "h12": "12-hour",
@@ -566,37 +575,47 @@
     "mode": {
       "d": "Days",
       "w": "Weeks",
-      "m": "Months"
+      "m": "Months",
+      "y": "Year"
     },
     "weekOf": "Week of {{date}}",
+    "soFar": "{{year}} so far",
     "spent": "spent",
     "earlier": "Earlier",
     "later": "Later",
     "same": {
       "d": "Same as the day before",
       "w": "Same as last week",
-      "m": "Same as last month"
+      "m": "Same as last month",
+      "y": "Same as {{year}}",
+      "yp": "Same as the same months of {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} vs the day before",
       "w": "↑ {{pct}} vs last week",
-      "m": "↑ {{pct}} vs last month"
+      "m": "↑ {{pct}} vs last month",
+      "y": "↑ {{pct}} vs {{year}}",
+      "yp": "↑ {{pct}} vs the same months of {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} vs the day before",
       "w": "↓ {{pct}} vs last week",
-      "m": "↓ {{pct}} vs last month"
+      "m": "↓ {{pct}} vs last month",
+      "y": "↓ {{pct}} vs {{year}}",
+      "yp": "↓ {{pct}} vs the same months of {{year}}"
     },
     "avg": "Avg {{amount}} a day",
     "none": {
       "d": "Nothing spent that day.",
       "w": "Nothing spent that week.",
-      "m": "Nothing spent in {{month}}."
+      "m": "Nothing spent in {{month}}.",
+      "y": "Nothing spent in {{year}}."
     },
     "open": {
       "d": "Open this day on Home",
       "w": "Open this week on Home",
-      "m": "Open this month on Home"
+      "m": "Open this month on Home",
+      "y": "Open this year on Home"
     }
   },
   "nav": {
@@ -653,7 +672,8 @@
     "none": {
       "day": "Nothing written down that day.",
       "month": "Nothing written down that month.",
-      "range": "Nothing written down in those days."
+      "range": "Nothing written down in those days.",
+      "year": "Nothing written down that year."
     },
     "deleted_one": "Deleted {{count}} entry",
     "deleted_other": "Deleted {{count}} entries"

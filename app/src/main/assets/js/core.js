@@ -195,9 +195,11 @@ const fmtSym = (f, v) =>
     : f.format(v);
 /* formatters are slow to build and money() runs for every row, so each kind is built once */
 const NF = new Map();
+/* short: the narrow sign and, from 1,000 up, no cents (Home's ring); "whole": the narrow sign and never cents (the
+   Summary's year bars) */
 function money(n, cur, short) {
   cur = cur || S.settings.cur;
-  const big = !!short && Math.abs(n) >= 1000,
+  const big = !!short && (short === "whole" || Math.abs(n) >= 1000),
     k = cur + (short ? (big ? "|s0" : "|s") : "");
   let f = NF.get(k);
   if (!f) {

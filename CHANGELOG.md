@@ -9,6 +9,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - A loan or lending with no payback day gets a reminder once a month, on the day the money was lent, until it is paid
   back, with *Record payment* and *Set a due date* buttons.
+- **A year** as a period on Home and in History, picked from a grid of years like the months (#41).
+- The spending summary's **Year** tab: a year's 12 months as bars you swipe through, the year against the same months
+  of the year before, and its categories (#41).
+- **Settings → Region → Home opens on:** today, this month or this year (#41).
 
 ### Changed
 

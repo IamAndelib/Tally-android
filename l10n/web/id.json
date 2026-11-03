@@ -187,8 +187,11 @@
     "day": "Hari",
     "range": "Rentang",
     "month": "Bulan",
+    "year": "Tahun",
     "prevYear": "Tahun sebelumnya",
     "nextYear": "Tahun berikutnya",
+    "earlierYears": "Tahun-tahun sebelumnya",
+    "laterYears": "Tahun-tahun berikutnya",
     "rangeEnd": "Sekarang ketuk hari terakhir",
     "rangeHint": "Geser melintasi hari, atau ketuk awal lalu akhir"
   },
@@ -515,6 +518,12 @@
     "region": "Wilayah",
     "choose": "Pilih",
     "week": "Hari pertama dalam minggu",
+    "opensOn": "Beranda dibuka pada",
+    "opens": {
+      "day": "Hari ini",
+      "month": "Bulan ini",
+      "year": "Tahun ini"
+    },
     "clock": "Format waktu",
     "h24": "24 jam",
     "h12": "12 jam",
@@ -561,37 +570,47 @@
     "mode": {
       "d": "Hari",
       "w": "Minggu",
-      "m": "Bulan"
+      "m": "Bulan",
+      "y": "Tahun"
     },
     "weekOf": "Minggu mulai {{date}}",
+    "soFar": "{{year}} sejauh ini",
     "spent": "keluar",
     "earlier": "Sebelumnya",
     "later": "Berikutnya",
     "same": {
       "d": "Sama dengan hari sebelumnya",
       "w": "Sama dengan minggu lalu",
-      "m": "Sama dengan bulan lalu"
+      "m": "Sama dengan bulan lalu",
+      "y": "Sama dengan {{year}}",
+      "yp": "Sama dengan bulan yang sama di {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} dari hari sebelumnya",
       "w": "↑ {{pct}} dari minggu lalu",
-      "m": "↑ {{pct}} dari bulan lalu"
+      "m": "↑ {{pct}} dari bulan lalu",
+      "y": "↑ {{pct}} dari {{year}}",
+      "yp": "↑ {{pct}} dari bulan yang sama di {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} dari hari sebelumnya",
       "w": "↓ {{pct}} dari minggu lalu",
-      "m": "↓ {{pct}} dari bulan lalu"
+      "m": "↓ {{pct}} dari bulan lalu",
+      "y": "↓ {{pct}} dari {{year}}",
+      "yp": "↓ {{pct}} dari bulan yang sama di {{year}}"
     },
     "avg": "Rata-rata {{amount}} per hari",
     "none": {
       "d": "Tidak ada pengeluaran hari itu.",
       "w": "Tidak ada pengeluaran minggu itu.",
-      "m": "Tidak ada pengeluaran di {{month}}."
+      "m": "Tidak ada pengeluaran di {{month}}.",
+      "y": "Tidak ada pengeluaran di {{year}}."
     },
     "open": {
       "d": "Buka hari tersebut di Beranda",
       "w": "Buka minggu tersebut di Beranda",
-      "m": "Buka bulan tersebut di Beranda"
+      "m": "Buka bulan tersebut di Beranda",
+      "y": "Buka tahun tersebut di Beranda"
     }
   },
   "nav": {
@@ -647,7 +666,8 @@
     "none": {
       "day": "Tidak ada catatan hari itu.",
       "month": "Tidak ada catatan bulan itu.",
-      "range": "Tidak ada catatan di hari-hari itu."
+      "range": "Tidak ada catatan di hari-hari itu.",
+      "year": "Tidak ada catatan tahun itu."
     },
     "deleted_other": "{{count}} transaksi dihapus"
   },

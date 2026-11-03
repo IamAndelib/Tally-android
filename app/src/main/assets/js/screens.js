@@ -276,14 +276,16 @@ function homeView() {
 
   const total = balanceIn(cur, b);
   const n = periodTxns().length;
-  if (!(V.period === "day" && V.anchor === today()))
+  if (!atHomePeriod()) {
+    const back = S.settings.home === "day" ? T("day.today") : T("settings.opens." + S.settings.home);
     h +=
       '<div class="todayrow"><button class="todaychip" data-act="go-today" aria-label="' +
-      TH("home.backToday") +
+      esc(S.settings.home === "day" ? T("home.backToday") : back) +
       '">' +
       ic("reset") +
-      TH("day.today") +
+      esc(back) +
       "</button></div>";
+  }
   h +=
     '<button class="balbar" data-act="entries">' +
     ic("list") +
@@ -1014,6 +1016,14 @@ function settingsView() {
     "</span>" +
     ic("down") +
     '</button><div class="lbl set">' +
+    TH("settings.opensOn") +
+    "</div>" +
+    seg(
+      "home-opens",
+      S.settings.home,
+      ["day", "month", "year"].map(k => [k, T("settings.opens." + k)])
+    ) +
+    '<div class="lbl set">' +
     TH("settings.week") +
     "</div>" +
     seg(
