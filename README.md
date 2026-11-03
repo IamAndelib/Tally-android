@@ -47,7 +47,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   that arrived; an ATM or cash-out fee can be added: it comes off the paying account and shows with the transfer in
   History, without counting as spending.
 - **Balance fixes.** When an account doesn't match reality, type what it really holds and Tally records the difference.
-- **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), with a cursor you can move.
+- **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), grouping numbers as you type, with a cursor you can
+  move.
 - **Overdraw warning.** Accounts other than credit cards warn before a save takes them below zero.
 
 **Loans and net worth**
@@ -70,7 +71,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - **Reminders**, each at the time you pick: an evening nudge if nothing was written that day, a daily balance check,
   and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons. A due
-  reminder asks for what is due, with the whole tab beside it. Reminders still showing update themselves when you
+  reminder asks for what is due, with the whole tab beside it; one with no payback day reminds once a month, on the
+  day the money was lent, with *Set a due date*. Reminders still showing update themselves when you
   write something down, and go away once they no longer apply.
   On first open Tally asks for the two things they need (notifications and unrestricted battery), each with its own
   Allow; whatever you leave off stays in Settings with a button.

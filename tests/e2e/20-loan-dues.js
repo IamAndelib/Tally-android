@@ -1,5 +1,5 @@
 // Loan dues per draw: payments go to the draw due soonest; reminders, status, the next due day and the suggested
-// payment follow what is really due, not the whole tab.
+// payment follow what is really due, not the whole tab. A tab with no payback day is reminded monthly.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("20-loan-dues");
 let fails = 0;
@@ -191,7 +191,16 @@ const ok = (c, m) => {
     i.rem.b2 === 0 && i.rem.a1 === 500 && i.nextDue === "" && i.st === "partly",
     "payment went to the dated draw: " + JSON.stringify(i)
   );
-  ok((await rem()).dues.length === 0, "nothing dated left, no reminder");
+  r = (await rem()).dues;
+  ok(
+    r.length === 1 &&
+      r[0].monthly === +d.m3.slice(8) &&
+      r[0].since === d.m3 &&
+      r[0].amount === (await m(500)) &&
+      !r[0].date &&
+      r[0].kind === "lend",
+    "nothing dated left: a monthly reminder on the day the 500 still out was lent: " + JSON.stringify(r)
+  );
 
   // ---- 7. a paid-off draw no longer keeps the tab overdue (the old bug)
   await seed(
@@ -202,6 +211,45 @@ const ok = (c, m) => {
   await settle();
   i = await info("L");
   ok(i.st === "partly" && i.nextDue === d.p5, "paid-off overdue draw no longer counts: " + JSON.stringify(i));
+
+  // ---- 8. no payback day at all: monthly from the oldest money still out, both directions; none once settled
+  await seed(
+    [lend("L", "Rahim", d.m3), Object.assign(lend("B", "Mina", d.m2), { kind: "borrow" }), lend("C", "Sam", d.m3)],
+    [
+      draw("a1", "L", 200, d.m3, ""),
+      draw("b2", "L", 400, d.m1, ""),
+      pay("p3", "L", 250, d.m1),
+      Object.assign(draw("c4", "B", 900, d.m2, ""), { dir: "in" }),
+      draw("e5", "C", 100, d.m3, ""),
+      pay("p6", "C", 100, d.m1),
+    ]
+  );
+  await page.reload();
+  await settle();
+  r = (await rem()).dues;
+  const by = id => r.find(x => x.id === id) || {};
+  ok(
+    by("L").monthly === +d.m1.slice(8) && by("L").since === d.m1 && by("L").amount === (await m(350)),
+    "the first 200 is paid back, so the day counts from the 400 still out, for all 350 left: " + JSON.stringify(by("L"))
+  );
+  ok(
+    by("B").kind === "borrow" && by("B").monthly === +d.m2.slice(8) && by("B").amount === (await m(900)),
+    "a loan without a payback day reminds too: " + JSON.stringify(by("B"))
+  );
+  ok(!by("C").id, "a settled tab has no reminder");
+  /* "Set a due date" from the notification opens the tab with its payback day picker */
+  await page.evaluate(() => window.tallyOpen("loan:L:due"));
+  await settle();
+  ok(
+    !!(await page.$('#sheet [data-act="loan-pay"]')) && !!(await page.$("#pop .dialog")),
+    "Set a due date opens the tab and its date picker"
+  );
+  await page.evaluate(() => {
+    S.settings.remind.dues = false;
+    save();
+    syncReminders();
+  });
+  ok((await rem()).dues.length === 0, "the due reminders switch turns the monthly ones off too");
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

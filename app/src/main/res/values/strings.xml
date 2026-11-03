@@ -35,6 +35,11 @@
     <string name="n_record">Record payment</string>
     <string name="n_plus_day">+1 day</string>
     <string name="n_plus_week">+1 week</string>
+    <string name="n_still_owes_you">%1$s still owes you %2$s</string>
+    <string name="n_you_still_owe">You still owe %1$s %2$s</string>
+    <string name="n_lent_on">Lent on %1$s · no payback day set</string>
+    <string name="n_borrowed_on">Borrowed on %1$s · no payback day set</string>
+    <string name="n_set_due">Set a due date</string>
     <string name="n_someone">Someone</string>
     <!-- on a lock screen that hides what notifications say: only the kind -->
     <string name="pub_check">Balance check</string>

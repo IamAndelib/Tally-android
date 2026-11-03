@@ -35,6 +35,11 @@
     <string name="n_record">Anotar pago</string>
     <string name="n_plus_day">+1 día</string>
     <string name="n_plus_week">+1 semana</string>
+    <string name="n_still_owes_you">%1$s todavía te debe %2$s</string>
+    <string name="n_you_still_owe">Todavía le debes %2$s a %1$s</string>
+    <string name="n_lent_on">Prestado el %1$s · sin día de devolución</string>
+    <string name="n_borrowed_on">Pedido el %1$s · sin día de devolución</string>
+    <string name="n_set_due">Fijar una fecha</string>
     <string name="n_someone">Alguien</string>
     <!-- en una pantalla de bloqueo que oculta el contenido: solo el tipo -->
     <string name="pub_check">Revisión de saldos</string>

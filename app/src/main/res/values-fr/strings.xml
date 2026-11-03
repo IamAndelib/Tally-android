@@ -35,6 +35,11 @@
     <string name="n_record">Noter le remboursement</string>
     <string name="n_plus_day">+1 jour</string>
     <string name="n_plus_week">+1 semaine</string>
+    <string name="n_still_owes_you">%1$s vous doit encore %2$s</string>
+    <string name="n_you_still_owe">Vous devez encore %2$s à %1$s</string>
+    <string name="n_lent_on">Prêté le %1$s · pas de date de retour</string>
+    <string name="n_borrowed_on">Emprunté le %1$s · pas de date de retour</string>
+    <string name="n_set_due">Fixer une date</string>
     <string name="n_someone">Quelqu’un</string>
     <!-- sur un écran de verrouillage qui masque le contenu des notifications : seulement le type -->
     <string name="pub_check">Point sur les soldes</string>

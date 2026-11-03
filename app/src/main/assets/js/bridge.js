@@ -57,20 +57,38 @@ function syncReminders() {
   const c = maxTs ? iso(new Date(maxTs)) : "",
     newest = c > maxDate ? c : maxDate,
     last = newest < now ? newest : now;
+  /* an open tab with a payback day: on that day. One with none: monthly, on the day of the month the oldest money still
+     out moved (the shell works out each next day, see ReminderReceiver.monthlyDate) */
   const dues =
     r.dues === false
       ? []
       : S.loans
           .map(l => ({ l, i: loanInfo(l) }))
-          .filter(x => x.i.open && x.i.nextDue)
-          .map(({ l, i }) => ({
-            id: l.id,
-            date: i.nextDue,
-            kind: l.kind,
-            who: l.person || "", // none: the shell says "Someone" in the phone's language
-            amount: money(i.dueAmt, i.cur),
-            total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
-          }));
+          .filter(x => x.i.open)
+          .map(({ l, i }) => {
+            const who = l.person || ""; // none: the shell says "Someone" in the phone's language
+            if (i.nextDue)
+              return {
+                id: l.id,
+                date: i.nextDue,
+                kind: l.kind,
+                who,
+                amount: money(i.dueAmt, i.cur),
+                total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
+              };
+            const out = i.draws.find(t => i.rem[t.id] > 0);
+            return (
+              out && {
+                id: l.id,
+                monthly: +out.date.slice(8),
+                since: out.date,
+                kind: l.kind,
+                who,
+                amount: money(i.left, i.cur),
+              }
+            );
+          })
+          .filter(Boolean);
   try {
     Android.setReminders(
       JSON.stringify({
@@ -396,7 +414,7 @@ function fixReminders(kind) {
 const keepPermsUp = () => {
   if (!$("#pp-rows")) closePop();
 };
-/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay|:due]" from a reminder, "check" from the balance check,
    "backup" from a failed auto backup (window.tallyOpen) */
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
@@ -437,6 +455,9 @@ function openFromNative(s) {
   keepPermsUp();
   closeSheet();
   loanOpen(id, pay === "pay");
+  /* "Set a due date" on a monthly reminder: the payback day's picker, open */
+  const due = pay === "due" && $("#f-due2");
+  if (due) due.click();
 }
 /* the app came back to the foreground (window.tallyResume) */
 function onAppResume() {

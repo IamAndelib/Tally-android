@@ -5,6 +5,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A loan or lending with no payback day gets a reminder once a month, on the day the money was lent, until it is paid
+  back, with *Record payment* and *Set a due date* buttons.
+
+### Changed
+
+- The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
+
 ## [1.4.3] — 2026-10-29
 
 ### Added

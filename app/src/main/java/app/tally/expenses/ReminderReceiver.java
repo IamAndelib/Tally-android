@@ -30,13 +30,15 @@ import java.util.Set;
 /**
  * Shows Tally's reminders. The page sends its reminder settings with Android.setReminders(json):
  *   {daily:{on,h,m}, lastEntry:"yyyy-MM-dd", check:{on,h,m,text,checked}, duesAt:{h,m},
- *    dues:[{id,date,kind:"borrow"|"lend",who,amount,total?}]}
+ *    dues:[{id,date,kind:"borrow"|"lend",who,amount,total?} | {id,monthly,since,kind,who,amount}]}
  * - daily: at h:m, "Nothing written today" if lastEntry is not today; re-armed for the next day.
  * - check: at h:m, "Do your balances still match?" with the balances in text, unless checked (the day the balances
  *   were last confirmed) is today. Tapping it opens the morning check on Home.
  * - dues: on the due date at duesAt (and each day while overdue), with "Record payment", "+1 day", "+1 week".
  *   amount is what is due by date; total (only when larger) is the whole tab, shown after the date.
  *   The +N buttons move the stored date and queue {type:"extend",id,days} for the page (Android.takeActions()).
+ *   A loan with no payback day comes with monthly (the day of the month it was lent) and since (that date) instead of
+ *   a date: once a month at duesAt, with "Record payment" and "Set a due date" (see {@link #monthlyDate}).
  * Every alarm is exact when the phone allows it (see {@link #arm}); each daily notice shows at most once a day.
  */
 public class ReminderReceiver extends BroadcastReceiver {
@@ -185,7 +187,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         for (int i = 0; dues != null && i < dues.length(); i++) {
             JSONObject d = dues.optJSONObject(i);
             if (d == null) continue;
-            String id = d.optString("id"), date = d.optString("date");
+            String id = d.optString("id"), date = dueDate(p, d, t);
             Calendar c = parse(date);
             if (id.isEmpty() || c == null) continue;
             long when;
@@ -244,19 +246,30 @@ public class ReminderReceiver extends BroadcastReceiver {
         String id = d.optString("id"), date = d.optString("date"), who = d.optString("who"), amount = d.optString("amount");
         String total = d.optString("total");
         if (who.isEmpty()) who = ctx.getString(R.string.n_someone); // a loan without a name
-        boolean lend = "lend".equals(d.optString("kind"));
+        boolean lend = "lend".equals(d.optString("kind")), monthly = d.has("monthly");
         boolean dueToday = date.equals(today());
-        String title = ctx.getString(lend ? R.string.n_owes_you : R.string.n_you_owe, who, amount);
-        String text = (lend
-                ? (dueToday ? ctx.getString(R.string.n_payback_today) : ctx.getString(R.string.n_payback_was, pretty(ctx, date)))
-                : (dueToday ? ctx.getString(R.string.n_due_today) : ctx.getString(R.string.n_due_was, pretty(ctx, date))))
-                + (total.isEmpty() ? "" : " · " + ctx.getString(R.string.n_in_all, total));
         int base = code(ctx, id);
-        Notification.Action[] actions = {
-                action(ctx, ctx.getString(R.string.n_record), openApp(ctx, "loan:" + id + ":pay", base + 1)),
-                action(ctx, ctx.getString(R.string.n_plus_day), extendIntent(ctx, id, 1, base + 2)),
-                action(ctx, ctx.getString(R.string.n_plus_week), extendIntent(ctx, id, 7, base + 3)),
-        };
+        String title, text;
+        Notification.Action[] actions;
+        if (monthly) {
+            title = ctx.getString(lend ? R.string.n_still_owes_you : R.string.n_you_still_owe, who, amount);
+            text = ctx.getString(lend ? R.string.n_lent_on : R.string.n_borrowed_on, pretty(ctx, d.optString("since")));
+            actions = new Notification.Action[] {
+                    action(ctx, ctx.getString(R.string.n_record), openApp(ctx, "loan:" + id + ":pay", base + 1)),
+                    action(ctx, ctx.getString(R.string.n_set_due), openApp(ctx, "loan:" + id + ":due", base + 2)),
+            };
+        } else {
+            title = ctx.getString(lend ? R.string.n_owes_you : R.string.n_you_owe, who, amount);
+            text = (lend
+                    ? (dueToday ? ctx.getString(R.string.n_payback_today) : ctx.getString(R.string.n_payback_was, pretty(ctx, date)))
+                    : (dueToday ? ctx.getString(R.string.n_due_today) : ctx.getString(R.string.n_due_was, pretty(ctx, date))))
+                    + (total.isEmpty() ? "" : " · " + ctx.getString(R.string.n_in_all, total));
+            actions = new Notification.Action[] {
+                    action(ctx, ctx.getString(R.string.n_record), openApp(ctx, "loan:" + id + ":pay", base + 1)),
+                    action(ctx, ctx.getString(R.string.n_plus_day), extendIntent(ctx, id, 1, base + 2)),
+                    action(ctx, ctx.getString(R.string.n_plus_week), extendIntent(ctx, id, 7, base + 3)),
+            };
+        }
         show(ctx, CH_DUES, base, title, text, openApp(ctx, "loan:" + id, base), actions, quiet);
         if (!quiet) prefs(ctx).edit().putString("shown:" + id, today()).apply();
     }
@@ -293,7 +306,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         for (int i = 0; dues != null && i < dues.length(); i++) {
             JSONObject d = dues.optJSONObject(i);
             String id = d == null ? "" : d.optString("id");
-            if (id.isEmpty() || d.optString("date").compareTo(t) > 0) continue; // not due (any more)
+            // not due (any more); a monthly one still on screen applies until the loan is paid or gets a payback day
+            if (id.isEmpty() || (!d.has("monthly") && d.optString("date").compareTo(t) > 0)) continue;
             due.add(code(ctx, id));
             if (up.contains(code(ctx, id))) showDue(ctx, d, true);
         }
@@ -447,6 +461,33 @@ public class ReminderReceiver extends BroadcastReceiver {
     private static SimpleDateFormat fmt() { return new SimpleDateFormat("yyyy-MM-dd", Locale.US); }
 
     static String today() { return fmt().format(new Date()); }
+
+    /** When a due reminder is next due: its date, or for a loan with no payback day, its next monthly day. */
+    private static String dueDate(SharedPreferences p, JSONObject d, String t) {
+        if (!d.has("monthly")) return d.optString("date");
+        return monthlyDate(d.optInt("monthly"), d.optString("since"), t, t.equals(p.getString("shown:" + d.optString("id"), "")));
+    }
+
+    /**
+     * A loan with no payback day is reminded once a month, on the day of the month it was lent ({@code day}; a month
+     * without that day, such as the 31st in April, uses its last day), from a month after {@code since}: today if
+     * that is such a day and it hasn't shown yet, else the next one. Worked out here, so it keeps coming every month
+     * while Tally stays closed.
+     */
+    private static String monthlyDate(int day, String since, String t, boolean shownToday) {
+        Calendar now = parse(t);
+        if (day < 1 || day > 31 || now == null) return "";
+        for (int k = 0; k < 24; k++) {
+            Calendar o = (Calendar) now.clone();
+            o.set(Calendar.DAY_OF_MONTH, 1);
+            o.add(Calendar.MONTH, k);
+            o.set(Calendar.DAY_OF_MONTH, Math.min(day, o.getActualMaximum(Calendar.DAY_OF_MONTH)));
+            String s = fmt().format(o.getTime());
+            if (s.compareTo(t) < 0 || (s.equals(t) && shownToday) || s.compareTo(since) <= 0) continue;
+            return s;
+        }
+        return "";
+    }
 
     private static Calendar parse(String s) {
         try {

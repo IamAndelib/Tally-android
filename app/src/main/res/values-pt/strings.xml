@@ -35,6 +35,11 @@
     <string name="n_record">Registrar pagamento</string>
     <string name="n_plus_day">+1 dia</string>
     <string name="n_plus_week">+1 semana</string>
+    <string name="n_still_owes_you">%1$s ainda deve %2$s a você</string>
+    <string name="n_you_still_owe">Você ainda deve %2$s a %1$s</string>
+    <string name="n_lent_on">Emprestado em %1$s · sem dia de devolução</string>
+    <string name="n_borrowed_on">Pego emprestado em %1$s · sem dia de devolução</string>
+    <string name="n_set_due">Definir uma data</string>
     <string name="n_someone">Alguém</string>
     <!-- na tela de bloqueio que oculta o conteúdo das notificações: só o tipo -->
     <string name="pub_check">Conferir saldos</string>

@@ -35,6 +35,11 @@
     <string name="n_record">记录还款</string>
     <string name="n_plus_day">+1 天</string>
     <string name="n_plus_week">+1 周</string>
+    <string name="n_still_owes_you">%1$s仍欠你%2$s</string>
+    <string name="n_you_still_owe">你仍欠%1$s%2$s</string>
+    <string name="n_lent_on">%1$s借出 · 未设还款日</string>
+    <string name="n_borrowed_on">%1$s借入 · 未设还款日</string>
+    <string name="n_set_due">设定还款日</string>
     <string name="n_someone">某人</string>
     <!-- 锁屏隐藏通知内容时：只显示类型 -->
     <string name="pub_check">余额核对</string>

@@ -35,6 +35,11 @@
     <string name="n_record">Zahlung erfassen</string>
     <string name="n_plus_day">+1 Tag</string>
     <string name="n_plus_week">+1 Woche</string>
+    <string name="n_still_owes_you">%1$s schuldet dir noch %2$s</string>
+    <string name="n_you_still_owe">Du schuldest %1$s noch %2$s</string>
+    <string name="n_lent_on">Verliehen am %1$s · kein Rückzahlungstag</string>
+    <string name="n_borrowed_on">Geliehen am %1$s · kein Rückzahlungstag</string>
+    <string name="n_set_due">Fälligkeit festlegen</string>
     <string name="n_someone">Jemand</string>
     <!-- auf einem Sperrbildschirm, der Inhalte verbirgt: nur die Art -->
     <string name="pub_check">Kontostand-Check</string>

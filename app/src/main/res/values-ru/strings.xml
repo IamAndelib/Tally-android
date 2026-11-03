@@ -35,6 +35,11 @@
     <string name="n_record">Записать платёж</string>
     <string name="n_plus_day">+1 день</string>
     <string name="n_plus_week">+1 неделя</string>
+    <string name="n_still_owes_you">%1$s: вам всё ещё должны %2$s</string>
+    <string name="n_you_still_owe">%1$s: вы всё ещё должны %2$s</string>
+    <string name="n_lent_on">Дали в долг %1$s · срок не указан</string>
+    <string name="n_borrowed_on">Взяли в долг %1$s · срок не указан</string>
+    <string name="n_set_due">Указать срок</string>
     <string name="n_someone">Кто-то</string>
     <!-- на экране блокировки, который скрывает текст уведомлений: только их вид -->
     <string name="pub_check">Сверка балансов</string>

@@ -35,6 +35,11 @@
     <string name="n_record">Catat pembayaran</string>
     <string name="n_plus_day">+1 hari</string>
     <string name="n_plus_week">+1 minggu</string>
+    <string name="n_still_owes_you">%1$s masih berutang %2$s padamu</string>
+    <string name="n_you_still_owe">Kamu masih berutang %2$s pada %1$s</string>
+    <string name="n_lent_on">Dipinjamkan %1$s · belum ada tanggal kembali</string>
+    <string name="n_borrowed_on">Dipinjam %1$s · belum ada tanggal kembali</string>
+    <string name="n_set_due">Atur jatuh tempo</string>
     <string name="n_someone">Seseorang</string>
     <!-- di layar kunci yang menyembunyikan isi notifikasi: hanya jenisnya -->
     <string name="pub_check">Cek saldo</string>

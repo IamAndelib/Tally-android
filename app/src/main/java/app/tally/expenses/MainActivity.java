@@ -369,7 +369,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** "loan:<id>[:pay]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
+    /** "loan:<id>[:pay|:due]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
     private void open(String what) {
         if (what != null) callPage("window.tallyOpen&&window.tallyOpen(" + JSONObject.quote(what) + ")");
     }
