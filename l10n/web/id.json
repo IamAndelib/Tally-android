@@ -575,6 +575,7 @@
     },
     "weekOf": "Minggu mulai {{date}}",
     "soFar": "{{year}} sejauh ini",
+    "todayCol": "Hari ini",
     "spent": "keluar",
     "earlier": "Sebelumnya",
     "later": "Berikutnya",
