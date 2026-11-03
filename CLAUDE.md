@@ -5,6 +5,10 @@ Guidance for Claude Code working in this repository. Read [README.md](README.md)
 this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
 what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 
+Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: the first unticked box), then
+[the roadmap](docs/roadmap.md). Notes per feature are in `docs/specs/`, decisions and their reasons in
+[docs/decisions.md](docs/decisions.md); add to them as you go.
+
 ## Working rules
 
 - **Ask first, in plain words.** Before anything that shows up publicly or that the maintainer didn't ask for (links,
