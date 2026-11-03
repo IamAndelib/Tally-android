@@ -5,6 +5,10 @@ Guidance for Claude Code working in this repository. Read [README.md](README.md)
 this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
 what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 
+Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: the first unticked box), then
+[the roadmap](docs/roadmap.md). Notes per feature are in `docs/specs/`, decisions and their reasons in
+[docs/decisions.md](docs/decisions.md); add to them as you go.
+
 ## Working rules
 
 - **Ask first, in plain words.** Before anything that shows up publicly or that the maintainer didn't ask for (links,
@@ -142,24 +146,17 @@ spending either.
 - `./gradlew assembleDebug`; JDK 21 (javac output must match F-Droid's build). Version: `tallyVersion` and
   `tallyVersionCode` (major·10000 + minor·100 + patch) in `gradle.properties`; debug builds become `-dev.<run>`.
 - `.github/workflows/build-apk.yml` (keep its file name: debug version codes depend on it):
-  - `check`: lint and tests;
   - `build`: debug APK to the `builds` branch (only when the `DEBUG_KEYSTORE_BASE64` secret exists; never replace that
     key, installed test builds would stop updating), plus a release signed with a throwaway key (`release-check`);
   - `fdroid`: `.github/fdroid-check.sh` in F-Droid's build image: `fdroid lint`, `rewritemeta` (must not change a byte
     of `docs/fdroid/app.tally.expenses.yml`), then F-Droid's own build compared with our signed APK. It must stay green:
-    F-Droid ships our signed APK only while builds are reproducible;
-  - `release`: on `main`, when `v<tallyVersion>` has no GitHub Release yet, signs with the release key from secrets,
-    verifies it and publishes the release and tag. On another branch with such a version, it makes the preview instead
-    (versionCode one below the release's, versionName `X.Y.Z-preview.<run>`, a draft with no tag) and keeps only the
-    newest preview.
-- Releasing: in a PR, bump `tallyVersion` + `tallyVersionCode` (the patch for a small release, the minor only for a
-  feature update: CONTRIBUTING → Releasing), add the `CHANGELOG.md` section and
-  `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, then merge into `main`; CI creates the tag (this
-  environment can't push tags). F-Droid picks up new tags by itself (see [docs/FDROID.md](docs/FDROID.md)).
+    F-Droid ships our signed APK only while builds are reproducible.
+- Releasing: see CONTRIBUTING → Releasing. After the merge into `main`, CI creates the tag (this environment can't push
+  tags).
 
 ## Tests
 
 `cd tests && npm ci`, then `npm run lint` and `npm test` (`npm test -- 15` runs one suite). Here, use
-`CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Add or extend a suite for every fix and feature.
+`CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
 When the interface changes visibly, `npm run media` remakes the store screenshots, feature graphic and social preview
 (the README shows the same screenshots).
