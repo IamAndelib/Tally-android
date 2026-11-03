@@ -16,3 +16,9 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-03 · P2 · During development, changes are checked with the tests and on an emulator; the maintainer tests by installing the test APK on a real device · maintainer's choice
 - 2026-11-03 · P2 · Every interface or feature change is first shown as screenshots of a mock-up and discussed; code changes only after the maintainer agrees · maintainer: keeps the work organised, efficient and clean
 - 2026-11-03 · P2 · #37 account colour in History: a soft pill in the account's colour around the account name (a transfer gets one per account); the left edge and the tinted row were shown and not chosen · maintainer's pick from the demo; the name stays, so nothing is shown by colour alone
+- 2026-11-03 · P2 · Reminder for a loan/lending with no payback day: its buttons are "Record payment" and "Set a due date" (no +1 day / +1 week) · maintainer's choice
+- 2026-11-03 · P2 · Home for a year shows the ring and donut of the whole year, as for a day or a month; the Summary's Year tab has 12 monthly bars · maintainer's choice
+- 2026-11-03 · P2 · "Home opens on" (Today / This month / This year) sits in Settings → Region, above the first day of the week · maintainer took the recommendation
+- 2026-11-03 · P2 · Every list in Assets and Liabilities, and Home's balance chips, reorder by hold-and-drag; Home and Assets share one account order · maintainer's request
+- 2026-11-03 · P2 · Deleting entries asks whether the balance changes or stays (kept: the account's opening balance absorbs the amount, no extra entry); wording without amounts · maintainer's request, wording to confirm
+- 2026-11-03 · P2 · Search shows matches grouped by kind as you type (Paid to, Received from, Categories, Entries; each with a count and total), and a group opens all its entries with their total · maintainer's request, to confirm from the demo
