@@ -14,6 +14,9 @@ Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: th
 - **Ask first, in plain words.** Before anything that shows up publicly or that the maintainer didn't ask for (links,
   names, extra lines in commits or PRs, new services, anything posted online), ask in simple everyday language, no
   jargon, and wait for a yes.
+- **Demo before code.** Every interface or feature change starts with screenshots of the proposal (the real app with
+  the change mocked on top by a throwaway script in the scratchpad), discussed with the maintainer; only what they
+  agree is built (docs/plans/2026-11-01-release-1.4.4.md → How each item is built).
 - **No analytics, tracking or network use, ever.** Tally has no `INTERNET` permission and a CSP that blocks every
   request; README, the privacy policy and the store listings promise this.
 - **No Claude session links anywhere public** (no `Claude-Session:` line or `claude.ai/code/session_…` URL in commits,
