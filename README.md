@@ -58,12 +58,14 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   a payment (off the account, shown with the payment, never spending), "paid more than owed" (the extra as a new loan,
   as income you file yourself, or as the payment's fee), write-off / forgive, and reopen.
 - **Assets and Liabilities** tabs with net worth per currency, other assets (a laptop, gold, …), cleared loans and
-  archived accounts. Drag a row between sections to archive it, mark it cleared or reopen it.
+  archived accounts. Hold and drag a row to reorder its list (Home's balance chips too), or onto another section to
+  archive it, mark it cleared or reopen it.
 
 **Looking back**
 
 - **Home and History** for any day, date range, month or year; History filtered by account, with each account's
-  running balance under every entry; swipe sideways to move between accounts. Hold an entry to select several and delete them together.
+  running balance under every entry, its account's name in a pill of the account's colour; swipe sideways to move
+  between accounts. Hold an entry to select several and delete them together.
 - **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month, or a year's 12 months by category,
   compared with the period before.
 

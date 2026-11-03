@@ -381,14 +381,21 @@ function drawSmYear(el) {
     : '<div class="empty" style="padding:16px">' + TH("summary.none.y", { year: y }) + "</div>";
   h += '<div class="gap"></div><button class="btn tonal" data-act="sm-open">' + TH("summary.open.y") + "</button>";
   el.innerHTML = h;
-  /* this month in the middle (a past year: December at the end); the edges fade where more months are */
+  /* this month at the right edge (a past year: December); an edge fades while months that have been are past it, so
+     this year's months still to come don't fade this one */
   const ch = $("#smy"),
+    cols = [...ch.querySelectorAll(".smcol")],
     on = ch.querySelector(".on"),
+    last = on ? cols.indexOf(on) : 11,
     fade = () => {
+      const r = ch.getBoundingClientRect();
       ch.classList.toggle("fl", ch.scrollLeft > 2);
-      ch.classList.toggle("fr", ch.scrollLeft < ch.scrollWidth - ch.clientWidth - 2);
+      ch.classList.toggle(
+        "fr",
+        cols.some((c, k) => k <= last && c.getBoundingClientRect().left >= r.right - 2)
+      );
     };
-  ch.scrollLeft = on ? on.offsetLeft - (ch.clientWidth - on.offsetWidth) / 2 : ch.scrollWidth;
+  ch.scrollLeft = cols[last].offsetLeft + cols[last].offsetWidth - ch.clientWidth;
   fade();
   ch.addEventListener("scroll", fade, { passive: true });
 }

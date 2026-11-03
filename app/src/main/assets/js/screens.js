@@ -219,9 +219,9 @@ function homeView() {
     side =
       '<div class="sec">' +
       TH("home.accounts") +
-      '</div><div class="list">' +
-      act.map(a => accRow(a, b)).join("") +
-      '</div><button class="btn text" data-act="acc-form" style="margin-top:4px">' +
+      "</div>" +
+      zoneList("home", act.map(a => accRow(a, b)).join("")) +
+      '<button class="btn text" data-act="acc-form" style="margin-top:4px">' +
       ic("add") +
       TH("account.add") +
       "</button>";
@@ -478,15 +478,15 @@ function netWorth() {
     });
   });
 }
-function accRow(a, b, drag) {
+function accRow(a, b) {
   return (
     '<button class="tx' +
     (FX.row === a.id ? " flash" : "") +
     '" data-act="acc-open" data-v="' +
     a.id +
-    '"' +
-    (drag ? ' data-drag="acc:' + a.id + '"' : "") +
-    ">" +
+    '" data-drag="acc:' +
+    a.id +
+    '">' +
     emblem(accEmb(a), "em") +
     '<span class="mid"><div class="d" dir="auto">' +
     esc(a.name) +
@@ -522,7 +522,7 @@ function assetsView() {
     TH("home.accounts") +
     "</div>" +
     (accs.length
-      ? zoneList("acc", accs.map(a => accRow(a, b, true)).join(""))
+      ? zoneList("acc", accs.map(a => accRow(a, b)).join(""))
       : '<div class="empty">' + TH("assets.noAccounts") + "</div>") +
     dropBox("acc", T("assets.dropShow"), "reset") +
     '<button class="btn text" data-act="acc-form" style="margin-top:4px">' +
@@ -536,7 +536,7 @@ function assetsView() {
       "</button>";
   h +=
     dropBox("arch", T("assets.dropArchive")) +
-    (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
+    (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b)).join("")) + dragTip() : "");
   const left = h; // two panes: net worth and accounts | what you're owed and other assets
   h = loanSection("lend", T("assets.owedToYou"), T("assets.owedHint"), T("assets.lendBtn"));
   h +=
@@ -544,11 +544,13 @@ function assetsView() {
     TH("assets.other") +
     "</div>" +
     (S.assets.length
-      ? '<div class="list">' +
+      ? '<div class="list" data-src="assets">' +
         S.assets
           .map(
             x =>
               '<button class="tx" data-act="asset-edit" data-v="' +
+              x.id +
+              '" data-drag="asset:' +
               x.id +
               '">' +
               emblem(x, "em") +
@@ -615,11 +617,7 @@ function liabsView() {
   h += loanSection("borrow", T("liabs.loans"), T("liabs.loansHint"), T("liabs.borrowBtn"));
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length
-    ? '<div class="sec">' +
-      TH("liabs.cards") +
-      '</div><div class="list">' +
-      cards.map(a => accRow(a, b)).join("") +
-      "</div>"
+    ? '<div class="sec">' + TH("liabs.cards") + "</div>" + zoneList("cards", cards.map(a => accRow(a, b)).join(""))
     : "";
   return tabBar(T("nav.liabs")) + panes(h, right);
 }

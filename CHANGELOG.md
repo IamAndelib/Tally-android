@@ -13,10 +13,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The spending summary's **Year** tab: a year's 12 months as bars you swipe through, the year against the same months
   of the year before, and its categories (#41).
 - **Settings → Region → Home opens on:** today, this month or this year (#41).
+- History shows each entry's account in a pill of the account's colour, so accounts are easy to tell apart (#37).
+- Hold and drag to reorder accounts, credit cards, loans, lendings and other assets, and Home's balance chips (#33).
 
 ### Changed
 
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
+- Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
 
 ## [1.4.3] — 2026-10-29
 

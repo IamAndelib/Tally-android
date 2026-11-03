@@ -831,6 +831,7 @@ body.hist #app {
 }
 /* the Year tab's 12 months: wide columns that scroll sideways, the edges fading where more months are (.fl / .fr) */
 .smchart.smy {
+  position: relative; /* the months' offsets count from it */
   display: flex;
   gap: 4px;
   height: 200px;
@@ -856,8 +857,9 @@ body.hist #app {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
   mask-image: linear-gradient(to right, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
 }
+/* five months in view (gaps 4 × 4px) */
 .smy .smcol {
-  flex: 0 0 4.75rem;
+  flex: 0 0 calc((100% - 16px) / 5);
   padding: 8px 0;
 }
 .smy .smcol .v {

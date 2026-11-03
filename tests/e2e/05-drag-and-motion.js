@@ -190,11 +190,12 @@ const ok = (c, m) => {
   await tap('[data-act="undo"]');
   S = await state();
   ok(!S.accounts.find(a => a.id === "w").archived, "undo");
-  // drop outside a zone: nothing changes
-  const before = JSON.stringify((await state()).accounts);
+  // drop outside a zone: nothing is archived (passing the rows on the way only reorders them, see suite 39)
+  const sorted = a => JSON.stringify(a.slice().sort((x, y) => (x.id < y.id ? -1 : 1)));
+  const before = sorted((await state()).accounts);
   await page.evaluate(() => scrollTo(0, 0));
   r = await drag('[data-src="acc"] [data-v="k"]', ".sumcard");
-  ok(JSON.stringify((await state()).accounts) === before && !r.over, "drop outside a zone changes nothing");
+  ok(sorted((await state()).accounts) === before && !r.over, "drop outside a zone archives nothing");
   ok(!(await page.$(".ghost")), "ghost removed");
   // a tap still opens; a scroll does not start a drag
   await tap('[data-src="acc"] [data-v="k"]');

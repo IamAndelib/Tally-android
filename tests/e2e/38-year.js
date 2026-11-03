@@ -1,6 +1,6 @@
 // A year as a period (#41): the Year tab of the period dialog (12 years like the month grid, this one ringed, empty ones
 // quieter, no future years), Home and History for a year, and moving year by year. The Summary's Year tab: 12 monthly
-// bars that scroll sideways, opening on this month with the edges fading where more months are, the year against the
+// bars that scroll sideways, five in view, this month at the right edge, the edges fading where months that have been are, the year against the
 // same days of the year before (a past year: against the whole year before), its categories, and "Open this year on
 // Home". Settings → Region → Home opens on: Today, This month or This year, which Home opens on and its chip comes
 // back to; a broken saved value is mended to Today.
@@ -103,16 +103,13 @@ const ok = (c, m) => {
       render();
       summarySheet();
       const ch = $("#smy"),
-        on = ch.querySelector(".on"),
-        mid = on.offsetLeft + on.offsetWidth / 2 - ch.scrollLeft;
+        on = ch.querySelector(".on");
       return {
         mode: SM.mode,
         cols: ch.querySelectorAll(".smcol").length,
         first: ch.querySelector(".smcol .x").textContent,
-        centred:
-          Math.abs(mid - ch.clientWidth / 2) < 2 ||
-          ch.scrollLeft === 0 ||
-          ch.scrollLeft >= ch.scrollWidth - ch.clientWidth - 1,
+        right: Math.abs(on.getBoundingClientRect().right - ch.getBoundingClientRect().right) < 2,
+        five: Math.round(ch.clientWidth / on.offsetWidth),
         scrolls: ch.scrollWidth > ch.clientWidth,
         fades: [ch.classList.contains("fl"), ch.classList.contains("fr")],
         head: $("#sm .smd").textContent,
@@ -123,7 +120,14 @@ const ok = (c, m) => {
       };
     });
     ok(s.mode === "y" && s.cols === 12 && s.first === "Jan", "a year on Home opens the Year tab: 12 months from Jan");
-    ok(s.scrolls && s.centred, "the bars scroll sideways, this month in the middle");
+    ok(
+      s.scrolls && s.right && s.five === 5,
+      "the bars scroll sideways, five months in view, this month at the right edge"
+    );
+    ok(
+      s.fades[0] && !s.fades[1],
+      "earlier months fade on the left; the months still to come don't fade this one: " + s.fades
+    );
     ok(
       s.amt.every(a => !/\.\d\d$/.test(a)) && s.amt.includes("$1,600"),
       "whole amounts on the bars: " + s.amt.join(" ")

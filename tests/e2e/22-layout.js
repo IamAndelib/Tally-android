@@ -563,6 +563,10 @@ function inspect() {
       await page.evaluate(() => summarySheet());
       await page.click('#sheet [data-act="sm-mode"][data-v="m"]');
     });
+    await shot("summary-year", async () => {
+      await page.evaluate(() => summarySheet());
+      await page.click('#sheet [data-act="sm-mode"][data-v="y"]');
+    });
     await shot(
       "entries",
       ev(() => entriesSheet())
