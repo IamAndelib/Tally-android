@@ -118,16 +118,16 @@ let CALC = null;
    grouped the phone's way ("1,250+300", "1.250+300"). Shown text only adds group separators, so a caret position maps
    across by skipping them. */
 const calcShown = expr => groupDigits(expr.split(NUMSEP.dec).join("."));
-function calcShownPos(shown, expr, pos) {
+function calcShownPos(disp, expr, pos) {
   let i = 0,
     j = 0;
-  while (i < pos && j < shown.length) {
-    if (shown[j] === expr[i]) i++;
+  while (i < pos && j < disp.length) {
+    if (disp[j] === expr[i]) i++;
     j++;
   }
   return j;
 }
-const calcExprPos = (shown, at) => [...shown.slice(0, at)].filter(ch => !NUMSEP.grp || ch !== NUMSEP.grp).length;
+const calcExprPos = (disp, at) => [...disp.slice(0, at)].filter(ch => !NUMSEP.grp || ch !== NUMSEP.grp).length;
 /* the calculator's amount field is readOnly (so it can't show a native caret) — this mirrors its text with a
    blinking synthetic one on top while the calculator is open */
 function calcMirrorSync(id) {
@@ -139,9 +139,9 @@ function calcMirrorSync(id) {
     if (res) res.textContent = "";
     return;
   }
-  const shown = calcShown(CALC.expr),
-    p = calcShownPos(shown, CALC.expr, Math.max(0, Math.min(CALC.expr.length, CALC.pos)));
-  mirror.innerHTML = esc(shown.slice(0, p)) + '<span class="blink"></span>' + esc(shown.slice(p));
+  const disp = calcShown(CALC.expr),
+    p = calcShownPos(disp, CALC.expr, Math.max(0, Math.min(CALC.expr.length, CALC.pos)));
+  mirror.innerHTML = esc(disp.slice(0, p)) + '<span class="blink"></span>' + esc(disp.slice(p));
   calcCaretIntoView(mirror);
   const res = $("#cr-" + id);
   if (res) {
