@@ -15,3 +15,4 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-01 · P1 · When the Plan branch (claude/plan-wip) is rebased, its saved-data format must be renumbered past main's (main's v7 = payees, shipped in 1.4.2; plan-wip's v7 = repeats) · two meanings of one version number would mis-migrate users' data
 - 2026-11-03 · P2 · During development, changes are checked with the tests and on an emulator; the maintainer tests by installing the test APK on a real device · maintainer's choice
 - 2026-11-03 · P2 · Every interface or feature change is first shown as screenshots of a mock-up and discussed; code changes only after the maintainer agrees · maintainer: keeps the work organised, efficient and clean
+- 2026-11-03 · P2 · #37 account colour in History: a soft pill in the account's colour around the account name (a transfer gets one per account); the left edge and the tinted row were shown and not chosen · maintainer's pick from the demo; the name stays, so nothing is shown by colour alone
