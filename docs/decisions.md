@@ -22,3 +22,7 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-03 · P2 · Every list in Assets and Liabilities, and Home's balance chips, reorder by hold-and-drag; Home and Assets share one account order · maintainer's request
 - 2026-11-03 · P2 · Deleting entries asks whether the balance changes or stays (kept: the account's opening balance absorbs the amount, no extra entry); wording without amounts · maintainer's request, wording to confirm
 - 2026-11-03 · P2 · Search shows matches grouped by kind as you type (Paid to, Received from, Categories, Entries; each with a count and total), and a group opens all its entries with their total · maintainer's request, to confirm from the demo
+- 2026-11-03 · P2 · Year picker: a grid of 12 years like the month grid, years without entries faded · maintainer's pick from the demo (grid or wheel)
+- 2026-11-03 · P2 · Default colour for credit card accounts becomes purple, so cards no longer look like banks; an account's own chosen colour is untouched · maintainer's choice
+- 2026-11-03 · P2 · Delete wording confirmed: "Delete this entry? Should its amount go back to the account, or the balance stay as it is?" · "Delete and update the balance" / "Delete, keep the balance" · maintainer
+- 2026-11-03 · P2 · Grouped search confirmed (Paid to, Received from, Categories, Accounts, People, Entries) · maintainer
