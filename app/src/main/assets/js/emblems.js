@@ -35,7 +35,9 @@ const TYPE_ICON = {
   card: "credit_card",
   savings: "savings",
 };
-const TYPE_COL = { bank: "#2a78d6", wallet: "#e0578c", cash: "#15a06f", card: "#4b5fd6", savings: "#c98500" };
+/* each account type's colour until one is picked; cards are purple so they don't look like banks (#2a78d6 beside the
+   indigo #4b5fd6 they had until 1.4.3) */
+const TYPE_COL = { bank: "#2a78d6", wallet: "#e0578c", cash: "#15a06f", card: "#a646c9", savings: "#c98500" };
 /* white or near-black glyph, whichever reads better on the circle (lumOf: theme.js) */
 const glyphOn = bg => {
   const L = lumOf(bg);

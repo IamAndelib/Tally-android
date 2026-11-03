@@ -623,6 +623,10 @@ function liabsView() {
     : "";
   return tabBar(T("nav.liabs")) + panes(h, right);
 }
+/* an account's name in a row's second line, in a soft pill of its colour (#37): the name says which account, the colour
+   only helps to spot it */
+const accPill = a =>
+  a ? '<bdi class="apill" style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '">' + esc(a.name) + "</bdi>" : bdi("?");
 function txLine(t) {
   const a = acc(t.account),
     cur = a ? a.currency : S.settings.cur;
@@ -636,7 +640,7 @@ function txLine(t) {
     em = XFER_EMB;
     cls = "xfer";
     d = esc(t.note || T("transfer.title"));
-    s = bdi(a ? a.name : "?") + " → " + bdi(to ? to.name : "?");
+    s = accPill(a) + " → " + accPill(to);
     amt =
       esc(money(t.amount, cur)) +
       (t.toAmount != null && to && to.currency !== cur
@@ -645,7 +649,7 @@ function txLine(t) {
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
     d = esc(noteShown(t, "fix.title"));
-    s = TH("fix.title") + " · " + bdi(a ? a.name : "?");
+    s = TH("fix.title") + " · " + accPill(a);
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -656,7 +660,7 @@ function txLine(t) {
     d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
       who: { html: bdi(who) },
     });
-    s = TH(lend ? "tx.lending" : "tx.loan") + " · " + bdi(a ? a.name : "?") + (t.note ? " · " + bdi(t.note) : "");
+    s = TH(lend ? "tx.lending" : "tx.loan") + " · " + accPill(a) + (t.note ? " · " + bdi(t.note) : "");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -669,22 +673,19 @@ function txLine(t) {
       const lend = l.kind === "lend";
       em = LOAN_EMB[lend ? "lend" : "borrow"];
       d = esc(noteShown(t, "loan.feeNote"));
-      s =
-        bdi(a ? a.name : "?") +
-        " · " +
-        TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } });
+      s = accPill(a) + " · " + TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } });
     } else {
       const to = acc(host.to);
       em = XFER_EMB;
       d = esc(noteShown(t, "transfer.feeNote"));
-      s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
+      s = accPill(a) + (to ? " → " + accPill(to) : "");
     }
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
     d = t.payee || t.note ? [t.payee, t.note].filter(Boolean).map(bdi).join(" · ") : esc(catName(k));
-    s = bdi(catName(k)) + " · " + bdi(a ? a.name : "?");
+    s = bdi(catName(k)) + " · " + accPill(a);
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }

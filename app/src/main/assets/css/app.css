@@ -1333,6 +1333,16 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* an account's name in its colour's soft pill (accPill): the tint is a fixed share of the colour over the row, so the
+   text keeps WCAG AA contrast on every account colour, light and dark */
+.apill {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgb(var(--acr) / var(--pill-a));
+  color: var(--on-surface);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
 /* an amount and a balance are never cut: the title, then the account name in the balance line give way to them */
 .tx .a {
   font-weight: 600;
