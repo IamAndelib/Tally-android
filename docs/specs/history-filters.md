@@ -88,12 +88,13 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
   (its own `· $Z fees` when any).
 - **Gone targets**: a filter whose account, category or person no longer exists (a backup restored) is dropped.
 - **Nothing matches** (a period changed, the last matching entry deleted): "Nothing matches these filters" with
-  **Clear all**.
+  **Clear all** under it; the Clear all beside the Filters button is left out then (one is enough).
 - **Selection** (hold an entry, or Select): works on the filtered list; Select all selects what's listed. While
   selecting, the period and filter rows are hidden; the list stays filtered.
 - **Leaving History** forgets its filters; entries opened from it and closed again keep them. Back from History goes
   Home as today.
-- **Sideways swipes** no longer switch accounts in History (accounts are a filter now).
+- **Sideways swipes** do nothing in History: they no longer switch accounts (accounts are a filter now), and they
+  don't step the period either (maintainer: no swipe). Another month is picked in the period dialog.
 
 ## Accessibility and text
 
@@ -116,8 +117,7 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 
 ## Open points (defaults chosen in the review, to confirm)
 
-1. **Stepping through periods without ‹ ›**: the History bar no longer has arrows. Default: a sideways swipe on the
-   list steps the period (as Home's ring does) while one is set; on all time it does nothing.
+1. ~~Stepping through periods by swiping~~: decided no (2026-11-05); the period dialog picks another month.
 2. **Closing the sheet without Show** (✕, Back, tapping outside): default: the choices are dropped, nothing changes.
 3. **Clear all at the top** goes back to all time too (the default view in one tap); the sheet's Clear all clears only
    the sheet's choices. Default as written above.
