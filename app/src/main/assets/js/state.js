@@ -578,10 +578,10 @@ function withUndo(msg, change, fx, after) {
   FX = fx || {};
   commit();
   FX = {};
-  snack(typeof msg === "function" ? msg() : msg, () => {
+  snack(typeof msg === "function" ? msg() : msg, entries => {
     Object.assign(S, before);
     commit();
-    if (after) after(); // e.g. an open list that shows the entries again
+    if (after) after(entries); // whether the entries list was open when Undo was tapped (it is closed by then)
     snack(T("common.undone"));
   });
 }

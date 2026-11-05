@@ -3252,19 +3252,18 @@ body.land.calcopen #snack .snack {
 .hfc.lock::after {
   display: none;
 }
-/* picked here the ✓ comes first, before the dot and the name (the rest of the app puts it last); it takes some of the
-   leading padding so the chip stays about as wide and doesn't jump to the next line when tapped. A chosen From / To
-   (a tinted button) leads with it too. The ::after is the touch target above. */
-.hfc[aria-pressed="true"]:not(.lead),
-button.hfc.tinted {
+/* picked here the ✓ comes first (.hftk, a real element before the dot and the name; the rest of the app puts it
+   last); it takes some of the leading padding so the chip stays about as wide and doesn't jump to the next line when
+   tapped. A chosen From / To (a tinted button) leads with it too. The ::after is the touch target above; ::before stays
+   the state layer. */
+.hfc.tk {
   padding-inline-start: 2px;
 }
-.hfc[aria-pressed="true"]:not(.lead)::before,
-button.hfc.tinted::before {
-  content: "✓";
-  font-size: 0.8rem;
+.hftk {
   flex: none;
   margin-inline-start: 6px;
+  font-size: 0.8rem;
+  line-height: 1;
 }
 .hfc.acct[aria-pressed="true"],
 .hfc.tinted {

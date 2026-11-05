@@ -241,8 +241,9 @@ document.addEventListener("click", ev => {
         /* what an open layer shows may be what Undo takes away: back to the screen first */
         closePop();
         BACKTO = null;
+        const entries = !!$("#sheet #ent-list"); // the entries list was open when Undo was tapped
         closeSheet();
-        f();
+        f(entries);
       }
       break;
     case "check-ok":

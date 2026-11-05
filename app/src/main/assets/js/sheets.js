@@ -1046,12 +1046,13 @@ function rowDelete(id) {
     return;
   }
   /* the entries sheet drawn again, where it was scrolled to: after the delete, and after its Undo, which closes the
-     layers first (events.js), so it opens the sheet again if it was open and nothing else has taken its place */
+     layers first (events.js), so it opens the sheet again only if it was open when Undo was tapped (not when it was
+     closed meanwhile) and the screen is the same */
   const p = $("#sheet #ent-list") && $("#sheet .p"),
     scroll = p ? p.scrollTop : 0,
     screen = V.screen,
-    redraw = undone => {
-      if (!p || (undone && (V.screen !== screen || $("#sheet").innerHTML))) return;
+    redraw = (undone, listed) => {
+      if (!p || (undone && (!listed || V.screen !== screen || $("#sheet").innerHTML))) return;
       entriesSheet();
       const q = $("#sheet .p");
       if (q) q.scrollTop = scroll;
@@ -1067,7 +1068,7 @@ function rowDelete(id) {
       V.open = "";
     },
     null,
-    () => redraw(true)
+    listed => redraw(true, listed)
   );
   redraw();
 }

@@ -442,7 +442,7 @@ const ok = (c, m) => {
         const q = s => [...document.querySelectorAll("#sheet " + s)];
         const info = b => ({
           v: b.dataset.v,
-          t: b.textContent.replace(/\s+/g, " ").trim(),
+          t: b.textContent.replace("✓", "").replace(/\s+/g, " ").trim(),
           on: b.getAttribute("aria-pressed") === "true",
           dim: b.getAttribute("aria-disabled") === "true",
         });
@@ -569,7 +569,7 @@ const ok = (c, m) => {
       role: document.querySelector("#pop [role=dialog]") && 1,
       items: [...document.querySelectorAll('#pop [data-act="hfs-pick"]')].map(b => ({
         v: b.dataset.v,
-        t: b.textContent.replace(/\s+/g, " ").trim(),
+        t: b.textContent.replace("✓", "").replace(/\s+/g, " ").trim(),
         dim: b.getAttribute("aria-disabled") === "true",
       })),
       focus: $("#pop").contains(document.activeElement),
@@ -704,61 +704,80 @@ const ok = (c, m) => {
       render();
       filtersSheet();
     });
-    /* the chip's parts read left to right: the tick, the dot, the name */
+    /* the tick is a real element, first in the chip, drawn (size, opacity, colour), left of the dot and the name */
     const parts = sel =>
       page.evaluate(sel => {
         const b = document.querySelector(sel),
-          kids = [...b.children],
-          before = getComputedStyle(b, "::before").content,
-          after = getComputedStyle(b, "::after").content;
+          tk = b.querySelector(".hftk"),
+          dot = b.querySelector(".adot"),
+          name = b.querySelector(".chn"),
+          q = tk && getComputedStyle(tk),
+          bf = getComputedStyle(b, "::before"),
+          r = e => e.getBoundingClientRect();
         return {
-          before,
-          after,
-          order: kids.map(k =>
-            k.classList.contains("adot") ? "dot" : k.classList.contains("chn") ? "name" : k.className
-          ),
-          top: Math.round(
-            b.getBoundingClientRect().top -
-              document.querySelector('#sheet [data-act="hfs-acc"]').getBoundingClientRect().top
-          ),
+          tick: !!tk,
+          first: !!tk && b.firstElementChild === tk,
+          text: tk ? tk.textContent : "",
+          w: tk ? r(tk).width : 0,
+          h: tk ? r(tk).height : 0,
+          opacity: q ? q.opacity : "",
+          color: q ? q.color : "",
+          hidden: tk ? tk.getAttribute("aria-hidden") : "",
+          leftOfDot: tk && dot ? r(tk).left < r(dot).left : null,
+          leftOfName: tk && name ? r(tk).left < r(name).left : null,
+          before: bf.content,
+          beforePos: bf.position,
+          after: getComputedStyle(b, "::after").content,
+          top: Math.round(r(b).top - r(document.querySelector('#sheet [data-act="hfs-acc"]')).top),
           pressed: b.getAttribute("aria-pressed"),
         };
       }, sel);
     const chip = '#sheet [data-act="hfs-acc"][data-v="a"]';
     const off = await parts(chip);
-    ok(
-      off.pressed === "false" && !off.before.includes("✓") && !off.after.includes("✓"),
-      "an unpicked chip has no tick: " + JSON.stringify(off)
-    );
+    ok(off.pressed === "false" && !off.tick, "an unpicked chip has no tick: " + JSON.stringify(off));
     await page.click(chip);
     const on = await parts(chip);
-    ok(on.pressed === "true", "tapping picks it");
     ok(
-      on.before.includes("✓") && !on.after.includes("✓"),
-      "a picked chip's tick comes first, none after: " + JSON.stringify(on)
+      on.pressed === "true" && on.tick && on.first && on.text === "✓",
+      "a picked chip's first child is the tick: " + JSON.stringify(on)
     );
-    ok(on.order.slice(0, 2).join() === "dot,name", "then the dot, then the name: " + on.order);
+    ok(on.w > 0 && on.h > 0, "the tick has a size: " + on.w + "x" + on.h);
+    ok(
+      on.opacity === "1" && on.color !== "rgba(0, 0, 0, 0)" && on.color !== "transparent",
+      "and is drawn: " + on.opacity + " " + on.color
+    );
+    ok(on.leftOfDot === true && on.leftOfName === true, "left of the dot and the name");
+    ok(on.hidden === "true", "hidden from screen readers (aria-pressed says it)");
+    ok(
+      on.before === '""' && on.beforePos === "absolute",
+      "the state layer is intact: " + on.before + " " + on.beforePos
+    );
+    ok(!on.after.includes("✓"), "no tick after the name");
     ok(on.top === off.top, "picking doesn't move the chip's row: " + off.top + " -> " + on.top);
     const kindOn = await page.evaluate(() => {
-      const b = document.querySelector('#sheet [data-act="hfs-kind"][data-v="xfer"]');
-      b.click();
+      document.querySelector('#sheet [data-act="hfs-kind"][data-v="xfer"]').click();
       const c = document.querySelector('#sheet [data-act="hfs-kind"][data-v="xfer"]');
-      return getComputedStyle(c, "::before").content + "|" + getComputedStyle(c, "::after").content;
+      return c.firstElementChild.className + "|" + c.firstElementChild.textContent;
     });
-    ok(kindOn.startsWith('"✓"') && !kindOn.endsWith('"✓"'), "a kind chip too: " + kindOn);
+    ok(kindOn === "hftk|✓", "a kind chip too: " + kindOn);
     /* Between: a chosen side leads with the tick; an unset one has none */
     await page.evaluate(() => {
       HFD.acc = "";
       HFD.from = "a";
       hfsDraw();
     });
-    const side = await page.evaluate(() => {
-      const bs = [...document.querySelectorAll("#sheet .hfsides > button.hfc")];
-      return bs.map(b => getComputedStyle(b, "::before").content);
-    });
+    const side = await page.evaluate(() =>
+      [...document.querySelectorAll("#sheet .hfsides > button.hfc")].map(b => {
+        const t = b.querySelector(".hftk"),
+          d = b.querySelector(".adot");
+        return t
+          ? b.firstElementChild === t && (!d || t.getBoundingClientRect().left < d.getBoundingClientRect().left)
+          : false;
+      })
+    );
     ok(
-      side[0].includes("✓") && !side[1].includes("✓"),
-      "Between: the chosen side has the tick, the open one none: " + side
+      side[0] === true && side[1] === false,
+      "Between: the chosen side has the tick first, the open one none: " + side
     );
     /* chips elsewhere keep theirs after the name */
     const elsewhere = await page.evaluate(() => {
@@ -1118,6 +1137,19 @@ const ok = (c, m) => {
     ok(!!(await page.$('#sheet .tx[data-v="e2"]')), "Undo: the row is back in the sheet");
     ok(!!(await page.$("#sheet #ent-list")), "the entries sheet is still open");
     await page.evaluate(() => closeSheet());
+
+    /* Undo after the sheet was closed: the entry is back and the sheet stays closed */
+    await page.evaluate(() => entriesSheet());
+    await page.click('#sheet .tx[data-v="e2"]');
+    await page.click('#sheet .txo [data-act="tx-del"]');
+    await page.waitForTimeout(100);
+    await page.evaluate(() => closeSheet());
+    await page.click('#snack [data-act="undo"]');
+    await page.waitForTimeout(150);
+    ok(
+      (await page.evaluate(() => S.txns.some(t => t.id === "e2"))) && !(await page.$("#sheet .p")),
+      "Undo with the sheet closed: the entry is back and the sheet stays closed"
+    );
 
     /* search counts the rows it shows; a fee that matches makes its entry the hit, listed once */
     const sr = await page.evaluate(() => {

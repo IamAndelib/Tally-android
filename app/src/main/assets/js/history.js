@@ -143,11 +143,15 @@ function hfTally(list, key) {
   });
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
+const HF_TICK = '<span class="hftk" aria-hidden="true">✓</span>';
 /* a compact option: dimmed (aria-disabled, taps ignored) at 0 unless picked; its count is read with it */
 function hfChip(act, v, on, inner, n, o = {}) {
-  const dim = n === 0 && !on;
+  const dim = n === 0 && !on,
+    tick = on && !/\blead\b/.test(o.cls || ""); // a chip with an emblem shows its check in the emblem
+  if (tick) inner = HF_TICK + inner;
   return (
     '<button class="chip hfc' +
+    (tick ? " tk" : "") +
     (o.cls ? " " + o.cls : "") +
     (dim ? " dim" : "") +
     '" data-act="' +
@@ -178,12 +182,13 @@ function hfSideChip(side) {
   if (lock) return '<span class="chip hfc lock tinted"' + histAccVar(a) + ">" + inner + "</span>";
   return (
     '<button class="chip hfc' +
-    (a ? " tinted" : "") +
+    (a ? " tinted tk" : "") +
     '" data-act="' +
     (side === "from" ? "hfs-from" : "hfs-to") +
     '" aria-haspopup="dialog"' +
     (a ? histAccVar(a) : "") +
     ">" +
+    (a ? HF_TICK : "") +
     inner +
     ic("down") +
     "</button>"
