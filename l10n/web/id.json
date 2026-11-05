@@ -704,7 +704,6 @@
     "allTime": "Sepanjang waktu",
     "none": {
       "all": "Belum ada catatan.",
-      "day": "Tidak ada catatan hari itu.",
       "month": "Tidak ada catatan bulan itu.",
       "range": "Tidak ada catatan di hari-hari itu.",
       "year": "Tidak ada catatan tahun itu."

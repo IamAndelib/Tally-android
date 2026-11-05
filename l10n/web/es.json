@@ -716,7 +716,6 @@
     "allTime": "Todo el tiempo",
     "none": {
       "all": "Aún no hay nada anotado.",
-      "day": "No anotaste nada ese día.",
       "month": "No anotaste nada ese mes.",
       "range": "No anotaste nada en esos días.",
       "year": "No anotaste nada ese año."

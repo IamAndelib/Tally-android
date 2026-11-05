@@ -3114,7 +3114,7 @@ body.land.calcopen #snack .snack {
   outline: none;
 }
 
-/* History: the period chip (label and ✕ are two targets), Filters, one chip per set filter, the summary line, and a
+/* History: the period chip (label and ✕ are two targets), Filters, one chip per set filter, and a
    heading for each month */
 .hbar,
 .hchips {

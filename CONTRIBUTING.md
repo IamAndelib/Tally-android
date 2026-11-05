@@ -90,8 +90,8 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
 | `js/loans.js` | loans and lendings |
 | `js/sheets.js` | entry, transfer, balance-fix, account, category and asset sheets |
 | `js/summary.js` | the spending summary |
-| `js/screens.js` | `render()` and the Home, Assets, Liabilities, History and Settings screens |
-| `js/history.js` | History's filters and totals: which entries a filter leaves, which are rows, their totals in words |
+| `js/screens.js` | `render()` and the Home, Assets, Liabilities and Settings screens |
+| `js/history.js` | History: the screen (period chip, Filters button, chips, months drawn in chunks), the Filters sheet, which entries a filter leaves, which are rows, their totals in words |
 | `js/search.js` | Search: matching, the grouped results and one group item's entries by week, month, year or all |
 | `js/bridge.js` | talking to the Android shell; `goBack()` |
 | `js/backup.js` | CSV export, backup, restore, delete all |

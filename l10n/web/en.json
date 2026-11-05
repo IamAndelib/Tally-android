@@ -710,7 +710,6 @@
     "allTime": "All time",
     "none": {
       "all": "Nothing written down yet.",
-      "day": "Nothing written down that day.",
       "month": "Nothing written down that month.",
       "range": "Nothing written down in those days.",
       "year": "Nothing written down that year."

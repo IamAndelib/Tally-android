@@ -716,7 +716,6 @@
     "allTime": "Depuis le début",
     "none": {
       "all": "Rien de noté pour l’instant.",
-      "day": "Rien de noté ce jour-là.",
       "month": "Rien de noté ce mois-là.",
       "range": "Rien de noté sur ces jours.",
       "year": "Rien de noté cette année-là."

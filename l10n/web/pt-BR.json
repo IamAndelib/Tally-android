@@ -716,7 +716,6 @@
     "allTime": "Todo o período",
     "none": {
       "all": "Nada anotado ainda.",
-      "day": "Nada anotado nesse dia.",
       "month": "Nada anotado nesse mês.",
       "range": "Nada anotado nesses dias.",
       "year": "Nada anotado nesse ano."

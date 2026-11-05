@@ -710,7 +710,6 @@
     "allTime": "Tüm zamanlar",
     "none": {
       "all": "Henüz hiçbir şey yazılmamış.",
-      "day": "O gün hiçbir şey yazılmamış.",
       "month": "O ay hiçbir şey yazılmamış.",
       "range": "O günlerde hiçbir şey yazılmamış.",
       "year": "O yıl hiçbir şey yazılmamış."

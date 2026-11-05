@@ -33,8 +33,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
 - Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
 - Nothing is cut short or shrunk any more: names, notes, categories, chips, fields, tabs and buttons wrap onto another
-  line. Each entry reads in order: what it was and how much, then its account and the balance left there, then its
-  details. On small phones and with large text, entries, accounts and lendings stack from the left.
+  line. On small phones and with large text, entries, accounts and lendings stack from the left.
 - Home's account chips show a larger icon, with the name (on two lines if need be) and balance beside it; where the
   date doesn't fit beside the ‹ › arrows, they make room for it.
 

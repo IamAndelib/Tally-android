@@ -710,7 +710,6 @@
     "allTime": "Gesamte Zeit",
     "none": {
       "all": "Noch nichts notiert.",
-      "day": "An diesem Tag nichts notiert.",
       "month": "In diesem Monat nichts notiert.",
       "range": "In diesem Zeitraum nichts notiert.",
       "year": "In diesem Jahr nichts notiert."
