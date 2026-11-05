@@ -3149,3 +3149,134 @@ body.land.calcopen #snack .snack {
   margin-inline-start: auto;
   text-align: end;
 }
+
+/* History's Filters sheet: compact chips (34px to see; the row gap makes up 48px to tap, each chip's ::before reaches
+   7px up and down), the sticky foot, and the From / To menu */
+.hfrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 8px;
+  margin: 0 4px;
+}
+.hfc {
+  position: relative;
+  min-height: 34px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.hfc::before {
+  content: "";
+  position: absolute;
+  inset: -7px 0;
+}
+.hfc.lock::before {
+  display: none;
+}
+.hfc.acct[aria-pressed="true"],
+.hfc.tinted {
+  background: rgb(var(--acr) / var(--tint-a));
+  color: var(--on-surface);
+  border-color: transparent;
+}
+.hfc > .adot,
+.hmi > .adot {
+  flex: none;
+  margin: 0 -2px 0 0;
+}
+.hfc .ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.hfc .chn {
+  padding: 4px 0;
+}
+.hfc.lead > .emb.sm {
+  width: 20px;
+  height: 20px;
+}
+.hfn {
+  flex: none;
+  min-width: 1.4em;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--surface-container, rgba(127, 127, 127, 0.16));
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+.hfc.dim,
+.hmi.dim {
+  opacity: 0.45;
+}
+.hfsides {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.hfsides > .chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.hfswap {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.hfhint {
+  margin: 10px 4px 0;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+}
+.hfs-foot {
+  position: sticky;
+  bottom: calc(-20px - env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px -20px calc(-20px - env(safe-area-inset-bottom, 0px));
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface-low);
+}
+.hfs-foot .btn {
+  flex: 1;
+  min-width: 0;
+}
+.hmenu {
+  position: fixed;
+  z-index: 16;
+  min-width: 200px;
+  max-width: calc(100% - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0;
+  border-radius: 12px;
+  background: var(--surface-low);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.hmi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  text-align: start;
+  font-size: 0.95rem;
+}
+.hmi .chn {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hmi .ic {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.hmi[aria-pressed="true"] {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}

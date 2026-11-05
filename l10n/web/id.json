@@ -724,7 +724,19 @@
     "fromAcc": "From {{account}}",
     "toAcc": "To {{account}}",
     "lentTo": "Lent to {{who}}",
-    "borrowedFrom": "Borrowed from {{who}}"
+    "borrowedFrom": "Borrowed from {{who}}",
+    "all": "All",
+    "transactions": "Transactions",
+    "category": "Category",
+    "lentSec": "Lent to",
+    "borrowedSec": "Borrowed from",
+    "between": "Between",
+    "everyone": "Everyone",
+    "anyAccount": "Any account",
+    "oneSide": "One side is {{account}}",
+    "showNone": "No entries",
+    "swap": "Swap From and To",
+    "show_other": "Show {{count}} entries"
   },
   "remind": {
     "nudge": "Pengingat malam",

@@ -527,6 +527,38 @@ document.addEventListener("click", ev => {
     case "hf-open":
       filtersSheet();
       break;
+    case "hfs-acc":
+    case "hfs-kind":
+    case "hfs-sub":
+    case "hfs-pick":
+      if (!HFD || el.getAttribute("aria-disabled") === "true") break; // a dimmed option has nothing to leave
+      if (act === "hfs-acc") Object.assign(HFD, { acc: v, from: "", to: "" });
+      else if (act === "hfs-kind") Object.assign(HFD, { kind: v, cat: "", who: "", from: "", to: "" });
+      else if (act === "hfs-sub") HFD[el.dataset.k] = v;
+      else {
+        Object.assign(HFD, hfSide(HFD, HFSIDE, v));
+        closePop();
+      }
+      hfsDraw();
+      break;
+    case "hfs-from":
+    case "hfs-to":
+      hfMenu(act === "hfs-from" ? "from" : "to", el);
+      break;
+    case "hfs-swap":
+      if (HFD) [HFD.from, HFD.to] = [HFD.to, HFD.from];
+      hfsDraw();
+      break;
+    case "hfs-clear":
+      HFD = histBlank();
+      hfsDraw();
+      break;
+    case "hfs-show":
+      if (!HFD || el.disabled) break;
+      HF = { ...HFD };
+      closeSheet();
+      render();
+      break;
     case "hf-del":
       if (v === "acc") HF.acc = "";
       else if (v === "from" || v === "to") HF[v] = "";

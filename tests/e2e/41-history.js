@@ -388,6 +388,296 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- the Filters sheet
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      const a = (id, name, extra) =>
+        S.accounts.push({ id, name, type: "bank", currency: "USD", opening: 0, archived: false, ...extra });
+      a("b", "Everyday");
+      a("c", "Cash");
+      a("k", "Credit card", { type: "card" });
+      a("s", "Savings");
+      a("o", "Old savings", { archived: true });
+      let n = 0;
+      const t = (type, amount, account, extra) =>
+        S.txns.push({ id: "t" + ++n, ts: n, date: today(), type, amount, account, note: "", ...extra });
+      t("expense", 20, "c", { cat: "food" });
+      t("expense", 10, "b", { cat: "food" });
+      t("expense", 5, "c", { cat: "transport" });
+      t("expense", 3, "k", { cat: "food" });
+      t("expense", 4, "k", { cat: "food" });
+      t("expense", 6, "b", { cat: "transport" });
+      t("expense", 1, "o", { cat: "food" });
+      t("income", 100, "b", { cat: "gift" });
+      t("transfer", 30, "b", { to: "k", feeId: "fx" });
+      t("expense", 2, "b", { id: "fx", cat: "fees", feeOf: "t9" });
+      t("transfer", 40, "b", { to: "c" });
+      t("transfer", 20, "k", { to: "s" });
+      t("transfer", 10, "b", { to: "k" });
+      S.loans.push({ id: "L1", kind: "lend", person: "Sam", account: "c", date: today(), note: "", status: "open" });
+      S.loans.push({
+        id: "L2",
+        kind: "lend",
+        person: "Priya",
+        account: "c",
+        date: today(),
+        note: "",
+        status: "settled",
+      });
+      t("loan", 50, "c", { loan: "L1", dir: "out", principal: true });
+      t("loan", 30, "c", { loan: "L2", dir: "out", principal: true });
+      t("loan", 30, "c", { loan: "L2", dir: "in" });
+      save();
+      location.reload();
+    });
+    await page.waitForLoadState();
+    await page.waitForTimeout(200);
+    await page.click('[data-act="go"][data-v="history"]');
+    const sheet = () =>
+      page.evaluate(() => {
+        const q = s => [...document.querySelectorAll("#sheet " + s)];
+        const info = b => ({
+          v: b.dataset.v,
+          t: b.textContent.replace(/\s+/g, " ").trim(),
+          on: b.getAttribute("aria-pressed") === "true",
+          dim: b.getAttribute("aria-disabled") === "true",
+        });
+        return {
+          secs: q(".sec").map(e => e.textContent.trim()),
+          acc: q('[data-act="hfs-acc"]').map(info),
+          kind: q('[data-act="hfs-kind"]').map(info),
+          sub: q('[data-act="hfs-sub"]').map(info),
+          from: (q('[data-act="hfs-from"]')[0] || {}).textContent,
+          to: (q('[data-act="hfs-to"]')[0] || {}).textContent,
+          locked: q(".hfc.lock").map(e => e.textContent.replace(/\s+/g, " ").trim()),
+          hint: (q(".hfhint")[0] || {}).textContent,
+          show: (q('[data-act="hfs-show"]')[0] || {}).textContent,
+          showOff: !!(q('[data-act="hfs-show"]')[0] || {}).disabled,
+          hf: JSON.stringify(HF),
+          hfd: JSON.stringify(HFD),
+        };
+      });
+    const tap = (a, v) => page.click(`#sheet [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
+    await page.click('#app [data-act="hf-open"]');
+    let r = await sheet();
+    ok(r.secs.join() === "Account,Transactions", "sections without a kind: " + r.secs);
+    ok(
+      r.acc.map(x => x.t.split(" ")[0]).join() === "All,Everyday,Cash,Credit,Savings,Old",
+      "every account, archived one with entries: " + r.acc.map(x => x.t)
+    );
+    ok(r.acc.find(x => x.v === "o").t.includes("archived"), "the archived one is marked");
+    ok(r.acc[0].on, "All accounts is picked");
+    ok(
+      r.kind.map(x => x.t).join("|") === "All|Spent 7|Received 1|Transfers 4|Lent 3",
+      "Transactions with counts, no Borrowed, no Balance fixes (never had): " + r.kind.map(x => x.t).join("|")
+    );
+    ok(r.show === "Show 15 entries", "the foot counts: " + r.show);
+    ok(
+      await page.evaluate(() => {
+        const l = document.querySelector('#sheet [data-act="hfs-acc"][data-v="b"]');
+        return !!l.querySelector(".adot");
+      }),
+      "an account chip has its dot"
+    );
+    const tall = await page.evaluate(() => {
+      const c = document.querySelector('#sheet [data-act="hfs-kind"]');
+      const b = c.getBoundingClientRect(),
+        z = getComputedStyle(c, "::before");
+      return { h: b.height, up: parseFloat(z.top), bh: parseFloat(z.height) };
+    });
+    ok(Math.round(tall.h) === 34, "compact chips are 34px tall: " + tall.h);
+    ok(tall.bh + 0 >= 48 || tall.h - 2 * tall.up >= 48, "the tap area reaches 48px: " + JSON.stringify(tall));
+    // focus, Back
+    ok(await page.evaluate(() => $("#sheet").contains(document.activeElement)), "the sheet takes the focus");
+    // pick Cash: kinds with 0 are dimmed, never the picked one
+    await tap("hfs-acc", "c");
+    r = await sheet();
+    ok(r.acc.find(x => x.v === "c").on, "Cash picked");
+    ok(
+      r.kind
+        .filter(x => x.dim)
+        .map(x => x.v)
+        .join() === "in" && r.kind.find(x => x.v === "xfer").t === "Transfers 1",
+      "Cash's kinds: " + r.kind.map(x => x.t).join("|")
+    );
+    await tap("hfs-acc", "s");
+    r = await sheet();
+    ok(
+      r.kind.find(x => x.v === "out").dim && r.kind.find(x => x.v === "out").t === "Spent 0",
+      "Savings: Spent is 0 and dimmed: " + r.kind.map(x => x.t).join("|")
+    );
+    await page.click('#sheet [data-act="hfs-kind"][data-v="out"]', { force: true }); // dimmed: ignored
+    ok((await sheet()).hfd.includes('"kind":""'), "a dimmed option ignores taps");
+    await tap("hfs-kind", "xfer");
+    await tap("hfs-acc", "");
+    await tap("hfs-kind", "out");
+    r = await sheet();
+    ok(r.kind.find(x => x.v === "out").on && !r.kind.find(x => x.v === "out").dim, "a picked kind is never dimmed");
+    // Spent: categories, most used first
+    ok(r.secs.join() === "Account,Transactions,Category", "Spent adds Category: " + r.secs);
+    ok(
+      /^All\|\S.* 5\|\S.* 2$/.test(r.sub.map(x => x.t).join("|")) && r.sub[1].v === "food",
+      "categories most used first: " + r.sub.map(x => x.t).join("|")
+    );
+    // an account dims what isn't there
+    await tap("hfs-acc", "o");
+    r = await sheet();
+    ok(r.sub.length === 2 && / 1$/.test(r.sub[1].t), "only categories that have entries: " + r.sub.map(x => x.t));
+    await tap("hfs-acc", "");
+    // Lent
+    await tap("hfs-kind", "lend");
+    r = await sheet();
+    ok(r.secs.join() === "Account,Transactions,Lent to", "Lent adds Lent to: " + r.secs);
+    ok(
+      r.sub.map(x => x.t).join("|") === "Everyone|Priya 2|Sam 1",
+      "Everyone and each person, a settled tab too: " + r.sub.map(x => x.t).join("|")
+    );
+    await tap("hfs-sub", "Sam");
+    r = await sheet();
+    ok(r.show === "Show 1 entry" && r.hfd.includes('"who":"Sam"'), "a person narrows the count: " + r.show);
+    // Transfers, no account: From ▾ ⇄ To ▾
+    await tap("hfs-kind", "xfer");
+    r = await sheet();
+    ok(r.secs.join() === "Account,Transactions,Between", "Transfers adds Between: " + r.secs);
+    ok(
+      /From Any account/.test(r.from) && /To Any account/.test(r.to) && !r.hint,
+      "From any account, To any account, no hint: " + r.from + " / " + r.to
+    );
+    ok(r.hfd.includes('"who":""'), "changing the kind drops the person");
+    await page.click('#sheet [data-act="hfs-from"]');
+    await page.click('#pop [data-act="hfs-pick"][data-v="b"]');
+    r = await sheet();
+    ok(/From Everyday/.test(r.from) && /To Any account/.test(r.to), "From Everyday: " + r.from + " / " + r.to);
+    await tap("hfs-swap");
+    r = await sheet();
+    ok(/From Any account/.test(r.from) && /To Everyday/.test(r.to), "swap swaps: " + r.from + " / " + r.to);
+    await tap("hfs-swap");
+    // with Credit card picked
+    await tap("hfs-acc", "k");
+    r = await sheet();
+    ok(
+      /From Any account/.test(r.from) && /To Any account/.test(r.to) && r.hint === "One side is Credit card",
+      "both any, with the hint: " + r.from + " / " + r.to + " / " + r.hint
+    );
+    ok(r.show === "Show 3 entries", "every transfer in and out of it: " + r.show);
+    await page.click('#sheet [data-act="hfs-from"]');
+    const menu = await page.evaluate(() => ({
+      role: document.querySelector("#pop [role=dialog]") && 1,
+      items: [...document.querySelectorAll('#pop [data-act="hfs-pick"]')].map(b => ({
+        v: b.dataset.v,
+        t: b.textContent.replace(/\s+/g, " ").trim(),
+        dim: b.getAttribute("aria-disabled") === "true",
+      })),
+      focus: $("#pop").contains(document.activeElement),
+    }));
+    ok(!menu.items.some(x => x.v === "k"), "the menu never lists the picked account: " + JSON.stringify(menu.items));
+    ok(
+      menu.items.find(x => x.v === "b").t === "Everyday 2" && !menu.items.find(x => x.v === "b").dim,
+      "Everyday: 2 " + JSON.stringify(menu.items)
+    );
+    ok(menu.items.find(x => x.v === "c").dim && menu.items.find(x => x.v === "s").dim, "accounts at 0 are dimmed");
+    ok(menu.focus, "the menu takes the focus");
+    await page.click('#pop [data-act="hfs-pick"][data-v="c"]', { force: true }); // dimmed: ignored
+    ok(await page.evaluate(() => !!$("#pop").innerHTML), "a dimmed menu item ignores taps");
+    await page.click('#pop [data-act="hfs-pick"][data-v="b"]');
+    r = await sheet();
+    ok(
+      /From Everyday/.test(r.from || "") && r.locked.join() === "To Credit card" && r.show === "Show 2 entries",
+      "From Everyday locks To as Credit card, 2 entries: " + r.from + " / " + r.locked + " / " + r.show
+    );
+    ok(!r.to, "the locked side is not a button");
+    // Back closes the menu first, then the sheet
+    await page.click('#sheet [data-act="hfs-from"]');
+    ok(
+      await page.evaluate(() => goBack() && !$("#pop").innerHTML && !!$("#sheet").innerHTML),
+      "Back closes the menu first"
+    );
+    // the menu opens upward when it wouldn't fit below (a short window)
+    await page.setViewportSize({ width: 393, height: 520 });
+    await page.click('#sheet [data-act="hfs-from"]');
+    const up = await page.evaluate(() => {
+      const m = document.querySelector("#pop .hmenu").getBoundingClientRect();
+      return { top: m.top, bottom: m.bottom, h: innerHeight };
+    });
+    ok(up.top >= 0 && up.bottom <= up.h + 0.5, "the menu stays on the screen: " + JSON.stringify(up));
+    await page.keyboard.press("Escape");
+    await page.setViewportSize({ width: 393, height: 852 });
+    // the sheet's Clear all clears only the draft, the period stays
+    await page.evaluate(() => {
+      HP.period = "year";
+      HP.anchor = today();
+      HF.acc = "b";
+    });
+    await tap("hfs-clear");
+    r = await sheet();
+    ok(
+      r.hfd === '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}' &&
+        r.hf.includes('"acc":"b"') &&
+        (await page.evaluate(() => HP.period)) === "year",
+      "the sheet's Clear all clears only the draft: " + r.hfd
+    );
+    // ✕ drops the draft
+    await tap("hfs-kind", "in");
+    await page.click('#sheet [data-act="close"]');
+    ok(
+      (await page.evaluate(() => HF.kind + "|" + HF.acc + "|" + !$("#sheet").innerHTML)) === "|b|true",
+      "✕ leaves HF as it was"
+    );
+    // Show applies
+    await page.click('#app [data-act="hf-open"]');
+    await tap("hfs-acc", "c");
+    await tap("hfs-kind", "out");
+    await page.click('#sheet [data-act="hfs-show"]');
+    ok(
+      (await page.evaluate(() => HF.acc + "|" + HF.kind + "|" + !$("#sheet").innerHTML)) === "c|out|true" &&
+        (await page.evaluate(() => document.querySelectorAll('#app .hchips [data-act="hf-del"]').length)) === 2,
+      "Show applies the draft and renders"
+    );
+    // outside and Back drop it
+    await page.click('#app [data-act="hf-open"]');
+    await tap("hfs-kind", "");
+    await page.mouse.click(190, 20);
+    ok((await page.evaluate(() => HF.kind + !$("#sheet").innerHTML)) === "outtrue", "outside drops the draft");
+    await page.click('#app [data-act="hf-open"]');
+    await tap("hfs-kind", "");
+    await page.evaluate(() => goBack());
+    ok((await page.evaluate(() => HF.kind + !$("#sheet").innerHTML)) === "outtrue", "Back drops the draft");
+    // nothing left: No entries, disabled
+    await page.evaluate(() => {
+      HF = histBlank();
+      render();
+    });
+    await page.click('#app [data-act="hf-open"]');
+    await tap("hfs-acc", "o");
+    await tap("hfs-kind", "out");
+    await page.evaluate(() => {
+      HFD.cat = "transport";
+      hfsDraw();
+    });
+    r = await sheet();
+    ok(r.show === "No entries" && r.showOff, "no entries: " + r.show + " " + r.showOff);
+    await ctx.close();
+  }
+
+  // a notebook that never had a loan or a fix: no Lent, no Borrowed, no Balance fixes
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      V.screen = "history";
+      render();
+      filtersSheet();
+    });
+    const kinds = await page.evaluate(() =>
+      [...document.querySelectorAll('#sheet [data-act="hfs-kind"]')].map(b => b.dataset.v).join()
+    );
+    ok(kinds === ",out", "kinds the notebook never had aren't listed: " + kinds);
+    await ctx.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

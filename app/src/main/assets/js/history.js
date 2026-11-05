@@ -105,8 +105,224 @@ function openHistory(f = {}) {
 }
 
 const histCount = () => ["acc", "kind", "cat", "who", "from", "to"].filter(k => HF[k]).length;
-/* Task 4 builds the Filters sheet here */
-function filtersSheet() {}
+/* ---- the Filters sheet: works on a copy (HFD); Show makes it the filters (HF), closing it any other way drops it */
+let HFD = null,
+  HFSIDE = "";
+const histAcc = a => a && (!a.archived || S.txns.some(t => t.account === a.id || t.to === a.id));
+const histAccs = () => S.accounts.filter(histAcc);
+const histAccVar = a => ' style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"';
+/* what picking one side (From or To) gives; with an account picked the other side is that account (an empty side
+   empties both) */
+function hfSide(d, side, id) {
+  const o = { ...d },
+    other = side === "from" ? "to" : "from";
+  o[side] = id;
+  if (d.acc) o[other] = id ? d.acc : "";
+  return o;
+}
+const hfRows = f => histRows(histList(f));
+/* how often each key comes up among the entries (most used first, then as listed) */
+function hfTally(list, key) {
+  const m = new Map();
+  list.forEach(t => {
+    const k = key(t);
+    if (k) m.set(k, (m.get(k) || 0) + 1);
+  });
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+/* a compact option: dimmed (aria-disabled, taps ignored) at 0 unless picked; its count is read with it */
+function hfChip(act, v, on, inner, n, o = {}) {
+  const dim = n === 0 && !on;
+  return (
+    '<button class="chip hfc' +
+    (o.cls ? " " + o.cls : "") +
+    (dim ? " dim" : "") +
+    '" data-act="' +
+    act +
+    '" data-v="' +
+    esc(v) +
+    '"' +
+    (o.k ? ' data-k="' + o.k + '"' : "") +
+    ' aria-pressed="' +
+    on +
+    '"' +
+    (dim ? ' aria-disabled="true"' : "") +
+    (o.attrs || "") +
+    ">" +
+    inner +
+    (n == null ? "" : ' <span class="hfn">' + n + "</span>") +
+    "</button>"
+  );
+}
+const hfName = s => '<span class="chn" dir="auto">' + esc(s) + "</span>";
+/* a dropdown chip (From, To): the account's dot and tint once one is chosen */
+function hfSideChip(side) {
+  const id = HFD[side],
+    a = id && acc(id),
+    label = T("history." + side + "Acc", { account: a ? a.name : T("history.anyAccount") }),
+    lock = !!(HFD.acc && HFD.from && HFD.to && id === HFD.acc),
+    inner = (a ? '<span class="adot"' + histAccVar(a) + "></span>" : "") + hfName(label);
+  if (lock) return '<span class="chip hfc lock tinted"' + histAccVar(a) + ">" + inner + "</span>";
+  return (
+    '<button class="chip hfc' +
+    (a ? " tinted" : "") +
+    '" data-act="' +
+    (side === "from" ? "hfs-from" : "hfs-to") +
+    '" aria-haspopup="dialog"' +
+    (a ? histAccVar(a) : "") +
+    ">" +
+    inner +
+    ic("down") +
+    "</button>"
+  );
+}
+function hfBody() {
+  const d = HFD,
+    kindOf = k => ({ ...d, kind: k, cat: "", who: "", from: "", to: "" });
+  let h = '<div class="sec">' + TH("common.account") + '</div><div class="hfrow">';
+  h += hfChip("hfs-acc", "", !d.acc, hfName(T("history.all")));
+  histAccs().forEach(a => {
+    const n = hfRows({ ...d, acc: a.id }).length;
+    h += hfChip(
+      "hfs-acc",
+      a.id,
+      d.acc === a.id,
+      '<span class="adot"' +
+        histAccVar(a) +
+        "></span>" +
+        hfName(a.name + (a.archived ? " (" + T("account.archivedTag") + ")" : "")),
+      n,
+      { cls: "acct", attrs: histAccVar(a) }
+    );
+  });
+  h += '</div><div class="sec">' + TH("history.transactions") + '</div><div class="hfrow">';
+  h += hfChip("hfs-kind", "", !d.kind, hfName(T("history.all")));
+  HIST_KINDS.forEach(([k]) => {
+    if (!S.txns.some(t => histKind(t) === k)) return; // never had one
+    h += hfChip("hfs-kind", k, d.kind === k, hfName(T("history.kind." + k)), hfRows(kindOf(k)).length);
+  });
+  h += "</div>";
+  if (d.kind === "out" || d.kind === "in") {
+    const rows = hfRows({ ...d, cat: "" }),
+      cats = hfTally(rows, t => t.cat);
+    if (d.cat && !cats.some(c => c[0] === d.cat)) cats.push([d.cat, 0]);
+    h += '<div class="sec">' + TH("history.category") + '</div><div class="hfrow">';
+    h += hfChip("hfs-sub", "", !d.cat, hfName(T("history.all")), null, { k: "cat" });
+    cats.forEach(([id, n]) => {
+      const c = S.cats.find(x => x.id === id);
+      if (c) h += hfChip("hfs-sub", id, d.cat === id, chipEmb(c) + hfName(catName(c)), n, { k: "cat", cls: "lead" });
+    });
+    h += "</div>";
+  } else if (d.kind === "lend" || d.kind === "borrow") {
+    const people = hfTally(hfRows({ ...d, who: "" }), t => t.loan && loan(t.loan) && loanWho(loan(t.loan)));
+    if (d.who && !people.some(p => p[0] === d.who)) people.push([d.who, 0]);
+    h +=
+      '<div class="sec">' +
+      TH(d.kind === "lend" ? "history.lentSec" : "history.borrowedSec") +
+      '</div><div class="hfrow">';
+    h += hfChip("hfs-sub", "", !d.who, hfName(T("history.everyone")), null, { k: "who" });
+    people.forEach(([who, n]) => {
+      h += hfChip("hfs-sub", who, d.who === who, hfName(who), n, { k: "who" });
+    });
+    h += "</div>";
+  } else if (d.kind === "xfer") {
+    h +=
+      '<div class="sec">' +
+      TH("history.between") +
+      '</div><div class="hfrow hfsides">' +
+      hfSideChip("from") +
+      '<button class="icon hfswap" data-act="hfs-swap" aria-label="' +
+      TH("history.swap") +
+      '">' +
+      ic("swap") +
+      "</button>" +
+      hfSideChip("to") +
+      "</div>";
+    const a = d.acc && acc(d.acc);
+    if (a) h += '<div class="hfhint">' + TH("history.oneSide", { account: a.name }) + "</div>";
+  }
+  return h;
+}
+function hfFoot() {
+  const n = hfRows(HFD).length;
+  return (
+    '<button class="hclear" data-act="hfs-clear">' +
+    TH("history.clearAll") +
+    '</button><button class="btn" data-act="hfs-show"' +
+    (n ? "" : " disabled") +
+    ">" +
+    TH(n ? "history.show" : "history.showNone", { count: n }) +
+    "</button>"
+  );
+}
+/* draw the sheet's choices again (the foot too), keeping the focus where it was */
+function hfsDraw() {
+  const root = $("#sheet");
+  if (!HFD || !$("#hfs-body")) return;
+  keepFocus(root, () => {
+    $("#hfs-body").innerHTML = hfBody();
+    $("#hfs-foot").innerHTML = hfFoot();
+  });
+  fitWrapped(root, ".chip .chn");
+}
+function filtersSheet() {
+  histDrop();
+  HFD = { ...HF };
+  openSheet(T("history.filters"), '<div id="hfs-body"></div><div class="hfs-foot" id="hfs-foot"></div>');
+  hfsDraw();
+}
+/* From / To as a menu of accounts with how many entries each leaves; it opens downward, or upward where there is no
+   room below */
+function hfMenu(side, btn) {
+  HFSIDE = side;
+  const a = HFD.acc,
+    items = [["", T("history.anyAccount"), hfRows(hfSide(HFD, side, "")).length]].concat(
+      histAccs()
+        .filter(x => x.id !== a)
+        .map(x => [x.id, x.name, hfRows(hfSide(HFD, side, x.id)).length, x])
+    );
+  $("#pop").innerHTML =
+    '<div class="pop" data-act="pop-bg"><div class="hmenu" role="dialog" aria-modal="true" aria-label="' +
+    esc(T(side === "from" ? "transfer.from" : "transfer.to")) +
+    '">' +
+    items
+      .map(([id, name, n, x]) => {
+        const on = HFD[side] === id,
+          dim = n === 0 && !on;
+        return (
+          '<button class="hmi' +
+          (dim ? " dim" : "") +
+          '" data-act="hfs-pick" data-v="' +
+          esc(id) +
+          '" aria-pressed="' +
+          on +
+          '"' +
+          (dim ? ' aria-disabled="true"' : "") +
+          ">" +
+          (x ? '<span class="adot"' + histAccVar(x) + "></span>" : "") +
+          hfName(name) +
+          (id ? ' <span class="hfn">' + n + "</span>" : "") +
+          (on ? ic("check") : "") +
+          "</button>"
+        );
+      })
+      .join("") +
+    "</div></div>";
+  const m = $("#pop .hmenu"),
+    r = btn.getBoundingClientRect(),
+    h = m.offsetHeight,
+    below = innerHeight - r.bottom - 8,
+    up = r.top - 8;
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + "px";
+  if (h <= below || below >= up) {
+    m.style.top = r.bottom + 4 + "px";
+    m.style.maxHeight = Math.max(120, below - 4) + "px";
+  } else {
+    m.style.bottom = innerHeight - r.top + 4 + "px";
+    m.style.maxHeight = Math.max(120, up - 4) + "px";
+  }
+  fitWrapped($("#pop"), ".chn");
+}
 const histChip = (v, text, label, attrs = "") =>
   '<button class="chip hchip" data-act="hf-del" data-v="' +
   v +

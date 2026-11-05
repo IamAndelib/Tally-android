@@ -496,6 +496,7 @@ function closeSheet() {
   closeSheet2();
   $("#sheet").innerHTML = "";
   F = null;
+  HFD = null; // History's Filters sheet: leaving it any way but Show drops its choices
   if (dayPending) {
     dayPending = false; // the day changed under the sheet: Home catches up now
     setTimeout(render, 0);
