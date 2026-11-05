@@ -277,6 +277,14 @@ const ok = (c, m) => {
         .forEach(e => {
           /* the layout size: a sheet or dialog still opening is drawn a little smaller (its animation's scale) */
           const b = { width: e.offsetWidth, height: e.offsetHeight };
+          /* a compact chip's touch target is its ::after, reaching past the drawn chip (History's Filters sheet) */
+          if (e.classList.contains("hfc")) {
+            const q = getComputedStyle(e, "::after");
+            if (q.content !== "none" && q.position === "absolute" && q.display !== "none") {
+              b.width = Math.max(b.width, parseFloat(q.width) || 0);
+              b.height = Math.max(b.height, parseFloat(q.height) || 0);
+            }
+          }
           if (!b.width || !b.height || getComputedStyle(e).visibility === "hidden") return;
           if (e.tagName === "A" && b.height < 24) return; // a link inside a sentence
           if (e.classList.contains("dd") ? b.height >= 48 && b.width >= 42 : b.width >= 48 && b.height >= 48) return;
@@ -304,6 +312,13 @@ const ok = (c, m) => {
     ["the currencies", () => curPicker("USD", () => {}, "Currency")],
     ["the time wheel", () => timePicker("Time", "21:00", () => {})],
     ["the summary", () => summarySheet()],
+    ["History, Filters", () => (openHistory(), filtersSheet())],
+    ["History, Filters, Transfers", () => (openHistory({ kind: "xfer" }), filtersSheet())],
+    [
+      "History, From menu",
+      () => (openHistory({ kind: "xfer" }), filtersSheet(), $('#sheet [data-act="hfs-from"]').click()),
+    ],
+    ["History, an opened row", () => (openHistory(), rowToggle($('#app .tx[data-v="e"]'), "e"))],
     ["a date picker", () => (txSheet(null, "expense", "food"), $("#sheet .datefld").click())],
     ["the period picker", () => ((V.screen = "home"), render(), $(".plabel").click())],
   ];

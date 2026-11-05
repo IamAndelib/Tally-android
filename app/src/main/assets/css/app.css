@@ -3226,7 +3226,7 @@ body.land.calcopen #snack .snack {
   text-align: end;
 }
 
-/* History's Filters sheet: compact chips (34px to see; the row gap makes up 48px to tap, each chip's ::before reaches
+/* History's Filters sheet: compact chips (34px to see; the row gap makes up 48px to tap, each chip's ::after reaches
    7px up and down), the sticky foot, and the From / To menu */
 .hfrow {
   display: flex;
@@ -3238,6 +3238,7 @@ body.land.calcopen #snack .snack {
 .hfc {
   position: relative;
   min-height: 34px;
+  min-width: 48px;
   padding: 0 12px;
   gap: 6px;
   font-size: 0.85rem;
@@ -3245,7 +3246,7 @@ body.land.calcopen #snack .snack {
 .hfc::after {
   content: "";
   position: absolute;
-  inset: -7px 0;
+  inset: -8px -1px; /* the border box and 7px more above and below: 48px with the row gap */
 }
 .hfc.lock::after {
   display: none;
@@ -3311,8 +3312,8 @@ body.land.calcopen #snack .snack {
 }
 .hfswap {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
 }
 .hfhint {
   margin: 10px 4px 0;
