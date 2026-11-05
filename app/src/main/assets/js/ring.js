@@ -65,8 +65,9 @@ function ringHTML(cats, o) {
     d0 = Math.round(u * (u < 70 ? 0.5 : 0.56)),
     dfit = Math.round(Math.max(u * 0.42, Math.min(d0, room))),
     names = room >= dfit - 1,
-    /* no name: only the % on Home, which still has to fit */
-    d = names ? dfit : Math.round(Math.max(u * 0.42, Math.min(d0, room + (home ? 1.3 * f : f * rows))));
+    /* no name: only the % on Home, which still has to fit, clear of the next icon on the diagonal too (a small
+       ring on a phone held sideways): the name's line less a little */
+    d = names ? dfit : Math.round(Math.max(u * 0.42, Math.min(d0, room + (home ? 1 * f : f * rows))));
   const pos = cats.map((c, i) => {
     const s = L.slots[i];
     return {

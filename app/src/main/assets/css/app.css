@@ -1769,6 +1769,18 @@ input {
 .seg button + button {
   border-left: 1px solid var(--outline);
 }
+/* four tabs that don't fit in a row (fitFigures): two rows of two, each word whole */
+.seg.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 20px;
+}
+.seg.two > button:nth-child(3) {
+  border-left: 0;
+}
+.seg.two > button:nth-child(n + 3) {
+  border-top: 1px solid var(--outline);
+}
 .seg button[aria-pressed="true"] {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
@@ -2671,6 +2683,12 @@ body.lock {
   font-size: 0.9rem;
   border-radius: 0;
   isolation: isolate;
+}
+/* a screen under 320px (a foldable's cover screen): a day's 35px column holds a 34px circle */
+@media (max-width: 319px) {
+  .dd {
+    --dd: min(34px, var(--row, 48px));
+  }
 }
 .dd::before {
   inset: 0;

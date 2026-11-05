@@ -421,6 +421,11 @@ function fitFigures(root) {
     if ([...r.children].some(b => b.scrollWidth > b.clientWidth + 1)) r.classList.add("stack");
   });
   fitWrapped(root, ".acc .n > span:last-child, .chip .chn");
+  /* tabs too wide for one row together (a sideways phone's narrow dialog, a large text size): two rows of two */
+  root.querySelectorAll(".seg").forEach(g => {
+    g.classList.remove("two");
+    if (g.children.length === 4 && g.scrollWidth > g.clientWidth + 1) g.classList.add("two");
+  });
   const shrink = (el, over) => {
     if (!over()) return;
     const f = parseFloat(getComputedStyle(el).fontSize);

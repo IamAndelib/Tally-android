@@ -39,8 +39,10 @@ const SIZES = (process.env.LAYOUT_SIZES || "")
   .split(",")
   .filter(Boolean)
   .map(x => {
-    const [w, h] = x.split("x").map(Number);
-    return { id: w + "x" + h, w, h };
+    const [win, scr] = x.split("s"), // <w>x<h>s<screen w>x<screen h>: a window smaller than its screen (split screen)
+      [w, h] = win.split("x").map(Number),
+      [sw, sh] = (scr || win).split("x").map(Number);
+    return { id: x, w, h, sw, sh };
   });
 const matrix = (SIZES.length ? SIZES : DEVICES.filter(d => !ONLY.length || ONLY.includes(d.id))).flatMap(d =>
   SCALES.filter(
@@ -300,7 +302,7 @@ function inspect() {
   }
   // 11. every control in view can be tapped: nothing lies on top of its middle (a bar, a scrim, another layer). One
   //     only partly in view (under the bottom bar, past its panel's edge, behind the keypad) is reached by scrolling.
-  const nav = layer.id === "app" && document.querySelector("#nav .in"),
+  const nav = layer.id === "app" && document.querySelector("#nav"),
     navTop = nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : vh;
   for (const [e, r] of rects) {
     if (e.disabled || e.closest(".calc")) continue;
@@ -424,7 +426,7 @@ function inspect() {
     const ctx = await browser.newContext({
       uiLang: dev.lang,
       viewport: { width: dev.w, height: dev.h },
-      screen: { width: dev.w, height: dev.h }, // the screen's shape tells a phone held sideways (phoneLand)
+      screen: { width: dev.sw || dev.w, height: dev.sh || dev.h }, // its shape tells a phone held sideways (phoneLand)
       deviceScaleFactor: 1,
       isMobile: true,
       reducedMotion: "reduce", // sheets and dialogs appear at once, so each state is measured settled
