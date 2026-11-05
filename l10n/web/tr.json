@@ -633,7 +633,14 @@
     "people": "Borçlar",
     "entries": "Kayıtlar",
     "showAll": "{{n}} kaydın tümünü göster",
-    "allTime": "{{entries}} · tüm zamanlar"
+    "allTime": "{{entries}} · tüm zamanlar",
+    "span": {
+      "w": "Hafta",
+      "m": "Ay",
+      "y": "Yıl",
+      "a": "Tümü"
+    },
+    "avg": "ortalama {{amount}}"
   },
   "nav": {
     "home": "Ana sayfa",

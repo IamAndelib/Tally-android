@@ -224,6 +224,13 @@ a {
 .srsum {
   margin: 8px 0 4px;
 }
+/* one result by Week, Month, Year or All: the Summary's tabs and bars (green for money received) */
+.seg.srspan {
+  margin: 8px 0 4px;
+}
+.srbars.got .smcol .b {
+  background: var(--got);
+}
 .appbar h1 {
   font-size: 1.35rem;
   font-weight: 600;

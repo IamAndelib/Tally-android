@@ -633,7 +633,14 @@
     "people": "Loans and lendings",
     "entries": "Entries",
     "showAll": "Show all {{n}}",
-    "allTime": "{{entries}} · all time"
+    "allTime": "{{entries}} · all time",
+    "span": {
+      "w": "Week",
+      "m": "Month",
+      "y": "Year",
+      "a": "All"
+    },
+    "avg": "{{amount}} on average"
   },
   "nav": {
     "home": "Home",

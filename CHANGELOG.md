@@ -17,7 +17,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Hold and drag to reorder accounts, credit cards, loans, lendings and other assets, and Home's balance chips (#33).
   Home's chips keep an order of their own.
 - **Search** (#37), next to History on Home and in History: matches grouped by payee, category, account and loan,
-  each with its count and total, and every matching entry; amounts and close matches too.
+  each with its count and total, and every matching entry; amounts and close matches too. Open one to see its entries
+  by week, month, year or all time, with bars and the change from the period before.
 
 ### Changed
 

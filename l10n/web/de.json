@@ -633,7 +633,14 @@
     "people": "Geliehen und verliehen",
     "entries": "Einträge",
     "showAll": "Alle {{n}} zeigen",
-    "allTime": "{{entries}} · insgesamt"
+    "allTime": "{{entries}} · insgesamt",
+    "span": {
+      "w": "Woche",
+      "m": "Monat",
+      "y": "Jahr",
+      "a": "Alles"
+    },
+    "avg": "durchschnittlich {{amount}}"
   },
   "nav": {
     "home": "Start",

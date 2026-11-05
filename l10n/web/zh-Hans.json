@@ -628,7 +628,14 @@
     "people": "借款与借出",
     "entries": "记录",
     "showAll": "显示全部{{n}}条",
-    "allTime": "{{entries}} · 全部时间"
+    "allTime": "{{entries}} · 全部时间",
+    "span": {
+      "w": "周",
+      "m": "月",
+      "y": "年",
+      "a": "全部"
+    },
+    "avg": "平均 {{amount}}"
   },
   "nav": {
     "home": "首页",

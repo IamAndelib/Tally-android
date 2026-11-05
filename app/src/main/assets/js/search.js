@@ -1,7 +1,7 @@
 /*
  * search.js — Search (#37): every entry, all time, from Home and History. As you type, matches are grouped by kind (who
  * was paid, who paid, categories, accounts, people with a loan, then single entries), a few of each with a count and a
- * total; one of them opens all its entries by day with their total. Matching ignores case and accents; each word typed
+ * total; one of them opens its entries by Week, Month, Year or All, with bars and the total. Matching ignores case and accents; each word typed
  * must start a word of the entry (anywhere in it for scripts written without spaces), a number matches amounts, and
  * only when nothing matches are words one typo away offered.
  */
@@ -78,10 +78,15 @@ function openSearch() {
   const inp = $("#sr-q");
   if (inp) inp.focus();
 }
+/* the results drawn anew: another set of rows, so the row in view isn't kept in place (render's rowAnchor) */
+function srRedraw() {
+  drawnScreen = "";
+  render();
+}
 function searchBack() {
   if (SR && SR.scope) {
     SR.scope = null;
-    render();
+    srRedraw();
     const inp = $("#sr-q");
     if (inp) inp.focus();
     return;
@@ -267,10 +272,24 @@ function srScope(v) {
           ? SR.q.trim()
           : (S.txns.find(t => t.payee && srFold(t.payee) === id) || {}).payee;
   SR.scope = { k, v: id, label: label || "?", fuzzy: k === "all" && !S.txns.some(t => srEntryHit(t, srTerms(SR.q))) };
-  render();
+  srRedraw();
   scrollTo(0, 0);
 }
-function srScoped() {
+/* one result's entries, by Week, Month, Year or All (SR.scope.span), like the Summary: up to six bars ending at the
+   chosen period (years for All), none before its first entry, that period's total against the one before, and its entries. The bars are for looking only; they
+   count spending, or money received when the result has no spending (a "Received from"). */
+const SR_SPANS = ["w", "m", "y", "a"];
+const srStart = (span, d) =>
+  span === "w" ? weekStart(d) : span === "m" ? d.slice(0, 7) + "-01" : d.slice(0, 4) + "-01-01";
+const srShift = (span, s, k) =>
+  span === "w"
+    ? addDays(s, 7 * k)
+    : span === "m"
+      ? shiftMonth(s.slice(0, 7), k) + "-01"
+      : String(+s.slice(0, 4) + k).padStart(4, "0") + "-01-01";
+const srEnd = (span, s) =>
+  span === "w" ? addDays(s, 6) : span === "m" ? monthEnd(s.slice(0, 7)) : s.slice(0, 4) + "-12-31";
+function srList() {
   const { k, v, fuzzy } = SR.scope,
     q = srTerms(SR.q),
     f =
@@ -282,16 +301,151 @@ function srScoped() {
             ? t => t.cat === v && !t.feeOf
             : k === "acc"
               ? t => t.account === v || t.to === v
-              : t => srEntryHit(t, q, fuzzy),
-    list = S.txns.filter(f).sort(byNewest),
-    tot = srTotals(list);
-  if (!list.length) return '<div class="empty">' + TH("search.none", { q: SR.scope.label }) + "</div>";
+              : t => srEntryHit(t, q, fuzzy);
+  return S.txns.filter(f).sort(byNewest);
+}
+function srSpan(span) {
+  SR.scope.span = span;
+  SR.scope.at = srStart(span, today());
+  srRedraw();
+}
+function srNav(d) {
+  const sc = SR.scope;
+  sc.at = srShift(sc.span, sc.at, d);
+  srRedraw();
+}
+function srScoped() {
+  const all = srList(),
+    sc = SR.scope,
+    t = today();
+  if (!all.length) return '<div class="empty">' + TH("search.none", { q: sc.label }) + "</div>";
+  /* it opens on this month, or on All when nothing of it is this month */
+  if (!sc.span) {
+    sc.span = all[0].date >= srStart("m", t) ? "m" : "a";
+    sc.at = srStart(sc.span, t);
+  }
+  const span = sc.span,
+    A = span === "a",
+    s = A ? "" : sc.at,
+    e = A ? "" : srEnd(span, s),
+    list = A ? all : all.filter(x => x.date >= s && x.date <= e),
+    /* the bars: in the currency most of its entries are in, spending unless it has none */
+    cn = {};
+  all.forEach(x => {
+    const c = (acc(x.account) || {}).currency;
+    cn[c] = (cn[c] || 0) + 1;
+  });
+  const cur = Object.keys(cn).sort((p, q) => cn[q] - cn[p])[0],
+    gotOnly = !all.some(isSpend),
+    counts = gotOnly ? x => x.type === "income" : isSpend,
+    vals = all.filter(x => counts(x) && inCur(x, cur)),
+    sum = (a, b) => rnd(vals.reduce((n, x) => (x.date >= a && x.date <= b ? n + x.amount : n), 0));
+  const first = srStart(A ? "y" : span, all[all.length - 1].date),
+    bars = [];
+  for (let i = 5; i >= 0; i--) {
+    const bs = srShift(A ? "y" : span, A ? srStart("y", t) : s, -i);
+    if (bs < first) continue; // nothing before its first entry
+    const be = srEnd(A ? "y" : span, bs);
+    bars.push({ s: bs, e: be, v: sum(bs, be) });
+  }
+  const max = Math.max(...bars.map(b => b.v), 0),
+    xLabel = b =>
+      span === "w"
+        ? parseISO(b.s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" })
+        : span === "m"
+          ? capFirst(parseISO(b.s).toLocaleDateString(DATE_LOC, { month: "short" }))
+          : b.s.slice(0, 4),
+    full = b =>
+      span === "w"
+        ? T("summary.weekOf", { date: parseISO(b.s).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }) })
+        : span === "m"
+          ? capFirst(monthLabel(b.s.slice(0, 7)))
+          : b.s.slice(0, 4);
+  let h =
+    '<div class="seg srspan">' +
+    SR_SPANS.map(
+      k =>
+        '<button data-act="sr-span" data-v="' +
+        k +
+        '" aria-pressed="' +
+        (span === k) +
+        '">' +
+        TH("search.span." + k) +
+        "</button>"
+    ).join("") +
+    "</div>";
+  if (!A)
+    h +=
+      '<div class="cal-h"><button class="icon" data-act="sr-nav" data-v="-1" aria-label="' +
+      TH("summary.earlier") +
+      '"' +
+      (s <= first ? " disabled" : "") +
+      ">" +
+      ic("left") +
+      "</button><b>" +
+      esc(span === "w" ? rangeLabel(s, e) : span === "m" ? capFirst(monthLabel(s.slice(0, 7), true)) : s.slice(0, 4)) +
+      '</b><button class="icon" data-act="sr-nav" data-v="1" aria-label="' +
+      TH("summary.later") +
+      '"' +
+      (e >= t ? " disabled" : "") +
+      ">" +
+      ic("right") +
+      "</button></div>";
+  h +=
+    '<div class="smchart smc srbars' +
+    (gotOnly ? " got" : "") +
+    '">' +
+    bars
+      .map(
+        b =>
+          '<div class="smcol' +
+          (A || b.s === s ? " on" : "") +
+          '" role="img" aria-label="' +
+          TH("common.labelValue", { label: full(b), value: money(b.v, cur) }) +
+          '"><span class="v">' +
+          (b.v ? esc(compact(b.v)) : "") +
+          '</span><span class="bw"><span class="b" style="height:' +
+          (b.v ? Math.max(2, (b.v / max) * 100) : 0).toFixed(1) +
+          '%"></span></span><span class="x">' +
+          esc(xLabel(b)) +
+          "</span></div>"
+      )
+      .join("") +
+    "</div>";
+  /* the period against the one before; one that isn't over yet by the same days of the one before; not when the
+     notebook was started during the one before (its total would be only part of it) */
+  let cmp = "";
+  if (!A && srShift(span, s, -1) >= S.txns.reduce((m, x) => (x.date < m ? x.date : m), t)) {
+    const v = sum(s, e > t ? t : e),
+      ps = srShift(span, s, -1),
+      pe = e > t ? addDays(ps, daysBetween(s, t)) : srEnd(span, ps),
+      was = sum(ps, pe < srEnd(span, ps) ? pe : srEnd(span, ps));
+    if (was > 0 && v > 0) {
+      const p = Math.round(((v - was) / was) * 100),
+        key = span === "y" ? (e > t ? "yp" : "y") : span;
+      cmp = T("summary." + (p === 0 ? "same" : p > 0 ? "up" : "down") + "." + key, {
+        pct: percent(Math.abs(p)),
+        year: +s.slice(0, 4) - 1,
+      });
+    }
+  }
+  if (!list.length)
+    return h + '<div class="empty">' + TH("history.none." + { w: "range", m: "month", y: "year" }[span]) + "</div>";
+  const tot = srTotals(list),
+    one = list.filter(counts),
+    avg =
+      one.length === list.length && one.every(x => inCur(x, cur))
+        ? T("search.avg", { amount: money(rnd(one.reduce((n, x) => n + x.amount, 0) / one.length), cur) })
+        : "",
+    n = T("home.entries", { count: list.length });
   return (
+    h +
     '<div class="smd srsum"><div class="muted small">' +
-    TH("search.allTime", { entries: T("home.entries", { count: list.length }) }) +
+    esc([A ? T("search.allTime", { entries: n }) : n, avg].filter(Boolean).join(" · ")) +
     "</div>" +
     (tot.spent ? '<div class="big spent">' + esc(tot.spent) + "</div>" : "") +
     (tot.got ? '<div class="big got">' + esc(tot.got) + "</div>" : "") +
+    (cmp ? '<div class="muted small">' + esc(cmp) + "</div>" : "") +
     "</div>" +
     dayGroups(list)
   );

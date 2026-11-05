@@ -638,7 +638,14 @@
     "people": "Préstamos",
     "entries": "Movimientos",
     "showAll": "Ver los {{n}}",
-    "allTime": "{{entries}} · desde siempre"
+    "allTime": "{{entries}} · desde siempre",
+    "span": {
+      "w": "Semana",
+      "m": "Mes",
+      "y": "Año",
+      "a": "Todo"
+    },
+    "avg": "{{amount}} de media"
   },
   "nav": {
     "home": "Inicio",

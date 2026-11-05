@@ -638,7 +638,14 @@
     "people": "Prêts et emprunts",
     "entries": "Opérations",
     "showAll": "Voir les {{n}}",
-    "allTime": "{{entries}} · depuis le début"
+    "allTime": "{{entries}} · depuis le début",
+    "span": {
+      "w": "Semaine",
+      "m": "Mois",
+      "y": "Année",
+      "a": "Tout"
+    },
+    "avg": "{{amount}} en moyenne"
   },
   "nav": {
     "home": "Accueil",

@@ -298,6 +298,12 @@ document.addEventListener("click", ev => {
     case "sr-unscope":
       searchBack();
       break;
+    case "sr-span":
+      srSpan(v);
+      break;
+    case "sr-nav":
+      srNav(+v);
+      break;
     case "f-showcats": {
       const g = $("#f-catgrid");
       g.hidden = !g.hidden;

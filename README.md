@@ -67,7 +67,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   running balance under every entry, its account's name in a pill of the account's colour; swipe sideways to move
   between accounts. Hold an entry to select several and delete them together.
 - **Search** every entry from Home or History: as you type, matches are grouped by who was paid, who paid you,
-  category, account and loan, each with its count and total; open one to see all its entries and what they come to.
+  category, account and loan, each with its count and total; open one to see its entries by week, month, year or all
+  time, with bars, what they come to and the change from the period before.
   A number finds amounts; a typo still finds close matches.
 - **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month, or a year's 12 months by category,
   compared with the period before.

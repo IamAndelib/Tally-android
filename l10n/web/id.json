@@ -628,7 +628,14 @@
     "people": "Pinjaman",
     "entries": "Transaksi",
     "showAll": "Lihat semua {{n}}",
-    "allTime": "{{entries}} · sepanjang waktu"
+    "allTime": "{{entries}} · sepanjang waktu",
+    "span": {
+      "w": "Minggu",
+      "m": "Bulan",
+      "y": "Tahun",
+      "a": "Semua"
+    },
+    "avg": "rata-rata {{amount}}"
   },
   "nav": {
     "home": "Beranda",

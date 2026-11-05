@@ -638,7 +638,14 @@
     "people": "Empréstimos",
     "entries": "Lançamentos",
     "showAll": "Ver todos os {{n}}",
-    "allTime": "{{entries}} · desde sempre"
+    "allTime": "{{entries}} · desde sempre",
+    "span": {
+      "w": "Semana",
+      "m": "Mês",
+      "y": "Ano",
+      "a": "Tudo"
+    },
+    "avg": "{{amount}} em média"
   },
   "nav": {
     "home": "Início",
