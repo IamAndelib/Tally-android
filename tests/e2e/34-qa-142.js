@@ -342,7 +342,7 @@ const ok = (c, m) => {
       V.screen = "history";
       Object.assign(HP, { period: "month", anchor: today() });
       render();
-      return $("#app .month .plabel span").textContent;
+      return $("#app .hpl span").textContent;
     });
     ok(/^[А-ЯЁ]/.test(h), "a Russian month heading starts with a capital: " + h);
     await ctx.close();

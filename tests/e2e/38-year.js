@@ -90,7 +90,10 @@ const ok = (c, m) => {
       render();
       return { label: $("#app").textContent.includes(String(y - 3)), empty: $("#app .empty").textContent };
     }, r.y);
-    ok(hist.label && hist.empty === "Nothing written down that year.", "History for an empty year: " + hist.empty);
+    ok(
+      hist.label && hist.empty.startsWith("Nothing matches these filters"),
+      "History for an empty year: " + hist.empty
+    );
     await ctx.close();
   }
 

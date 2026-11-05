@@ -46,19 +46,15 @@ const ok = (c, m) => {
       period: HP.period,
       label: periodLabel(HP),
       rng: range(HP),
-      next: canNext(HP),
       homeOk: V.period !== "all",
       rows: document.querySelectorAll("#app .row, #app .tx").length,
-      oldDate: historyList().some(t => t.date.startsWith(+today().slice(0, 4) - 3 + "-03")),
+      oldDate: histList().some(t => t.date.startsWith(+today().slice(0, 4) - 3 + "-03")),
     }));
     ok(r.period === "all", "History opens on all time: " + r.period);
     ok(r.label === "All time", "its label: " + r.label);
     ok(r.rng[0] === "0000-01-01" && r.rng[1] === "9999-12-31", "its range: " + r.rng);
     ok(r.oldDate, "the entry from three years ago is listed");
-    ok(!r.next, "no later period to step to");
     ok(r.homeOk, "Home does not take all");
-    await page.evaluate(() => shiftPeriod(-1, HP));
-    ok((await page.evaluate(() => HP.period)) === "all", "shifting does nothing on all time");
     await page.evaluate(() => {
       lastDay = addDays(today(), -1);
       catchUpToday();
@@ -204,6 +200,168 @@ const ok = (c, m) => {
     ok(r.orphan, "a fee whose entry is gone stays a row");
     ok(r.cleared === '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}all', "histClear: " + r.cleared);
     ok(r.opened === "bhistoryall", "openHistory sets the filter and all time: " + r.opened);
+    await ctx.close();
+  }
+
+  // ---- the screen: period chip, Filters, chips, month headings
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      const a = (id, name) => S.accounts.push({ id, name, type: "bank", currency: "USD", opening: 0, archived: false });
+      a("b", "Everyday");
+      a("c", "Cash");
+      const y = +today().slice(0, 4) - 1;
+      const t = (id, date, type, amount, account, extra) =>
+        S.txns.push({ id, ts: 1, date, type, amount, account, note: "", ...extra });
+      t("e1", y + "-06-17", "expense", 20, "c", { cat: "food" });
+      t("e2", y + "-06-16", "expense", 10, "b", { cat: "food" });
+      t("e3", y + "-05-02", "expense", 5, "c", { cat: "transport" });
+      t("i1", y + "-06-10", "income", 100, "b", { cat: "gift" });
+      t("x1", y + "-06-12", "transfer", 40, "b", { to: "c" });
+      save();
+      location.reload();
+    });
+    await page.waitForLoadState();
+    await page.waitForTimeout(200);
+    const act = (a, v) => page.click(`#app [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
+    const sub = () =>
+      page.evaluate(() => ({
+        sel: document.querySelectorAll('#app [data-act="tx-open"]').length,
+        chips: [...document.querySelectorAll('#app .hchips [data-act="hf-del"]')].map(b => b.dataset.v),
+        clear: document.querySelectorAll('#app [data-act="hf-clear"]').length,
+        filters: (document.querySelector('#app [data-act="hf-open"]') || {}).textContent,
+        all: !!document.querySelector('#app [data-act="hp-all"]'),
+      }));
+    await page.click('[data-act="go"][data-v="history"]');
+    let r = await sub();
+    ok(
+      r.chips.length === 0 && r.clear === 0 && !r.all,
+      "from Home: all time, no chips, no Clear all: " + JSON.stringify(r)
+    );
+    ok(r.filters.trim() === "Filters", "Filters unfilled: " + r.filters);
+    ok(
+      (await page.getAttribute('#app [data-act="hp-open"]', "aria-label")).startsWith("Choose a period"),
+      "the period chip's label is named"
+    );
+    ok((await page.getAttribute("#app .hfsum", "role")) === "status", "the summary line is a status region");
+    const mons = await page.evaluate(() => [...document.querySelectorAll("#app .hmon")].map(e => e.textContent));
+    const yr = new Date().getFullYear() - 1;
+    ok(
+      mons.length === 2 && mons[0].startsWith("June " + yr) && mons[0].includes("$30.00 spent · $100.00 received"),
+      "month headings carry the month's words: " + JSON.stringify(mons)
+    );
+    ok(mons[1].startsWith("May " + yr) && mons[1].includes("$5.00 spent"), "second month: " + mons[1]);
+
+    // an account's "Open in History"
+    await page.evaluate(() => {
+      V.screen = "home";
+      render();
+      accOpen("c");
+    });
+    await page.click('#sheet [data-act="hist-acc"]');
+    r = await sub();
+    ok(
+      (await page.evaluate(() => HF.acc + HP.period)) === "call" && r.chips.join() === "acc" && r.clear === 1,
+      "Open in History sets the account chip: " + JSON.stringify(r)
+    );
+    ok(/Filters\s*·\s*1/.test(r.filters), "Filters · 1: " + r.filters);
+    ok(
+      (await page.getAttribute('#app [data-act="hf-del"][data-v="acc"]', "aria-label")) === "Remove filter: Cash",
+      "the chip's ✕ is labelled"
+    );
+    ok(await page.isVisible('#app [data-act="hf-del"][data-v="acc"] .adot'), "an account chip has its colour dot");
+    // a period, then ✕ back to all time keeping the account
+    await page.evaluate(() => {
+      Object.assign(HP, { period: "month", anchor: today().slice(0, 4) - 1 + "-06-15" });
+      render();
+    });
+    ok((await sub()).all, "a set period has its ✕");
+    ok(
+      (await page.getAttribute('#app [data-act="hp-all"]', "aria-label")) === "Show all time",
+      "the ✕ is labelled Show all time"
+    );
+    for (const sel of ['[data-act="hp-open"]', '[data-act="hp-all"]']) {
+      const b = await (await page.$("#app " + sel)).boundingBox();
+      ok(b.height >= 47.5 && b.width >= 40, sel + " is a target: " + b.width + "x" + b.height);
+    }
+    await act("hp-all");
+    ok((await page.evaluate(() => HP.period + HF.acc)) === "allc", "✕ returns to all time and keeps the account");
+    // kind and its category
+    await page.evaluate(() => {
+      HF.kind = "out";
+      HF.cat = "food";
+      render();
+    });
+    ok((await sub()).chips.join() === "acc,kind,sub", "chips: account, kind, category");
+    await act("hf-del", "kind");
+    ok((await page.evaluate(() => HF.kind + "|" + HF.cat)) === "|", "removing the kind removes its category");
+    // Clear all, with a period set
+    await page.evaluate(() => {
+      HF.kind = "in";
+      Object.assign(HP, { period: "month", anchor: today() });
+      render();
+    });
+    ok(
+      (await page.evaluate(() => document.querySelector("#app .empty").textContent)).includes(
+        "Nothing matches these filters"
+      ) &&
+        (await sub()).clear === 1 &&
+        (await page.$$('#app .empty [data-act="hf-clear"]')).length === 1,
+      "nothing matches: one Clear all, under the words"
+    );
+    await act("hf-clear");
+    r = await sub();
+    ok(
+      (await page.evaluate(() => JSON.stringify(HF) + HP.period)) ===
+        '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}all' && r.clear === 0,
+      "Clear all goes back to the default view"
+    );
+    // Filters is wired to filtersSheet() (Task 4 fills it)
+    ok(
+      await page.evaluate(() => {
+        let called = 0;
+        const f = filtersSheet;
+        filtersSheet = () => called++;
+        document.querySelector('#app [data-act="hf-open"]').click();
+        filtersSheet = f;
+        return called === 1;
+      }),
+      "Filters calls filtersSheet()"
+    );
+    // selection hides the rows above; Select all takes the listed
+    await page.evaluate(() => {
+      HF.acc = "c";
+      render();
+    });
+    await act("sel-start");
+    ok(
+      (await page.$("#app .hbar")) === null && (await page.$("#app .hchips")) === null,
+      "selection hides the period and filter rows"
+    );
+    await act("sel-all");
+    ok((await page.evaluate(() => V.sel.size)) === 3, "Select all selects only the listed entries");
+    await act("sel-cancel");
+    // a sideways swipe does nothing
+    const before = await page.evaluate(() => JSON.stringify(HF) + JSON.stringify(HP));
+    const box = await (await page.$("#app .hmon")).boundingBox();
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 60, box.y + 12, { steps: 6 });
+    await page.mouse.up();
+    ok(
+      (await page.evaluate(() => JSON.stringify(HF) + JSON.stringify(HP))) === before,
+      "a sideways swipe changes nothing"
+    );
+    // leaving History forgets the filters
+    await page.click('#app [data-act="home"]');
+    await page.click('[data-act="go"][data-v="history"]');
+    ok(
+      (await page.evaluate(() => JSON.stringify(HF))) === '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}',
+      "leaving History and coming back resets the filters"
+    );
     await ctx.close();
   }
 

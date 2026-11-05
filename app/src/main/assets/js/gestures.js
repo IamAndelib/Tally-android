@@ -16,8 +16,7 @@ function swallowNextClick() {
 }
 let sw = null,
   LP = null,
-  smSw = null,
-  hsw = null;
+  smSw = null;
 /* true while a dropped ring tile glides into its slot (no new drag until the page has redrawn) */
 let ringSettling = false;
 /* like a phone keyboard's backspace: after 400 ms held, delete every 70 ms, faster (35 ms) after about a second */
@@ -44,8 +43,6 @@ function pressStart(x, y, target) {
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
   smSw = target.closest("#sm .smchart:not(.smy)") ? { x, y } : null; // the year's bars scroll sideways instead
-  /* History: a sideways swipe on the page (not on the chip strip, which scrolls) moves between account filters */
-  hsw = !layer && V.screen === "history" && !V.sel && !target.closest(".strip") ? { x, y } : null;
   /* holding the calculator's ⌫ keeps deleting (a quick tap is still one delete, through the click) */
   const bs = CALC && target.closest('.calc [data-act="calc-key"][data-v="⌫"]');
   if (bs) {
@@ -190,19 +187,6 @@ function pressEnd(x, y) {
     }
   }
   smSw = null;
-  /* History: finger left → the next account chip (All → Bank → Cash), right → back; stops at the ends */
-  if (hsw && x != null && !(LP && LP.active) && V.screen === "history" && !V.sel) {
-    const dx = x - hsw.x,
-      dy = y - hsw.y,
-      ids = histAccs(),
-      i = ids.indexOf(V.hAcc || ""),
-      j = i + (dx < 0 ? 1 : -1);
-    if (ids.length > 2 && Math.abs(dx) > 60 && Math.abs(dy) < 50 && j >= 0 && j < ids.length) {
-      setHistAcc(ids[j]);
-      buzz("tick");
-    }
-  }
-  hsw = null;
   if (LP && LP.kind === "repeat") {
     stopRepeat();
     if (LP.fired) swallowNextClick(); // the release shouldn't delete one more
@@ -504,7 +488,6 @@ document.addEventListener(
       /* a second finger (a pinch) ends every swipe */
       sw = null;
       smSw = null;
-      hsw = null;
       if (LP) {
         clearTimeout(LP.timer);
         stopRepeat();

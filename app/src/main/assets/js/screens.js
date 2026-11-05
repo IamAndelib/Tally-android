@@ -84,7 +84,10 @@ function toAnchor(a, box, scroller) {
 function drawScreen() {
   const app = $("#app");
   RBC = null;
-  if (V.screen !== "history") V.sel = null;
+  if (V.screen !== "history") {
+    V.sel = null;
+    HF = histBlank(); // leaving History forgets its filters
+  }
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
@@ -112,7 +115,6 @@ function drawScreen() {
   } else app.innerHTML = homeView();
   fitFigures(app);
   if (document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
-  document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
       [
@@ -807,22 +809,6 @@ function dayGroups(list) {
   });
   return cur ? h + "</div>" : h;
 }
-/* History's account filter ("" = All), from its chips or a sideways swipe; the chosen chip scrolls into view */
-function setHistAcc(id) {
-  V.hAcc = id || "";
-  if (V.sel) V.sel = new Set();
-  render();
-  const chip = $('.strip [data-act="hacc"][aria-pressed="true"]');
-  if (chip && chip.scrollIntoView) chip.scrollIntoView({ block: "nearest", inline: "nearest" });
-}
-/* the History filter chips in order: All, then the accounts shown */
-const histAccs = () => [""].concat(S.accounts.filter(a => !a.archived || a.id === V.hAcc).map(a => a.id));
-function historyList() {
-  const [s, e] = range(HP);
-  let list = S.txns.filter(t => t.date >= s && t.date <= e);
-  if (V.hAcc) list = list.filter(t => t.account === V.hAcc || t.to === V.hAcc);
-  return list.sort(byNewest);
-}
 /* a row ticked or unticked in History's selection: that row and the count change, not the whole (long) list */
 function selSync(b) {
   const on = V.sel.has(b.dataset.v),
@@ -832,96 +818,6 @@ function selSync(b) {
   b.querySelector(".em.pick").innerHTML = ic(on ? "checked" : "unchecked");
   $("#app .appbar h1").textContent = T("history.selected", { count: n });
   $('#app [data-act="sel-del"]').disabled = !n;
-}
-function historyView() {
-  if (V.hAcc && !acc(V.hAcc)) V.hAcc = ""; // its account was deleted, or a backup restored
-  const list = historyList();
-  /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
-     entry out of sight */
-  if (V.sel) {
-    const listed = new Set(list.map(t => t.id));
-    V.sel = new Set([...V.sel].filter(id => listed.has(id)));
-  }
-  let h;
-  if (V.sel) {
-    const n = V.sel.size;
-    h =
-      '<header class="appbar"><button class="icon" data-act="sel-cancel" aria-label="' +
-      TH("history.stopSel") +
-      '">' +
-      ic("close") +
-      "</button><h1>" +
-      TH("history.selected", { count: n }) +
-      "</h1>" +
-      '<button class="icon" data-act="sel-all" aria-label="' +
-      TH("history.selAll") +
-      '">' +
-      ic("selectall") +
-      "</button>" +
-      '<button class="icon" data-act="sel-del" aria-label="' +
-      TH("history.delSel") +
-      '"' +
-      (n ? "" : " disabled") +
-      ">" +
-      ic("delete") +
-      "</button></header>";
-  } else
-    h =
-      '<header class="appbar"><button class="icon" data-act="home" aria-label="' +
-      TH("common.back") +
-      '">' +
-      ic("back") +
-      "</button><h1>" +
-      TH("common.history") +
-      "</h1>" +
-      searchBtn() +
-      (list.length
-        ? '<button class="icon" data-act="sel-start" aria-label="' +
-          TH("history.select") +
-          '">' +
-          ic("checkbox") +
-          "</button>"
-        : "") +
-      "</header>";
-  h +=
-    '<div class="month"><button class="icon" data-act="hmon" data-v="-1" aria-label="' +
-    TH("common.previous") +
-    '">' +
-    ic("left") +
-    '</button><button class="plabel" data-act="period-open" data-v="hist" aria-haspopup="dialog"><span>' +
-    esc(periodLabel(HP)) +
-    "</span>" +
-    ic("down") +
-    '</button><button class="icon" data-act="hmon" data-v="1" aria-label="' +
-    TH("common.next") +
-    '"' +
-    (canNext(HP) ? "" : " disabled") +
-    ">" +
-    ic("right") +
-    "</button></div>";
-  const accs = S.accounts.filter(a => !a.archived || a.id === V.hAcc); // same order as histAccs()
-  if (accs.length > 1)
-    h +=
-      '<div class="strip" style="margin-top:8px"><button class="chip" data-act="hacc" data-v="" aria-pressed="' +
-      !V.hAcc +
-      '">' +
-      TH("history.all") +
-      "</button>" +
-      accs
-        .map(
-          a =>
-            '<button class="chip" data-act="hacc" data-v="' +
-            a.id +
-            '" aria-pressed="' +
-            (V.hAcc === a.id) +
-            '"><span class="chn" dir="auto">' +
-            esc(a.name) +
-            "</span></button>"
-        )
-        .join("") +
-      "</div>";
-  if (!list.length) return h + '<div class="empty">' + TH("history.none." + HP.period) + "</div>";
-  return h + dayGroups(list);
 }
 function catGrid(kind) {
   let h = '<div class="cgrid" data-kind="' + kind + '">';

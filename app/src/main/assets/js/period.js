@@ -18,12 +18,12 @@ const V = {
   rs: null,
   re: null,
   cur: null,
-  hAcc: "",
   showArchived: false,
   sel: null,
 };
 /* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month"|"year", anchor, rs, re}; History
-   alone also has "all" (all time, its default), which Home never takes */
+   alone also has "all" (all time, its default), which Home never takes. Only Home steps (‹ ›, swipes); History's
+   period is picked in the dialog */
 const HP = {};
 const histAllTime = () => Object.assign(HP, { period: "all", anchor: today(), rs: null, re: null });
 histAllTime();
@@ -50,8 +50,8 @@ function periodText(p) {
   if (p === HP || m.slice(0, 4) === t.slice(0, 4)) return monthLabel(m, p === HP);
   return parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short", year: "numeric" });
 }
-function shiftPeriod(n, p = V) {
-  if (p.period === "all") return;
+function shiftPeriod(n) {
+  const p = V;
   if (p.period === "day") p.anchor = addDays(p.anchor, n);
   else if (p.period === "range") {
     const len = daysBetween(p.rs, p.re) + 1;
@@ -66,7 +66,7 @@ function shiftPeriod(n, p = V) {
   else p.anchor = shiftMonth(p.anchor.slice(0, 7), n) + "-01";
   if (p.anchor > today()) p.anchor = today();
 }
-const canNext = (p = V) => p.period !== "all" && range(p)[1] < today();
+const canNext = () => range(V)[1] < today();
 /* what Home opens on (Settings → Region): today, this month or this year; its Today chip comes back to it */
 function homePeriod() {
   V.period = S.settings.home;

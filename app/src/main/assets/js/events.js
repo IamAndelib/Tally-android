@@ -60,8 +60,11 @@ document.addEventListener("click", ev => {
       break;
     case "go":
       closeSheet();
-      V.screen = v;
-      render();
+      if (v === "history") openHistory();
+      else {
+        V.screen = v;
+        render();
+      }
       scrollTo(0, 0);
       break;
     case "tab":
@@ -153,7 +156,7 @@ document.addEventListener("click", ev => {
       cycleDonut();
       break;
     case "period-open":
-      periodDialog(v === "hist" ? HP : V);
+      periodDialog(V);
       break;
     case "pd-tab":
       PD.tab = v;
@@ -380,10 +383,7 @@ document.addEventListener("click", ev => {
       break;
     case "hist-acc":
       closeSheet();
-      V.hAcc = v;
-      Object.assign(HP, { period: "month", anchor: today() });
-      V.screen = "history";
-      render();
+      openHistory({ acc: v });
       scrollTo(0, 0);
       break;
     case "acc-form":
@@ -517,15 +517,26 @@ document.addEventListener("click", ev => {
       V.showArchived = true;
       render();
       break;
-    case "hmon":
-      if (+v < 0 || canNext(HP)) {
-        shiftPeriod(+v, HP);
-        if (V.sel) V.sel = new Set();
-        render();
-      }
+    case "hp-open":
+      periodDialog(HP);
       break;
-    case "hacc":
-      setHistAcc(v);
+    case "hp-all":
+      histAllTime();
+      render();
+      break;
+    case "hf-open":
+      filtersSheet();
+      break;
+    case "hf-del":
+      if (v === "acc") HF.acc = "";
+      else if (v === "from" || v === "to") HF[v] = "";
+      else if (v === "kind") Object.assign(HF, { kind: "", cat: "", who: "", from: "", to: "" });
+      else Object.assign(HF, { cat: "", who: "", from: "", to: "" });
+      render();
+      break;
+    case "hf-clear":
+      histClear();
+      render();
       break;
     case "sel-start":
       V.sel = new Set();
@@ -544,7 +555,7 @@ document.addEventListener("click", ev => {
       } else selSync(el);
       break;
     case "sel-all": {
-      const ids = historyList().map(t => t.id);
+      const ids = histList().map(t => t.id);
       V.sel = ids.every(id => V.sel.has(id)) ? new Set() : new Set(ids);
       render();
       break;

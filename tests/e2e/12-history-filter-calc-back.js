@@ -36,7 +36,7 @@ const ok = (c, m) => {
   };
   const settle = () => page.waitForTimeout(150);
 
-  // ---- 1. History account filter: chips size to their text and the row scrolls
+  // ---- 1. History account filter: its chip sizes to its text
   await page.goto(appUrl);
   await page.evaluate(() =>
     localStorage.setItem(
@@ -64,41 +64,23 @@ const ok = (c, m) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.evaluate(() => (document.documentElement.dataset.theme = "dark"));
   await settle();
-  const chipBoxes = await page.evaluate(() =>
-    [...document.querySelectorAll(".strip .chip")].map(c => ({
-      text: c.textContent,
-      width: c.getBoundingClientRect().width,
-      scrollWidth: c.scrollWidth,
-    }))
-  );
+  /* the account filter is a chip under the period row (the list of accounts to pick from is in the Filters sheet) */
+  const chipBoxes = [];
+  for (const id of ["c", "k", "w", "b", "d"]) {
+    await page.evaluate(id => openHistory({ acc: id }), id);
+    await settle();
+    chipBoxes.push(
+      await page.evaluate(() => {
+        const c = document.querySelector('.hchips [data-act="hf-del"][data-v="acc"]');
+        return { text: c.textContent, width: c.getBoundingClientRect().width, scrollWidth: c.scrollWidth };
+      })
+    );
+  }
   ok(
     chipBoxes.every(c => c.scrollWidth <= c.width + 1),
-    "every account chip is wide enough for its own text, no clipping: " + JSON.stringify(chipBoxes)
-  );
-  const stripOverflow = await page.evaluate(() => {
-    const s = document.querySelector(".strip");
-    return { clientWidth: s.clientWidth, scrollWidth: s.scrollWidth };
-  });
-  ok(
-    stripOverflow.scrollWidth > stripOverflow.clientWidth,
-    "the filter row overflows and scrolls instead of squeezing chips: " + JSON.stringify(stripOverflow)
+    "every account filter chip is wide enough for its own text, no clipping: " + JSON.stringify(chipBoxes)
   );
   await page.screenshot({ path: OUT + "/history-chips.png" });
-  // scroll it to confirm the last chip is reachable, not just visually truncated
-  await page.evaluate(() => {
-    document.querySelector(".strip").scrollLeft = 9999;
-  });
-  await settle();
-  await page.screenshot({ path: OUT + "/history-chips-scrolled.png" });
-  const lastChip = await page.evaluate(() => {
-    const cs = [...document.querySelectorAll(".strip .chip")];
-    const c = cs[cs.length - 1];
-    return { text: c.textContent, width: c.getBoundingClientRect().width, scrollWidth: c.scrollWidth };
-  });
-  ok(
-    lastChip.scrollWidth <= lastChip.width + 1,
-    "scrolled into view, the last chip is unclipped too: " + JSON.stringify(lastChip)
-  );
 
   // ---- 2/3. calculator: taller keys, visible caret (stays focused, not blurred), inputmode swap
   await act("home");

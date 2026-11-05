@@ -466,10 +466,6 @@ body.land .pnav .plabel.long {
   margin: 4px -4px 0;
   touch-action: pan-y;
 }
-/* History: sideways swipes belong to the app (they switch the account filter); the chip strip still scrolls itself */
-body.hist #app {
-  touch-action: pan-y;
-}
 .ring.edit {
   margin: 0 -4px;
   background: var(--surface-container);
@@ -3034,4 +3030,111 @@ body.land.calcopen #snack .snack {
 [role="dialog"]:focus,
 [role="alertdialog"]:focus {
   outline: none;
+}
+
+/* History: the period chip (label and ✕ are two targets), Filters, one chip per set filter, the summary line, and a
+   heading for each month */
+.hbar,
+.hchips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.hbar {
+  margin-top: 4px;
+}
+.hchips {
+  margin-top: 8px;
+}
+.hp {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.hp.set {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  border-color: transparent;
+}
+.hpl {
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 12px 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+}
+.hpl > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hp.set .hpl {
+  padding-right: 4px;
+}
+.hpx {
+  flex: none;
+  width: 44px;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+}
+.hp .ic,
+.hchip .ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.hfbtn.on,
+.hchip {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  border-color: transparent;
+}
+.hchip[data-v="acc"] {
+  background: rgb(var(--acr) / var(--tint-a));
+  color: var(--on-surface);
+}
+.hchip .chn {
+  flex: 0 1 auto;
+}
+.hclear {
+  min-height: 48px;
+}
+.hfsum {
+  margin: 12px 4px 0;
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+}
+.hfsum:empty {
+  display: none;
+}
+.hfsum b {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+.hmon {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 16px 4px 0;
+  font-weight: 600;
+}
+.hmon > span:last-child {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--on-surface-variant);
+  margin-inline-start: auto;
+  text-align: end;
 }

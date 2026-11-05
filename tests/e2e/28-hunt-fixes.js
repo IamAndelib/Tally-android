@@ -1442,16 +1442,14 @@ const ok = (c, m) => {
       return !!n && n.scrollWidth <= n.clientWidth + 1 && c.scrollWidth <= c.clientWidth + 1;
     }, sel);
   await narrow.evaluate(() => {
-    V.screen = "history";
-    V.hAcc = "b";
-    render();
+    openHistory({ acc: "b" });
   });
   ok(
-    await chipOk('.strip [data-act="hacc"][data-v="b"]'),
-    "History's chip for a long account name shows it whole and keeps its ✓"
+    await chipOk('.hchips [data-act="hf-del"][data-v="acc"]'),
+    "History's chip for a long account name shows it whole and keeps its ✕"
   );
   await narrow.evaluate(() => {
-    V.hAcc = "";
+    HF.acc = "";
     V.screen = "home";
     render();
     loanForm("lend");

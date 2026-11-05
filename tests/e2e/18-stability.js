@@ -337,14 +337,13 @@ const ago = n => {
     assets: [],
   });
   await page.evaluate(() => {
-    V.screen = "history";
-    V.hAcc = "c";
+    openHistory({ acc: "c" });
     S.accounts = S.accounts.filter(x => x.id !== "c");
     render();
   });
   ok(
-    (await page.evaluate(() => V.hAcc)) === "" && (await page.$$('#app [data-act="tx-open"]')).length === 1,
-    "a filter on a deleted account resets to All"
+    (await page.evaluate(() => HF.acc)) === "" && (await page.$$('#app [data-act="tx-open"]')).length === 1,
+    "a filter on a deleted account is dropped"
   );
 
   // ---- 11. restore: a file that can't be read
@@ -365,7 +364,7 @@ const ago = n => {
   ok(pv[0] === "day" && pv[1] === today() && pv[2].startsWith("Today"), "Home: Month tab → Today shows today: " + pv);
   await act("go", "history");
   await settle();
-  await act("period-open", "hist");
+  await act("hp-open");
   await act("pd-tab", "month");
   await act("pd-today");
   pv = await page.evaluate(() => [HP.period, HP.anchor]);
@@ -537,8 +536,7 @@ const ago = n => {
   );
   await tp.reload();
   await tp.evaluate(() => {
-    V.screen = "history";
-    render();
+    openHistory({ acc: "" });
   });
   const tcdp = await tctx.newCDPSession(tp);
   const T = (type, x, y) =>
@@ -550,24 +548,17 @@ const ago = n => {
     await T("touchEnd");
     await tp.waitForTimeout(200);
   };
-  const hAcc = () => tp.evaluate(() => V.hAcc);
+  const filt = () => tp.evaluate(() => JSON.stringify(HF) + JSON.stringify(HP));
+  const before = await filt();
   const list = await (await tp.$("#app .list")).boundingBox();
   const lx = list.x + list.width / 2,
     ly = list.y + 30;
   await swipe(lx + 60, ly, -120);
-  ok((await hAcc()) === "a", "swipe left: All → Bank");
-  await swipe(lx + 60, ly, -120);
-  const onCash = await tp.evaluate(() => [V.hAcc, $('.strip [data-v="c"]').getAttribute("aria-pressed")]);
-  ok(onCash[0] === "c" && onCash[1] === "true", "swipe left again: Cash, its chip pressed " + onCash);
-  await swipe(lx + 60, ly, -120);
-  ok((await hAcc()) === "c", "at the last account it stops");
+  ok((await filt()) === before, "a swipe left in History changes nothing (accounts are a filter now)");
   await swipe(lx - 60, ly, 120);
-  ok((await hAcc()) === "a", "swipe right: back to Bank");
+  ok((await filt()) === before, "a swipe right changes nothing either (no period stepping)");
   await swipe(lx - 60, ly, 40, 120);
-  ok((await hAcc()) === "a", "a mostly vertical swipe changes nothing");
-  const strip = await (await tp.$(".strip")).boundingBox();
-  await swipe(strip.x + strip.width / 2 + 60, strip.y + strip.height / 2, -120);
-  ok((await hAcc()) === "a", "a swipe on the chip strip itself changes nothing");
+  ok((await filt()) === before, "a mostly vertical swipe changes nothing");
   await tctx.close();
 
   // ---- 17. round 26: label room under a selected category, donut centre modes, haptic strength, About, symbols

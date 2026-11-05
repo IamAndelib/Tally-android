@@ -407,7 +407,7 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="go"][data-v="history"]');
   await page.waitForTimeout(80);
   ok(
-    (await page.isVisible(".month .plabel")) && !(await page.isVisible("#sheet .p")),
+    (await page.isVisible("#app .hpl")) && !(await page.isVisible("#sheet .p")),
     "Open full history still goes to History"
   );
   await tap('[data-act="home"]');

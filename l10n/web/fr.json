@@ -698,7 +698,6 @@
     "selAll": "Tout sélectionner",
     "delSel": "Supprimer la sélection",
     "select": "Sélectionner des opérations",
-    "all": "Tout",
     "allTime": "All time",
     "none": {
       "all": "Nothing written down yet.",
@@ -719,7 +718,29 @@
       "added": "{{amount}} added",
       "takenOff": "{{amount}} taken off",
       "fees": "{{amount}} fees"
-    }
+    },
+    "filters": "Filters",
+    "filtersN": "Filters · {{count}}",
+    "choosePeriod": "Choose a period: {{period}}",
+    "showAll": "Show all time",
+    "removeFilter": "Remove filter: {{name}}",
+    "clearAll": "Clear all",
+    "noMatch": "Nothing matches these filters",
+    "count_many": "{{count}} entries",
+    "count_one": "{{count}} entry",
+    "count_other": "{{count}} entries",
+    "kind": {
+      "out": "Spent",
+      "in": "Received",
+      "xfer": "Transfers",
+      "lend": "Lent",
+      "borrow": "Borrowed",
+      "fix": "Balance fixes"
+    },
+    "fromAcc": "From {{account}}",
+    "toAcc": "To {{account}}",
+    "lentTo": "Lent to {{who}}",
+    "borrowedFrom": "Borrowed from {{who}}"
   },
   "remind": {
     "nudge": "Rappel du soir",

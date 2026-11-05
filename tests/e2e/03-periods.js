@@ -74,7 +74,18 @@ const ok = (c, m) => {
         .sort()
         .join("")
     );
-  const hlabel = () => page.textContent(".month .plabel");
+  const hlabel = () => page.textContent("#app .hpl span");
+  /* History has no ‹ › (the period is picked in the dialog): the period maths are still checked, stepped directly */
+  const step = n =>
+    page.evaluate(n => {
+      const home = { ...V };
+      Object.assign(V, HP);
+      shiftPeriod(n);
+      Object.assign(HP, V);
+      Object.assign(V, home);
+      if (V.sel) V.sel = new Set();
+      render();
+    }, n);
   const homeLabel = () => page.textContent(".pnav .plabel");
   const inMonth = x => x.slice(0, 7) === d.t.slice(0, 7);
   const expectMonth = ["a", "b", "c", "e"]
@@ -98,7 +109,7 @@ const ok = (c, m) => {
   ok(await page.isVisible("text=Theme"), "settings icon opens Settings");
   await act("home");
   await act("go", "history");
-  ok(await page.isVisible(".month .plabel"), "history icon opens History");
+  ok(await page.isVisible("#app .hpl"), "history icon opens History");
 
   // ---- history period
   ok((await hlabel()) === "All time", "History opens on all time: " + (await hlabel()));
@@ -108,8 +119,8 @@ const ok = (c, m) => {
   });
   ok(/\d{4}/.test(await hlabel()), "label is this month with year: " + (await hlabel()));
   ok((await rows()) === expectMonth, "shows this month " + (await rows()));
-  ok(await page.isDisabled('.month [data-act="hmon"][data-v="1"]'), "next disabled at this month");
-  await page.click(".month .plabel");
+  ok(!(await page.evaluate(() => canNext(HP))), "no later period than this month");
+  await page.click("#app .hpl");
   await page.waitForSelector("#pd");
   ok(
     (await page.isVisible('#pd [data-act="pd-tab"][data-v="range"]')) &&
@@ -130,18 +141,18 @@ const ok = (c, m) => {
   await page.click(`#pd [data-act="pd-day"][data-v="${d.m3}"]`);
   ok((await rows()) === "c", "picking a day shows only that day " + (await rows()));
   ok(!/\d{4}/.test(await hlabel()) && (await hlabel()).length > 3, "label shows the day: " + (await hlabel()));
-  await act("hmon", "1");
+  await step(1);
   ok((await rows()) === "", "› steps one day");
-  await act("hmon", "-1");
-  await act("hmon", "-1");
-  await act("hmon", "-1");
+  await step(-1);
+  await step(-1);
+  await step(-1);
   ok((await rows()) === "e", "‹ steps back by days " + (await rows()));
   await act("home");
   ok((await homeLabel()) === "Today", "Home period unchanged by History");
   await act("go", "history");
-  ok((await rows()) === "e", "History kept its period after visiting Home");
+  ok((await hlabel()) === "All time", "History opens on all time again after visiting Home");
   // range: tap start then end
-  await page.click(".month .plabel");
+  await page.click("#app .hpl");
   await act("pd-tab", "range");
   await nav('[data-act="pd-rday"]', d.m5);
   await page.click(`#pd [data-act="pd-rday"][data-v="${d.m5}"]`);
@@ -153,11 +164,17 @@ const ok = (c, m) => {
   ok((await hlabel()).includes("–"), "range label: " + (await hlabel()));
   await page.screenshot({ path: OUT + "/history-range.png" });
   // account chip combines with the period
-  await act("hacc", "k");
+  await page.evaluate(() => {
+    HF.acc = "k";
+    render();
+  });
   ok((await rows()) === "be", "account filter within range " + (await rows()));
-  await act("hacc", "");
+  await page.evaluate(() => {
+    HF.acc = "";
+    render();
+  });
   // drag a range
-  await page.click(".month .plabel");
+  await page.click("#app .hpl");
   await act("pd-tab", "range");
   await nav('[data-act="pd-rday"]', d.m3);
   const bb = async v => {
@@ -181,7 +198,7 @@ const ok = (c, m) => {
     ok((await rows()) === "abc", "range across months " + (await rows()));
   }
   // month: previous month
-  await page.click(".month .plabel");
+  await page.click("#app .hpl");
   await act("pd-tab", "month");
   await page.click(`#pd [data-act="pd-month"][data-v="${d.pm.slice(0, 7)}"]`).catch(async () => {
     await page.click('#pd [data-act="pd-year"][data-v="-1"]');
@@ -191,11 +208,11 @@ const ok = (c, m) => {
     (await rows()).includes("p") && !(await rows()).includes("a"),
     "picking a month shows that month " + (await rows())
   );
-  await act("hmon", "1");
+  await step(1);
   ok((await rows()) === expectMonth, "› steps a month");
   // open the dialog in dark for a screenshot
   await page.evaluate(() => (document.documentElement.dataset.theme = "dark"));
-  await page.click(".month .plabel");
+  await page.click("#app .hpl");
   await page.waitForTimeout(200);
   await page.screenshot({ path: OUT + "/history-dialog-dark.png" });
   await act("pd-close");
@@ -203,7 +220,7 @@ const ok = (c, m) => {
   // selection mode still works and resets on period change
   await act("sel-start");
   await act("sel-toggle", "a");
-  await act("hmon", "-1");
+  await step(-1);
   ok(
     (await page.evaluate(() => document.querySelector("header h1").textContent)) === "0 selected",
     "selection clears when the period changes"
