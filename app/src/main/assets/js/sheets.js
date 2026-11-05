@@ -881,6 +881,7 @@ function restoreCat(id) {
 function entriesSheet() {
   RBC = null;
   V.open = "";
+  rowsClose($("#app")); // one open row at a time: not the page's behind this list
   const list = periodTxns().sort(byNewest);
   openSheet(
     periodLabel(),
@@ -1044,9 +1045,18 @@ function rowDelete(id) {
     snack(no);
     return;
   }
+  /* the entries sheet drawn again, where it was scrolled to: after the delete, and after its Undo, which closes the
+     layers first (events.js), so it opens the sheet again if it was open and nothing else has taken its place */
   const p = $("#sheet #ent-list") && $("#sheet .p"),
     scroll = p ? p.scrollTop : 0,
-    own = 1 + (t.feeId ? 1 : 0);
+    screen = V.screen,
+    redraw = undone => {
+      if (!p || (undone && (V.screen !== screen || $("#sheet").innerHTML))) return;
+      entriesSheet();
+      const q = $("#sheet .p");
+      if (q) q.scrollTop = scroll;
+    };
+  const own = 1 + (t.feeId ? 1 : 0);
   let n = 0;
   withUndo(
     () => (n > own ? T("history.deleted", { count: n }) : T("common.deleted")),
@@ -1055,11 +1065,9 @@ function rowDelete(id) {
       deleteEntries([id]);
       n -= S.txns.length;
       V.open = "";
-    }
+    },
+    null,
+    () => redraw(true)
   );
-  if (p) {
-    entriesSheet();
-    const q = $("#sheet .p");
-    if (q) q.scrollTop = scroll;
-  }
+  redraw();
 }

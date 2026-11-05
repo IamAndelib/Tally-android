@@ -494,6 +494,10 @@ function groupAmountInputs(root) {
 }
 function closeSheet() {
   closeSheet2();
+  if ($("#sheet #ent-list")) {
+    V.open = ""; // a row opened in the entries sheet goes with it (rowToggle)
+    rowsClose($("#app"));
+  }
   $("#sheet").innerHTML = "";
   F = null;
   HFD = null; // History's Filters sheet: leaving it any way but Show drops its choices

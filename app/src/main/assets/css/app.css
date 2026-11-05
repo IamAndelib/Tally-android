@@ -850,7 +850,7 @@ body.land .pnav .plabel.long {
 }
 /* picked: a ✓ after the name, or in a chip that leads with an emblem (.lead) a check in place of its glyph, so the
    chip keeps its width and doesn't jump to the next line when tapped */
-.chip[aria-pressed="true"]:not(.lead)::after {
+.chip[aria-pressed="true"]:not(.lead):not(.hfc)::after {
   content: "✓";
   font-size: 0.8rem;
   flex: none;
@@ -3244,13 +3244,27 @@ body.land.calcopen #snack .snack {
   gap: 6px;
   font-size: 0.85rem;
 }
-.hfc::before {
+.hfc::after {
   content: "";
   position: absolute;
   inset: -7px 0;
 }
-.hfc.lock::before {
+.hfc.lock::after {
   display: none;
+}
+/* picked here the ✓ comes first, before the dot and the name (the rest of the app puts it last); it takes some of the
+   leading padding so the chip stays about as wide and doesn't jump to the next line when tapped. A chosen From / To
+   (a tinted button) leads with it too. The ::after is the touch target above. */
+.hfc[aria-pressed="true"]:not(.lead),
+button.hfc.tinted {
+  padding-inline-start: 2px;
+}
+.hfc[aria-pressed="true"]:not(.lead)::before,
+button.hfc.tinted::before {
+  content: "✓";
+  font-size: 0.8rem;
+  flex: none;
+  margin-inline-start: 6px;
 }
 .hfc.acct[aria-pressed="true"],
 .hfc.tinted {

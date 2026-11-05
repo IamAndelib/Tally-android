@@ -83,6 +83,8 @@ goes to the next line only when the line can't hold it). Sections, in order:
      list every transfer in and out of it; choosing From fills To with the picked account, locked (no ▾), and the
      other way round; ⇄ flips the two; the dropdowns never list the picked account.
    - **Balance fixes**, **All** → nothing more.
+   A picked chip shows its ✓ first (`✓ ● Cash`, `✓ Spent 40`, `✓ From ● Everyday ▾`), taking some of its leading
+   padding so it doesn't jump to the next line; chips elsewhere in the app keep the ✓ after the name.
 4. A sticky foot: **Clear all** (clears the sheet's choices) and **Show N entries**, the count of what the choices
    give, live; at 0 it reads **No entries** and is disabled.
 

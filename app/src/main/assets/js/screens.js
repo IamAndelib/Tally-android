@@ -863,12 +863,18 @@ function txOpenView(t) {
     "</div></div>"
   );
 }
+/* the rows opened in a list, closed (not V.open: the caller says which one stays) */
+function rowsClose(scope) {
+  scope.querySelectorAll(".txo").forEach(x => x.remove());
+  scope.querySelectorAll('.tx[aria-expanded="true"]').forEach(x => x.setAttribute("aria-expanded", "false"));
+}
 /* a tap on a row: it opens in place (the one open before closes), or closes. Only that row's part is added or removed,
-   not the whole (long) list drawn anew */
+   not the whole (long) list drawn anew. One row is open at a time, in the list that was tapped (the page, search or
+   the entries sheet, never the page behind a sheet): a list in a sheet starts with none open and the page's row behind
+   it is closed (entriesSheet), and closing that sheet leaves none open (closeSheet). */
 function rowToggle(row, id) {
   const was = V.open === id;
-  document.querySelectorAll(".txo").forEach(x => x.remove());
-  document.querySelectorAll('.tx[aria-expanded="true"]').forEach(x => x.setAttribute("aria-expanded", "false"));
+  rowsClose(row.closest("#sheet, #sr, #app") || document);
   V.open = was ? "" : id;
   const t = entry(id);
   if (was || !t) return;

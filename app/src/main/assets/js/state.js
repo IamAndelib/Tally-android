@@ -570,7 +570,7 @@ function currencies() {
 /* Every add/edit/delete of entries goes through here: snapshot entries, loans, accounts and assets, apply the change,
    save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. msg may be
    a function, read after the change. */
-function withUndo(msg, change, fx) {
+function withUndo(msg, change, fx, after) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
   const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
     before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) };
@@ -581,6 +581,7 @@ function withUndo(msg, change, fx) {
   snack(typeof msg === "function" ? msg() : msg, () => {
     Object.assign(S, before);
     commit();
+    if (after) after(); // e.g. an open list that shows the entries again
     snack(T("common.undone"));
   });
 }

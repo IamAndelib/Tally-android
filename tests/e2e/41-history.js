@@ -486,7 +486,7 @@ const ok = (c, m) => {
     const tall = await page.evaluate(() => {
       const c = document.querySelector('#sheet [data-act="hfs-kind"]');
       const b = c.getBoundingClientRect(),
-        z = getComputedStyle(c, "::before");
+        z = getComputedStyle(c, "::after");
       return { h: b.height, up: parseFloat(z.top), bh: parseFloat(z.height) };
     });
     ok(Math.round(tall.h) === 34, "compact chips are 34px tall: " + tall.h);
@@ -694,6 +694,87 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // a picked chip in the Filters sheet starts with its tick; picking doesn't move the chip to another line
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S.accounts.push({ id: "k", name: "Cash", type: "cash", currency: "USD", opening: 10, archived: false });
+      S.txns.push({ id: "xf", ts: 2, date: today(), type: "transfer", amount: 5, account: "a", to: "k", note: "" });
+      V.screen = "history";
+      render();
+      filtersSheet();
+    });
+    /* the chip's parts read left to right: the tick, the dot, the name */
+    const parts = sel =>
+      page.evaluate(sel => {
+        const b = document.querySelector(sel),
+          kids = [...b.children],
+          before = getComputedStyle(b, "::before").content,
+          after = getComputedStyle(b, "::after").content;
+        return {
+          before,
+          after,
+          order: kids.map(k =>
+            k.classList.contains("adot") ? "dot" : k.classList.contains("chn") ? "name" : k.className
+          ),
+          top: Math.round(
+            b.getBoundingClientRect().top -
+              document.querySelector('#sheet [data-act="hfs-acc"]').getBoundingClientRect().top
+          ),
+          pressed: b.getAttribute("aria-pressed"),
+        };
+      }, sel);
+    const chip = '#sheet [data-act="hfs-acc"][data-v="a"]';
+    const off = await parts(chip);
+    ok(
+      off.pressed === "false" && !off.before.includes("✓") && !off.after.includes("✓"),
+      "an unpicked chip has no tick: " + JSON.stringify(off)
+    );
+    await page.click(chip);
+    const on = await parts(chip);
+    ok(on.pressed === "true", "tapping picks it");
+    ok(
+      on.before.includes("✓") && !on.after.includes("✓"),
+      "a picked chip's tick comes first, none after: " + JSON.stringify(on)
+    );
+    ok(on.order.slice(0, 2).join() === "dot,name", "then the dot, then the name: " + on.order);
+    ok(on.top === off.top, "picking doesn't move the chip's row: " + off.top + " -> " + on.top);
+    const kindOn = await page.evaluate(() => {
+      const b = document.querySelector('#sheet [data-act="hfs-kind"][data-v="xfer"]');
+      b.click();
+      const c = document.querySelector('#sheet [data-act="hfs-kind"][data-v="xfer"]');
+      return getComputedStyle(c, "::before").content + "|" + getComputedStyle(c, "::after").content;
+    });
+    ok(kindOn.startsWith('"✓"') && !kindOn.endsWith('"✓"'), "a kind chip too: " + kindOn);
+    /* Between: a chosen side leads with the tick; an unset one has none */
+    await page.evaluate(() => {
+      HFD.acc = "";
+      HFD.from = "a";
+      hfsDraw();
+    });
+    const side = await page.evaluate(() => {
+      const bs = [...document.querySelectorAll("#sheet .hfsides > button.hfc")];
+      return bs.map(b => getComputedStyle(b, "::before").content);
+    });
+    ok(
+      side[0].includes("✓") && !side[1].includes("✓"),
+      "Between: the chosen side has the tick, the open one none: " + side
+    );
+    /* chips elsewhere keep theirs after the name */
+    const elsewhere = await page.evaluate(() => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.setAttribute("aria-pressed", "true");
+      b.textContent = "x";
+      document.body.append(b);
+      const r = getComputedStyle(b, "::after").content + "|" + getComputedStyle(b, "::before").content;
+      b.remove();
+      return r;
+    });
+    ok(elsewhere.startsWith('"✓"'), "other chips keep the tick after the name: " + elsewhere);
+    await ctx.close();
+  }
+
   // a notebook that never had a loan or a fix: no Lent, no Borrowed, no Balance fixes
   {
     const { ctx, page } = await open();
@@ -785,7 +866,8 @@ const ok = (c, m) => {
     const pr = await text(row("pay"));
     ok(pr.includes("+ $1.50 fee"), "a loan payment's fee is under its amount: " + pr);
     const cf = await text(row("coffee"));
-    ok(/Food.* · .*Cash/.test(cf) || cf.includes("Cash"), "category and account on the second line: " + cf);
+    const cs = await page.textContent(row("coffee") + " .s");
+    ok(cs.replace(/\s+/g, " ").trim() === "Eating out · Cash", "category and account on the second line: " + cs);
 
     /* tap opens, a second tap on another row closes the first */
     await page.click(row("coffee"));
@@ -829,8 +911,8 @@ const ok = (c, m) => {
     );
     ok(xo.text.includes("Paid in all") && xo.text.includes("$202.00"), "Paid in all $202.00: " + xo.text);
     ok(
-      xo.boxes.some(b => b.includes("$4,848.00")) || xo.boxes.some(b => b.includes("in Everyday")),
-      "the paying account's balance is after its fee"
+      xo.boxes.some(b => b.includes("$5,435.50") && b.includes("in Everyday")),
+      "the paying account's balance is after its fee ($5,050 + $600 draw - $12.50 cinema - $200 - $2): " + xo.boxes
     );
     ok(
       xo.boxes.some(b => b.includes("$313.15") && b.includes("in Cash")),
@@ -851,10 +933,8 @@ const ok = (c, m) => {
     ok(lo.bar, "the loan has its bar box");
     ok(lo.acts === "tx-open:Edit,tx-del:Delete,tx-lend:Open loan", "buttons: Edit, Delete, Open loan: " + lo.acts);
     await page.click('#app .txo [data-act="tx-lend"]');
-    ok(
-      !!(await page.$("#sheet .p")) && (await page.evaluate(() => F && F.kind)) !== undefined,
-      "Open loan opens the loan"
-    );
+    const lt = await page.evaluate(() => ($("#sheet .p h2") || {}).textContent || "");
+    ok(lt === "Maya", "Open loan opens the loan: its title is the person's name: " + lt);
     await page.evaluate(() => goBack());
 
     /* Edit opens the entry form; Delete removes the entry (and its fee) */
@@ -890,6 +970,192 @@ const ok = (c, m) => {
       return [...document.querySelectorAll("#sr .tx[data-v]")].map(r => r.dataset.v + ":" + r.dataset.act).join();
     });
     ok(sr.includes("tr1:row-open") && !sr.includes("fee1"), "search: the same rows: " + sr);
+    await ctx.close();
+  }
+
+  // rows: undo redraws the entries sheet; opening stays inside its list; search counts rows; the kinds of rows' boxes
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      const acct = (id, name, opening) =>
+        S.accounts.push({ id, name, type: "bank", currency: "USD", opening, archived: false });
+      acct("b", "Everyday", 5050);
+      acct("c", "Cash", 118);
+      const add = (id, date, type, amount, account, extra) =>
+        S.txns.push({ id, ts: 1000 + S.txns.length, date, type, amount, account, note: "", ...extra });
+      const d = n => addDays(today(), n);
+      S.loans.push({ id: "L1", kind: "lend", person: "Noor", account: "c", date: d(-5), note: "", status: "open" });
+      S.loans.push({ id: "L2", kind: "borrow", person: "Maya", account: "b", date: d(-9), note: "", status: "open" });
+      S.loans.push({ id: "L3", kind: "lend", person: "Omar", account: "c", date: d(-7), note: "", status: "open" });
+      add("e1", d(-1), "expense", 7.25, "c", { cat: "food", payee: "Bakery" });
+      add("e2", d(-1), "expense", 2.5, "c", { cat: "food", payee: "Tea House" });
+      add("xf", d(-2), "transfer", 200, "b", { to: "c", feeId: "xfee" });
+      add("xfee", d(-2), "expense", 2, "b", { cat: "fees", feeOf: "xf" });
+      add("draw", d(-9), "loan", 600, "b", { loan: "L2", dir: "in", principal: true });
+      add("back", d(-3), "loan", 100, "b", { loan: "L2", dir: "out", feeId: "bfee" });
+      add("bfee", d(-3), "expense", 1, "b", { cat: "fees", feeOf: "back" });
+      /* a lending paid back to us, with a fee on our side */
+      add("lend", d(-7), "loan", 80, "c", { loan: "L3", dir: "out", principal: true, due: d(30) });
+      add("got", d(-4), "loan", 30, "c", { loan: "L3", dir: "in", feeId: "gfee" });
+      add("gfee", d(-4), "expense", 0.5, "c", { cat: "fees", feeOf: "got" });
+      add("fix", d(-6), "adjust", -4, "c", {});
+      save();
+      V.screen = "history";
+      render();
+    });
+    const row = id => `#app .tx[data-v="${id}"]`;
+    const txt = async sel => (await page.textContent(sel)).replace(/\s+/g, " ");
+
+    /* more kinds of rows */
+    await page.click(row("got"));
+    const got = await txt("#app .txo");
+    ok(got.includes("Reached you"), "an incoming loan payment with a fee shows Reached you: " + got);
+    await page.click(row("lend"));
+    const lent = await txt("#app .txo");
+    ok(lent.includes("Due"), "a draw with a due date still owed shows Due: " + lent);
+    await page.click(row("fix"));
+    const fx = await txt("#app .txo");
+    ok(/Was\s*\$?[\d.,]+/.test(fx) && fx.includes("Now"), "a balance fix shows Was and Now: " + fx);
+    const fb = await page.evaluate(() =>
+      [...document.querySelectorAll("#app .txo .fbox")].map(b => b.textContent.replace(/\s+/g, " "))
+    );
+    /* Cash held $118 - $80 lent = $38 when the $4 was taken off */
+    ok(
+      fb.some(b => b.includes("Was") && b.includes("$38.00")) &&
+        fb.some(b => b.includes("Now") && b.includes("$34.00")),
+      "Was $38.00, Now $34.00: " + fb
+    );
+
+    /* selection mode: rows don't expand, a tap selects */
+    const sel = await page.evaluate(() => {
+      V.sel = new Set();
+      render();
+      return {
+        exp: document.querySelectorAll("#app .tx[aria-expanded]").length,
+        rows: document.querySelectorAll("#app .tx[data-v]").length,
+      };
+    });
+    ok(sel.rows > 0 && sel.exp === 0, "in selection mode rows have no aria-expanded: " + JSON.stringify(sel));
+    await page.click(row("e1"));
+    const picked = await page.evaluate(() => ({
+      open: V.open,
+      txo: document.querySelectorAll("#app .txo").length,
+      sel: V.sel ? [...V.sel].join() : null,
+    }));
+    ok(
+      picked.sel === "e1" && picked.txo === 0 && picked.open === "",
+      "a tap selects, doesn't open: " + JSON.stringify(picked)
+    );
+    await page.evaluate(() => {
+      V.sel = null;
+      render();
+    });
+
+    /* V.open clears when the screen changes */
+    await page.click(row("e1"));
+    ok((await page.evaluate(() => V.open)) === "e1", "e1 open");
+    const away = await page.evaluate(() => {
+      V.screen = "home";
+      render();
+      V.screen = "history";
+      render();
+      return { open: V.open, txo: document.querySelectorAll("#app .txo").length };
+    });
+    ok(away.open === "" && away.txo === 0, "an open row closes when the screen changes: " + JSON.stringify(away));
+
+    /* opening stays inside its list: the entries sheet's row doesn't close History's, and closing the sheet leaves
+       none open (the rule is in rowToggle) */
+    await page.click(row("e1"));
+    const behind = await page.evaluate(() => {
+      Object.assign(V, { period: "range", rs: addDays(today(), -12), re: today() });
+      entriesSheet();
+      return { open: V.open, pageTxo: document.querySelectorAll("#app .txo").length };
+    });
+    ok(
+      behind.open === "" && behind.pageTxo === 0,
+      "opening the sheet closes the page's row, V.open with it: " + JSON.stringify(behind)
+    );
+    await page.click('#sheet .tx[data-v="e2"]');
+    const inSheet = await page.evaluate(() => ({
+      open: V.open,
+      sheetTxo: document.querySelectorAll("#sheet .txo").length,
+      pageTxo: document.querySelectorAll("#app .txo").length,
+    }));
+    ok(
+      inSheet.open === "e2" && inSheet.sheetTxo === 1 && inSheet.pageTxo === 0,
+      "the sheet's row opens: " + JSON.stringify(inSheet)
+    );
+    /* a row opened on the page behind the sheet (e.g. after a redraw) is not closed by a tap in the sheet */
+    const kept = await page.evaluate(() => {
+      const r = document.querySelector('#app .tx[data-v="e1"]');
+      r.setAttribute("aria-expanded", "true");
+      r.insertAdjacentHTML("afterend", '<div class="txo" id="mark"></div>');
+      rowToggle(document.querySelector('#sheet .tx[data-v="e1"]'), "e1");
+      return {
+        mark: !!document.querySelector("#app #mark"),
+        sheetTxo: document.querySelectorAll("#sheet .txo").length,
+      };
+    });
+    ok(kept.mark && kept.sheetTxo === 1, "a tap in the sheet leaves the page's rows alone: " + JSON.stringify(kept));
+    await page.evaluate(() => {
+      document.querySelector("#app #mark").remove();
+      closeSheet();
+    });
+    const closed = await page.evaluate(() => ({ open: V.open, txo: document.querySelectorAll("#app .txo").length }));
+    ok(closed.open === "" && closed.txo === 0, "closing the sheet leaves no row open: " + JSON.stringify(closed));
+
+    /* Delete in the entries sheet, then Undo: the sheet shows the entry again */
+    await page.evaluate(() => entriesSheet());
+    await page.click('#sheet .tx[data-v="e2"]');
+    await page.click('#sheet .txo [data-act="tx-del"]');
+    await page.waitForTimeout(100);
+    ok(!(await page.$('#sheet .tx[data-v="e2"]')), "deleted: the row leaves the sheet");
+    await page.click('#snack [data-act="undo"]');
+    await page.waitForTimeout(100);
+    ok(!!(await page.$('#sheet .tx[data-v="e2"]')), "Undo: the row is back in the sheet");
+    ok(!!(await page.$("#sheet #ent-list")), "the entries sheet is still open");
+    await page.evaluate(() => closeSheet());
+
+    /* search counts the rows it shows; a fee that matches makes its entry the hit, listed once */
+    const sr = await page.evaluate(() => {
+      V.screen = "home";
+      openSearch();
+      $("#sr-q").value = "2";
+      searchInput("2");
+      const ids = [...document.querySelectorAll("#sr .tx[data-act='row-open']")].map(r => r.dataset.v);
+      const q = srTerms("2");
+      return {
+        ids,
+        hits: histRows(S.txns.filter(t => srEntryHit(t, q, false)))
+          .map(t => t.id)
+          .sort(),
+      };
+    });
+    ok(
+      sr.ids.includes("xf") && !sr.ids.includes("xfee"),
+      "search 2: the transfer (its $2 fee matches) is listed: " + sr.ids
+    );
+    ok(sr.ids.filter(x => x === "xf").length === 1, "listed once");
+    ok(sr.ids.slice().sort().join() === sr.hits.join(), "the rows shown are the hits: " + sr.ids + " / " + sr.hits);
+    const acctCount = await page.evaluate(() => {
+      const q = srTerms("everyday");
+      searchInput("everyday");
+      const sub = [...document.querySelectorAll("#sr [data-act='sr-scope'] .s")].map(x => x.textContent);
+      SR.scope = { k: "acc", v: "b" };
+      return {
+        sub,
+        scoped: srList().length,
+        rows: histRows(S.txns.filter(t => t.account === "b" || t.to === "b")).length,
+      };
+    });
+    ok(
+      acctCount.sub.some(x => x.startsWith(acctCount.rows + " ")),
+      "an account's count is its rows: " + acctCount.sub + " / " + acctCount.rows
+    );
+    ok(acctCount.scoped === acctCount.rows, "the scoped list is its rows: " + acctCount.scoped);
     await ctx.close();
   }
 

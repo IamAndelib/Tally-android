@@ -61,11 +61,16 @@ function srTexts(t) {
   if (t.type === "loan" && loan(t.loan)) out.push(loanWho(loan(t.loan)));
   return out.filter(Boolean);
 }
+/* an entry is found by its own words and amounts, or by its fee's (a fee has no row of its own: it is shown inside its
+   transfer or payment, so that is the hit, listed once) */
 function srEntryHit(t, q, fuzzy) {
+  const fee = t.feeId && entry(t.feeId),
+    one = (x, w, n) =>
+      (n && [x.amount, x.toAmount].some(a => a != null && a >= n.lo - 1e-9 && a < n.hi)) ||
+      srTexts(x).some(s => srHit(s, w, fuzzy));
   return q.every(w => {
     const n = srNum(w);
-    if (n && [t.amount, t.toAmount].some(a => a != null && a >= n.lo - 1e-9 && a < n.hi)) return true;
-    return srTexts(t).some(x => srHit(x, w, fuzzy));
+    return one(t, w, n) || (fee && one(fee, w, n));
   });
 }
 const srNameHit = (name, q, fuzzy) => q.every(w => srHit(name, w, fuzzy));
@@ -187,7 +192,7 @@ function srGroups(q, fuzzy) {
       "</button>",
     sub = list => {
       const tot = srTotals(list);
-      return [T("home.entries", { count: list.length }), tot.spent, tot.got].filter(Boolean).join(" · ");
+      return [T("home.entries", { count: histRows(list).length }), tot.spent, tot.got].filter(Boolean).join(" · ");
     },
     group = (title, rows) =>
       rows.length ? '<div class="sec">' + esc(title) + '</div><div class="list">' + rows.join("") + "</div>" : "";
@@ -302,7 +307,7 @@ function srList() {
             : k === "acc"
               ? t => t.account === v || t.to === v
               : t => srEntryHit(t, q, fuzzy);
-  return S.txns.filter(f).sort(byNewest);
+  return histRows(S.txns.filter(f).sort(byNewest)); // as many as the rows shown (a fee is inside its entry)
 }
 function srSpan(span) {
   SR.scope.span = span;
