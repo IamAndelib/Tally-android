@@ -371,6 +371,36 @@ const ok = (c, m) => {
     return { arrows: vis("#app .pnav > .icon"), search: vis('#app .appbar [data-act="search-open"]') };
   });
   ok(side.arrows === 0 && side.search === 1, "sideways: no period arrows, Search in the bar: " + JSON.stringify(side));
+  /* upright on a 360px phone the date fits beside its arrows, a past day's too; on a small phone at a large text size
+     in German "Heute" is whole too (where a date wouldn't fit, the arrows make room for it) */
+  for (const [w, sc, lang, want, back] of [
+    [360, 1, "en", 2, 2],
+    [320, 1.3, "de", null, 0],
+  ]) {
+    const up = await browser.newContext({ viewport: { width: w, height: 700 }, uiLang: lang, locale: lang });
+    await up.addInitScript(sc => {
+      window.Android = { getColors: () => null, setBars() {}, fontScale: () => sc };
+    }, sc);
+    const upPage = await up.newPage();
+    await upPage.goto(appUrl);
+    const r = await upPage.evaluate(back => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "a", name: "Cash", type: "cash", currency: "USD", opening: 10, archived: false });
+      V.period = "day";
+      V.anchor = addDays(today(), -back);
+      render();
+      const l = $(".pnav .plabel > span");
+      return {
+        arrows: [...document.querySelectorAll("#app .pnav > .icon")].filter(e => e.offsetWidth > 0).length,
+        whole: l.scrollWidth <= l.clientWidth + 1,
+        label: l.textContent,
+      };
+    }, back);
+    ok((want == null || r.arrows === want) && r.whole, w + "px @" + sc + ": the date whole: " + JSON.stringify(r));
+    await up.close();
+  }
   await tab.close();
   await phone.close();
 

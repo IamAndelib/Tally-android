@@ -286,15 +286,15 @@ a {
   z-index: 1;
 }
 .pnav > .icon:first-child {
-  margin-right: -10px;
+  margin-right: -16px; /* the glyph is 24px in its 48px: 4px from the date */
 }
 .pnav > .icon:last-child {
-  margin-left: -6px;
+  margin-left: -12px;
 }
 /* with Search, History and Settings beside it, a little smaller on the narrowest phones (320px: Today still whole) */
 .pnav .plabel {
   font-size: clamp(0.9rem, 4.5vw, 1.25rem);
-  padding: 0 6px 0 10px;
+  padding: 0 4px 0 8px;
 }
 /* no ‹ › on a phone held sideways (its narrow right side has no room for them beside the icons), nor where the date
    doesn't fit beside them (fitFigures: .noarr): a swipe on the ring and the period dialog still move the period */

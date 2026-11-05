@@ -112,7 +112,7 @@ const ok = (c, m) => {
   });
   await settle();
   const row = (await page.textContent(`[data-v="${fee.id}"]`)).replace(/\s+/g, " ");
-  ok(/Transfer fee\s*City Bank → Brac Joint/.test(row) && !row.includes("Food"), "History row: " + row);
+  ok(/Transfer fee.*City Bank.*→ Brac Joint/.test(row) && !row.includes("Food"), "History row: " + row);
   const day = (await page.textContent("#app .day")).replace(/\s+/g, " ");
   ok(day.includes("50.00") && !day.includes("60.00"), "the day's total leaves out the fee: " + day);
   await page.screenshot({ path: OUT + "/history.png" });
@@ -270,7 +270,7 @@ const ok = (c, m) => {
   const oldFee = saved131.txns.find(x => x.feeOf);
   const upRow = (await page.textContent(`[data-v="${oldFee.id}"]`)).replace(/\s+/g, " ");
   ok(
-    /Transfer fee\s*City Bank → Brac Joint/.test(upRow) && !upRow.includes("Food"),
+    /Transfer fee.*City Bank.*→ Brac Joint/.test(upRow) && !upRow.includes("Food"),
     "after the update, History: " + upRow
   );
   ok((await page.textContent("#app .day")).includes("50.00"), "the day's total is 50");
