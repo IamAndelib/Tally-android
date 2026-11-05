@@ -40,3 +40,7 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-05 · P3 · Home's chips keep swiping sideways (not a grid): icon 32px on the left in the middle, the name (two lines if need be, its box as wide as its longest line) and balance starting together beside it, the pair in the middle of the chip · maintainer
 - 2026-11-05 · P3 · Home's ‹ › go where the date doesn't fit beside them (as on a phone held sideways) · maintainer
 - 2026-11-05 · P3 · Chips always fit their content, never stretched to fill a row · maintainer
+- 2026-11-05 · P2 · History opens on all time with a period chip and a Filters sheet (account, kind, category or person, transfers' From/To), each option showing its count; "Clear all" returns to the default view · maintainer's pick from mocks (docs/specs/history-filters.md)
+- 2026-11-05 · P2 · Entry rows have two lines and open in place on a tap; a transfer's or payment's fee shows inside its entry, never as a row; no running balance on the row · maintainer's pick from mocks
+- 2026-11-05 · P3 · History has no visible summary line (the months carry their totals); a hidden status region still announces the entry count to TalkBack after each change · maintainer
+- 2026-11-05 · P3 · A loan's or balance fix's note shows only when the row is opened, under "Added at"; expenses, income and transfers keep theirs as the title · maintainer

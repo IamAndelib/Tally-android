@@ -20,8 +20,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
   each with its count and total, and every matching entry; amounts and close matches too. Open one to see its entries
   by week, month, year or all time, with bars and the change from the period before.
 
+- **History from all time**, with a period chip and a **Filters** sheet: by account, by kind (spent, received,
+  transfers, lent, borrowed, balance fixes), category, person, or the accounts a transfer went between. Each choice
+  shows how many entries it leaves; months carry their totals.
+
 ### Changed
 
+- Entries read in two lines, the same in History, Home and search: what it was and how much, then its category and
+  account. A tap opens the entry in place (the time it was added, the balance left, a loan's progress, any note on a
+  loan or balance fix) with Edit and Delete inside.
+- A transfer's or loan payment's fee sits inside its entry (`+ $2.00 fee`) instead of a row of its own, and
+  search counts entries the same way.
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
 - Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
 - Nothing is cut short or shrunk any more: names, notes, categories, chips, fields, tabs and buttons wrap onto another

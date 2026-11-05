@@ -63,9 +63,11 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 **Looking back**
 
-- **Home and History** for any day, date range, month or year; History filtered by account, with each account's
-  running balance beside every entry's account, marked with a dot of the account's colour; swipe sideways to move
-  between accounts. Hold an entry to select several and delete them together.
+- **Home and History** for any day, date range, month or year. History starts on all time; narrow it with the period
+  chip and the Filters sheet: account, kind of money movement, category, person, or the accounts a transfer went
+  between, each option showing how many entries it leaves. Entries are two lines with the account marked by a dot of
+  its colour; a transfer's fee sits inside it. Tap an entry to open it in place; hold one to select several and delete
+  them together.
 - **Search** every entry from Home or History: as you type, matches are grouped by who was paid, who paid you,
   category, account and loan, each with its count and total; open one to see its entries by week, month, year or all
   time, with bars, what they come to and the change from the period before.

@@ -12,19 +12,21 @@ Search stays the way to find entries by their words; History becomes the way to 
 
 **At the top of History** (under the app bar with Back, Search and Select):
 
-- A **period chip**, `All time ▾` by default. Its label opens the period dialog; once a period is set the chip shows it
-  (`June 2026`) with an **✕** that goes back to all time and keeps the other filters. Label and ✕ are separate targets,
-  each 48dp.
+- A **period chip**, `All time ▾` by default. Its label opens the period dialog (its accessible name is "Choose a
+  period: {{period}}", the label in the name); once a period is set the chip shows it (`June 2026`) with an **✕** that
+  goes back to all time and keeps the other filters. Label and ✕ are separate targets, each 48dp.
 - A **Filters** button with the filter icon; once filters are set it reads `Filters · 3` and is filled.
 - **Clear all**, a text button beside them, only while a period or a filter is set: it goes back to the default view
   (all time, no filters).
 - Under that row, each set filter as a **full-size chip with ✕** (48dp, not compact: people tap these ✕ often):
   `Credit card ✕` `Transfers ✕` `From Everyday ✕`. Removing a filter also removes the ones that depend on it (✕ on
   Spent removes its category; ✕ on Transfers removes From/To).
-- A **summary line**: the number of entries and their money in the words that fit what's shown (see Totals).
+- **No visible summary line** (maintainer's ruling): a visually hidden status region in its place says only the
+  entry count ("12 entries", nothing when the list is empty), so TalkBack hears the new count after a change. The money
+  in words is on the month headings.
 
 **The list**: every entry of the period and filters, newest first, grouped by **month headings** (month name and its
-totals, in the same words as the summary line), then by day as today.
+totals, see Totals), then by day as today.
 
 ## Entry rows
 
@@ -50,6 +52,9 @@ balances apart):
      of what's paid back and `$250.00 of $600.00 paid`; then **Paid in all** or **Reached you** when there's a fee,
      **Due** for a draw with a due date still owed, and the Left after box;
    - a balance fix: **Was** and **Now**.
+   A loan's or balance fix's **note** is not on the collapsed row (its line 2 is the account); the opened row shows it
+   as a quiet line under "Added at", wrapping. Expenses and income keep payee · note as their title, transfers their
+   note.
    No exchange rate (the row already shows both amounts).
 3. **Actions, centred**: Edit (tonal), Delete (danger), then **Open lending** / **Open loan** for loan entries.
 
@@ -95,7 +100,7 @@ near the foot of the screen.
 
 ## Totals
 
-The summary line and each month heading, per currency (several joined with "+"), in words:
+Each month heading, per currency (several joined with "+"), in words:
 
 | Shown | Words |
 |---|---|
@@ -127,8 +132,9 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 ## Accessibility and text
 
 - The period chip: "Choose a period" and "Show all time" for its two parts; each filter chip's ✕: "Remove filter:
-  Cash"; counts read with each option; a dimmed option is `aria-disabled`; the summary line is a status region, so
-  the new count is read out after Show.
+  Cash"; counts read with each option; a dimmed option is `aria-disabled`; the hidden status region (not shown on
+  screen) reads out the new count after Show or a removed chip. Search's counts use the same row rule as History: a
+  fee is folded into its entry and not counted.
 - The sheet is a layer like the others (focus in, Back closes it, what's behind is hidden from screen readers).
   From 840px it is a centred dialog, as every sheet is there; held sideways it takes the full height.
 - New texts, in all nine languages: Filters, Transactions, Between, From, To, Lent to, Borrowed from, Everyone, Any
