@@ -510,6 +510,10 @@ function goBack() {
     render();
     return true;
   }
+  if (V.screen === "search") {
+    searchBack();
+    return true;
+  }
   if (V.screen !== "home") {
     V.screen = "home";
     render();

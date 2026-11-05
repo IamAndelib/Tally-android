@@ -15,6 +15,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - **Settings → Region → Home opens on:** today, this month or this year (#41).
 - History shows each entry's account in a pill of the account's colour, so accounts are easy to tell apart (#37).
 - Hold and drag to reorder accounts, credit cards, loans, lendings and other assets, and Home's balance chips (#33).
+  Home's chips keep an order of their own.
+- **Search** (#37), next to History on Home and in History: matches grouped by payee, category, account and loan,
+  each with its count and total, and every matching entry; amounts and close matches too.
 
 ### Changed
 

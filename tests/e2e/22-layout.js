@@ -563,6 +563,22 @@ function inspect() {
       await page.evaluate(() => summarySheet());
       await page.click('#sheet [data-act="sm-mode"][data-v="m"]');
     });
+    await shot("search", async () => {
+      await page.evaluate(() => {
+        openSearch();
+        $("#sr-q").value = "a";
+        searchInput("a");
+      });
+    });
+    await shot("search-scope", async () => {
+      await page.evaluate(() => {
+        openSearch();
+        $("#sr-q").value = "a";
+        searchInput("a");
+        const b = $('#sr [data-act="sr-scope"]');
+        if (b) b.click();
+      });
+    });
     await shot("summary-year", async () => {
       await page.evaluate(() => summarySheet());
       await page.click('#sheet [data-act="sm-mode"][data-v="y"]');

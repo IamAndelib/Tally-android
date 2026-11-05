@@ -619,6 +619,22 @@
       "y": "Dieses Jahr auf Start öffnen"
     }
   },
+  "search": {
+    "title": "Suchen",
+    "placeholder": "Einträge suchen",
+    "hint": "Finde Einträge nach Notiz, Empfänger, Kategorie, Konto oder Betrag.",
+    "clear": "Löschen",
+    "unscope": "Zurück zu allen Ergebnissen, nicht nur {{name}}",
+    "none": "Nichts passt zu „{{q}}“.",
+    "close": "Keine genauen Treffer. Diese sind ähnlich:",
+    "spent": "{{amount}} ausgegeben",
+    "received": "{{amount}} erhalten",
+    "cats": "Kategorien",
+    "people": "Geliehen und verliehen",
+    "entries": "Einträge",
+    "showAll": "Alle {{n}} zeigen",
+    "allTime": "{{entries}} · insgesamt"
+  },
   "nav": {
     "home": "Start",
     "assets": "Vermögen",

@@ -103,6 +103,7 @@ function drawScreen() {
       : Math.max(300, Math.min(pw, ((screen && screen.availHeight) || innerHeight) - 400));
   }
   if (V.screen === "history") app.innerHTML = historyView();
+  else if (V.screen === "search") app.innerHTML = searchView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
   else if (V.screen === "settings") {
@@ -209,7 +210,7 @@ function homeView() {
     ">" +
     ic("right") +
     "</button></div>" +
-    topIcons() +
+    topIcons(true) +
     "</header>";
 
   const wide = twoPane();
@@ -372,8 +373,11 @@ function checkCard(b, cur) {
     "</button></section>"
   );
 }
-/* History + Settings, always one tap away in the top bar */
-const topIcons = () =>
+/* Search (Home only), History + Settings, always one tap away in the top bar */
+const searchBtn = () =>
+  '<button class="icon" data-act="search-open" aria-label="' + TH("search.title") + '">' + ic("search") + "</button>";
+const topIcons = search =>
+  (search ? searchBtn() : "") +
   '<button class="icon" data-act="go" data-v="history" aria-label="' +
   TH("common.history") +
   '">' +
@@ -844,6 +848,7 @@ function historyView() {
       "</button><h1>" +
       TH("common.history") +
       "</h1>" +
+      searchBtn() +
       (list.length
         ? '<button class="icon" data-act="sel-start" aria-label="' +
           TH("history.select") +

@@ -624,6 +624,22 @@
       "y": "Abrir este ano no Início"
     }
   },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Buscar lançamentos",
+    "hint": "Encontre lançamentos por nota, favorecido, categoria, conta ou valor.",
+    "clear": "Limpar",
+    "unscope": "Voltar a todos os resultados, não só {{name}}",
+    "none": "Nada corresponde a “{{q}}”.",
+    "close": "Nenhum resultado exato. Estes são parecidos:",
+    "spent": "{{amount}} gastos",
+    "received": "{{amount}} recebidos",
+    "cats": "Categorias",
+    "people": "Empréstimos",
+    "entries": "Lançamentos",
+    "showAll": "Ver todos os {{n}}",
+    "allTime": "{{entries}} · desde sempre"
+  },
   "nav": {
     "home": "Início",
     "assets": "Ativos",

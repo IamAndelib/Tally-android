@@ -624,6 +624,22 @@
       "y": "Abrir este año en Inicio"
     }
   },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Buscar movimientos",
+    "hint": "Busca movimientos por nota, beneficiario, categoría, cuenta o importe.",
+    "clear": "Borrar",
+    "unscope": "Volver a todos los resultados, no solo {{name}}",
+    "none": "Nada coincide con «{{q}}».",
+    "close": "Ninguna coincidencia exacta. Estas se parecen:",
+    "spent": "{{amount}} gastados",
+    "received": "{{amount}} recibidos",
+    "cats": "Categorías",
+    "people": "Préstamos",
+    "entries": "Movimientos",
+    "showAll": "Ver los {{n}}",
+    "allTime": "{{entries}} · desde siempre"
+  },
   "nav": {
     "home": "Inicio",
     "assets": "Activos",

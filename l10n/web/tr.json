@@ -619,6 +619,22 @@
       "y": "Bu yılı Ana sayfada aç"
     }
   },
+  "search": {
+    "title": "Ara",
+    "placeholder": "Kayıtlarda ara",
+    "hint": "Kayıtları nota, alıcıya, kategoriye, hesaba ya da tutara göre bul.",
+    "clear": "Temizle",
+    "unscope": "Yalnızca {{name}} değil, tüm sonuçlara dön",
+    "none": "“{{q}}” ile eşleşen bir şey yok.",
+    "close": "Tam eşleşme yok. Benzerleri:",
+    "spent": "{{amount}} harcandı",
+    "received": "{{amount}} alındı",
+    "cats": "Kategoriler",
+    "people": "Borçlar",
+    "entries": "Kayıtlar",
+    "showAll": "{{n}} kaydın tümünü göster",
+    "allTime": "{{entries}} · tüm zamanlar"
+  },
   "nav": {
     "home": "Ana sayfa",
     "assets": "Varlıklar",

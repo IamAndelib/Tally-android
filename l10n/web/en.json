@@ -619,6 +619,22 @@
       "y": "Open this year on Home"
     }
   },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search entries",
+    "hint": "Find entries by note, payee, category, account or amount.",
+    "clear": "Clear",
+    "unscope": "Back to all results, not just {{name}}",
+    "none": "Nothing matches “{{q}}”.",
+    "close": "No exact matches. These are close:",
+    "spent": "{{amount}} spent",
+    "received": "{{amount}} received",
+    "cats": "Categories",
+    "people": "Loans and lendings",
+    "entries": "Entries",
+    "showAll": "Show all {{n}}",
+    "allTime": "{{entries}} · all time"
+  },
   "nav": {
     "home": "Home",
     "assets": "Assets",

@@ -614,6 +614,22 @@
       "y": "在首页打开这一年"
     }
   },
+  "search": {
+    "title": "搜索",
+    "placeholder": "搜索记录",
+    "hint": "按备注、收付款方、分类、账户或金额查找记录。",
+    "clear": "清除",
+    "unscope": "返回全部结果，而不只是{{name}}",
+    "none": "没有与“{{q}}”匹配的内容。",
+    "close": "没有完全匹配的结果，以下相近：",
+    "spent": "支出{{amount}}",
+    "received": "收入{{amount}}",
+    "cats": "分类",
+    "people": "借款与借出",
+    "entries": "记录",
+    "showAll": "显示全部{{n}}条",
+    "allTime": "{{entries}} · 全部时间"
+  },
   "nav": {
     "home": "首页",
     "assets": "资产",

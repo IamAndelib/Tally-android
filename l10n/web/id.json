@@ -614,6 +614,22 @@
       "y": "Buka tahun tersebut di Beranda"
     }
   },
+  "search": {
+    "title": "Cari",
+    "placeholder": "Cari transaksi",
+    "hint": "Temukan transaksi lewat catatan, penerima, kategori, akun, atau jumlah.",
+    "clear": "Hapus",
+    "unscope": "Kembali ke semua hasil, bukan hanya {{name}}",
+    "none": "Tidak ada yang cocok dengan “{{q}}”.",
+    "close": "Tidak ada yang persis cocok. Yang mirip:",
+    "spent": "{{amount}} keluar",
+    "received": "{{amount}} masuk",
+    "cats": "Kategori",
+    "people": "Pinjaman",
+    "entries": "Transaksi",
+    "showAll": "Lihat semua {{n}}",
+    "allTime": "{{entries}} · sepanjang waktu"
+  },
   "nav": {
     "home": "Beranda",
     "assets": "Aset",
