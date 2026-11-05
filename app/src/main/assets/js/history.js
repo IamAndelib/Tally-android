@@ -1,10 +1,10 @@
 /*
- * history.js — History's filters and totals (no screen here): what filters History has (`HF`: account, kind, then a
+ * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`: account, kind, then a
  * category, a person or a transfer's two sides), which entries they leave (`histList()`, `histMatch()`), which of those
  * are rows (`histRows()`: a fee is shown inside what it was charged on, never as a row), the totals in words
  * (`histWords()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
- * itself (`historyView()`: period chip, Filters button, one chip per set filter, summary line, month headings). A fee
- * follows its entry everywhere: it has that entry's kind and matches whatever that entry matches.
+ * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
+ * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches.
  */
 const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "" });
 let HF = histBlank();
@@ -17,7 +17,7 @@ const HIST_KINDS = [
   ["borrow", t => t.type === "loan"],
   ["fix", t => t.type === "adjust"],
 ];
-const histHost = t => (t.feeOf ? S.txns.find(x => x.id === t.feeOf) : null);
+const histHost = t => (t.feeOf ? entry(t.feeOf) || null : null);
 function histKind(t) {
   const host = histHost(t);
   if (host) return histKind(host);
@@ -37,13 +37,13 @@ function histMatch(t, f = HF, skip = "") {
   if (f.to && !(t.type === "transfer" && t.to === f.to)) return false;
   return true;
 }
-function histList(f = HF, skip) {
+const histPick = (f = HF, skip) => {
   const [s, e] = range(HP);
-  return S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f, skip)).sort(byNewest);
-}
+  return S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f, skip));
+};
+const histList = (f = HF, skip) => histPick(f, skip).sort(byNewest);
 function histRows(list) {
-  const ids = new Set(S.txns.map(t => t.id));
-  return list.filter(t => !(t.feeOf && ids.has(t.feeOf)));
+  return list.filter(t => !(t.feeOf && entry(t.feeOf)));
 }
 /* the totals of a list, per currency (by code, joined with " + ") in the words of the kind shown: ["$X spent", "€Y + $Z
    received", "$W fees"]; a phrase whose amount is 0 is left out */
@@ -106,18 +106,26 @@ function histNorm(f) {
 }
 function histClear() {
   HF = histBlank();
+  HSHOW.sig = "";
   histAllTime();
 }
 /* History with the given filters (an account's "Open in History"), on all time */
 function openHistory(f = {}) {
   HF = histNorm({ ...histBlank(), ...f });
   histAllTime();
+  HSHOW.sig = "";
   V.screen = "history";
   V.open = "";
   render();
 }
 
-const histCount = () => ["acc", "kind", "cat", "who", "from", "to"].filter(k => HF[k]).length;
+/* the filters that are set and shown as chips and counted: with an account picked, a transfer side that is that account
+   is implied by the other side (the sheet shows it locked), so it is neither */
+const histSet = () =>
+  ["acc", "kind", "cat", "who", "from", "to"].filter(
+    k => HF[k] && !((k === "from" || k === "to") && HF.acc && HF[k] === HF.acc && HF.from && HF.to)
+  );
+const histCount = () => histSet().length;
 /* ---- the Filters sheet: works on a copy (HFD); Show makes it the filters (HF), closing it any other way drops it */
 let HFD = null,
   HFSIDE = "";
@@ -134,6 +142,8 @@ function hfSide(d, side, id) {
   return o;
 }
 const hfRows = f => histRows(histList(f));
+/* how many rows a choice would leave (no sorting: only the count is wanted) */
+const hfCount = f => histRows(histPick(f)).length;
 /* how often each key comes up among the entries (most used first, then as listed) */
 function hfTally(list, key) {
   const m = new Map();
@@ -200,7 +210,7 @@ function hfBody() {
   let h = '<div class="sec">' + TH("common.account") + '</div><div class="hfrow">';
   h += hfChip("hfs-acc", "", !d.acc, hfName(T("history.all")));
   histAccs().forEach(a => {
-    const n = hfRows({ ...d, acc: a.id }).length;
+    const n = hfCount({ ...d, acc: a.id });
     h += hfChip(
       "hfs-acc",
       a.id,
@@ -217,7 +227,7 @@ function hfBody() {
   h += hfChip("hfs-kind", "", !d.kind, hfName(T("history.all")));
   HIST_KINDS.forEach(([k]) => {
     if (!S.txns.some(t => histKind(t) === k)) return; // never had one
-    h += hfChip("hfs-kind", k, d.kind === k, hfName(T("history.kind." + k)), hfRows(kindOf(k)).length);
+    h += hfChip("hfs-kind", k, d.kind === k, hfName(T("history.kind." + k)), hfCount(kindOf(k)));
   });
   h += "</div>";
   if (d.kind === "out" || d.kind === "in") {
@@ -262,7 +272,7 @@ function hfBody() {
   return h;
 }
 function hfFoot() {
-  const n = hfRows(HFD).length;
+  const n = hfCount(HFD);
   return (
     '<button class="hclear" data-act="hfs-clear">' +
     TH("history.clearAll") +
@@ -294,10 +304,10 @@ function filtersSheet() {
 function hfMenu(side, btn) {
   HFSIDE = side;
   const a = HFD.acc,
-    items = [["", T("history.anyAccount"), hfRows(hfSide(HFD, side, "")).length]].concat(
+    items = [["", T("history.anyAccount"), hfCount(hfSide(HFD, side, ""))]].concat(
       histAccs()
         .filter(x => x.id !== a)
-        .map(x => [x.id, x.name, hfRows(hfSide(HFD, side, x.id)).length, x])
+        .map(x => [x.id, x.name, hfCount(hfSide(HFD, side, x.id)), x])
     );
   $("#pop").innerHTML =
     '<div class="pop" data-act="pop-bg"><div class="hmenu" role="dialog" aria-modal="true" aria-label="' +
@@ -387,7 +397,7 @@ function histChips() {
     ["from", "history.fromAcc"],
     ["to", "history.toAcc"],
   ].forEach(([k, key]) => {
-    if (!HF[k] || !acc(HF[k])) return;
+    if (!histSet().includes(k) || !acc(HF[k])) return;
     const n = T(key, { account: acc(HF[k]).name });
     h.push(histChip(k, plain(n), n));
   });
@@ -421,30 +431,77 @@ function histBar(clearHere) {
     "</div>"
   );
 }
+/* after a chip, the period or Clear all is gone, the focus goes on: to the chip now in the removed one's place (else the
+   one before it), else the Filters button, so it never falls back to the page */
+function histFocus(sel, at) {
+  const all = [...document.querySelectorAll("#app " + sel)],
+    el = at == null ? all[0] : all[Math.min(at, all.length - 1)];
+  const to = el || $("#app .hfbtn");
+  if (to) to.focus({ preventScroll: true });
+}
 const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("history.clearAll") + "</button>";
-/* the entries, month by month: a heading with the month's words, then its days (dayGroups) */
-function histMonths(list) {
-  let h = "",
-    i = 0;
-  while (i < list.length) {
-    const m = list[i].date.slice(0, 7);
+/* the entries, month by month: a heading with the month's words, then its days (dayGroups). Only the first rows are
+   drawn (a notebook of years is thousands of rows); the rest follow as the end of the list comes near (histWatch). A
+   chunk ends at the end of a day, and a month cut in two has its heading, with the whole month's words, only once. */
+const HIST_CHUNK = 300;
+let HSHOW = { sig: "", n: HIST_CHUNK }, // what is drawn: the entries so far, for these filters and this period
+  HLIST = [], // the entries it is drawn from
+  HIO = null;
+const histSig = () => JSON.stringify([HF, HP.period, HP.anchor, HP.rs, HP.re]);
+const histMonth = t => t.date.slice(0, 7);
+/* the markup for list[i..] up to about `budget` entries; `next` is where the following chunk starts */
+function histMonths(list, i, budget) {
+  let h = "";
+  const stop = i + budget;
+  while (i < list.length && i < stop) {
+    const m = histMonth(list[i]);
     let j = i;
-    while (j < list.length && list[j].date.slice(0, 7) === m) j++;
-    const part = list.slice(i, j);
-    h +=
-      '<div class="hmon"><span>' +
-      esc(capFirst(monthLabel(m, true))) +
-      "</span><span>" +
-      esc(histWords(part, HF.kind).join(" · ")) +
-      "</span></div>" +
-      dayGroups(part);
-    i = j;
+    while (j < list.length && histMonth(list[j]) === m) j++;
+    if (i === 0 || histMonth(list[i - 1]) !== m)
+      h +=
+        '<div class="hmon"><span>' +
+        esc(capFirst(monthLabel(m, true))) +
+        "</span><span>" +
+        esc(histWords(list.slice(i, j), HF.kind).join(" · ")) +
+        "</span></div>";
+    let e = j;
+    if (e > stop) {
+      e = stop;
+      while (e < j && list[e].date === list[e - 1].date) e++; // the day is whole
+    }
+    h += dayGroups(list.slice(i, e));
+    i = e;
   }
-  return h;
+  return { html: h, next: i };
+}
+/* the rest of the list is drawn when the marker after the last row comes within a few screens */
+function histWatch() {
+  histUnwatch();
+  const end = $("#app .hmore");
+  if (!end || typeof IntersectionObserver === "undefined") return;
+  HIO = new IntersectionObserver(es => es.some(e => e.isIntersecting) && histMore(), { rootMargin: "1500px 0px" });
+  HIO.observe(end);
+}
+function histUnwatch() {
+  if (HIO) HIO.disconnect();
+  HIO = null;
+}
+function histMore() {
+  const end = $("#app .hmore");
+  if (!end || V.screen !== "history") return histUnwatch();
+  const r = histMonths(HLIST, +end.dataset.next, HIST_CHUNK);
+  end.insertAdjacentHTML("beforebegin", "<div>" + r.html + "</div>");
+  fitFigures(end.previousElementSibling);
+  HSHOW.n = r.next;
+  if (r.next >= HLIST.length) end.remove();
+  else end.dataset.next = r.next;
+  histWatch(); // still near the end? this says so again
 }
 function historyView() {
   histDrop();
   const list = histList(HF, ""); // nothing skipped
+  if (HSHOW.sig !== histSig()) HSHOW = { sig: histSig(), n: HIST_CHUNK };
+  HLIST = list;
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
      entry out of sight */
   if (V.sel) {
@@ -512,5 +569,6 @@ function historyView() {
       (anySet ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn() : TH("history.none.all")) +
       "</div>"
     );
-  return h + histMonths(list);
+  const r = histMonths(list, 0, Math.max(HSHOW.n, HIST_CHUNK));
+  return h + r.html + (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : "");
 }

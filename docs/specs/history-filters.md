@@ -19,7 +19,8 @@ Search stays the way to find entries by their words; History becomes the way to 
 - **Clear all**, a text button beside them, only while a period or a filter is set: it goes back to the default view
   (all time, no filters).
 - Under that row, each set filter as a **full-size chip with ✕** (48dp, not compact: people tap these ✕ often):
-  `Credit card ✕` `Transfers ✕` `From Everyday ✕`. Removing a filter also removes the ones that depend on it (✕ on
+  `Credit card ✕` `Transfers ✕` `From Everyday ✕` (the side that is the account itself, implied by the other, has no chip
+  and isn't counted in "Filters · N"). Removing a filter also removes the ones that depend on it (✕ on
   Spent removes its category; ✕ on Transfers removes From/To).
 - **No visible summary line** (maintainer's ruling): a visually hidden status region in its place says only the
   entry count ("12 entries", nothing when the list is empty), so TalkBack hears the new count after a change. The money
@@ -125,7 +126,11 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 - **Selection** (hold an entry, or Select): works on the filtered list; Select all selects what's listed. While
   selecting, the period and filter rows are hidden; the list stays filtered.
 - **Leaving History** forgets its filters; entries opened from it and closed again keep them. Back from History goes
-  Home as today.
+  Home as today. The one exception is Search: History → Search → Back keeps both the filters and the period, so the
+  screen comes back as it was left. Leaving any other way resets as above.
+- **Long lists** are drawn in chunks (the first 300 entries, then more as the end comes within a few screens); months
+  still show the totals of the whole month, and Select all and the hidden count read from the data, not from what is
+  drawn. Nothing changes in how it looks.
 - **Sideways swipes** do nothing in History: they no longer switch accounts (accounts are a filter now), and they
   don't step the period either (maintainer: no swipe). Another month is picked in the period dialog.
 

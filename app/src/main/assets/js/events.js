@@ -534,6 +534,7 @@ document.addEventListener("click", ev => {
     case "hp-all":
       histAllTime();
       render();
+      histFocus(".hpl");
       break;
     case "hf-open":
       filtersSheet();
@@ -571,17 +572,21 @@ document.addEventListener("click", ev => {
       closeSheet();
       render();
       break;
-    case "hf-del":
+    case "hf-del": {
+      const chipAt = [...document.querySelectorAll("#app .hchips .hchip")].indexOf(el);
       if (v === "acc") HF.acc = "";
       else if (v === "from" || v === "to") HF[v] = "";
       else if (v === "kind") Object.assign(HF, { kind: "", cat: "", who: "", from: "", to: "" });
       else Object.assign(HF, { cat: "", who: "", from: "", to: "" });
       HF = histNorm(HF);
       render();
+      histFocus(".hchip", chipAt);
       break;
+    }
     case "hf-clear":
       histClear();
       render();
+      histFocus(".hfbtn");
       break;
     case "sel-start":
       V.sel = new Set();

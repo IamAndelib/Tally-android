@@ -54,6 +54,7 @@ const ok = (c, m) => {
     ok(r.label === "All time", "its label: " + r.label);
     ok(r.rng[0] === "0000-01-01" && r.rng[1] === "9999-12-31", "its range: " + r.rng);
     ok(r.oldDate, "the entry from three years ago is listed");
+    ok(r.rows === 2, "both entries are rows: " + r.rows);
     ok(r.homeOk, "Home does not take all");
     await page.evaluate(() => {
       lastDay = addDays(today(), -1);
@@ -174,6 +175,25 @@ const ok = (c, m) => {
     ok(JSON.stringify(r.xwords) === '["$240.00 moved","$2.00 fees"]', "transfer words: " + JSON.stringify(r.xwords));
     ok(JSON.stringify(r.in) === '["€80.00 + $150.00 received"]', "received words: " + JSON.stringify(r.in));
     ok(JSON.stringify(r.lend) === '["$50.00 lent"]', "lent words, no zero got back: " + JSON.stringify(r.lend));
+    const back = await page.evaluate(() => {
+      const e = (kind, dir) => ({ type: "loan", loan: kind === "lend" ? "L1" : "L2", dir, amount: 20, account: "c" });
+      return {
+        lendIn: histWords([e("lend", "in")], "lend"),
+        lendOut: histWords([e("lend", "out")], "lend"),
+        borIn: histWords([e("borrow", "in")], "borrow"),
+        borOut: histWords([e("borrow", "out")], "borrow"),
+      };
+    });
+    ok(
+      JSON.stringify(back) ===
+        JSON.stringify({
+          lendIn: ["$20.00 got back"],
+          lendOut: ["$20.00 lent"],
+          borIn: ["$20.00 borrowed"],
+          borOut: ["$20.00 paid back"],
+        }),
+      "lend and borrow, in and out: " + JSON.stringify(back)
+    );
     ok(
       JSON.stringify(r.borrow) === '["$600.00 borrowed","$100.00 paid back","$1.00 fees"]',
       "borrowed words: " + JSON.stringify(r.borrow)
@@ -255,7 +275,7 @@ const ok = (c, m) => {
       );
     });
     ok(
-      hs && hs.text === hs.rows + " entries" && hs.w <= 1 && hs.h <= 1,
+      hs && hs.text === hs.rows + (hs.rows === 1 ? " entry" : " entries") && hs.w <= 1 && hs.h <= 1,
       "a hidden status region says the count: " + JSON.stringify(hs)
     );
     const mons = await page.evaluate(() => [...document.querySelectorAll("#app .hmon")].map(e => e.textContent));
@@ -1276,6 +1296,280 @@ const ok = (c, m) => {
       "an account's count is its rows: " + acctCount.sub + " / " + acctCount.rows
     );
     ok(acctCount.scoped === acctCount.rows, "the scoped list is its rows: " + acctCount.scoped);
+    await ctx.close();
+  }
+
+  // I2: the side that follows from the account is not a chip of its own and is not counted
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      ["b:Everyday", "k:Credit card"].forEach(x =>
+        S.accounts.push({ id: x[0], name: x.slice(2), type: "bank", currency: "USD", opening: 0, archived: false })
+      );
+      S.txns.push({ id: "x1", ts: 1, date: today(), type: "transfer", amount: 5, account: "b", to: "k", note: "" });
+      V.screen = "home";
+      openHistory({ acc: "k", kind: "xfer", from: "b" });
+    });
+    const chips = () =>
+      page.evaluate(() => ({
+        chips: [...document.querySelectorAll("#app .hchips .hchip")].map(c => c.textContent.trim()),
+        bar: document.querySelector("#app .hfbtn").textContent.trim(),
+        hf: JSON.stringify(HF),
+      }));
+    let r = await chips();
+    ok(
+      r.chips.join("|") === "Credit card|Transfers|From Everyday" && r.bar === "Filters · 3",
+      "account + Transfers + From: three chips, counted 3: " + JSON.stringify(r)
+    );
+    await page.evaluate(() => openHistory({ acc: "k", kind: "xfer", to: "b" }));
+    r = await chips();
+    ok(
+      r.chips.join("|") === "Credit card|Transfers|To Everyday" && r.bar === "Filters · 3",
+      "account + Transfers + To: " + JSON.stringify(r)
+    );
+    await page.evaluate(() => openHistory({ kind: "xfer", from: "b", to: "k" }));
+    r = await chips();
+    ok(
+      r.chips.join("|") === "Transfers|From Everyday|To Credit card" && r.bar === "Filters · 3",
+      "no account, both sides: all three shown: " + JSON.stringify(r)
+    );
+    await ctx.close();
+  }
+
+  // I3: after removing a filter, the period or everything, the focus is on something that still exists
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      ["b:Everyday", "k:Credit card"].forEach(x =>
+        S.accounts.push({ id: x[0], name: x.slice(2), type: "bank", currency: "USD", opening: 0, archived: false })
+      );
+      S.txns.push({ id: "x1", ts: 1, date: today(), type: "expense", amount: 5, account: "k", cat: "food", note: "" });
+      S.txns.push({ id: "x2", ts: 2, date: today(), type: "expense", amount: 6, account: "k", cat: "food", note: "" });
+      V.screen = "home";
+      openHistory({ acc: "k", kind: "out", cat: "food" });
+    });
+    const where = () =>
+      page.evaluate(() => {
+        const a = document.activeElement;
+        return a === document.body
+          ? "body"
+          : (a.dataset.act || a.tagName) + ":" + (a.dataset.v || "") + (document.body.contains(a) ? "" : "(gone)");
+      });
+    await page.click('#app [data-act="hf-del"][data-v="kind"]'); // takes the category with it
+    let w = await where();
+    ok(w === "hf-del:acc", "after a removed chip the focus is on the next chip's ✕ (the one now in its place): " + w);
+    await page.click('#app [data-act="hf-del"][data-v="acc"]');
+    w = await where();
+    ok(w === "hf-open:", "the last chip removed: the Filters button has it: " + w);
+    await page.evaluate(() => {
+      openHistory({ acc: "k" });
+      HP.period = "month";
+      HP.anchor = today();
+      render();
+    });
+    await page.click('#app [data-act="hp-all"]');
+    w = await where();
+    ok(w === "hp-open:", "the period's ✕: the period chip has the focus: " + w);
+    await page.evaluate(() => {
+      openHistory({ acc: "k", kind: "out" });
+      render();
+    });
+    await page.click('#app [data-act="hf-clear"]');
+    w = await where();
+    ok(w === "hf-open:", "Clear all: the Filters button has the focus: " + w);
+    await ctx.close();
+  }
+
+  // I4: History > Search > Back comes back as it was left; leaving any other way resets
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "k", name: "Credit card", type: "bank", currency: "USD", opening: 0, archived: false });
+      S.txns.push({ id: "x1", ts: 1, date: today(), type: "expense", amount: 5, account: "k", cat: "food", note: "" });
+      V.screen = "home";
+      openHistory({ acc: "k", kind: "out" });
+      HP.period = "month";
+      HP.anchor = today();
+      render();
+    });
+    await page.click('#app [data-act="search-open"]');
+    await page.evaluate(() => searchBack());
+    let r = await page.evaluate(() => ({ s: V.screen, hf: JSON.stringify(HF), p: HP.period }));
+    ok(
+      r.s === "history" && r.hf.includes('"acc":"k"') && r.hf.includes('"kind":"out"') && r.p === "month",
+      "Search and back keeps the filters and the period: " + JSON.stringify(r)
+    );
+    await page.click('#app [data-act="home"]');
+    await page.evaluate(() => {
+      V.screen = "history";
+      render();
+    });
+    r = await page.evaluate(() => ({ hf: JSON.stringify(HF), p: HP.period }));
+    ok(
+      !r.hf.includes('"acc":"k"') && r.p === "month",
+      "(Home and back to History from the app: filters gone) " + JSON.stringify(r)
+    );
+    await page.evaluate(() => {
+      openHistory({ acc: "k" });
+      openSearch();
+      V.screen = "home";
+      render();
+    });
+    ok(
+      (await page.evaluate(() => JSON.stringify(HF))) === (await page.evaluate(() => JSON.stringify(histBlank()))),
+      "Search then Home: reset"
+    );
+    await ctx.close();
+  }
+
+  // I5: Home's balance bar counts rows, a fee folded into its entry
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      ["b:Everyday", "k:Credit card"].forEach(x =>
+        S.accounts.push({ id: x[0], name: x.slice(2), type: "bank", currency: "USD", opening: 100, archived: false })
+      );
+      S.txns.push({
+        id: "x1",
+        ts: 1,
+        date: today(),
+        type: "transfer",
+        amount: 5,
+        account: "b",
+        to: "k",
+        feeId: "f1",
+        note: "",
+      });
+      S.txns.push({
+        id: "f1",
+        ts: 1,
+        date: today(),
+        type: "expense",
+        amount: 1,
+        account: "b",
+        cat: "fees",
+        feeOf: "x1",
+        note: "",
+      });
+      V.screen = "home";
+      render();
+    });
+    const bar = await page.evaluate(() => document.querySelector("#app .balbar .l").textContent);
+    ok(/1 entry/.test(bar), "Home's bar counts the transfer once, not its fee: " + bar);
+    await page.click('#app [data-act="entries"]');
+    const rows = await page.evaluate(() => document.querySelectorAll("#sheet .tx[data-v]").length);
+    ok(rows === 1, "the list it opens has one row: " + rows);
+    await ctx.close();
+  }
+
+  // I1: a big notebook: History opens and the Filters sheet answers quickly, and scrolling to the end shows every row
+  {
+    const { ctx, page } = await open();
+    const r = await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      "abcde"
+        .split("")
+        .forEach(id =>
+          S.accounts.push({ id, name: "Acc " + id, type: "bank", currency: "USD", opening: 0, archived: false })
+        );
+      for (let i = 0; i < 10000; i++) {
+        const date = addDays(today(), -Math.floor(i / 10)),
+          id = "t" + i;
+        if (i % 20 === 0) {
+          S.txns.push({
+            id,
+            ts: i,
+            date,
+            type: "transfer",
+            amount: 10,
+            account: "a",
+            to: "b",
+            feeId: "f" + i,
+            note: "",
+          });
+          S.txns.push({
+            id: "f" + i,
+            ts: i,
+            date,
+            type: "expense",
+            amount: 1,
+            account: "a",
+            cat: "fees",
+            feeOf: id,
+            note: "",
+          });
+        } else
+          S.txns.push({
+            id,
+            ts: i,
+            date,
+            type: i % 7 ? "expense" : "income",
+            amount: 5,
+            account: "abcde"[i % 5],
+            cat: i % 2 ? "food" : "gift",
+            note: "",
+          });
+      }
+      V.screen = "home";
+      let t0 = performance.now();
+      openHistory();
+      const open = performance.now() - t0;
+      const drawn = document.querySelectorAll("#app .tx").length;
+      t0 = performance.now();
+      filtersSheet();
+      const sheet = performance.now() - t0;
+      t0 = performance.now();
+      document.querySelector('#sheet [data-act="hfs-acc"][data-v="b"]').click();
+      const chip = performance.now() - t0;
+      closeSheet();
+      return {
+        open,
+        sheet,
+        chip,
+        drawn,
+        total: histRows(histList()).length,
+        status: document.querySelector("#app [role=status]").textContent,
+      };
+    });
+    console.log(
+      "timings (ms): open " + Math.round(r.open) + ", sheet " + Math.round(r.sheet) + ", chip " + Math.round(r.chip)
+    );
+    ok(r.open < 750, "10,000 entries: History opens in under 750 ms (budget 250): " + Math.round(r.open));
+    ok(r.chip < 240, "a Filters chip answers in under 240 ms (budget 80): " + Math.round(r.chip));
+    ok(r.sheet < 750, "the Filters sheet opens in under 750 ms: " + Math.round(r.sheet));
+    ok(r.drawn < r.total && r.drawn > 0, "only the first rows are drawn at first: " + r.drawn + " of " + r.total);
+    ok(
+      r.status.startsWith(String(r.total).replace(/(\d)(?=(\d{3})$)/, "$1,")) || r.status.includes(String(r.total)),
+      "the count still reads from the data: " + r.status
+    );
+    for (let k = 0; k < 60; k++) {
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(60);
+      if ((await page.evaluate(() => document.querySelectorAll("#app .tx").length)) >= r.total) break;
+    }
+    const end = await page.evaluate(() => ({
+      n: document.querySelectorAll("#app .tx").length,
+      more: !!document.querySelector("#app .hmore"),
+      mons: document.querySelectorAll("#app .hmon").length,
+    }));
+    ok(
+      end.n === r.total && !end.more,
+      "scrolling to the end shows every row: " + JSON.stringify(end) + " / " + r.total
+    );
     await ctx.close();
   }
 

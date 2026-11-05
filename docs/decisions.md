@@ -44,3 +44,4 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-05 · P2 · Entry rows have two lines and open in place on a tap; a transfer's or payment's fee shows inside its entry, never as a row; no running balance on the row · maintainer's pick from mocks
 - 2026-11-05 · P3 · History has no visible summary line (the months carry their totals); a hidden status region still announces the entry count to TalkBack after each change · maintainer
 - 2026-11-05 · P3 · A loan's or balance fix's note shows only when the row is opened, under "Added at"; expenses, income and transfers keep theirs as the title · maintainer
+- 2026-11-05 · P2 · History → Search → Back keeps History's filters and period (leaving any other way still resets) · maintainer's ruling after the final review; documented in docs/specs/history-filters.md

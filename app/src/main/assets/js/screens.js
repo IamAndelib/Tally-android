@@ -87,7 +87,9 @@ function drawScreen() {
   if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
   if (V.screen !== "history") {
     V.sel = null;
-    HF = histBlank(); // leaving History forgets its filters
+    /* leaving History forgets its filters, except for Search opened from it: Back there brings it back as it was */
+    if (!(V.screen === "search" && SR && SR.from === "history")) HF = histBlank();
+    histUnwatch();
   }
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
@@ -106,8 +108,10 @@ function drawScreen() {
       ? Math.max(240, Math.min(pw, innerHeight - 12))
       : Math.max(300, Math.min(pw, ((screen && screen.availHeight) || innerHeight) - 400));
   }
-  if (V.screen === "history") app.innerHTML = historyView();
-  else if (V.screen === "search") app.innerHTML = searchView();
+  if (V.screen === "history") {
+    app.innerHTML = historyView();
+    histWatch();
+  } else if (V.screen === "search") app.innerHTML = searchView();
   else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
   else if (V.screen === "settings") {
@@ -279,7 +283,7 @@ function homeView() {
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
   const total = balanceIn(cur, b);
-  const n = periodTxns().length;
+  const n = histRows(periodTxns()).length; // a fee is part of its entry
   if (!atHomePeriod()) {
     const back = S.settings.home === "day" ? T("day.today") : T("settings.opens." + S.settings.home);
     h +=

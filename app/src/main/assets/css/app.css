@@ -3206,6 +3206,9 @@ body.land.calcopen #snack .snack {
   flex: none;
   margin: 0 -2px 0 0;
 }
+.hmore {
+  height: 1px; /* the marker after the last row drawn (histWatch) */
+}
 .hmon {
   display: flex;
   flex-wrap: wrap;
