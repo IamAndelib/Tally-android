@@ -250,6 +250,7 @@ function dragBegin() {
     grid: el.closest(".cgrid"),
     ring: el.closest(".ring.edit"),
   });
+  if (LP.kind === "chip") g.classList.add("gh-chip"); // lifted at its own size, like a row
   if (LP.kind === "move") {
     g.classList.add("gh-row");
     LP.to = ZONE_TO[el.closest("[data-src]").dataset.src]; // none for a list that only reorders
@@ -267,7 +268,7 @@ const ZONE_TO = {
 };
 /* a dropped row (or Home balance chip): onto its section's box, it moves there (archived, cleared, active again); among
    its own list's rows, the list keeps the new order (accounts, loans and other assets are listed in the order they're
-   kept, so Home's chips and Assets share one account order); anywhere else, nothing changes */
+   kept; Home's chips in an order of their own, settings.chipOrder); anywhere else, nothing changes */
 function rowDrop() {
   const L = LP,
     ok = !!L.over;
@@ -285,10 +286,13 @@ function rowDrop() {
   }
   if (!L.moved) return;
   const sib = [...L.el.parentNode.children].filter(e => e.matches("[data-drag], .acc[data-v]")),
-    ids = sib.map(e => (e.dataset.drag ? e.dataset.drag.split(":")[1] : e.dataset.v)),
-    type = L.kind === "chip" ? "acc" : L.el.dataset.drag.split(":")[0],
-    key = { acc: "accounts", loan: "loans", asset: "assets" }[type];
-  S[key] = keepOrder(S[key], ids);
+    ids = sib.map(e => (e.dataset.drag ? e.dataset.drag.split(":")[1] : e.dataset.v));
+  /* Home (its chips, or its account list on a wide screen) keeps an order of its own; elsewhere the kept lists' order */
+  if (L.kind === "chip" || L.el.closest('[data-src="home"]')) S.settings.chipOrder = ids;
+  else {
+    const key = { acc: "accounts", loan: "loans", asset: "assets" }[L.el.dataset.drag.split(":")[0]];
+    S[key] = keepOrder(S[key], ids);
+  }
   buzz("confirm");
   commit();
 }

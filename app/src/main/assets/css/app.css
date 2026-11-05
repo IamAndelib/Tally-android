@@ -2195,10 +2195,12 @@ body.hasnav .snack {
 .tile.placeholder {
   opacity: 0.25;
 }
-.tx.placeholder {
+.tx.placeholder,
+.acc.placeholder {
   opacity: 0.3;
 }
-.ghost.gh-row {
+.ghost.gh-row,
+.ghost.gh-chip {
   transform: none;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }

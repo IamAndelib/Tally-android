@@ -103,7 +103,7 @@ function migrate(o) {
   /* only the settings Tally knows, each checked below */
   Object.keys(s.settings)
     .concat(["backupAsk", "customCols", "dragTip", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
-    .concat(["lastCheck", "savedBackup"])
+    .concat(["chipOrder", "lastCheck", "savedBackup"])
     .forEach(k => {
       if (own(os, k)) s.settings[k] = os[k];
     });
@@ -213,6 +213,15 @@ function migrate(o) {
   }
   uniq(s.cats);
   uniq(s.accounts);
+  /* Home's own order of its balance chips (account ids, as they were dragged on Home); unknown, repeated or
+     broken ids drop out, and none left means the accounts' own order */
+  const accIds = new Set(s.accounts.map(a => a.id)),
+    seen = new Set();
+  s.settings.chipOrder = (Array.isArray(os.chipOrder) ? os.chipOrder : [])
+    .filter(v => typeof v === "string")
+    .map(sid)
+    .filter(id => accIds.has(id) && !seen.has(id) && seen.add(id));
+  if (!s.settings.chipOrder.length) delete s.settings.chipOrder;
   const okAcc = new Set(s.accounts.map(a => a.id));
   s.txns = (Array.isArray(o.txns) ? o.txns : [])
     .filter(t => t && t.id && isDay(t.date) && okNum(t.amount) && okAcc.has(sid(t.account)))
@@ -457,6 +466,13 @@ function entry(id) {
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
 const activeAccounts = () => S.accounts.filter(a => !a.archived);
+/* the active accounts in Home's order (its balance chips, dragged there): settings.chipOrder first, then the others in
+   the accounts' own order (Assets, pickers), so a new account comes last */
+function homeAccounts() {
+  const order = S.settings.chipOrder || [],
+    at = a => (order.includes(a.id) ? order.indexOf(a.id) : order.length + S.accounts.indexOf(a));
+  return activeAccounts().sort((x, y) => at(x) - at(y));
+}
 /* A transfer's or loan payment's fee is its own entry, an expense linked to it (feeOf ↔ feeId), so it comes off the
    paying account in every version of Tally; but like the transfer or payment it is never spending: the ring, day
    totals, summaries and the widget count only isSpend() entries, and History shows the fee with what it was charged on.

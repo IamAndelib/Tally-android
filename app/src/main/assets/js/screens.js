@@ -148,7 +148,7 @@ function subBar(title) {
   );
 }
 function homeView() {
-  const act = activeAccounts();
+  const act = homeAccounts();
   /* every account archived: not a new notebook, so a way back to them */
   if (!act.length && S.accounts.length)
     return (

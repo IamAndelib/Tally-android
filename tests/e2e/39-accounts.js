@@ -1,8 +1,9 @@
 // Accounts at a glance (#37, #33). History rows show each account's name in a soft pill of its colour (a transfer, one per
 // account), readable (WCAG AA) on every colour of the palette in light and dark; a card without a colour of its own is
 // purple, not the bank's blue. Hold and drag reorders every list in Assets and Liabilities (accounts, cards, money owed
-// either way, other assets) and Home's balance chips; Home and Assets share one account order, other kinds keep their
-// places among them, and a drop onto a section's box still archives instead of reordering.
+// either way, other assets) and Home's balance chips; Home keeps an order of its own (settings.chipOrder, new accounts
+// last), Assets the accounts' order, other kinds keep their places among them, and a drop onto a section's box still
+// archives instead of reordering.
 const { chromium, appUrl, launchOptions } = require("./harness");
 let fails = 0;
 const ok = (c, m) => {
@@ -196,19 +197,72 @@ const ok = (c, m) => {
     });
     const chips = () =>
       page.evaluate(() => [...document.querySelectorAll(".strip .acc[data-v]")].map(c => c.dataset.v).join());
-    ok((await chips()) === "s,k2,b,c,k", "Home's chips follow the same order");
+    ok((await chips()) === "s,k2,b,c,k", "with no order of their own yet, Home's chips follow the accounts' order");
+    /* mid-drag: the chip's place is faded where it will land, the lifted copy at its own size */
+    const look = await (async () => {
+      await page.evaluate(() => document.querySelector('.strip .acc[data-v="b"]').scrollIntoView({ inline: "center" }));
+      const [x0, y0] = await mid('.strip .acc[data-v="b"]');
+      await T("touchStart", x0, y0);
+      await page.waitForTimeout(450);
+      await T("touchMove", x0 - 4, y0); // lifted, not yet past another chip
+      const r = await page.evaluate(() => ({
+        faded: getComputedStyle(document.querySelector(".strip .acc.placeholder")).opacity,
+        scale: getComputedStyle(document.querySelector(".ghost")).transform,
+      }));
+      await T("touchEnd");
+      await page.waitForTimeout(250);
+      await page.evaluate(() => (document.querySelector(".strip").scrollLeft = 0));
+      return r;
+    })();
+    ok(
+      look.faded === "0.3" && look.scale === "none",
+      "while dragged: its place faded, the lifted chip unscaled " + JSON.stringify(look)
+    );
     await drag('.strip .acc[data-v="b"]', '.strip .acc[data-v="s"]', true);
     ok(
-      (await ids("accounts")).join() === "b,s,k2,c,k" && (await chips()) === "b,s,k2,c,k",
-      "a chip dragged to the front: " + (await chips())
+      (await chips()) === "b,s,k2,c,k" && (await ids("accounts")).join() === "s,k2,b,c,k",
+      "a chip dragged to the front moves on Home only; Assets keeps its order: " + (await chips())
     );
+    ok(
+      (await page.evaluate(() => JSON.parse(localStorage.getItem("tally:v1")).settings.chipOrder.join())) ===
+        "b,s,k2,c,k",
+      "Home's order is kept as its own"
+    );
+    /* and the other way round: reordering in Assets leaves Home as it is */
+    await page.evaluate(() => {
+      V.screen = "assets";
+      render();
+    });
+    await drag('[data-src="acc"] [data-v="c"]', '[data-src="acc"] [data-v="s"]');
+    await page.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+    ok(
+      (await ids("accounts")).join() === "c,k2,s,b,k" && (await chips()) === "b,s,k2,c,k",
+      "a drag in Assets doesn't move Home's chips: " + (await ids("accounts")) + " / " + (await chips())
+    );
+    /* a new account comes last on Home; a deleted one drops out of Home's order on the next start */
+    const after = await page.evaluate(() => {
+      S.accounts.push({ id: "n", name: "New", type: "bank", currency: "USD", opening: 0, archived: false });
+      save();
+      render();
+      const chipsNow = homeAccounts()
+        .map(a => a.id)
+        .join();
+      const m = migrate({ v: 7, settings: { cur: "USD", chipOrder: ["b", "gone", "b", 5, "c"] }, accounts: S.accounts })
+        .settings.chipOrder;
+      return { chipsNow, m: m.join() };
+    });
+    ok(after.chipsNow === "b,s,k2,c,k,n", "a new account comes last on Home: " + after.chipsNow);
+    ok(after.m === "b,c", "a broken saved order keeps only known accounts, once: " + after.m);
     /* a short hold that moves at once is a scroll of the strip, not a drag */
     const [x, y] = await mid('.strip .acc[data-v="c"]');
     await T("touchStart", x, y);
     await T("touchMove", x - 60, y);
     await T("touchEnd");
     await page.waitForTimeout(250);
-    ok((await ids("accounts")).join() === "b,s,k2,c,k", "a quick swipe on the chips changes nothing");
+    ok((await chips()) === "b,s,k2,c,k,n", "a quick swipe on the chips changes nothing");
     await ctx.close();
   }
 
