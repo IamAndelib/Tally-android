@@ -1312,6 +1312,32 @@ input {
   font-weight: 600;
   font-size: 1.15rem;
 }
+/* a short upright window (split screen): the keys get lower, down to 40px, so the amount stays in view above them */
+@media (max-height: 420px) {
+  body:not(.land) .calc {
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  body:not(.land) .calc button {
+    height: max(40px, min(56px, calc((100vh - 210px) / 4)));
+  }
+  body:not(.land) .calc button.op {
+    font-size: 1.35rem;
+  }
+  body:not(.land) .calcbar {
+    height: 32px;
+  }
+  /* and the amount's figures a size smaller (figures may shrink; words don't) */
+  body:not(.land) .amtwrap input {
+    height: 48px;
+    font-size: min(1.8rem, 10vw);
+  }
+  body:not(.land) .caretmirror {
+    line-height: 48px;
+    font-size: min(1.8rem, 10vw);
+  }
+}
 .calc button.op {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
@@ -2968,6 +2994,10 @@ body.land #dp > .dp-h,
 body.land #pd > .seg {
   grid-area: head;
   align-self: start;
+}
+/* its tabs keep their height (two rows of them too): a box that clips may otherwise be squeezed by a short grid */
+body.land #pd > .seg {
+  min-height: min-content;
 }
 body.land #dp > .cal-h,
 body.land #pd > .cal-h {

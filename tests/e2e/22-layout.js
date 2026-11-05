@@ -20,6 +20,8 @@ const DEVICES = [
   { id: "small-16x9", w: 320, h: 640 }, // small phone, or a 360 px phone at the largest display size
   { id: "compact-16x9", w: 360, h: 640 },
   { id: "phone-20x9", w: 360, h: 800 },
+  { id: "galaxy-s", w: 360, h: 780 }, // Galaxy S2x, the most sold Android phones
+  { id: "galaxy-a", w: 384, h: 854 }, // Galaxy A and Ultra
   { id: "pixel", w: 393, h: 852 },
   { id: "large-phone", w: 412, h: 915 },
   { id: "max-phone", w: 430, h: 932 },
