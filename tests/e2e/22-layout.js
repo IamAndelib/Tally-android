@@ -325,6 +325,8 @@ function inspect() {
     if (clipped) continue;
     const hit = document.elementFromPoint(cx, cy);
     // (the calculator's caret mirror lies over the amount on purpose: a tap there places the caret)
+    // (under the bottom bar: reached by scrolling)
+    if (hit && hit.closest("#nav")) continue;
     if (hit && hit !== e && !e.contains(hit) && !(hit.dataset && hit.dataset.act === "calc-pos"))
       out.push("can't be tapped " + name(e) + " (under " + name(hit) + ")");
   }
