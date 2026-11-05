@@ -375,15 +375,18 @@ const ok = (c, m) => {
   await tap(".balbar");
   ok(await page.isVisible('#sheet [data-v="e1"]'), "banner opens today's entries");
   await tap('#sheet [data-v="e1"]');
+  await tap('#sheet .txo [data-act="tx-open"]');
   ok(await page.isVisible("#f-amt"), "entry opens");
   await tap('#sheet [data-act="close"]');
   await page.waitForTimeout(80);
   ok(await page.isVisible('#sheet [data-v="e1"]'), "✕ returns to the entries list");
   await tap('#sheet [data-v="e1"]');
+  await tap('#sheet .txo [data-act="tx-open"]');
   await page.evaluate(() => window.tallyBack());
   await page.waitForTimeout(80);
   ok(await page.isVisible('#sheet [data-v="e1"]'), "Android back returns to the list");
   await tap('#sheet [data-v="e1"]');
+  await tap('#sheet .txo [data-act="tx-open"]');
   await page.fill("#f-amt", "150");
   await tap('#sheet [data-act="tx-save"]');
   await page.waitForTimeout(80);

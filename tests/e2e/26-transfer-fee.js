@@ -111,14 +111,19 @@ const ok = (c, m) => {
     render();
   });
   await settle();
-  const row = (await page.textContent(`[data-v="${fee.id}"]`)).replace(/\s+/g, " ");
-  ok(/Transfer fee.*City Bank.*→ Brac Joint/.test(row) && !row.includes("Food"), "History row: " + row);
+  const row = (await page.textContent(`[data-v="${tr.id}"]`)).replace(/\s+/g, " ");
+  ok(
+    /City Bank.*→.*Brac Joint/.test(row) && /\+ .*10\.00 fee/.test(row) && !row.includes("Food"),
+    "History: the transfer row, with its fee under the amount: " + row
+  );
+  ok(!(await page.$(`[data-v="${fee.id}"]`)), "the fee has no row of its own");
   const day = (await page.textContent("#app .day")).replace(/\s+/g, " ");
   ok(day.includes("50.00") && !day.includes("60.00"), "the day's total leaves out the fee: " + day);
   await page.screenshot({ path: OUT + "/history.png" });
-  await page.click(`[data-v="${fee.id}"]`);
+  await page.click(`[data-v="${tr.id}"]`);
+  await page.click('#app .txo [data-act="tx-open"]');
   await settle();
-  ok(await page.evaluate(() => F && F.kind === "tr"), "tapping the fee opens its transfer");
+  ok(await page.evaluate(() => F && F.kind === "tr"), "tapping Edit opens the transfer");
   await page.evaluate(() => closeSheet());
 
   // ---- 4. saved data: a fee whose transfer is gone is plain spending; a transfer whose fee is gone has none
@@ -268,9 +273,12 @@ const ok = (c, m) => {
   });
   await settle();
   const oldFee = saved131.txns.find(x => x.feeOf);
-  const upRow = (await page.textContent(`[data-v="${oldFee.id}"]`)).replace(/\s+/g, " ");
+  const upRow = (await page.textContent(`[data-v="${saved131.txns.find(x => x.type === "transfer").id}"]`)).replace(
+    /\s+/g,
+    " "
+  );
   ok(
-    /Transfer fee.*City Bank.*→ Brac Joint/.test(upRow) && !upRow.includes("Food"),
+    /City Bank.*→.*Brac Joint/.test(upRow) && /\+ .*fee/.test(upRow) && !upRow.includes("Food"),
     "after the update, History: " + upRow
   );
   ok((await page.textContent("#app .day")).includes("50.00"), "the day's total is 50");

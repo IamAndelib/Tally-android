@@ -20,6 +20,7 @@ const V = {
   cur: null,
   showArchived: false,
   sel: null,
+  open: "", // the entry whose row is opened in place (txOpenView), one at a time
 };
 /* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month"|"year", anchor, rs, re}; History
    alone also has "all" (all time, its default), which Home never takes. Only Home steps (‹ ›, swipes); History's

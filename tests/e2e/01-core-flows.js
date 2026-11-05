@@ -326,7 +326,7 @@ const ok = (c, m) => {
   const gift = S.txns.find(t => t.type === "income");
   const before = S.txns.length;
   // long-press with mouse (same code path as touch)
-  const row = await page.$(`[data-act="tx-open"][data-v="${tr.id}"]`);
+  const row = await page.$(`[data-act="row-open"][data-v="${tr.id}"]`);
   const rb = await row.boundingBox();
   await page.mouse.move(rb.x + 60, rb.y + 20);
   await page.mouse.down();
@@ -351,7 +351,7 @@ const ok = (c, m) => {
   await act("sel-start");
   await act("sel-all");
   ok(
-    (await page.evaluate(() => document.querySelectorAll(".tx.on").length)) === before,
+    (await page.evaluate(() => document.querySelectorAll(".tx.on").length)) === before - 1, // the fee is no row
     "select all selects the month"
   );
   await act("sel-cancel");

@@ -51,19 +51,19 @@ const ok = (c, m) => {
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll("#app .tx[data-v]")].map(r => ({
         id: r.dataset.v,
-        accs: [...r.querySelectorAll(".ac .an")].map(p => p.textContent),
-        dots: [...r.querySelectorAll(".ac .adot")].map(d => getComputedStyle(d).backgroundColor),
-        bals: [...r.querySelectorAll(".ac .rb")].length,
+        accs: [...r.querySelectorAll(".s bdi")].map(p => p.textContent),
+        dots: [...r.querySelectorAll(".s .adot")].map(d => getComputedStyle(d).backgroundColor),
+        bals: [...r.querySelectorAll(".rb, .ac")].length,
       }))
     );
     const by = id => rows.find(r => r.id === id) || { accs: [], dots: [] };
     ok(
-      by("e1").accs.join() === "Bank" && by("e2").accs.join() === "Card" && by("e1").bals === 1,
-      scheme + ": each entry names its account on a line of its own, with its balance"
+      by("e1").accs.join() === "Bank" && by("e2").accs.join() === "Card" && by("e1").bals === 0,
+      scheme + ": each entry names its account on its second line, with no balance on the row"
     );
     ok(
-      by("x1").accs.join() === "↓Bank,↑Cash" && by("x1").bals === 2,
-      scheme + ": a transfer, a line for each account: " + by("x1").accs.join()
+      by("x1").accs.join() === "Bank,Cash" && by("x1").bals === 0,
+      scheme + ": a transfer reads From → To: " + by("x1").accs.join()
     );
     const want = await page.evaluate(() => ["b", "k"].map(id => "rgb(" + hexRgb(accEmb(acc(id)).c).join(", ") + ")"));
     ok(
@@ -72,7 +72,7 @@ const ok = (c, m) => {
     );
     /* the name itself is plain text in the row's quiet colour: readable (4.5:1) whatever the account's colour */
     const worst = await page.evaluate(() => {
-      const an = document.querySelector("#app .tx[data-v] .an"),
+      const an = document.querySelector("#app .tx[data-v] .s"),
         rgb = s => (s.match(/[\d.]+/g) || []).map(Number);
       let bgEl = an;
       while (bgEl && rgb(getComputedStyle(bgEl).backgroundColor)[3] === 0) bgEl = bgEl.parentElement;

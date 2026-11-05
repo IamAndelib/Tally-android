@@ -880,6 +880,7 @@ function restoreCat(id) {
 }
 function entriesSheet() {
   RBC = null;
+  V.open = "";
   const list = periodTxns().sort(byNewest);
   openSheet(
     periodLabel(),
@@ -1032,4 +1033,33 @@ function saveTr() {
     id ? T("common.saved") : T("transfer.done", { amount: money(amt, fa.currency), account: ta.name }),
     { row: id || nid }
   );
+}
+/* Delete in an opened row: the entry goes with its fee (and a loan's only draw takes its loan), with an Undo, as in
+   History's selection; the entries sheet is drawn again where it was */
+function rowDelete(id) {
+  const t = entry(id);
+  if (!t) return;
+  const no = loanBlock([id]);
+  if (no) {
+    snack(no);
+    return;
+  }
+  const p = $("#sheet #ent-list") && $("#sheet .p"),
+    scroll = p ? p.scrollTop : 0,
+    own = 1 + (t.feeId ? 1 : 0);
+  let n = 0;
+  withUndo(
+    () => (n > own ? T("history.deleted", { count: n }) : T("common.deleted")),
+    () => {
+      n = S.txns.length;
+      deleteEntries([id]);
+      n -= S.txns.length;
+      V.open = "";
+    }
+  );
+  if (p) {
+    entriesSheet();
+    const q = $("#sheet .p");
+    if (q) q.scrollTop = scroll;
+  }
 }

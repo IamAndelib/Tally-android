@@ -235,7 +235,7 @@ function srGroups(q, fuzzy) {
         l.id
       );
     });
-  const hits = all.filter(t => srEntryHit(t, q, fuzzy));
+  const hits = histRows(all.filter(t => srEntryHit(t, q, fuzzy))); // a fee is shown inside its transfer or payment
   let ents = "";
   if (hits.length)
     ents =

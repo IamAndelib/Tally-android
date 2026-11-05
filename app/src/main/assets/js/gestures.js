@@ -65,7 +65,7 @@ function pressStart(x, y, target) {
     return;
   }
   const tile = !ringSettling && target.closest(".cgrid .tile, .ring.edit .tile"),
-    row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="tx-open"]');
+    row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="row-open"]');
   const mv =
     (V.screen === "assets" || V.screen === "liabs" || V.screen === "home") &&
     (target.closest(".tx[data-drag]") || target.closest('.strip .acc[data-act="acc-open"]'));

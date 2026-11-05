@@ -1489,7 +1489,7 @@ input {
   overflow-wrap: break-word;
   line-height: 1.35;
 }
-/* an entry's row (txLine): what it was | how much, each account | its balance after the entry, then the details */
+/* an entry's row (txLine): what it was | how much, then its category and account under the title */
 .tx.en .mid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1498,6 +1498,8 @@ input {
   align-items: baseline;
 }
 .tx.en .d {
+  grid-column: 1;
+  grid-row: 1;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; /* a long note: the whole of it is one tap away */
@@ -1506,39 +1508,19 @@ input {
 }
 .tx.en .a {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   max-width: none;
 }
-.tx.en .ac,
 .tx.en .s {
-  grid-column: 1 / -1;
-}
-.tx.en .ac {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: var(--on-surface-variant);
-}
-.tx.en .an {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: break-word;
+  grid-column: 1;
+  grid-row: 2;
 }
 .tx.en .ar {
-  margin-right: 2px;
-}
-.tx.en .rb {
-  flex: none;
-  margin-left: auto;
-  white-space: nowrap;
-}
-.tx.en .sep {
-  display: none;
+  margin: 0 2px;
 }
 /* the account's colour as a dot before its name: the name says which account, the colour only helps to spot it */
 .adot {
@@ -1551,27 +1533,123 @@ input {
   background: rgb(var(--acr));
 }
 /* a tight list (fitFigures: under 20rem wide, a small phone or a large text size): the title has the whole width, the
-   amount starts the line below it, and an account and its balance read as one line */
-.list.tight .tx.en .d {
+   amount starts the line below it, then the category and account */
+.list.tight .tx.en .d,
+.list.tight .tx.en .s {
   grid-column: 1 / -1;
+  grid-row: auto;
+}
+.list.tight .tx.en .d {
   -webkit-line-clamp: 3;
 }
 .list.tight .tx.en .a {
   grid-column: 1 / -1;
   grid-row: auto;
+  align-self: auto;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 0 8px;
   justify-self: start;
 }
-.list.tight .tx.en .ac {
+/* the opened part of a row (txOpenView): a soft panel under it, the row above it the same colour */
+.tx[aria-expanded="true"],
+.txo {
+  background: var(--surface-high);
+}
+.txo {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.txo + .tx {
+  border-top: 1px solid var(--outline-variant);
+}
+.txo .added {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--on-surface);
+}
+.txo .added .ic {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+.txo .added b {
+  font-weight: 600;
+}
+.txo .frow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.txo .fbox,
+.txo .lbox {
+  background: var(--surface-low);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.txo .fbox {
+  flex: 1 1 8rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.txo .bcap,
+.txo .bin,
+.txo .lfoot {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+}
+.txo .bval {
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.txo .lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--on-surface-variant);
+}
+.txo .lhead b {
+  font-size: 1.05rem;
+  color: var(--on-surface);
+}
+.txo .ltrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--outline-variant);
+  margin: 8px 0 6px;
+  overflow: hidden;
+}
+.txo .ltrack span {
   display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
 }
-.list.tight .tx.en .rb {
-  display: inline;
+.txo .acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
 }
-.list.tight .tx.en .sep {
-  display: inline;
+.txo .acts .btn {
+  width: auto;
+  flex: none;
+  padding: 6px 16px;
+}
+.txo .acts .btn .ic {
+  width: 18px;
+  height: 18px;
 }
 /* an account, lending or asset row (.stk) in a tight list: the icon on the left in the middle; its name, balance and
    type below each other from the left */

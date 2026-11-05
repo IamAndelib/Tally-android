@@ -62,9 +62,10 @@ const ok = (c, m) => {
       scrollTo(0, 6000);
       await new Promise(res => setTimeout(res, 200));
       const el = [...document.querySelectorAll("#app .tx[data-v]")].find(e => e.getBoundingClientRect().top > 400);
-      const id = el.dataset.v,
-        top = el.getBoundingClientRect().top;
-      el.click();
+      const id = el.dataset.v;
+      el.click(); // opens in place, scrolled into view if need be
+      $('#app .txo [data-act="tx-open"]').click();
+      const top = el.getBoundingClientRect().top;
       await new Promise(res => setTimeout(res, 200));
       $('#sheet [data-act="tx-save"]').click();
       await new Promise(res => setTimeout(res, 400));
@@ -88,6 +89,7 @@ const ok = (c, m) => {
       const id = el.dataset.v,
         top = el.getBoundingClientRect().top;
       el.click();
+      $('#sheet .txo [data-act="tx-open"]').click();
       await new Promise(res => setTimeout(res, 300));
       $('#sheet [data-act="close"]').click();
       await new Promise(res => setTimeout(res, 500));

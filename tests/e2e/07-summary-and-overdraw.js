@@ -98,11 +98,19 @@ const ok = (c, m) => {
       cs === (await page.evaluate(() => getComputedStyle(document.querySelector(".spent")).color)),
     "expense red, income green, transfer blue " + [cs, cg, cx]
   );
-  /* each account line: the account's name, then its balance after the entry */
-  const rb = async id =>
-    page.$$eval(`[data-v="${id}"] .ac`, e =>
-      e.map(x => x.querySelector(".an").textContent + " " + x.querySelector(".rb").textContent)
+  /* an opened row's Left after boxes: the balance an account held after the entry, and which account */
+  const rb = async id => {
+    await tap(`.tx[data-v="${id}"]`);
+    const boxes = await page.$$eval(`.txo[data-v="${id}"] .fbox`, e =>
+      e
+        .filter(x => x.querySelector(".bcap").textContent === "Left after")
+        .map(
+          x => x.querySelector(".bin").textContent.replace(/^in\s*/, "") + " " + x.querySelector(".bval").textContent
+        )
     );
+    await tap(`.tx[data-v="${id}"]`);
+    return boxes;
+  };
   const want = {
     e0: "Wallet BDT 930",
     e1: "Wallet BDT 830",
@@ -129,11 +137,17 @@ const ok = (c, m) => {
       tr[1].includes("1,080"),
     "transfer shows both accounts " + JSON.stringify(tr)
   );
+  const lb = async id => {
+    await tap(`.tx[data-v="${id}"]`);
+    const t = (await page.$eval(`.txo[data-v="${id}"]`, e => e.innerText)).replace(/\s+/g, " ");
+    await tap(`.tx[data-v="${id}"]`);
+    return t;
+  };
+  /* a loan's box shows the loan as it is now: all of it paid back by the last payment */
+  const lbs = [await lb("r1"), await lb("r2"), await lb("p1")];
   ok(
-    (await txt('[data-v="r1"] .s')).includes("Partly paid") &&
-      (await txt('[data-v="r2"] .s')).includes("Cleared") &&
-      !(await txt('[data-v="p1"] .s')).includes("paid"),
-    "loan pills: partly paid, then cleared"
+    lbs.every(t => t.includes("Cleared") && t.includes("BDT 300.00 of BDT 300.00 back")),
+    "an opened loan entry shows the lending's bar and that it is cleared: " + lbs.join(" / ")
   );
   await page.screenshot({ path: OUT + "/history.png" });
   await tap('[data-act="home"]');

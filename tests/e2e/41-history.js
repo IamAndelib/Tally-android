@@ -709,6 +709,190 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- the rows: two lines, fees inside, opened in place
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.clock = "12";
+      S.settings.lastCheck = today();
+      const acct = (id, name, opening) =>
+        S.accounts.push({ id, name, type: "bank", currency: "USD", opening, archived: false });
+      acct("b", "Everyday", 5050);
+      acct("c", "Cash", 118);
+      const at = (date, h, m) => {
+        const [y, mo, d] = date.split("-").map(Number);
+        return new Date(y, mo - 1, d, h, m).getTime();
+      };
+      const add = (id, date, h, m, type, amount, account, extra) =>
+        S.txns.push({ id, ts: at(date, h, m), date, type, amount, account, note: "", ...extra });
+      S.loans.push({
+        id: "L2",
+        kind: "borrow",
+        person: "Maya",
+        account: "b",
+        date: addDays(today(), -8),
+        note: "",
+        status: "open",
+      });
+      add("draw", addDays(today(), -8), 10, 0, "loan", 600, "b", { loan: "L2", dir: "in", principal: true });
+      /* written down two days after its date */
+      add("late", addDays(today(), -6), 9, 0, "expense", 12.5, "b", { cat: "fun", payee: "Riverside Cinema" });
+      S.txns.find(t => t.id === "late").ts = at(today(), 9, 3);
+      add("coffee", addDays(today(), -4), 18, 14, "expense", 4.85, "c", {
+        cat: "food",
+        payee: "Corner Café",
+        note: "Coffee",
+      });
+      add("tr1", addDays(today(), -3), 12, 0, "transfer", 200, "b", { to: "c", feeId: "fee1" });
+      add("fee1", addDays(today(), -3), 12, 0, "expense", 2, "b", { cat: "fees", feeOf: "tr1" });
+      S.txns.find(t => t.id === "fee1").ts += 1;
+      add("pay", addDays(today(), -2), 12, 0, "loan", 250, "b", { loan: "L2", dir: "out", feeId: "fee2" });
+      add("fee2", addDays(today(), -2), 12, 0, "expense", 1.5, "b", { cat: "fees", feeOf: "pay" });
+      S.txns.find(t => t.id === "fee2").ts += 1;
+      add("orph", addDays(today(), -1), 12, 0, "expense", 3, "b", { cat: "fees", feeOf: "gone" });
+      save();
+      V.screen = "history";
+      render();
+    });
+    const row = id => `#app .tx[data-v="${id}"]`;
+    const text = async sel => (await page.textContent(sel)).replace(/\s+/g, " ");
+    const state = () =>
+      page.evaluate(() => ({
+        open: V.open,
+        txo: document.querySelectorAll("#app .txo").length,
+        exp: [...document.querySelectorAll("#app .tx[aria-expanded]")]
+          .map(r => r.dataset.v + r.getAttribute("aria-expanded"))
+          .join(),
+      }));
+    const rb = await page.evaluate(() => ({
+      feeRow: !!document.querySelector('#app .tx[data-v="fee1"], #app .tx[data-v="fee2"]'),
+      acts: [...document.querySelectorAll("#app .tx[data-v]")].map(r => r.dataset.act).join(),
+      orphan: !!document.querySelector('#app .tx[data-v="orph"]'),
+      noBal: !document.querySelector("#app .tx .rb, #app .tx .ac"),
+    }));
+    ok(!rb.feeRow, "a fee with its transfer or payment has no row of its own");
+    ok(rb.orphan, "an orphan fee is a row of its own");
+    ok(
+      rb.acts.split(",").every(a => a === "row-open"),
+      "every row opens in place: " + rb.acts
+    );
+    ok(rb.noBal, "no running balance on the row");
+    const tr = await text(row("tr1"));
+    ok(tr.includes("+ $2.00 fee") && tr.includes("$200.00"), "a transfer's fee is under its amount: " + tr);
+    ok(/Everyday\s*→\s*Cash/.test(tr), "a transfer reads From → To: " + tr);
+    const pr = await text(row("pay"));
+    ok(pr.includes("+ $1.50 fee"), "a loan payment's fee is under its amount: " + pr);
+    const cf = await text(row("coffee"));
+    ok(/Food.* · .*Cash/.test(cf) || cf.includes("Cash"), "category and account on the second line: " + cf);
+
+    /* tap opens, a second tap on another row closes the first */
+    await page.click(row("coffee"));
+    let st = await state();
+    ok(
+      st.open === "coffee" && st.txo === 1 && st.exp.includes("coffeetrue"),
+      "a tap opens the row: " + JSON.stringify(st)
+    );
+    const op = await text("#app .txo");
+    ok(
+      op.includes("Left after") && op.includes("$113.15") && op.includes("in Cash"),
+      "a purchase: Left after $113.15 in Cash: " + op
+    );
+    ok(op.includes("Added at 6:14 PM"), "the time it was added: " + op);
+    ok(!/rate/i.test(op), "no exchange rate");
+    await page.click(row("late"));
+    st = await state();
+    ok(
+      st.open === "late" && st.txo === 1 && st.exp.includes("coffeefalse") && st.exp.includes("latetrue"),
+      "one open at a time: " + JSON.stringify(st)
+    );
+    const late = await text("#app .txo");
+    const want = await page.evaluate(
+      () =>
+        "Added " + parseISO(today()).toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }) + " at 9:03 AM"
+    );
+    ok(late.replace(/\s+/g, " ").includes(want), "written down later: " + late + " / " + want);
+    await page.click(row("late"));
+    st = await state();
+    ok(st.open === "" && st.txo === 0, "a second tap closes it: " + JSON.stringify(st));
+
+    /* a transfer */
+    await page.click(row("tr1"));
+    const xo = await page.evaluate(() => ({
+      text: document.querySelector("#app .txo").textContent.replace(/\s+/g, " "),
+      boxes: [...document.querySelectorAll("#app .txo .fbox")].map(b => b.textContent.replace(/\s+/g, " ")),
+    }));
+    ok(
+      xo.boxes.filter(b => b.includes("Left after")).length === 2,
+      "a transfer: a Left after box for each account: " + xo.boxes
+    );
+    ok(xo.text.includes("Paid in all") && xo.text.includes("$202.00"), "Paid in all $202.00: " + xo.text);
+    ok(
+      xo.boxes.some(b => b.includes("$4,848.00")) || xo.boxes.some(b => b.includes("in Everyday")),
+      "the paying account's balance is after its fee"
+    );
+    ok(
+      xo.boxes.some(b => b.includes("$313.15") && b.includes("in Cash")),
+      "the receiving account's balance: " + xo.boxes
+    );
+    ok(!/rate/i.test(xo.text), "no rate line");
+
+    /* a loan payment */
+    await page.click(row("pay"));
+    const lo = await page.evaluate(() => ({
+      text: document.querySelector("#app .txo").innerText.replace(/\s+/g, " "),
+      acts: [...document.querySelectorAll("#app .txo .acts button")]
+        .map(b => b.dataset.act + ":" + b.textContent.trim())
+        .join(),
+      bar: !!document.querySelector("#app .txo .lbox"),
+    }));
+    ok(lo.text.includes("You owe Maya $350.00") && lo.text.includes("$250.00 of $600.00 paid"), "the loan: " + lo.text);
+    ok(lo.bar, "the loan has its bar box");
+    ok(lo.acts === "tx-open:Edit,tx-del:Delete,tx-lend:Open loan", "buttons: Edit, Delete, Open loan: " + lo.acts);
+    await page.click('#app .txo [data-act="tx-lend"]');
+    ok(
+      !!(await page.$("#sheet .p")) && (await page.evaluate(() => F && F.kind)) !== undefined,
+      "Open loan opens the loan"
+    );
+    await page.evaluate(() => goBack());
+
+    /* Edit opens the entry form; Delete removes the entry (and its fee) */
+    await page.click(row("coffee"));
+    await page.click('#app .txo [data-act="tx-open"]');
+    ok(!!(await page.$("#sheet #f-amt")), "Edit opens the entry form");
+    await page.evaluate(() => goBack());
+    ok((await state()).open === "coffee", "the row stays open behind the form");
+    await page.click('#app .txo [data-act="tx-del"]');
+    await page.waitForTimeout(100);
+    const del = await page.evaluate(() => ({
+      txo: document.querySelectorAll("#app .txo").length,
+      gone: !S.txns.some(t => t.id === "coffee"),
+      open: V.open,
+    }));
+    ok(del.gone && del.txo === 0 && del.open === "", "Delete removes the entry and closes it: " + JSON.stringify(del));
+
+    /* Home's entries sheet and search show the same rows */
+    const other = await page.evaluate(() => {
+      V.screen = "home";
+      Object.assign(V, { period: "range", rs: addDays(today(), -10), re: today() });
+      render();
+      entriesSheet();
+      const sheet = [...document.querySelectorAll("#sheet .tx[data-v]")].map(r => r.dataset.v + ":" + r.dataset.act);
+      closeSheet();
+      return sheet.join();
+    });
+    ok(other.includes("tr1:row-open") && !other.includes("fee1"), "Home's entries: the same rows: " + other);
+    const sr = await page.evaluate(() => {
+      openSearch();
+      $("#sr-q").value = "everyday";
+      searchInput("everyday");
+      return [...document.querySelectorAll("#sr .tx[data-v]")].map(r => r.dataset.v + ":" + r.dataset.act).join();
+    });
+    ok(sr.includes("tr1:row-open") && !sr.includes("fee1"), "search: the same rows: " + sr);
+    await ctx.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

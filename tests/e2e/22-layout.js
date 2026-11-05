@@ -529,6 +529,30 @@ function inspect() {
         render();
       })
     );
+    /* an opened row: a transfer with its fee (two balance boxes), a loan payment (the bar box) */
+    const opened = () =>
+      ev(() => {
+        V.screen = "history";
+        render();
+        const t = S.txns.find(x => x.type === "transfer");
+        V.open = t.id;
+        render();
+        const o = document.querySelector(".txo");
+        if (o) o.scrollIntoView({ block: "center" });
+      });
+    await shot("history-open-transfer", opened());
+    await shot(
+      "history-open-loan",
+      ev(() => {
+        V.screen = "history";
+        render();
+        const t = S.txns.find(x => x.type === "loan" && !x.principal) || S.txns.find(x => x.type === "loan");
+        V.open = t ? t.id : "";
+        render();
+        const o = document.querySelector(".txo");
+        if (o) o.scrollIntoView({ block: "center" });
+      })
+    );
     await shot(
       "settings",
       ev(() => {

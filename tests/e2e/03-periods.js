@@ -69,7 +69,7 @@ const ok = (c, m) => {
   const act = (a, v) => page.click(v === undefined ? `[data-act="${a}"]` : `[data-act="${a}"][data-v="${v}"]`);
   const rows = () =>
     page.evaluate(() =>
-      [...document.querySelectorAll('.tx[data-act="tx-open"]')]
+      [...document.querySelectorAll('.tx[data-act="row-open"]')]
         .map(x => x.dataset.v)
         .sort()
         .join("")

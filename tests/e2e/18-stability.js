@@ -342,7 +342,7 @@ const ago = n => {
     render();
   });
   ok(
-    (await page.evaluate(() => HF.acc)) === "" && (await page.$$('#app [data-act="tx-open"]')).length === 1,
+    (await page.evaluate(() => HF.acc)) === "" && (await page.$$('#app [data-act="row-open"]')).length === 1,
     "a filter on a deleted account is dropped"
   );
 

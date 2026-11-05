@@ -251,8 +251,10 @@ const ok = (c, m) => {
 
   /* an entry opens from the results; Back leaves Search to where it was opened from */
   await typeIn("rain");
-  await page.click('#sr .tx[data-act="tx-open"]');
-  ok(!!(await page.$("#sheet .sheet, #sheet .p")), "an entry opens from the results");
+  await page.click('#sr .tx[data-act="row-open"]');
+  ok(!(await page.$("#sheet .p")) && !!(await page.$("#sr .txo")), "a result opens in place, with its details");
+  await page.click('#sr .txo [data-act="tx-open"]');
+  ok(!!(await page.$("#sheet .sheet, #sheet .p")), "an entry opens from the results (Edit)");
   await page.evaluate(() => goBack());
   await page.evaluate(() => goBack());
   ok((await page.evaluate(() => V.screen)) === "home", "Back from Search returns to Home");

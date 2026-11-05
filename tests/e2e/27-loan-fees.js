@@ -156,14 +156,18 @@ const ok = (c, m) => {
     render();
   });
   await settle();
-  const row = (await page.textContent(`[data-v="${f1.id}"]`)).replace(/\s+/g, " ");
+  const row = (await page.textContent(`[data-v="${p1.id}"]`)).replace(/\s+/g, " ");
   ok(
-    /Payment fee/.test(row) && /paid back Sam/.test(row) && !/Food/.test(row),
-    "History shows it with the payment: " + row
+    /paid back Sam/i.test(row) &&
+      /\+ .*20\.00 fee/.test(row) &&
+      !/Food/.test(row) &&
+      !(await page.$(`[data-v="${f1.id}"]`)),
+    "History shows the payment with its fee under the amount, the fee no row: " + row
   );
   ok(/50\.00/.test(await page.textContent("#app .day")), "the day's total is the 50 spent");
-  await click(`[data-v="${f1.id}"]`);
-  ok((await page.textContent("#sheet h2")) === "Sam", "tapping the fee opens its loan");
+  await click(`[data-v="${p1.id}"]`);
+  await click('#app .txo [data-act="tx-open"]');
+  ok((await page.textContent("#sheet h2")) === "Sam", "Edit on the payment opens its loan");
   await click('#sheet .tx.exp .txh[data-act="row-exp"]');
   ok(/BDT.20\.00 fee/.test(await page.textContent("#sheet .tx.exp.open .more")), "the payment's row shows its fee");
 
@@ -194,10 +198,8 @@ const ok = (c, m) => {
     render();
   });
   await settle();
-  ok(
-    /got back from Rina/.test(await page.textContent(`[data-v="${p2.feeId}"]`)),
-    "its History row: " + (await page.textContent(`[data-v="${p2.feeId}"]`)).replace(/\s+/g, " ")
-  );
+  const gb = (await page.textContent(`[data-v="${p2.id}"]`)).replace(/\s+/g, " ");
+  ok(/Rina paid back/.test(gb) && /\+ .*15\.00 fee/.test(gb), "its History row, with the fee under the amount: " + gb);
   await page.evaluate(() => loanOpen("L"));
   await settle();
   await click('#sheet [data-act="loan-reopen"]');

@@ -84,6 +84,7 @@ function toAnchor(a, box, scroller) {
 function drawScreen() {
   const app = $("#app");
   RBC = null;
+  if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
   if (V.screen !== "history") {
     V.sel = null;
     HF = histBlank(); // leaving History forgets its filters
@@ -662,46 +663,35 @@ const accTag = a =>
   a
     ? '<bdi><span class="adot" style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"></span>' + esc(a.name) + "</bdi>"
     : bdi("?");
-/* An entry's row: each line pairs what belongs together. What it was | how much; each account it touched | what that
-   account held right after it (a transfer: both, ↓ out of one, ↑ into the other); then its details (the category when
-   the title is a payee or a note, a loan's kind and state, a fee's reason), only when there are any. Every text
+/* An entry's row: two lines. What it was | how much (a fee under it: "+ $2.00 fee"; a transfer between currencies: what
+   arrived), then its category when the title is a payee or a note (a note, for a loan) and its account with the dot of
+   its colour; a transfer: From → To. No balance on the row: tapping it opens it in place (txOpenView), where the balances,
+   the time it was written down and the actions are. A transfer's or loan payment's fee has no row (histRows). Every text
    wraps, nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the
-   title the whole width, the amount the line below it, and each account and its balance one line. */
+   title the whole width, the amount the line below it, then the second line. */
 function txLine(t) {
   const a = acc(t.account),
     cur = a ? a.currency : S.settings.cur,
-    r = runBal()[t.id] || {};
+    f = t.feeId ? entry(t.feeId) : null;
   let em,
     d,
     amt,
     cls = "",
-    det = [];
-  /* an account line: [arrow] the account, then its balance after this entry */
-  const line = (x, bal, arrow) =>
-    '<span class="ac"><span class="an">' +
-    (arrow ? '<span class="ar">' + arrow + "</span>" : "") +
-    accTag(x) +
-    "</span>" +
-    (x && bal != null
-      ? '<span class="sep">\u00a0· </span><span class="rb">' + esc(money(bal, x.currency)) + "</span>" // "·" ends a line
-      : "") +
-    "</span>";
-  let lines = line(a, r.a);
+    sub = accTag(a),
+    small = "";
   if (t.type === "transfer") {
     const to = acc(t.to);
     em = XFER_EMB;
     cls = "xfer";
     d = esc(t.note || T("transfer.title"));
-    amt =
-      esc(money(t.amount, cur)) +
-      (t.toAmount != null && to && to.currency !== cur
-        ? "<small>→ " + esc(money(t.toAmount, to.currency)) + "</small>"
-        : "");
-    lines = line(a, r.a, "↓") + line(to, r.t, "↑");
+    amt = esc(money(t.amount, cur));
+    sub += ' <span class="ar">\u2192</span> ' + accTag(to);
+    if (t.toAmount != null && to && to.currency !== cur)
+      small += "<small>\u2192 " + esc(money(t.toAmount, to.currency)) + "</small>";
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
     d = esc(noteShown(t, "fix.title"));
-    if (t.note) det.push(TH("fix.title"));
+    if (t.note) sub = TH("fix.title") + " \u00b7 " + sub;
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -712,50 +702,46 @@ function txLine(t) {
     d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
       who: { html: bdi(who) },
     });
-    det.push(loanPill(t) + TH(lend ? "tx.lending" : "tx.loan"));
-    if (t.note) det.push(bdi(t.note));
+    if (t.note) sub = bdi(t.note) + " \u00b7 " + sub;
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
-    /* a fee: shown with the transfer or loan payment it was charged on, not as a category's spending */
+    /* a fee whose transfer or payment is gone (or one met outside History): its own row, never a category's spending */
     const host = entry(t.feeOf) || {},
       l = host.type === "loan" && loan(host.loan);
     cls = "xfer";
     amt = esc(signed(-t.amount, cur));
-    if (l) {
-      const lend = l.kind === "lend";
-      em = LOAN_EMB[lend ? "lend" : "borrow"];
-      d = esc(noteShown(t, "loan.feeNote"));
-      det.push(TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } }));
-    } else {
-      const to = acc(host.to);
-      em = XFER_EMB;
-      d = esc(noteShown(t, "transfer.feeNote"));
-      if (to) det.push("→ " + accTag(to)); // the transfer it was charged on went there
-    }
+    em = l ? LOAN_EMB[l.kind === "lend" ? "lend" : "borrow"] : XFER_EMB;
+    d = esc(noteShown(t, l ? "loan.feeNote" : "transfer.feeNote"));
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
     if (t.payee || t.note) {
-      d = [t.payee, t.note].filter(Boolean).map(bdi).join(" · ");
-      det.push(bdi(catName(k)));
+      d = [t.payee, t.note].filter(Boolean).map(bdi).join(" \u00b7 ");
+      sub = bdi(catName(k)) + " \u00b7 " + sub;
     } else d = esc(catName(k));
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
+  if (f)
+    small +=
+      "<small>" +
+      TH("tx.feeLine", { amount: money(f.amount, (acc(f.account) || a || {}).currency || cur) }) +
+      "</small>";
   const selMode = !!V.sel && V.screen === "history",
-    on = selMode && V.sel.has(t.id);
+    on = selMode && V.sel.has(t.id),
+    isOpen = !selMode && V.open === t.id;
   return (
     '<button class="tx en' +
     (on ? " on" : "") +
     (FX.row === t.id ? " flash" : "") +
     '" data-act="' +
-    (selMode ? "sel-toggle" : "tx-open") +
+    (selMode ? "sel-toggle" : "row-open") +
     '" data-v="' +
     t.id +
     '"' +
-    (selMode ? ' aria-pressed="' + on + '"' : "") +
+    (selMode ? ' aria-pressed="' + on + '"' : ' aria-expanded="' + isOpen + '"') +
     ">" +
     (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
     '<span class="mid"><span class="d" dir="auto">' +
@@ -764,11 +750,132 @@ function txLine(t) {
     cls +
     '">' +
     amt +
-    "</span>" +
-    lines +
-    (det.length ? '<span class="s">' + det.join(" · ") + "</span>" : "") +
-    "</span></button>"
+    small +
+    '</span><span class="s">' +
+    sub +
+    "</span></span></button>" +
+    (isOpen ? txOpenView(t) : "")
   );
+}
+/* What an opened row adds to what the row shows: when it was written down, the balance it left (after its fee), what a
+   transfer or a loan adds, and the actions. A box is a small label over a bold figure; an account is named only to tell
+   two balances apart. Built on demand: the tap that opens a row puts it after the row (rowToggle). */
+function txOpenView(t) {
+  const a = acc(t.account),
+    cur = a ? a.currency : S.settings.cur,
+    RB = runBal(),
+    r = RB[t.id] || {},
+    f = t.feeId ? entry(t.feeId) : null,
+    after = (f && RB[f.id]) || r, // the balance after the entry and its fee
+    M = (v, c) => esc(money(v, c));
+  const box = (cap, val, extra) =>
+    '<div class="fbox"><div class="bcap">' +
+    cap +
+    '</div><div class="bval">' +
+    val +
+    "</div>" +
+    (extra || "") +
+    "</div>";
+  const bal = (x, v) =>
+    x && v != null
+      ? box(
+          TH("tx.leftAfter"),
+          M(v, x.currency),
+          '<div class="bin">' + TH("tx.inAcc", { account: { html: accTag(x) } }) + "</div>"
+        )
+      : "";
+  const row = boxes => (boxes ? '<div class="frow">' + boxes + "</div>" : "");
+  let h = "";
+  if (t.ts) {
+    const w = new Date(t.ts),
+      time =
+        "<b>" +
+        esc(w.toLocaleTimeString(DATE_LOC, { hour: "numeric", minute: "2-digit", hour12: S.settings.clock === "12" })) +
+        "</b>";
+    h +=
+      '<div class="added">' +
+      ic("schedule") +
+      "<span>" +
+      (iso(w) !== t.date
+        ? TH("tx.addedOn", {
+            date: { html: "<b>" + esc(w.toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" })) + "</b>" },
+            time: { html: time },
+          })
+        : TH("tx.addedAt", { time: { html: time } })) +
+      "</span></div>";
+  }
+  let loanBtn = "";
+  if (t.type === "transfer") {
+    const to = acc(t.to);
+    h += row(f ? box(TH("tx.paidInAll"), M(t.amount + f.amount, cur)) : "");
+    h += row(bal(a, after.a) + bal(to, r.t));
+  } else if (t.type === "loan" && loan(t.loan)) {
+    const l = loan(t.loan),
+      i = loanInfo(l),
+      lend = l.kind === "lend",
+      who = { html: bdi(loanWho(l)) },
+      paid = Math.max(0, rnd(i.total - i.left)),
+      pct = i.total ? Math.min(100, Math.round((paid / i.total) * 100)) : 0;
+    h +=
+      '<div class="lbox"><div class="lhead"><span>' +
+      (i.left > 0 ? TH(lend ? "tx.owesYou" : "tx.youOwe", { who }) : TH("tx.cleared")) +
+      "</span>" +
+      (i.left > 0 ? "<b>" + M(i.left, i.cur) + "</b>" : "") +
+      '</div><div class="ltrack" aria-hidden="true"><span style="width:' +
+      pct +
+      '%"></span></div><div class="lfoot">' +
+      TH(lend ? "tx.backOf" : "tx.paidOf", { paid: money(paid, i.cur), total: money(i.total, i.cur) }) +
+      "</div></div>";
+    let boxes = "";
+    if (f)
+      boxes += box(
+        TH(t.dir === "out" ? "tx.paidInAll" : "tx.reachedYou"),
+        M(t.dir === "out" ? t.amount + f.amount : t.amount - f.amount, cur)
+      );
+    if (t.principal && t.due && i.rem[t.id] > 0) boxes += box(TH("tx.due"), esc(shortDay(t.due)));
+    h += row(boxes + bal(a, after.a));
+    loanBtn =
+      '<button class="btn text" data-act="tx-lend" data-v="' +
+      esc(l.id) +
+      '">' +
+      TH(lend ? "tx.openLend" : "tx.openLoan") +
+      "</button>";
+  } else if (t.type === "adjust") {
+    if (after.a != null) h += row(box(TH("tx.was"), M(after.a - t.amount, cur)) + box(TH("tx.now"), M(after.a, cur)));
+  } else h += row(bal(a, after.a));
+  return (
+    '<div class="txo" data-v="' +
+    t.id +
+    '">' +
+    h +
+    '<div class="acts"><button class="btn tonal" data-act="tx-open" data-v="' +
+    t.id +
+    '">' +
+    ic("edit") +
+    TH("common.edit") +
+    '</button><button class="btn text dng" data-act="tx-del" data-v="' +
+    t.id +
+    '">' +
+    ic("delete") +
+    TH("common.delete") +
+    "</button>" +
+    loanBtn +
+    "</div></div>"
+  );
+}
+/* a tap on a row: it opens in place (the one open before closes), or closes. Only that row's part is added or removed,
+   not the whole (long) list drawn anew */
+function rowToggle(row, id) {
+  const was = V.open === id;
+  document.querySelectorAll(".txo").forEach(x => x.remove());
+  document.querySelectorAll('.tx[aria-expanded="true"]').forEach(x => x.setAttribute("aria-expanded", "false"));
+  V.open = was ? "" : id;
+  const t = entry(id);
+  if (was || !t) return;
+  row.setAttribute("aria-expanded", "true");
+  row.insertAdjacentHTML("afterend", txOpenView(t));
+  const o = row.nextElementSibling;
+  if (o && o.scrollIntoView) o.scrollIntoView({ block: "nearest" });
 }
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
@@ -776,6 +883,7 @@ function loanPill(t) {
   return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
 function dayGroups(list) {
+  list = histRows(list); // a fee is shown inside what it was charged on
   let h = "",
     cur = "";
   /* each day's spending per currency, in one pass (a year of History is thousands of rows) */

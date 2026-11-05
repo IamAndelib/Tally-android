@@ -284,6 +284,12 @@ document.addEventListener("click", ev => {
     case "tx-open":
       openEntry(v);
       break;
+    case "row-open":
+      rowToggle(el, v);
+      break;
+    case "tx-lend":
+      loanOpen(v);
+      break;
     case "search-open":
       openSearch();
       break;
@@ -336,6 +342,10 @@ document.addEventListener("click", ev => {
     }
     case "tx-del":
     case "tr-del": {
+      if (el.closest(".txo")) {
+        rowDelete(v);
+        break;
+      }
       const id = F.id;
       closeSheet();
       withUndo(T("common.deleted"), () => deleteEntries([id]));
@@ -589,7 +599,7 @@ document.addEventListener("click", ev => {
       } else selSync(el);
       break;
     case "sel-all": {
-      const ids = histList().map(t => t.id);
+      const ids = histRows(histList()).map(t => t.id); // a fee goes with its entry
       V.sel = ids.every(id => V.sel.has(id)) ? new Set() : new Set(ids);
       render();
       break;

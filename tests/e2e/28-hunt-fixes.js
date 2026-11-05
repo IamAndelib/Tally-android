@@ -163,6 +163,7 @@ const ok = (c, m) => {
   await page.evaluate(() => entriesSheet());
   await settle();
   await page.click(`#sheet [data-v="${e1}"]`);
+  await page.click('#sheet .txo [data-act="tx-open"]');
   await settle();
   await page.fill("#f-amt", "13");
   await page.click('#sheet [data-act="tx-save"]');
@@ -1410,16 +1411,16 @@ const ok = (c, m) => {
       r = document.createRange();
     if (!b || !b.nextSibling) return null;
     r.selectNodeContents(b.nextSibling);
-    const an = $('#app [data-v="x1"] .an'),
-      arrow = an.firstChild;
+    const an = $('#app [data-v="x1"] .s'),
+      arrow = an.querySelector(".ar");
     return {
       sentence:
         getComputedStyle(d).direction === "ltr" &&
         b.getBoundingClientRect().right <= r.getBoundingClientRect().left + 1,
       arrow:
-        arrow.classList.contains("ar") &&
-        arrow.textContent === "↓" &&
-        !an.querySelector("bdi").textContent.includes("↓"),
+        !!arrow &&
+        arrow.textContent === "→" &&
+        [...an.querySelectorAll("bdi")].every(x => !x.textContent.includes("→")),
     };
   });
   ok(bidi && bidi.sentence, 'a right-to-left name keeps the sentence in order: "سارة paid back", name first');
