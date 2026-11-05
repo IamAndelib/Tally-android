@@ -33,3 +33,4 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-05 · P2 · A search result opens by Week | Month | Year | All (concept A), with up to six bars ending at the chosen period and none before its first entry, the total, the average per entry and the change from the period before; not B's three figures (redundant). It opens on this month, or on All when nothing of it is this month; no comparison with a period during which the notebook was started · maintainer's pick, defaults mine
 - 2026-11-05 · P3 · A small phone held sideways: Home's bar keeps Search where it is upright and drops the ‹ › arrows (the ring's swipe and the period dialog still move the period) · maintainer's pick of two demos
 - 2026-11-05 · P3 · A Home chip dragged over another ticks once per switch, not on every move, like the rows · maintainer, after trying round D
+- 2026-11-05 · P3 · The search result's tabs read All | Week | Month | Year (All first) · maintainer

@@ -278,7 +278,7 @@ function srScope(v) {
 /* one result's entries, by Week, Month, Year or All (SR.scope.span), like the Summary: up to six bars ending at the
    chosen period (years for All), none before its first entry, that period's total against the one before, and its entries. The bars are for looking only; they
    count spending, or money received when the result has no spending (a "Received from"). */
-const SR_SPANS = ["w", "m", "y", "a"];
+const SR_SPANS = ["a", "w", "m", "y"]; // the tabs, in order: All first
 const srStart = (span, d) =>
   span === "w" ? weekStart(d) : span === "m" ? d.slice(0, 7) + "-01" : d.slice(0, 4) + "-01-01";
 const srShift = (span, s, k) =>

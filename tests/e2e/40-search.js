@@ -159,6 +159,12 @@ const ok = (c, m) => {
     "Green Market opens on this month, at the top, no later month, no bars before its first entry: " +
       JSON.stringify(sc)
   );
+  ok(
+    (await page.evaluate(() =>
+      [...document.querySelectorAll('#sr [data-act="sr-span"]')].map(b => b.dataset.v).join()
+    )) === "a,w,m,y",
+    "the tabs: All first, then Week, Month, Year"
+  );
   await page.click('#sr [data-act="sr-span"][data-v="a"]');
   sc = await scope();
   ok(
