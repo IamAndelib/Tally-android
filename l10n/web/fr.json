@@ -741,7 +741,7 @@
     "removeFilter": "Retirer le filtre : {{name}}",
     "clearAll": "Tout effacer",
     "noMatch": "Aucune opération ne correspond à ces filtres",
-    "count_many": "{{count}} entries",
+    "count_many": "{{count}} d’opérations",
     "count_one": "{{count}} opération",
     "count_other": "{{count}} opérations",
     "kind": {
@@ -767,7 +767,7 @@
     "oneSide": "Un des côtés est {{account}}",
     "showNone": "Aucune opération",
     "swap": "Inverser De et Vers",
-    "show_many": "Show {{count}} entries",
+    "show_many": "Voir {{count}} d’opérations",
     "show_one": "Voir {{count}} opération",
     "show_other": "Voir {{count}} opérations"
   },

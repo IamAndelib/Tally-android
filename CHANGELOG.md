@@ -19,7 +19,6 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - **Search** (#37), next to History on Home and in History: matches grouped by payee, category, account and loan,
   each with its count and total, and every matching entry; amounts and close matches too. Open one to see its entries
   by week, month, year or all time, with bars and the change from the period before.
-
 - **History from all time**, with a period chip and a **Filters** sheet: by account, by kind (spent, received,
   transfers, lent, borrowed, balance fixes), category, person, or the accounts a transfer went between. Each choice
   shows how many entries it leaves; months carry their totals.

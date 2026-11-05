@@ -741,7 +741,7 @@
     "removeFilter": "Quitar filtro: {{name}}",
     "clearAll": "Borrar todo",
     "noMatch": "Ningún movimiento coincide con estos filtros",
-    "count_many": "{{count}} entries",
+    "count_many": "{{count}} movimientos",
     "count_one": "{{count}} movimiento",
     "count_other": "{{count}} movimientos",
     "kind": {
@@ -767,7 +767,7 @@
     "oneSide": "Una de las cuentas es {{account}}",
     "showNone": "Ningún movimiento",
     "swap": "Intercambiar origen y destino",
-    "show_many": "Show {{count}} entries",
+    "show_many": "Ver {{count}} movimientos",
     "show_one": "Ver {{count}} movimiento",
     "show_other": "Ver {{count}} movimientos"
   },
