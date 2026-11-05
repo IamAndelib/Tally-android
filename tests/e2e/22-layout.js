@@ -34,11 +34,20 @@ const DEVICES = [
 const SCALES = [1, 1.3];
 const FULL = !!process.env.LAYOUT_FULL,
   ONLY = (process.env.LAYOUT_ONLY || "").split(",").filter(Boolean); // e.g. LAYOUT_ONLY=small-16x9,pixel
-const matrix = DEVICES.filter(d => !ONLY.length || ONLY.includes(d.id)).flatMap(d =>
+/* LAYOUT_SIZES=<w>x<h>,…: those window sizes instead (a sweep across the widths where the layout changes) */
+const SIZES = (process.env.LAYOUT_SIZES || "")
+  .split(",")
+  .filter(Boolean)
+  .map(x => {
+    const [w, h] = x.split("x").map(Number);
+    return { id: w + "x" + h, w, h };
+  });
+const matrix = (SIZES.length ? SIZES : DEVICES.filter(d => !ONLY.length || ONLY.includes(d.id))).flatMap(d =>
   SCALES.filter(
     s =>
       FULL ||
       s === 1 ||
+      SIZES.length ||
       ["small-16x9", "phone-20x9", "phone-landscape", "large-landscape", "tablet-portrait"].includes(d.id)
   ).map(s => ({ ...d, s }))
 );
@@ -50,7 +59,7 @@ const LANGS = (process.env.LAYOUT_LANGS || "de,ru,zh-Hans").split(",").filter(Bo
 const runs = matrix
   .map(d => ({ ...d, lang: "en" }))
   .concat(
-    ONLY.length && !process.env.LAYOUT_LANGS
+    (ONLY.length || SIZES.length) && !process.env.LAYOUT_LANGS
       ? []
       : LANGS.flatMap(lang =>
           DEVICES.filter(d => ["small-16x9", "phone-landscape"].includes(d.id)).map(d => ({
@@ -288,6 +297,32 @@ function inspect() {
         y = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (x > 2 && y > 2) out.push("overlap " + name(a) + " / " + name(b));
     }
+  }
+  // 11. every control in view can be tapped: nothing lies on top of its middle (a bar, a scrim, another layer). One
+  //     only partly in view (under the bottom bar, past its panel's edge, behind the keypad) is reached by scrolling.
+  const nav = layer.id === "app" && document.querySelector("#nav .in"),
+    navTop = nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : vh;
+  for (const [e, r] of rects) {
+    if (e.disabled || e.closest(".calc")) continue;
+    const cx = r.left + r.width / 2,
+      cy = r.top + r.height / 2;
+    if (cx < 0 || cx > vw || cy < 0 || cy > Math.min(vh, navTop)) continue;
+    let sc = e.parentElement,
+      clipped = false;
+    while (sc && sc !== document.body) {
+      if (/auto|scroll|hidden/.test(getComputedStyle(sc).overflowY)) {
+        const c = sc.getBoundingClientRect();
+        if (cy < c.top || cy > c.bottom || cx < c.left || cx > c.right) clipped = true;
+      }
+      sc = sc.parentElement;
+    }
+    const pad = document.querySelector(".calc");
+    if (pad && vis(pad) && cy > pad.getBoundingClientRect().top) clipped = true;
+    if (clipped) continue;
+    const hit = document.elementFromPoint(cx, cy);
+    // (the calculator's caret mirror lies over the amount on purpose: a tap there places the caret)
+    if (hit && hit !== e && !e.contains(hit) && !(hit.dataset && hit.dataset.act === "calc-pos"))
+      out.push("can't be tapped " + name(e) + " (under " + name(hit) + ")");
   }
   // 5. ring icons and labels never overlap each other (only checked on the screen itself)
   const tiles =
