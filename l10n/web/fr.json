@@ -709,7 +709,17 @@
     },
     "deleted_one": "{{count}} opération supprimée",
     "deleted_many": "{{count}} d’opérations supprimées",
-    "deleted_other": "{{count}} opérations supprimées"
+    "deleted_other": "{{count}} opérations supprimées",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Rappel du soir",

@@ -709,7 +709,17 @@
     },
     "deleted_one": "Se eliminó {{count}} movimiento",
     "deleted_many": "Se eliminaron {{count}} movimientos",
-    "deleted_other": "Se eliminaron {{count}} movimientos"
+    "deleted_other": "Se eliminaron {{count}} movimientos",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Aviso de la noche",

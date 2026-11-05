@@ -702,7 +702,17 @@
       "year": "In diesem Jahr nichts notiert."
     },
     "deleted_one": "{{count}} Eintrag gelöscht",
-    "deleted_other": "{{count}} Einträge gelöscht"
+    "deleted_other": "{{count}} Einträge gelöscht",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Abend-Erinnerung",

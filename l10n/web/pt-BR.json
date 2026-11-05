@@ -709,7 +709,17 @@
     },
     "deleted_one": "{{count}} lançamento excluído",
     "deleted_many": "{{count}} lançamentos excluídos",
-    "deleted_other": "{{count}} lançamentos excluídos"
+    "deleted_other": "{{count}} lançamentos excluídos",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Lembrete da noite",

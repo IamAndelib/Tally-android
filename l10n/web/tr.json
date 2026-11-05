@@ -702,7 +702,17 @@
       "year": "O yıl hiçbir şey yazılmamış."
     },
     "deleted_one": "{{count}} kayıt silindi",
-    "deleted_other": "{{count}} kayıt silindi"
+    "deleted_other": "{{count}} kayıt silindi",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Akşam hatırlatması",

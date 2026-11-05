@@ -702,7 +702,17 @@
       "year": "Nothing written down that year."
     },
     "deleted_one": "Deleted {{count}} entry",
-    "deleted_other": "Deleted {{count}} entries"
+    "deleted_other": "Deleted {{count}} entries",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Evening nudge",

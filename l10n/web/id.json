@@ -695,7 +695,17 @@
       "range": "Tidak ada catatan di hari-hari itu.",
       "year": "Tidak ada catatan tahun itu."
     },
-    "deleted_other": "{{count}} transaksi dihapus"
+    "deleted_other": "{{count}} transaksi dihapus",
+    "words": {
+      "moved": "{{amount}} moved",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "fees": "{{amount}} fees"
+    }
   },
   "remind": {
     "nudge": "Pengingat malam",
