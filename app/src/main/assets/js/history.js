@@ -90,6 +90,19 @@ function histDrop() {
   ["acc", "from", "to"].forEach(k => HF[k] && !acc(HF[k]) && (HF[k] = ""));
   if (HF.cat && !S.cats.some(c => c.id === HF.cat)) HF.cat = "";
   if (HF.who && !S.loans.some(l => loanWho(l) === HF.who)) HF.who = "";
+  HF = histNorm(HF);
+}
+/* the sides of a transfer filter, made to agree with the rest: only for Transfers; with an account picked, one side set
+   means the other is that account, and a side that is the account with the other empty means "both ways" (neither) */
+function histNorm(f) {
+  const o = { ...f };
+  if (o.kind !== "xfer") return { ...o, from: "", to: "" };
+  if (o.acc && !o.from !== !o.to) {
+    if (o.from === o.acc || o.to === o.acc) Object.assign(o, { from: "", to: "" });
+    else if (o.from) o.to = o.acc;
+    else o.from = o.acc;
+  }
+  return o;
 }
 function histClear() {
   HF = histBlank();
@@ -97,7 +110,7 @@ function histClear() {
 }
 /* History with the given filters (an account's "Open in History"), on all time */
 function openHistory(f = {}) {
-  HF = { ...histBlank(), ...f };
+  HF = histNorm({ ...histBlank(), ...f });
   histAllTime();
   V.screen = "history";
   V.open = "";
@@ -160,7 +173,7 @@ function hfSideChip(side) {
   const id = HFD[side],
     a = id && acc(id),
     label = T("history." + side + "Acc", { account: a ? a.name : T("history.anyAccount") }),
-    lock = !!(HFD.acc && HFD.from && HFD.to && id === HFD.acc),
+    lock = !!(HFD.acc && id === HFD.acc),
     inner = (a ? '<span class="adot"' + histAccVar(a) + "></span>" : "") + hfName(label);
   if (lock) return '<span class="chip hfc lock tinted"' + histAccVar(a) + ">" + inner + "</span>";
   return (
@@ -267,7 +280,7 @@ function hfsDraw() {
 }
 function filtersSheet() {
   histDrop();
-  HFD = { ...HF };
+  HFD = histNorm(HF);
   openSheet(T("history.filters"), '<div id="hfs-body"></div><div class="hfs-foot" id="hfs-foot"></div>');
   hfsDraw();
 }

@@ -194,7 +194,7 @@ const ok = (c, m) => {
       "skip ignores one filter: " + [r.skipKind, r.skipAcc, r.skipSub]
     );
     ok(
-      r.drop === '{"acc":"","kind":"out","cat":"","who":"","from":"b","to":""}',
+      r.drop === '{"acc":"","kind":"out","cat":"","who":"","from":"","to":""}',
       "gone account, category and person are dropped: " + r.drop
     );
     ok(r.orphan, "a fee whose entry is gone stays a row");
@@ -646,6 +646,37 @@ const ok = (c, m) => {
     await tap("hfs-kind", "");
     await page.evaluate(() => goBack());
     ok((await page.evaluate(() => HF.kind + !$("#sheet").innerHTML)) === "outtrue", "Back drops the draft");
+    // a state reached from outside the sheet: one side set with an account picked
+    await page.evaluate(() => {
+      HF = histBlank();
+      openHistory({ acc: "k", kind: "xfer", from: "b" });
+    });
+    ok((await page.evaluate(() => HF.to)) === "k", "openHistory fills the other side with the account");
+    await page.click('#app [data-act="hf-open"]');
+    r = await sheet();
+    ok(
+      r.locked.join() === "To Credit card" && /From Everyday/.test(r.from) && r.show === "Show 2 entries",
+      "a locked To Credit card, 2 entries: " + r.locked + " / " + r.show
+    );
+    await tap("hfs-swap");
+    r = await sheet();
+    ok(
+      r.locked.join() === "From Credit card" && /To Everyday/.test(r.to) && r.show === "No entries",
+      "swap: From Credit card locked, To Everyday, none: " + r.locked + " / " + r.to + " / " + r.show
+    );
+    await page.click('#sheet [data-act="close"]');
+    await page.click('#app [data-act="hf-del"][data-v="from"]');
+    ok(
+      (await page.evaluate(() => HF.from + "|" + HF.to + "|" + HF.acc)) === "||k",
+      "removing the From chip sets both sides back to any"
+    );
+    await page.click('#app [data-act="hf-open"]');
+    r = await sheet();
+    ok(
+      r.hint === "One side is Credit card" && r.show === "Show 3 entries",
+      "both any again: " + r.hint + " / " + r.show
+    );
+    await page.click('#sheet [data-act="close"]');
     // nothing left: No entries, disabled
     await page.evaluate(() => {
       HF = histBlank();

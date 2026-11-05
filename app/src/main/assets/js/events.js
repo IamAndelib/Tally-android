@@ -539,6 +539,7 @@ document.addEventListener("click", ev => {
         Object.assign(HFD, hfSide(HFD, HFSIDE, v));
         closePop();
       }
+      HFD = histNorm(HFD);
       hfsDraw();
       break;
     case "hfs-from":
@@ -546,7 +547,7 @@ document.addEventListener("click", ev => {
       hfMenu(act === "hfs-from" ? "from" : "to", el);
       break;
     case "hfs-swap":
-      if (HFD) [HFD.from, HFD.to] = [HFD.to, HFD.from];
+      if (HFD) HFD = histNorm({ ...HFD, from: HFD.to, to: HFD.from });
       hfsDraw();
       break;
     case "hfs-clear":
@@ -564,6 +565,7 @@ document.addEventListener("click", ev => {
       else if (v === "from" || v === "to") HF[v] = "";
       else if (v === "kind") Object.assign(HF, { kind: "", cat: "", who: "", from: "", to: "" });
       else Object.assign(HF, { cat: "", who: "", from: "", to: "" });
+      HF = histNorm(HF);
       render();
       break;
     case "hf-clear":
