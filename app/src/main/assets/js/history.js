@@ -127,9 +127,9 @@ function histChips() {
     h.push(
       histChip(
         "acc",
-        '<span class="chn" dir="auto"><span class="adot" style="--acr:' +
+        '<span class="adot" style="--acr:' +
           hexRgb(accEmb(a).c).join(" ") +
-          '"></span>' +
+          '"></span><span class="chn" dir="auto">' +
           esc(a.name) +
           "</span>",
         a.name,
@@ -187,8 +187,7 @@ function histBar(clearHere) {
     "</div>"
   );
 }
-const histClearBtn = () =>
-  '<button class="btn text hclear" data-act="hf-clear">' + TH("history.clearAll") + "</button>";
+const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("history.clearAll") + "</button>";
 /* the entries, month by month: a heading with the month's words, then its days (dayGroups) */
 function histMonths(list) {
   let h = "",
@@ -265,9 +264,7 @@ function historyView() {
     /* Clear all sits after the chips; with none (only a period set) beside the Filters button; not at all when the
        list is empty (its message has one) */
     const clear = anySet && list.length;
-    h +=
-      histBar(clear && !chips) +
-      (chips ? '<div class="hchips">' + chips + (clear ? histClearBtn() : "") + "</div>" : "");
+    h += histBar(clear) + (chips ? '<div class="hchips">' + chips + "</div>" : "");
     h +=
       '<div class="hfsum" role="status">' +
       (list.length

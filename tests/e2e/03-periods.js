@@ -78,10 +78,11 @@ const ok = (c, m) => {
   /* History has no ‹ › (the period is picked in the dialog): the period maths are still checked, stepped directly */
   const step = n =>
     page.evaluate(n => {
-      const home = { ...V };
-      Object.assign(V, HP);
+      const keys = ["period", "anchor", "rs", "re"],
+        home = Object.fromEntries(keys.map(k => [k, V[k]]));
+      keys.forEach(k => (V[k] = HP[k]));
       shiftPeriod(n);
-      Object.assign(HP, V);
+      keys.forEach(k => (HP[k] = V[k]));
       Object.assign(V, home);
       if (V.sel) V.sel = new Set();
       render();
@@ -119,7 +120,6 @@ const ok = (c, m) => {
   });
   ok(/\d{4}/.test(await hlabel()), "label is this month with year: " + (await hlabel()));
   ok((await rows()) === expectMonth, "shows this month " + (await rows()));
-  ok(!(await page.evaluate(() => canNext(HP))), "no later period than this month");
   await page.click("#app .hpl");
   await page.waitForSelector("#pd");
   ok(

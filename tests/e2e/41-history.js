@@ -273,6 +273,29 @@ const ok = (c, m) => {
       "the chip's ✕ is labelled"
     );
     ok(await page.isVisible('#app [data-act="hf-del"][data-v="acc"] .adot'), "an account chip has its colour dot");
+    ok(
+      await page.evaluate(
+        () =>
+          !!document.querySelector('.hbar [data-act="hf-clear"]') &&
+          !document.querySelector('.hchips [data-act="hf-clear"]')
+      ),
+      "Clear all sits in the bar, not among the chips"
+    );
+    await page.evaluate(() => {
+      HF.kind = "out";
+      render();
+    });
+    ok(
+      await page.evaluate(() => {
+        const h = v => document.querySelector('.hchips [data-v="' + v + '"]').getBoundingClientRect().height;
+        return Math.abs(h("acc") - h("kind")) < 1;
+      }),
+      "the account chip is as tall as a kind chip (dot and name on one line)"
+    );
+    await page.evaluate(() => {
+      HF.kind = "";
+      render();
+    });
     // a period, then ✕ back to all time keeping the account
     await page.evaluate(() => {
       Object.assign(HP, { period: "month", anchor: today().slice(0, 4) - 1 + "-06-15" });
@@ -285,7 +308,7 @@ const ok = (c, m) => {
     );
     for (const sel of ['[data-act="hp-open"]', '[data-act="hp-all"]']) {
       const b = await (await page.$("#app " + sel)).boundingBox();
-      ok(b.height >= 47.5 && b.width >= 40, sel + " is a target: " + b.width + "x" + b.height);
+      ok(b.height >= 47.5 && b.width >= 47.5, sel + " is a target: " + b.width + "x" + b.height);
     }
     await act("hp-all");
     ok((await page.evaluate(() => HP.period + HF.acc)) === "allc", "✕ returns to all time and keeps the account");

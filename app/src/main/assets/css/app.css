@@ -3083,7 +3083,7 @@ body.land.calcopen #snack .snack {
 }
 .hpx {
   flex: none;
-  width: 44px;
+  width: 48px;
   min-height: 48px;
   display: grid;
   place-items: center;
@@ -3108,15 +3108,26 @@ body.land.calcopen #snack .snack {
   flex: 0 1 auto;
 }
 .hclear {
+  flex: none;
+  width: auto;
   min-height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+}
+.empty .hclear {
+  margin: 0 auto;
+}
+.hchip > .adot {
+  flex: none;
+  margin: 0 -2px 0 0;
 }
 .hfsum {
   margin: 12px 4px 0;
   font-size: 0.9rem;
   color: var(--on-surface-variant);
-}
-.hfsum:empty {
-  display: none;
 }
 .hfsum b {
   color: var(--on-surface);
