@@ -64,7 +64,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Looking back**
 
 - **Home and History** for any day, date range, month or year; History filtered by account, with each account's
-  running balance under every entry, its account's name in a pill of the account's colour; swipe sideways to move
+  running balance beside every entry's account, marked with a dot of the account's colour; swipe sideways to move
   between accounts. Hold an entry to select several and delete them together.
 - **Search** every entry from Home or History: as you type, matches are grouped by who was paid, who paid you,
   category, account and loan, each with its count and total; open one to see its entries by week, month, year or all

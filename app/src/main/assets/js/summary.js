@@ -249,7 +249,10 @@ function drawSm() {
     '<div class="big spent">' +
     esc(money(b.v, cur)) +
     "</div>" +
-    (cmp || avg ? '<div class="muted small">' + esc([avg, cmp].filter(Boolean).join(" · ")) + "</div>" : "") +
+    [avg, cmp] // each on its own line, so a phrase is never split between two
+      .filter(Boolean)
+      .map(x => '<div class="muted small">' + esc(x) + "</div>")
+      .join("") +
     "</div>";
   if (top.length)
     h +=

@@ -296,11 +296,16 @@ a {
   font-size: clamp(0.9rem, 4.5vw, 1.25rem);
   padding: 0 6px 0 10px;
 }
-/* a phone held sideways: no ‹ › (its narrow right side has no room for them beside the icons; a swipe on the ring and
-   the period dialog still move the period), and the upright phone's size (vw is the long side there) */
-body.land .pnav > .icon {
+/* no ‹ › on a phone held sideways (its narrow right side has no room for them beside the icons), nor where the date
+   doesn't fit beside them (fitFigures: .noarr): a swipe on the ring and the period dialog still move the period */
+body.land .pnav > .icon,
+.pnav.noarr > .icon {
   display: none;
 }
+.pnav.noarr .plabel {
+  padding-left: 12px;
+}
+/* a phone held sideways: the upright phone's size (vw is the long side there) */
 body.land .pnav .plabel {
   font-size: 1.05rem;
 }
@@ -335,21 +340,41 @@ body.land .pnav .plabel.long {
   flex-direction: column;
   gap: 2px;
 }
-/* the emblem, then the name in its own direction (a right-to-left one cut at its own end) */
+/* an account's chip: its icon on the left in the middle; beside it the name (two lines if need be, in a box as wide as
+   its longest line: fitWrapped) and the balance below it, starting together, the pair in the middle of the chip */
+.acc:not(.add) {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-content: center;
+  justify-content: start;
+  padding: 10px 14px 10px 12px;
+}
 .acc .n {
-  display: flex;
-  align-items: center;
-  max-width: 152px; /* a long name is cut; the balance below never is */
+  display: contents;
   font-size: 0.78rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
+}
+.acc .n > .emb {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  margin: 0;
 }
 .acc .n > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  max-width: 7.5rem; /* grows with the text size */
+  line-height: 1.2;
+  overflow-wrap: break-word;
 }
 .acc .b {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
   font-weight: 600;
   font-size: 1rem;
   white-space: nowrap;
@@ -475,13 +500,21 @@ body.hist #app {
   place-items: center;
   font-size: 1.45rem;
 }
+/* a category's name under its icon: on up to two lines, hyphenated in the page's language, never set smaller (on
+   Home's ring, .rt, names are whole or left out instead) */
 .cat .cn {
   font-size: 0.72rem;
   color: var(--on-surface-variant);
   max-width: 100%;
-  white-space: nowrap;
+  text-align: center;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .cat .cp {
   font-size: 0.72rem;
@@ -531,9 +564,12 @@ body.hist #app {
   line-height: 1.1; /* digits only, no descenders: the tightest line */
 }
 .rt .cn {
+  display: block; /* one line, not a tile's two: whole or not at all (ringHTML leaves out a name that has no room) */
+  white-space: nowrap;
+  text-overflow: ellipsis;
   line-height: 1.3; /* tall enough for descenders (g, y) inside the clipped name */
   max-width: 92%; /* a little air between neighbouring names in a full ring */
-  flex-shrink: 0; /* whole or not at all (ringHTML leaves out a name that has no room) */
+  flex-shrink: 0;
 }
 .dcenter {
   position: absolute;
@@ -743,6 +779,17 @@ body.hist #app {
   flex: 1;
   min-width: 0;
 }
+/* two fields or buttons side by side go below each other when either's label doesn't fit (a small phone, a large
+   text size, a long language) instead of being cut or set smaller */
+.row:not(.notedate):not(.catrow) {
+  flex-wrap: wrap;
+}
+.row > .field {
+  flex: 1 1 9rem;
+}
+.row > .btn {
+  flex: 1 1 8.5rem;
+}
 /* note and date side by side, the date below the note on a narrow screen */
 .row.notedate {
   flex-wrap: wrap;
@@ -793,8 +840,9 @@ body.hist #app {
   gap: 8px;
   font-size: 0.9rem;
   font-weight: 500;
+  line-height: 1.2;
   color: var(--on-surface-variant);
-  white-space: nowrap;
+  text-align: start;
 }
 .strip .chip {
   flex-shrink: 0;
@@ -811,12 +859,12 @@ body.hist #app {
   font-size: 0.8rem;
   flex: none;
 }
-/* a name in its chip (an account, person, type or category): cut with "…" when it doesn't fit, the emblem and ✓
-   stay whole */
+/* a name in its chip (an account, person, type or category): a chip fits its name; one longer than the line wraps,
+   in a box as wide as its longest line (fitWrapped); the emblem and ✓ stay whole beside it */
 .chip .chn {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 6px 0;
+  overflow-wrap: anywhere; /* a name is the person's own: any letter may break */
 }
 .chip > .emb:first-child,
 .chip > .ic:first-child {
@@ -1015,6 +1063,34 @@ body.hist #app {
 }
 .smtop .tx {
   padding: 10px 14px;
+}
+/* a category in the Summary: its name and share on the whole line (wrapping), its bar and amount below */
+.smtop .tx {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+}
+.smtop .tx > .em {
+  grid-row: 1 / -1;
+}
+.smtop .tx .mid {
+  display: contents;
+}
+.smtop .tx .d {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  line-height: 1.25;
+}
+.smtop .tx .pbar {
+  grid-column: 2;
+  grid-row: 2;
+}
+.smtop .tx > .a {
+  grid-column: 3;
+  grid-row: 2;
 }
 .pbar {
   display: block;
@@ -1297,6 +1373,7 @@ input {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+  align-items: start;
 }
 /* room under the icon for the selected ring (5px) without the label moving when a category is picked */
 .catgrid .cat {
@@ -1380,27 +1457,132 @@ input {
   flex: 1;
   min-width: 0;
 }
+/* a row's texts wrap rather than lose letters; the icon stays in the middle of the row however tall it gets */
 .tx .d {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 .tx .s {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  line-height: 1.35;
 }
-/* an account's name in its colour's soft pill (accPill): the tint is a fixed share of the colour over the row, so the
-   text keeps WCAG AA contrast on every account colour, light and dark */
-.apill {
-  padding: 0 6px;
-  border-radius: 999px;
-  background: rgb(var(--acr) / var(--pill-a));
-  color: var(--on-surface);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+/* an entry's row (txLine): what it was | how much, each account | its balance after the entry, then the details */
+.tx.en .mid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 3px;
+  align-items: baseline;
+}
+.tx.en .d {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* a long note: the whole of it is one tap away */
+  overflow: hidden;
+  line-height: 1.3;
+}
+.tx.en .a {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: none;
+}
+.tx.en .ac,
+.tx.en .s {
+  grid-column: 1 / -1;
+}
+.tx.en .ac {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--on-surface-variant);
+}
+.tx.en .an {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.tx.en .ar {
+  margin-right: 2px;
+}
+.tx.en .rb {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.tx.en .sep {
+  display: none;
+}
+/* the account's colour as a dot before its name: the name says which account, the colour only helps to spot it */
+.adot {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+  background: rgb(var(--acr));
+}
+/* a tight list (fitFigures: under 20rem wide, a small phone or a large text size): the title has the whole width, the
+   amount starts the line below it, and an account and its balance read as one line */
+.list.tight .tx.en .d {
+  grid-column: 1 / -1;
+  -webkit-line-clamp: 3;
+}
+.list.tight .tx.en .a {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  justify-self: start;
+}
+.list.tight .tx.en .ac {
+  display: block;
+}
+.list.tight .tx.en .rb {
+  display: inline;
+}
+.list.tight .tx.en .sep {
+  display: inline;
+}
+/* an account, lending or asset row (.stk) in a tight list: the icon on the left in the middle; its name, balance and
+   type below each other from the left */
+.list.tight .tx.stk {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "em d" "em a" "em s";
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: center;
+}
+.list.tight .tx.stk > .em {
+  grid-area: em;
+}
+.list.tight .tx.stk .mid {
+  display: contents;
+}
+.list.tight .tx.stk .d {
+  grid-area: d;
+}
+.list.tight .tx.stk .s {
+  grid-area: s;
+}
+.list.tight .tx.stk > .a {
+  grid-area: a;
+  justify-self: start;
+  text-align: left;
+  max-width: none;
+}
+.list.tight .tx.stk > .a small {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 /* an amount and a balance are never cut: the title, then the account name in the balance line give way to them */
 .tx .a {
@@ -1426,30 +1608,13 @@ input {
 .tx > .ic {
   color: var(--primary);
 }
-/* the lines under an amount are sized in em, not rem: they follow the amount when fitFigures() sets it smaller */
+/* the line under an amount (a converted amount, a status) is sized in em, not rem: it follows the amount when
+   fitFigures() sets it smaller */
 .tx .a small {
   display: block;
   font-weight: 400;
   font-size: 0.75em;
   color: var(--on-surface-variant);
-}
-/* the balance line: [arrow] name balance. The name's column shrinks to nothing (its name cut with "…") but may grow
-   as wide as the name, so a long name never makes the amount's column wider than the amount and balance need */
-.tx .a .rb {
-  display: grid;
-  grid-template-columns: minmax(0, max-content) auto;
-  justify-content: end;
-  column-gap: 0.3em;
-  font-weight: 500;
-  font-size: 0.72em;
-  color: var(--on-surface-variant);
-}
-.tx .a .rb.ar {
-  grid-template-columns: auto minmax(0, max-content) auto;
-}
-.tx .a .rbn {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .tx .s .st {
   margin-right: 2px;
@@ -1458,8 +1623,6 @@ input {
 /* alone on its line (a loan card's payment rows): in a narrow row it ends in "…" rather than lose letters */
 .tx.exp .s .st {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   vertical-align: top;
 }
 .tx.exp {
@@ -1476,6 +1639,33 @@ input {
   padding: 12px 14px;
   text-align: left;
   border-radius: 0;
+}
+/* a lending's history row in a tight list: what it was, then its amount below it, the arrow on the right */
+.list.tight .tx .txh {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "em d chev" "em a chev" "em s chev";
+  row-gap: 2px;
+}
+.list.tight .tx .txh > .em {
+  grid-area: em;
+}
+.list.tight .tx .txh .mid {
+  display: contents;
+}
+.list.tight .tx .txh .d {
+  grid-area: d;
+}
+.list.tight .tx .txh .s {
+  grid-area: s;
+}
+.list.tight .tx .txh > .a {
+  grid-area: a;
+  justify-self: start;
+  text-align: left;
+}
+.list.tight .tx .txh > .chev {
+  grid-area: chev;
 }
 .tx .more {
   display: none;
@@ -1565,8 +1755,12 @@ input {
   border-radius: 24px;
   overflow: hidden;
 }
+/* each tab as wide as its word needs, the rest shared: a long word ("Zeitraum") is whole at its full size */
 .seg button {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: min-content;
+  padding-left: 6px;
+  padding-right: 6px;
   min-height: 48px;
   font-weight: 500;
   font-size: 0.9rem;
@@ -1645,7 +1839,9 @@ input {
   font-size: 1.3rem;
   font-weight: 600;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 @keyframes up {
   from {
@@ -1723,8 +1919,8 @@ input {
   margin-right: 6px;
 }
 .acc .n .emb.sm {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
 }
 .cprevbtn {
   border-radius: 50%;
@@ -1931,6 +2127,13 @@ body.hasnav .snack {
 .fbtn .emb {
   width: 32px;
   height: 32px;
+}
+/* a word too long beside its icon (German, Russian at a large text size): the icon above it (fitFigures) */
+.loanbtns.stack .fbtn {
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  overflow-wrap: break-word;
 }
 .todayrow {
   display: flex;
@@ -2222,16 +2425,15 @@ body.hasnav .snack {
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  height: 52px;
-  padding: 0 10px 0 14px;
+  min-height: 52px; /* a long value takes a second line */
+  padding: 8px 10px 8px 14px;
   border: 1px solid var(--outline);
   border-radius: 12px;
   text-align: left;
 }
 .fieldbtn span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 .fieldbtn .ic {
   color: var(--on-surface-variant);
@@ -2241,6 +2443,7 @@ body.hasnav .snack {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+  align-items: start;
   background: var(--surface-container);
   border-radius: 20px;
   padding: 8px 4px;

@@ -34,3 +34,9 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-05 · P3 · A small phone held sideways: Home's bar keeps Search where it is upright and drops the ‹ › arrows (the ring's swipe and the period dialog still move the period) · maintainer's pick of two demos
 - 2026-11-05 · P3 · A Home chip dragged over another ticks once per switch, not on every move, like the rows · maintainer, after trying round D
 - 2026-11-05 · P3 · The search result's tabs read All | Week | Month | Year (All first) · maintainer
+- 2026-11-05 · P2 · Words wrap, they are never cut ("…") or set smaller; only figures shrink, Home's ring keeps names whole or leaves them out, an entry's title ends after two lines (three in a tight list) · maintainer: "shortening texts don't help, it's information going missing"
+- 2026-11-05 · P2 · Entry rows: what it was | how much, each account | its balance after the entry, then the details; the account shown as a dot of its colour and its name (replaces the round C pill); tight lists (under 20rem) stack from the left, account and balance as one line · maintainer's pick (dot) of two concepts
+- 2026-11-05 · P3 · Assets rows in a tight list: icon on the left in the middle, name, balance and type below each other from the left; on a normal phone the balance stays on the right · maintainer
+- 2026-11-05 · P3 · Home's chips keep swiping sideways (not a grid): icon 32px on the left in the middle, the name (two lines if need be, its box as wide as its longest line) and balance starting together beside it, the pair in the middle of the chip · maintainer
+- 2026-11-05 · P3 · Home's ‹ › go where the date doesn't fit beside them (as on a phone held sideways) · maintainer
+- 2026-11-05 · P3 · Chips always fit their content, never stretched to fill a row · maintainer

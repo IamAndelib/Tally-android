@@ -397,18 +397,30 @@ function perCur(add) {
   });
   return m;
 }
-/* a figure too wide for its place (a long balance at a large text size on a small phone) is set smaller, a tenth at a
-   time down to 60%, rather than cut: the summary cards' totals, and a row's amount where the row can't hold it (its
-   balance lines are sized in em, so they shrink with it). Still too wide, a total wraps. Measured again once the font
-   has loaded. A button beside another whose label is one word too long for it (German, French at a large text size),
-   and a segment of a segmented button ("Semanas" among four on a small phone), is set smaller the same way, then
-   breaks the word as a last resort. */
+/* Text wraps rather than shrinks or loses letters (a label, a name, a tile, a tab); only a figure too wide for its
+   place (a long balance at a large text size on a small phone) is set smaller, a tenth at a time down to 60%: the
+   summary cards' totals (still too wide: they wrap), and a row's amount where the row can't hold it. Also, measured
+   here (again once the font has loaded): a list narrower than 20rem is tight (its rows stack, .list.tight); Home's
+   period loses its ‹ › where the date doesn't fit beside them; Lend and Borrow put their icon above the word when a
+   word doesn't fit beside it; a name that wrapped gets a box as wide as its longest line (fitWrapped). */
 function fitFigures(root) {
   root
-    .querySelectorAll(
-      ".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style], .seg > button[style], .cat .cn[style]"
-    )
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style]")
     .forEach(el => el.removeAttribute("style"));
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  root
+    .querySelectorAll(".list")
+    .forEach(l => l.classList.toggle("tight", l.clientWidth > 0 && l.clientWidth < 20 * rem));
+  root.querySelectorAll(".pnav").forEach(p => {
+    p.classList.remove("noarr");
+    const l = p.querySelector(".plabel > span");
+    if (l && l.scrollWidth > l.clientWidth + 1) p.classList.add("noarr");
+  });
+  root.querySelectorAll(".loanbtns").forEach(r => {
+    r.classList.remove("stack");
+    if ([...r.children].some(b => b.scrollWidth > b.clientWidth + 1)) r.classList.add("stack");
+  });
+  fitWrapped(root, ".acc .n > span:last-child, .chip .chn");
   const shrink = (el, over) => {
     if (!over()) return;
     const f = parseFloat(getComputedStyle(el).fontSize);
@@ -448,21 +460,33 @@ function fitFigures(root) {
   root.querySelectorAll(".tx .a").forEach(el => {
     if (!el.closest("[data-far]")) fitRow(el);
   });
-  root.querySelectorAll(".row > .btn, .fbtn, .seg > button").forEach(el => {
-    const over = () => el.scrollWidth > el.clientWidth + 1;
-    shrink(el, over);
-    if (over()) el.style.overflowWrap = "anywhere";
-  });
-  /* a category name too wide for its tile (a long word, large text): a little smaller, down to 10px (a ring's 9px, as
-     in a full one), and only then its ellipsis */
-  root.querySelectorAll(".cat .cn").forEach(el => {
-    const min = el.closest(".rt") ? 9 : 10;
+  /* a name on Home's ring too wide for its tile: a little smaller, down to 9px, and only then its ellipsis (ring names
+     are whole or left out: ringHTML) */
+  root.querySelectorAll(".rt .cn").forEach(el => {
     for (
       let px = parseFloat(getComputedStyle(el).fontSize) - 0.5;
-      px >= min && el.scrollWidth > el.clientWidth + 1;
+      px >= 9 && el.scrollWidth > el.clientWidth + 1;
       px -= 0.5
     )
       el.style.fontSize = px + "px";
+  });
+}
+/* A box sizes a wrapped text to the room it had, not to the text: a chip whose name took two lines would keep empty
+   space beside its shorter line. These get the width of their longest line instead. */
+function fitWrapped(root, sel) {
+  root.querySelectorAll(sel).forEach(el => {
+    el.style.width = "";
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const lines = new Map();
+    for (const q of r.getClientRects()) {
+      if (!q.width) continue;
+      const k = Math.round(q.top / 4),
+        l = lines.get(k);
+      lines.set(k, l ? [Math.min(l[0], q.left), Math.max(l[1], q.right)] : [q.left, q.right]);
+    }
+    if (lines.size < 2) return;
+    el.style.width = Math.ceil(Math.max(...[...lines.values()].map(l => l[1] - l[0]))) + 1 + "px";
   });
 }
 const curLines = m =>
@@ -484,7 +508,7 @@ function netWorth() {
 }
 function accRow(a, b) {
   return (
-    '<button class="tx' +
+    '<button class="tx stk' +
     (FX.row === a.id ? " flash" : "") +
     '" data-act="acc-open" data-v="' +
     a.id +
@@ -552,7 +576,7 @@ function assetsView() {
         S.assets
           .map(
             x =>
-              '<button class="tx" data-act="asset-edit" data-v="' +
+              '<button class="tx stk" data-act="asset-edit" data-v="' +
               x.id +
               '" data-drag="asset:' +
               x.id +
@@ -625,33 +649,52 @@ function liabsView() {
     : "";
   return tabBar(T("nav.liabs")) + panes(h, right);
 }
-/* an account's name in a row's second line, in a soft pill of its colour (#37): the name says which account, the colour
-   only helps to spot it */
-const accPill = a =>
-  a ? '<bdi class="apill" style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '">' + esc(a.name) + "</bdi>" : bdi("?");
+/* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
+   helps to spot it */
+const accTag = a =>
+  a
+    ? '<bdi><span class="adot" style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"></span>' + esc(a.name) + "</bdi>"
+    : bdi("?");
+/* An entry's row: each line pairs what belongs together. What it was | how much; each account it touched | what that
+   account held right after it (a transfer: both, ↓ out of one, ↑ into the other); then its details (the category when
+   the title is a payee or a note, a loan's kind and state, a fee's reason), only when there are any. Every text
+   wraps, nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the
+   title the whole width, the amount the line below it, and each account and its balance one line. */
 function txLine(t) {
   const a = acc(t.account),
-    cur = a ? a.currency : S.settings.cur;
+    cur = a ? a.currency : S.settings.cur,
+    r = runBal()[t.id] || {};
   let em,
     d,
-    s,
     amt,
-    cls = "";
+    cls = "",
+    det = [];
+  /* an account line: [arrow] the account, then its balance after this entry */
+  const line = (x, bal, arrow) =>
+    '<span class="ac"><span class="an">' +
+    (arrow ? '<span class="ar">' + arrow + "</span>" : "") +
+    accTag(x) +
+    "</span>" +
+    (x && bal != null
+      ? '<span class="sep">\u00a0· </span><span class="rb">' + esc(money(bal, x.currency)) + "</span>" // "·" ends a line
+      : "") +
+    "</span>";
+  let lines = line(a, r.a);
   if (t.type === "transfer") {
     const to = acc(t.to);
     em = XFER_EMB;
     cls = "xfer";
     d = esc(t.note || T("transfer.title"));
-    s = accPill(a) + " → " + accPill(to);
     amt =
       esc(money(t.amount, cur)) +
       (t.toAmount != null && to && to.currency !== cur
         ? "<small>→ " + esc(money(t.toAmount, to.currency)) + "</small>"
         : "");
+    lines = line(a, r.a, "↓") + line(to, r.t, "↑");
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
     d = esc(noteShown(t, "fix.title"));
-    s = TH("fix.title") + " · " + accPill(a);
+    if (t.note) det.push(TH("fix.title"));
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -662,7 +705,8 @@ function txLine(t) {
     d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
       who: { html: bdi(who) },
     });
-    s = TH(lend ? "tx.lending" : "tx.loan") + " · " + accPill(a) + (t.note ? " · " + bdi(t.note) : "");
+    det.push(loanPill(t) + TH(lend ? "tx.lending" : "tx.loan"));
+    if (t.note) det.push(bdi(t.note));
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -675,26 +719,28 @@ function txLine(t) {
       const lend = l.kind === "lend";
       em = LOAN_EMB[lend ? "lend" : "borrow"];
       d = esc(noteShown(t, "loan.feeNote"));
-      s = accPill(a) + " · " + TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } });
+      det.push(TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } }));
     } else {
       const to = acc(host.to);
       em = XFER_EMB;
       d = esc(noteShown(t, "transfer.feeNote"));
-      s = accPill(a) + (to ? " → " + accPill(to) : "");
+      if (to) det.push("→ " + accTag(to)); // the transfer it was charged on went there
     }
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    d = t.payee || t.note ? [t.payee, t.note].filter(Boolean).map(bdi).join(" · ") : esc(catName(k));
-    s = bdi(catName(k)) + " · " + accPill(a);
+    if (t.payee || t.note) {
+      d = [t.payee, t.note].filter(Boolean).map(bdi).join(" · ");
+      det.push(bdi(catName(k)));
+    } else d = esc(catName(k));
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
   const selMode = !!V.sel && V.screen === "history",
     on = selMode && V.sel.has(t.id);
   return (
-    '<button class="tx' +
+    '<button class="tx en' +
     (on ? " on" : "") +
     (FX.row === t.id ? " flash" : "") +
     '" data-act="' +
@@ -705,43 +751,18 @@ function txLine(t) {
     (selMode ? ' aria-pressed="' + on + '"' : "") +
     ">" +
     (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
-    '<span class="mid"><div class="d" dir="auto">' +
+    '<span class="mid"><span class="d" dir="auto">' +
     d +
-    '</div><div class="s">' +
-    loanPill(t) +
-    s +
-    '</div></span><span class="a ' +
+    '</span><span class="a ' +
     cls +
     '">' +
     amt +
-    rbLines(t) +
+    "</span>" +
+    lines +
+    (det.length ? '<span class="s">' + det.join(" · ") + "</span>" : "") +
     "</span></button>"
   );
 }
-/* the small grey balance line(s) under an amount: what the account held right after this entry */
-function rbLines(t) {
-  const r = runBal()[t.id];
-  if (!r) return "";
-  const a = acc(t.account);
-  if (t.type === "transfer") {
-    const to = acc(t.to);
-    return (
-      rbLine(a ? a.name : "?", money(r.a, a ? a.currency : ""), "↓") +
-      (to && r.t != null ? rbLine(to.name, money(r.t, to.currency), "↑") : "")
-    );
-  }
-  return a ? rbLine(a.name, money(r.a, a.currency)) : "";
-}
-/* on a narrow screen the account name gives way (ellipsis), never the balance; a transfer's arrow stays outside the
-   name, on the app's side of it */
-const rbLine = (name, bal, arrow) =>
-  '<span class="rb' +
-  (arrow ? ' ar">' + arrow : '">') +
-  '<span class="rbn" dir="auto">' +
-  esc(name) +
-  "</span> " +
-  esc(bal) +
-  "</span>";
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
@@ -774,8 +795,8 @@ function dayGroups(list) {
         "</span><span>" +
         esc(tot) +
         '</span></div><div class="list dl" style="contain-intrinsic-size:0 ' +
-        rows.get(cur) * 72 +
-        'px">';
+        rows.get(cur) * 5 + // an estimate (a row of two or three lines), in rem: it grows with the text size
+        'rem">';
     }
     h += txLine(t);
   });
@@ -948,8 +969,9 @@ function sliderShow(el, n) {
 }
 /* Settings → First day of week: the days' long names where they fit, else the short ones (the long one still read out) */
 function fitWeekSeg() {
-  const b = [...document.querySelectorAll('#app [data-act="week"]')];
-  if (b.some(x => x.scrollWidth > x.clientWidth + 1))
+  const b = [...document.querySelectorAll('#app [data-act="week"]')],
+    seg = b.length && b[0].parentElement; // each tab is as wide as its word: the three together may not fit
+  if (seg && (seg.scrollWidth > seg.clientWidth + 1 || b.some(x => x.scrollWidth > x.clientWidth + 1)))
     b.forEach(x => {
       x.setAttribute("aria-label", x.textContent);
       x.textContent = capFirst(weekdayName(+x.dataset.v, "short"));

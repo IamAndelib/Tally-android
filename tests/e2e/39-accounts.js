@@ -1,5 +1,5 @@
-// Accounts at a glance (#37, #33). History rows show each account's name in a soft pill of its colour (a transfer, one per
-// account), readable (WCAG AA) on every colour of the palette in light and dark; a card without a colour of its own is
+// Accounts at a glance (#37, #33). History rows name each account on a line of its own with its balance, after a dot of
+// its colour (a transfer, a line per account), the name readable (WCAG AA) in light and dark; a card without a colour of its own is
 // purple, not the bank's blue. Hold and drag reorders every list in Assets and Liabilities (accounts, cards, money owed
 // either way, other assets) and Home's balance chips; Home keeps an order of its own (settings.chipOrder, new accounts
 // last), Assets the accounts' order, other kinds keep their places among them, and a drop onto a section's box still
@@ -51,21 +51,31 @@ const ok = (c, m) => {
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll("#app .tx[data-v]")].map(r => ({
         id: r.dataset.v,
-        pills: [...r.querySelectorAll(".s .apill")].map(p => p.textContent),
+        accs: [...r.querySelectorAll(".ac .an")].map(p => p.textContent),
+        dots: [...r.querySelectorAll(".ac .adot")].map(d => getComputedStyle(d).backgroundColor),
+        bals: [...r.querySelectorAll(".ac .rb")].length,
       }))
     );
-    const by = id => (rows.find(r => r.id === id) || {}).pills || [];
-    ok(by("e1").join() === "Bank" && by("e2").join() === "Card", scheme + ": the account name sits in a pill");
-    ok(by("x1").join() === "Bank,Cash", scheme + ": a transfer has a pill for each account: " + by("x1").join());
-    /* every palette colour (and each type's) as an account colour: the name in its pill keeps 4.5:1 on the row */
+    const by = id => rows.find(r => r.id === id) || { accs: [], dots: [] };
+    ok(
+      by("e1").accs.join() === "Bank" && by("e2").accs.join() === "Card" && by("e1").bals === 1,
+      scheme + ": each entry names its account on a line of its own, with its balance"
+    );
+    ok(
+      by("x1").accs.join() === "↓Bank,↑Cash" && by("x1").bals === 2,
+      scheme + ": a transfer, a line for each account: " + by("x1").accs.join()
+    );
+    const want = await page.evaluate(() => ["b", "k"].map(id => "rgb(" + hexRgb(accEmb(acc(id)).c).join(", ") + ")"));
+    ok(
+      by("e1").dots[0] === want[0] && by("e2").dots[0] === want[1],
+      scheme + ": a dot of the account's colour before its name " + JSON.stringify([by("e1").dots, want])
+    );
+    /* the name itself is plain text in the row's quiet colour: readable (4.5:1) whatever the account's colour */
     const worst = await page.evaluate(() => {
-      const cols = [...new Set(PALETTE.concat(Object.values(TYPE_COL)))],
-        pill = document.querySelector("#app .tx[data-v] .apill"),
-        row = pill.closest(".tx"),
+      const an = document.querySelector("#app .tx[data-v] .an"),
         rgb = s => (s.match(/[\d.]+/g) || []).map(Number);
-      let bgEl = row;
+      let bgEl = an;
       while (bgEl && rgb(getComputedStyle(bgEl).backgroundColor)[3] === 0) bgEl = bgEl.parentElement;
-      const under = rgb(getComputedStyle(bgEl || document.body).backgroundColor).slice(0, 3);
       const lum = c =>
         c
           .map(v => {
@@ -73,25 +83,13 @@ const ok = (c, m) => {
             return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
           })
           .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
-      let min = 99,
-        at = "";
-      for (const c of cols) {
-        pill.style.setProperty("--acr", hexRgb(c).join(" "));
-        const st = getComputedStyle(pill),
-          bg = rgb(st.backgroundColor),
-          a = bg.length > 3 ? bg[3] : 1,
-          mixed = bg.slice(0, 3).map((v, i) => v * a + under[i] * (1 - a)),
-          fg = rgb(st.color).slice(0, 3),
-          [x, y] = [lum(mixed), lum(fg)],
-          ratio = (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-        if (ratio < min) {
-          min = ratio;
-          at = c;
-        }
-      }
-      return { min: Math.round(min * 100) / 100, at };
+      const [x, y] = [
+        lum(rgb(getComputedStyle(bgEl || document.body).backgroundColor).slice(0, 3)),
+        lum(rgb(getComputedStyle(an).color).slice(0, 3)),
+      ];
+      return { min: Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100 };
     });
-    ok(worst.min >= 4.5, scheme + ": every account colour keeps the name readable, lowest " + JSON.stringify(worst));
+    ok(worst.min >= 4.5, scheme + ": the account's name is readable on the row " + JSON.stringify(worst));
     await ctx.close();
   }
   {

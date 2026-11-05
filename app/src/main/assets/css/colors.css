@@ -33,7 +33,6 @@
   --lend-bg: #d4ecfb;
   --lend-fg: #0b5a86;
   --xfer: #1565c0;
-  --pill-a: 0.24; /* how strongly an account's colour tints its name pill in History */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -70,7 +69,6 @@
     --lend-bg: #1f3a4c;
     --lend-fg: #b6ddf6;
     --xfer: #9ecaff;
-    --pill-a: 0.38;
     color-scheme: dark;
   }
 }
@@ -107,6 +105,5 @@
   --lend-bg: #1f3a4c;
   --lend-fg: #b6ddf6;
   --xfer: #9ecaff;
-  --pill-a: 0.38;
   color-scheme: dark;
 }

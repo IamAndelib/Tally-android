@@ -161,7 +161,7 @@ function loanRow(l, i = loanInfo(l)) {
         : T("loan.noDue")
       : T(lend ? "loan.lentOn" : "loan.borrowedOn", { date }));
   return (
-    '<button class="tx' +
+    '<button class="tx stk' +
     (FX.row === l.id ? " flash" : "") +
     '" data-act="loan-open" data-v="' +
     l.id +

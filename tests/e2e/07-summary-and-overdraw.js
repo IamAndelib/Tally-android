@@ -98,7 +98,11 @@ const ok = (c, m) => {
       cs === (await page.evaluate(() => getComputedStyle(document.querySelector(".spent")).color)),
     "expense red, income green, transfer blue " + [cs, cg, cx]
   );
-  const rb = async id => page.$$eval(`[data-v="${id}"] .rb`, e => e.map(x => x.textContent));
+  /* each account line: the account's name, then its balance after the entry */
+  const rb = async id =>
+    page.$$eval(`[data-v="${id}"] .ac`, e =>
+      e.map(x => x.querySelector(".an").textContent + " " + x.querySelector(".rb").textContent)
+    );
   const want = {
     e0: "Wallet BDT 930",
     e1: "Wallet BDT 830",

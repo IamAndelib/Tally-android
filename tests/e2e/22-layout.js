@@ -358,6 +358,20 @@ function inspect() {
   const pl = layer.id === "app" && document.querySelector(".pnav .plabel > span");
   if (pl && window.__fontScale === 1 && pl.textContent === "Today" && pl.scrollWidth > pl.clientWidth + 1)
     out.push("period label cut: " + pl.scrollWidth + ">" + pl.clientWidth);
+  // 7. words wrap rather than being cut ("…") or set smaller: rows, chips, tiles, fields, tabs and buttons (figures may
+  //    shrink, Home's ring keeps its names whole or leaves them out, and a very long entry title ends in "…" after
+  //    its lines)
+  for (const e of layer.querySelectorAll(
+    ".tx:not(.en) .d, .tx .s, .tx .an, .chip .chn, .cat:not(.rt) .cn, .fieldbtn > span, .seg > button, .fbtn, .row > .btn, .acc .n > span"
+  )) {
+    if (!vis(e) || e.closest("[aria-hidden=true]")) continue;
+    const t = "'" + e.textContent.trim().slice(0, 30) + "'";
+    if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== "visible")
+      out.push("words cut " + name(e) + " " + t);
+    else if (/-webkit-box/.test(getComputedStyle(e).display) && e.scrollHeight > e.clientHeight + 2)
+      out.push("lines cut " + name(e) + " " + t);
+    if (e.style.fontSize) out.push("words set smaller " + name(e) + " " + t);
+  }
   // 6. a sheet or dialog fits the screen (its content scrolls inside)
   const box = layer.querySelector(".p, .dlg, [role=dialog]");
   if (box && box !== layer) {
