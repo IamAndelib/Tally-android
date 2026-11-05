@@ -1,7 +1,6 @@
 # History: all time, a period chip and a Filters sheet
 
-Status: design agreed with the maintainer on 2026-11-05 from mocks on the real app (concept 3); this spec is for review
-before the implementation plan. Search will build on it later: a search result can open History with its filter set.
+Status: approved by the maintainer on 2026-11-05 from mocks on the real app. Search will build on it later: a search result can open History with its filter set.
 
 ## Why
 
@@ -25,7 +24,34 @@ Search stays the way to find entries by their words; History becomes the way to 
 - A **summary line**: the number of entries and their money in the words that fit what's shown (see Totals).
 
 **The list**: every entry of the period and filters, newest first, grouped by **month headings** (month name and its
-totals, in the same words as the summary line), then by day as today. The rows are today's entry rows.
+totals, in the same words as the summary line), then by day as today.
+
+## Entry rows
+
+Simpler rows, the same in History, Home's day list and search results:
+
+- **Two lines.** Line 1: what it was (payee and note, or the category, or "Lent to Sam", "Transfer") and the amount.
+  Line 2: the category (when the title isn't it) and the account with its colour dot (`Groceries · ● Credit card`);
+  a transfer: `● Everyday → ● Cash`. No running balance on the row.
+- **A fee joins what it was charged on**: under the amount, `+ $2.00 fee`; a cross-currency transfer `→ €600.00`. A
+  fee has no row of its own anywhere entries are listed (it stays its own entry in the data, linked by `feeOf`).
+- **Tap opens the row in place** (one open at a time; tap again closes; `aria-expanded`). Editing is the Edit button
+  inside. In selection mode a tap selects, as today.
+
+**The opened row** adds only what the row can't show (each fact in one place; an account name only to tell two
+balances apart):
+
+1. **When added**: a clock icon, "Added at **6:14 PM**", at the normal text size; when written down on a later day
+   than its date, "Added **Jun 16** at **9:03 AM**" (the date itself, never "Yesterday"). Time per Settings' clock.
+2. **Figure boxes** (soft boxes, a small label over a bold figure, a little room inside):
+   - every entry: **Left after** · the balance · `in ● Everyday` (after the entry and its fee);
+   - a transfer: one such box for each account, and **Paid in all** (amount + fee) when there's a fee;
+   - a loan or lending entry: first a bar box, `You owe Maya $350.00` / `Sam owes you $50.00` (or **Cleared**), a bar
+     of what's paid back and `$250.00 of $600.00 paid`; then **Paid in all** or **Reached you** when there's a fee,
+     **Due** for a draw with a due date still owed, and the Left after box;
+   - a balance fix: **Was** and **Now**.
+   No exchange rate (the row already shows both amounts).
+3. **Actions, centred**: Edit (tonal), Delete (danger), then **Open lending** / **Open loan** for loan entries.
 
 **The default view**: all time, no filters. History opens on it from Home (the History button, "Open full history").
 Opened from an account ("Open in History" on its sheet) it starts on all time with that account set.
@@ -84,8 +110,8 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 - **What a kind contains**: Spent = expenses that aren't fees; Received = income; Transfers = transfers and their fees;
   Lent / Borrowed = a lending's or loan's draws and payments, and their payments' fees; Balance fixes = fixes. An
   account matches when it's the entry's account or a transfer's destination.
-- **A fee** is listed with the kind of what it was charged on and counted in neither spent nor the totals above
-  (its own `· $Z fees` when any).
+- **A fee** belongs to the kind of what it was charged on, is shown inside that entry's row (not as a row), and is
+  counted in neither spent nor the totals above but as its own `· $Z fees` when any.
 - **Gone targets**: a filter whose account, category or person no longer exists (a backup restored) is dropped.
 - **Nothing matches** (a period changed, the last matching entry deleted): "Nothing matches these filters" with
   **Clear all** under it; the Clear all beside the Filters button is left out then (one is enough).
@@ -115,10 +141,10 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 - Choosing several categories or accounts at once.
 - Saving filters across visits.
 
-## Open points (defaults chosen in the review, to confirm)
+## Decided in the review (2026-11-05)
 
-1. ~~Stepping through periods by swiping~~: decided no (2026-11-05); the period dialog picks another month.
-2. **Closing the sheet without Show** (✕, Back, tapping outside): default: the choices are dropped, nothing changes.
-3. **Clear all at the top** goes back to all time too (the default view in one tap); the sheet's Clear all clears only
-   the sheet's choices. Default as written above.
-4. **Release**: default: this goes into 1.4.4 as item 12, before the remaining polish items.
+- No swipe in History; another period is picked in the dialog.
+- Closing the sheet without Show (✕, Back, outside) drops its choices; nothing changes.
+- Clear all at the top goes back to the default view (all time, no filters); the sheet's Clear all clears only the
+  sheet's choices.
+- Ships in 1.4.4 as item 12, before the remaining polish items.
