@@ -22,10 +22,14 @@ const V = {
   showArchived: false,
   sel: null,
 };
-/* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month"|"year", anchor, rs, re} */
-const HP = { period: "month", anchor: today(), rs: null, re: null };
+/* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month"|"year", anchor, rs, re}; History
+   alone also has "all" (all time, its default), which Home never takes */
+const HP = {};
+const histAllTime = () => Object.assign(HP, { period: "all", anchor: today(), rs: null, re: null });
+histAllTime();
 function range(p = V) {
   const a = p.anchor;
+  if (p.period === "all") return ["0000-01-01", "9999-12-31"];
   if (p.period === "day") return [a, a];
   if (p.period === "range") return [p.rs, p.re];
   if (p.period === "year") return [a.slice(0, 4) + "-01-01", a.slice(0, 4) + "-12-31"];
@@ -38,6 +42,7 @@ function periodLabel(p = V) {
 function periodText(p) {
   const t = today(),
     [s, e] = range(p);
+  if (p.period === "all") return T("history.allTime");
   if (p.period === "day") return dayName(p.anchor);
   if (p.period === "range") return s === e ? dayName(s) : rangeLabel(s, e);
   if (p.period === "year") return p.anchor.slice(0, 4);
@@ -46,6 +51,7 @@ function periodText(p) {
   return parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short", year: "numeric" });
 }
 function shiftPeriod(n, p = V) {
+  if (p.period === "all") return;
   if (p.period === "day") p.anchor = addDays(p.anchor, n);
   else if (p.period === "range") {
     const len = daysBetween(p.rs, p.re) + 1;
@@ -60,7 +66,7 @@ function shiftPeriod(n, p = V) {
   else p.anchor = shiftMonth(p.anchor.slice(0, 7), n) + "-01";
   if (p.anchor > today()) p.anchor = today();
 }
-const canNext = (p = V) => range(p)[1] < today();
+const canNext = (p = V) => p.period !== "all" && range(p)[1] < today();
 /* what Home opens on (Settings → Region): today, this month or this year; its Today chip comes back to it */
 function homePeriod() {
   V.period = S.settings.home;
@@ -93,7 +99,7 @@ function catchUpToday() {
     V.rs = addDays(V.rs, daysBetween(was, t));
     V.re = t;
   }
-  /* History likewise: its year, its month, its day, or a range that ended today */
+  /* History likewise (all time stays): its year, its month, its day, or a range that ended today */
   if (HP.period === "year" && HP.anchor.slice(0, 4) === was.slice(0, 4)) HP.anchor = t;
   else if (HP.period === "month" && HP.anchor.slice(0, 7) === was.slice(0, 7)) HP.anchor = t;
   else if (HP.period === "day" && HP.anchor === was) HP.anchor = t;
@@ -136,7 +142,7 @@ let PD = null;
 function periodDialog(p) {
   const ref = p.period === "range" ? p.re : p.anchor,
     now = +today().slice(0, 4);
-  PD = { p, tab: p.period, month: ref.slice(0, 7), year: +ref.slice(0, 4), pick: null };
+  PD = { p, tab: p.period === "all" ? "month" : p.period, month: ref.slice(0, 7), year: +ref.slice(0, 4), pick: null };
   PD.yEnd = now - Math.floor(Math.max(0, now - PD.year) / 12) * 12;
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="pd" role="dialog" aria-modal="true" aria-label="' +

@@ -687,7 +687,9 @@
     "delSel": "Hapus yang dipilih",
     "select": "Pilih transaksi",
     "all": "Semua",
+    "allTime": "All time",
     "none": {
+      "all": "Nothing written down yet.",
       "day": "Tidak ada catatan hari itu.",
       "month": "Tidak ada catatan bulan itu.",
       "range": "Tidak ada catatan di hari-hari itu.",

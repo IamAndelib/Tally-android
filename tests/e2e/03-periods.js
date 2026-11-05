@@ -101,8 +101,13 @@ const ok = (c, m) => {
   ok(await page.isVisible(".month .plabel"), "history icon opens History");
 
   // ---- history period
-  ok(/\d{4}/.test(await hlabel()), "default label is this month with year: " + (await hlabel()));
-  ok((await rows()) === expectMonth, "default shows this month " + (await rows()));
+  ok((await hlabel()) === "All time", "History opens on all time: " + (await hlabel()));
+  await page.evaluate(() => {
+    Object.assign(HP, { period: "month", anchor: today() }); // the rest of this suite works from this month
+    render();
+  });
+  ok(/\d{4}/.test(await hlabel()), "label is this month with year: " + (await hlabel()));
+  ok((await rows()) === expectMonth, "shows this month " + (await rows()));
   ok(await page.isDisabled('.month [data-act="hmon"][data-v="1"]'), "next disabled at this month");
   await page.click(".month .plabel");
   await page.waitForSelector("#pd");

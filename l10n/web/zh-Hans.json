@@ -687,7 +687,9 @@
     "delSel": "删除所选",
     "select": "选择记录",
     "all": "全部",
+    "allTime": "All time",
     "none": {
+      "all": "Nothing written down yet.",
       "day": "那天没有记录。",
       "month": "那个月没有记录。",
       "range": "这段时间没有记录。",

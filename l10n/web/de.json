@@ -693,7 +693,9 @@
     "delSel": "Auswahl löschen",
     "select": "Einträge auswählen",
     "all": "Alle",
+    "allTime": "All time",
     "none": {
+      "all": "Nothing written down yet.",
       "day": "An diesem Tag nichts notiert.",
       "month": "In diesem Monat nichts notiert.",
       "range": "In diesem Zeitraum nichts notiert.",

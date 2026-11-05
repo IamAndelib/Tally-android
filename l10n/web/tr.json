@@ -693,7 +693,9 @@
     "delSel": "Seçilenleri sil",
     "select": "Kayıt seç",
     "all": "Tümü",
+    "allTime": "All time",
     "none": {
+      "all": "Nothing written down yet.",
       "day": "O gün hiçbir şey yazılmamış.",
       "month": "O ay hiçbir şey yazılmamış.",
       "range": "O günlerde hiçbir şey yazılmamış.",

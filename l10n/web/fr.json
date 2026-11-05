@@ -699,7 +699,9 @@
     "delSel": "Supprimer la sélection",
     "select": "Sélectionner des opérations",
     "all": "Tout",
+    "allTime": "All time",
     "none": {
+      "all": "Nothing written down yet.",
       "day": "Rien de noté ce jour-là.",
       "month": "Rien de noté ce mois-là.",
       "range": "Rien de noté sur ces jours.",

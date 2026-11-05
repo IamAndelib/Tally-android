@@ -699,7 +699,9 @@
     "delSel": "Eliminar selección",
     "select": "Seleccionar movimientos",
     "all": "Todas",
+    "allTime": "All time",
     "none": {
+      "all": "Nothing written down yet.",
       "day": "No anotaste nada ese día.",
       "month": "No anotaste nada ese mes.",
       "range": "No anotaste nada en esos días.",
