@@ -3321,14 +3321,17 @@ body.land.calcopen #snack .snack {
   bottom: calc(-20px - env(safe-area-inset-bottom, 0px));
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 16px -20px calc(-20px - env(safe-area-inset-bottom, 0px));
   padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   background: var(--surface-low);
 }
 .hfs-foot .btn {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 8rem;
+  min-width: min-content; /* a long word in the label takes its room; the foot wraps instead of cutting it */
+  padding-left: 12px;
+  padding-right: 12px;
 }
 .hmenu {
   position: fixed;

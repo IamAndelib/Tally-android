@@ -112,7 +112,14 @@ function sampleState(t, nCats) {
     spend.forEach(([cat, a], i) => (d + i) % 3 === 0 && add(ago(d), "expense", a, i % 2 ? "c" : "b", { cat }));
   add(ago(1), "income", 2450, "b", { cat: "income" });
   add(ago(2), "transfer", 200, "b", { to: "c" });
-  add(ago(5), "loan", 300, "c", { dir: "out", loan: "L1", principal: true, due: ago(1) });
+  add(ago(5), "loan", 300, "c", {
+    dir: "out",
+    loan: "L1",
+    principal: true,
+    due: ago(1),
+    note: "Lent for the trip, back by Friday if the pay arrives in time",
+  });
+  add(ago(4), "adjust", -12.5, "c", { note: "Counted the drawer again and found the coins from the jar missing" });
   add(ago(3), "loan", 1000, "c", { dir: "out", loan: "L1", principal: true, due: ahead(5) });
   add(ago(8), "loan", 2500, "s", { dir: "in", loan: "L2", principal: true, due: ahead(20) });
   const cats = [];
@@ -295,6 +302,8 @@ function inspect() {
       if (a.contains(b) || b.contains(a)) continue;
       // the calculator keypad slides over the form on purpose (the form scrolls above it)
       if (!!a.closest(".calc") !== !!b.closest(".calc")) continue;
+      // and the Filters sheet's sticky foot over the chips that scroll up behind it
+      if (!!a.closest(".hfs-foot") !== !!b.closest(".hfs-foot")) continue;
       // so do the period arrows over the label's padding (on top of it, each keeping its 48px)
       if (a.closest(".pnav") && b.closest(".pnav")) continue;
       const x = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left),
@@ -322,6 +331,8 @@ function inspect() {
     }
     const pad = document.querySelector(".calc");
     if (pad && vis(pad) && cy > pad.getBoundingClientRect().top) clipped = true;
+    const foot = document.querySelector(".hfs-foot");
+    if (foot && vis(foot) && !e.closest(".hfs-foot") && cy > foot.getBoundingClientRect().top) clipped = true;
     if (clipped) continue;
     const hit = document.elementFromPoint(cx, cy);
     // (the calculator's caret mirror lies over the amount on purpose: a tap there places the caret)
@@ -529,6 +540,41 @@ function inspect() {
         render();
       })
     );
+    /* History filtered (chips), and the Filters sheet for Spent, Lent and Transfers with an account */
+    await shot(
+      "history-filtered",
+      ev(() => {
+        openHistory({ kind: "out", acc: "b", cat: "groceries" });
+      })
+    );
+    const sheetFor = f => () =>
+      page.evaluate(f => {
+        V.screen = "history";
+        render();
+        filtersSheet();
+        HFD = histNorm({ ...histBlank(), ...f });
+        hfsDraw();
+      }, f);
+    await shot("history-filters-spent", sheetFor({ kind: "out" }));
+    await shot("history-filters-lent", sheetFor({ kind: "lend" }));
+    await shot("history-filters-transfers", sheetFor({ kind: "xfer", from: "b" }));
+    await page.evaluate(() => histClear());
+    /* a loan's and a balance fix's note show in the opened row */
+    const openNote = (label, test) =>
+      shot(label, () =>
+        page.evaluate(test => {
+          histClear();
+          V.screen = "history";
+          render();
+          const t = S.txns.find(x => x.note && x.type === test);
+          V.open = t.id;
+          render();
+          const o = document.querySelector(".txo");
+          if (o) o.scrollIntoView({ block: "center" });
+        }, test)
+      );
+    await openNote("history-open-loan-note", "loan");
+    await openNote("history-open-fix-note", "adjust");
     /* an opened row: a transfer with its fee (two balance boxes), a loan payment (the bar box) */
     const opened = () =>
       ev(() => {

@@ -648,9 +648,10 @@ const ok = (c, m) => {
     V.screen = "history";
     render();
   });
+  await page.click('#app [data-v="d2"]');
   ok(
-    (await page.textContent('#app [data-v="d2"]')).includes("school fees"),
-    "a note on an added draw shows in History"
+    (await page.textContent("#app .txo")).includes("school fees"),
+    "a note on an added draw shows in History, in the opened row"
   );
   await lseed([["d1", 1000, d10]], [["p", 600, d7]]);
   await page.evaluate(() => {
