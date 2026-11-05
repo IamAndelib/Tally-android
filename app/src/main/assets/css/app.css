@@ -289,7 +289,11 @@ a {
   font-size: clamp(0.9rem, 4.5vw, 1.25rem);
   padding: 0 6px 0 10px;
 }
-/* a phone held sideways: the upright phone's size (vw is the long side there) */
+/* a phone held sideways: no ‹ › (its narrow right side has no room for them beside the icons; a swipe on the ring and
+   the period dialog still move the period), and the upright phone's size (vw is the long side there) */
+body.land .pnav > .icon {
+  display: none;
+}
 body.land .pnav .plabel {
   font-size: 1.05rem;
 }

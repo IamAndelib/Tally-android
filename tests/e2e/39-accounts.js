@@ -218,6 +218,31 @@ const ok = (c, m) => {
       look.faded === "0.3" && look.scale === "none",
       "while dragged: its place faded, the lifted chip unscaled " + JSON.stringify(look)
     );
+    /* one tick per switch: hovering over a neighbour, even wiggling on it, doesn't keep ticking */
+    {
+      await page.evaluate(() => {
+        window.__ticks = 0;
+        Android.haptic = k => k === "tick" && window.__ticks++;
+      });
+      await page.evaluate(() => document.querySelector('.strip .acc[data-v="c"]').scrollIntoView({ inline: "center" }));
+      const [x0, y0] = await mid('.strip .acc[data-v="c"]');
+      const [kx, , , kw] = await mid('.strip .acc[data-v="k"]');
+      await T("touchStart", x0, y0);
+      await page.waitForTimeout(450);
+      for (let k = 1; k <= 6; k++) await T("touchMove", x0 + ((kx + kw / 4 - x0) * k) / 6, y0);
+      for (let k = 0; k < 10; k++) await T("touchMove", kx + kw / 4 + (k % 2 ? 6 : -6), y0);
+      const n = await page.evaluate(() => window.__ticks);
+      await T("touchEnd");
+      await page.waitForTimeout(250);
+      await page.evaluate(() => {
+        delete Android.haptic;
+        delete S.settings.chipOrder;
+        save();
+        render();
+        document.querySelector(".strip").scrollLeft = 0;
+      });
+      ok(n === 1, "a chip held over its neighbour ticks once, not on every move: " + n);
+    }
     await drag('.strip .acc[data-v="b"]', '.strip .acc[data-v="s"]', true);
     ok(
       (await chips()) === "b,s,k2,c,k" && (await ids("accounts")).join() === "s,k2,b,c,k",

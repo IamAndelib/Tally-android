@@ -360,6 +360,17 @@ const ok = (c, m) => {
   const pp = await phone.newPage();
   await pp.goto(appUrl);
   ok(await pp.evaluate(() => phoneLand()), "a sideways phone still is");
+  /* held sideways, Home's bar has no ‹ › (no room beside the icons), and Search stays in it */
+  const side = await pp.evaluate(() => {
+    S = blank();
+    S.settings.cur = "USD";
+    S.settings.lastCheck = today();
+    S.accounts.push({ id: "a", name: "Cash", type: "cash", currency: "USD", opening: 10, archived: false });
+    render();
+    const vis = s => [...document.querySelectorAll(s)].filter(e => e.offsetWidth > 0).length;
+    return { arrows: vis("#app .pnav > .icon"), search: vis('#app .appbar [data-act="search-open"]') };
+  });
+  ok(side.arrows === 0 && side.search === 1, "sideways: no period arrows, Search in the bar: " + JSON.stringify(side));
   await tab.close();
   await phone.close();
 

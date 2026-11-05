@@ -322,12 +322,17 @@ function dragMove(x, y) {
     else if (x > sr.right - 32) strip.scrollLeft += 8;
     const hit = document.elementFromPoint(x, sr.top + sr.height / 2),
       t = hit && hit.closest(".acc[data-v]");
+    /* past the middle of a neighbour the held chip takes its place, with one tick per switch: a chip already on that
+       side stays put, so hovering never repeats the tick */
     if (t && t !== L.el && t.parentNode === strip) {
-      const r = t.getBoundingClientRect();
-      if (x < r.left + r.width / 2) t.before(L.el);
-      else t.after(L.el);
-      L.moved = true;
-      buzz("tick");
+      const r = t.getBoundingClientRect(),
+        after = !!(L.el.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING);
+      if (after ? x > r.left + r.width / 2 : x < r.left + r.width / 2) {
+        if (after) t.after(L.el);
+        else t.before(L.el);
+        L.moved = true;
+        buzz("tick");
+      }
     }
     return;
   }
