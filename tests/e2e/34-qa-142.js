@@ -340,6 +340,7 @@ const ok = (c, m) => {
     await seed(page);
     const h = await page.evaluate(() => {
       V.screen = "history";
+      Object.assign(HP, { period: "month", anchor: today() });
       render();
       return $("#app .month .plabel span").textContent;
     });
