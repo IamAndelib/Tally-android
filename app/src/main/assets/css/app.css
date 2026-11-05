@@ -1581,6 +1581,10 @@ input {
 .txo .added b {
   font-weight: 600;
 }
+.txo .onote {
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
 .txo .frow {
   display: flex;
   flex-wrap: wrap;
@@ -3201,15 +3205,6 @@ body.land.calcopen #snack .snack {
 .hchip > .adot {
   flex: none;
   margin: 0 -2px 0 0;
-}
-.hfsum {
-  margin: 12px 4px 0;
-  font-size: 0.9rem;
-  color: var(--on-surface-variant);
-}
-.hfsum b {
-  color: var(--on-surface);
-  font-weight: 600;
 }
 .hmon {
   display: flex;

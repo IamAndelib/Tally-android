@@ -499,16 +499,10 @@ function historyView() {
        list is empty (its message has one) */
     const clear = anySet && list.length;
     h += histBar(clear) + (chips ? '<div class="hchips">' + chips + "</div>" : "");
+    /* no visible summary (the months carry their totals); a hidden status says the count after each change */
     h +=
-      '<div class="hfsum" role="status">' +
-      (list.length
-        ? "<b>" +
-          TH("history.count", { count: histRows(list).length }) +
-          "</b>" +
-          histWords(list, HF.kind)
-            .map(w => " · " + esc(w))
-            .join("")
-        : "") +
+      '<div class="vh" role="status">' +
+      (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
       "</div>";
   }
   if (!list.length)

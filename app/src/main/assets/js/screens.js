@@ -690,8 +690,7 @@ function txLine(t) {
       small += "<small>\u2192 " + esc(money(t.toAmount, to.currency)) + "</small>";
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = esc(noteShown(t, "fix.title"));
-    if (t.note) sub = TH("fix.title") + " \u00b7 " + sub;
+    d = TH("fix.title");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
@@ -702,7 +701,6 @@ function txLine(t) {
     d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
       who: { html: bdi(who) },
     });
-    if (t.note) sub = bdi(t.note) + " \u00b7 " + sub;
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -804,6 +802,9 @@ function txOpenView(t) {
         : TH("tx.addedAt", { time: { html: time } })) +
       "</span></div>";
   }
+  /* a loan's or fix's note lives here only; an expense's, income's and transfer's is their title */
+  if (t.note && !autoNote(t.note) && (t.type === "loan" || t.type === "adjust"))
+    h += '<div class="onote" dir="auto">' + bdi(t.note) + "</div>";
   let loanBtn = "";
   if (t.type === "transfer") {
     const to = acc(t.to);

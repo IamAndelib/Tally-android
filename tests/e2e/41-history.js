@@ -246,7 +246,18 @@ const ok = (c, m) => {
       (await page.getAttribute('#app [data-act="hp-open"]', "aria-label")).startsWith("Choose a period"),
       "the period chip's label is named"
     );
-    ok((await page.getAttribute("#app .hfsum", "role")) === "status", "the summary line is a status region");
+    ok(await page.evaluate(() => !document.querySelector("#app .hfsum")), "no visible summary line under the chips");
+    const hs = await page.evaluate(() => {
+      const e = document.querySelector('#app [role="status"].vh'),
+        b = e && e.getBoundingClientRect();
+      return (
+        e && { text: e.textContent.trim(), rows: document.querySelectorAll("#app .tx").length, w: b.width, h: b.height }
+      );
+    });
+    ok(
+      hs && hs.text === hs.rows + " entries" && hs.w <= 1 && hs.h <= 1,
+      "a hidden status region says the count: " + JSON.stringify(hs)
+    );
     const mons = await page.evaluate(() => [...document.querySelectorAll("#app .hmon")].map(e => e.textContent));
     const yr = new Date().getFullYear() - 1;
     ok(
@@ -989,6 +1000,83 @@ const ok = (c, m) => {
       return [...document.querySelectorAll("#sr .tx[data-v]")].map(r => r.dataset.v + ":" + r.dataset.act).join();
     });
     ok(sr.includes("tr1:row-open") && !sr.includes("fee1"), "search: the same rows: " + sr);
+    await ctx.close();
+  }
+
+  // a loan's or balance fix's note shows only in the opened row, under "Added at"
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.clock = "12";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 5000, archived: false });
+      S.loans.push({ id: "L1", kind: "lend", person: "Sam", account: "b", date: today(), note: "", status: "open" });
+      const at = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 9, 30).getTime();
+      S.txns.push({
+        id: "ln",
+        ts: at,
+        date: today(),
+        type: "loan",
+        amount: 40,
+        account: "b",
+        loan: "L1",
+        dir: "out",
+        principal: true,
+        note: "Back by Friday",
+      });
+      S.txns.push({
+        id: "fx",
+        ts: at + 1,
+        date: today(),
+        type: "adjust",
+        amount: -3,
+        account: "b",
+        note: "Counted the drawer",
+      });
+      S.txns.push({
+        id: "xf",
+        ts: at + 2,
+        date: today(),
+        type: "transfer",
+        amount: 5,
+        account: "b",
+        to: "b",
+        note: "Rent share",
+      });
+      save();
+      V.screen = "history";
+      render();
+    });
+    const t = id =>
+      page.evaluate(i => document.querySelector('#app .tx[data-v="' + i + '"]').textContent.replace(/\s+/g, " "), id);
+    const lnT = await t("ln"),
+      fxT = await t("fx"),
+      xfT = await t("xf");
+    ok(!lnT.includes("Back by Friday") && lnT.includes("Sam"), "a collapsed loan row has no note: " + lnT);
+    ok(!fxT.includes("Counted the drawer") && fxT.includes("Balance fix"), "a collapsed fix row has no note: " + fxT);
+    ok(xfT.includes("Rent share"), "a transfer's note stays its title: " + xfT);
+    for (const [id, note] of [
+      ["ln", "Back by Friday"],
+      ["fx", "Counted the drawer"],
+    ]) {
+      await page.click('#app .tx[data-v="' + id + '"]');
+      const o = await page.evaluate(() => {
+        const a = document.querySelector("#app .txo .added"),
+          n = document.querySelector("#app .txo .onote");
+        return {
+          after: !!(a && n && a.nextElementSibling === n),
+          text: n ? n.textContent.trim() : "",
+          bdi: !!(n && n.querySelector("bdi")),
+        };
+      });
+      ok(
+        o.after && o.text === note && o.bdi,
+        "opened " + id + ": the note is right under Added at: " + JSON.stringify(o)
+      );
+      await page.click('#app .tx[data-v="' + id + '"]');
+    }
     await ctx.close();
   }
 
