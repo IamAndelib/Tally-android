@@ -172,6 +172,7 @@ function choiceTap(i) {
   if (!c) {
     closePop();
     if (b.run) b.run();
+    if ($("#pop").innerHTML) sheetSwap = true; // it opened the next question (Save backup → Delete) in this same tap
     return;
   }
   choiceDialog(

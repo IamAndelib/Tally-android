@@ -1192,6 +1192,37 @@ const stub = () => {
   await cd("destroy");
   await settle();
   ok((await popEmpty()) && (await state()).accounts.length === 0, "Delete deletes");
+  /* a double tap on an answer that opens the next question at once (Save backup → Delete, when saving is
+     immediate) must not answer that question with its second tap */
+  await page.evaluate(() => {
+    window.__ran = 0;
+    choiceDialog("A", "", [
+      {
+        role: "keep",
+        label: "Go",
+        run: () =>
+          choiceDialog(
+            "B",
+            "",
+            [
+              { role: "out", label: "Cancel" },
+              { role: "destroy", label: "Danger", run: () => window.__ran++ },
+            ],
+            { row: true }
+          ),
+      },
+    ]);
+  });
+  await settle();
+  const go = await (await page.$("#pop .cd-keep")).boundingBox();
+  await page.mouse.dblclick(go.x + go.width * 0.8, go.y + go.height / 2);
+  await settle();
+  ok(
+    (await page.evaluate(() => window.__ran)) === 0 && (await page.$("#pop .cd-destroy")) !== null,
+    "a double tap opens the next question without answering it"
+  );
+  await page.evaluate(() => closePop());
+  await settle();
   await seed(base());
   await act("go", "settings");
   await settle();
