@@ -1087,14 +1087,14 @@ function saveTr() {
   );
 }
 /* Deleting asks first whether the balance changes (go(false): today's delete) or stays (go(true): the opening balances
-   take the amounts over, deleteEntries()). Loan entries are only offered the first, one answer for a whole selection.
+   take the amounts over, deleteEntries()). Loan entries are only offered the first, with the title alone; one answer for a whole selection.
    Cancel and Back change nothing; the focus goes back to the Delete that asked. */
 function deleteAsk(ids, go) {
   const count = ids.length,
     kept = canKeepBalance(ids);
   choiceDialog(
     T("entries.delTitle", { count }),
-    T("entries.del" + (kept ? "Body" : "BodyLoan") + (count > 1 ? "Many" : "")),
+    kept ? T("entries.delBody" + (count > 1 ? "Many" : "")) : "", // a loan entry: only the title (maintainer)
     [
       { role: "destroy", label: T("entries.delUpdate"), run: () => go(false) },
       kept && { role: "destroy-outline", label: T("entries.delKeep"), run: () => go(true) },

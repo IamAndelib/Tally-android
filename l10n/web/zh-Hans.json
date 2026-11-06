@@ -460,9 +460,7 @@
     "delKeep": "删除，保留余额",
     "delTitle_other": "删除{{count}}条记录？",
     "delBody": "金额要退回账户，还是让余额保持不变？",
-    "delBodyMany": "金额要退回账户，还是让余额保持不变？",
-    "delBodyLoan": "借入或借出的记录不能保留余额：金额会退回账户。",
-    "delBodyLoanMany": "借入或借出的记录不能保留余额：金额会退回账户。"
+    "delBodyMany": "金额要退回账户，还是让余额保持不变？"
   },
   "home": {
     "nothingYet": "还没有任何记录。",

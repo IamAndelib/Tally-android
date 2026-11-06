@@ -464,9 +464,7 @@
     "delTitle_one": "Bu kayıt silinsin mi?",
     "delTitle_other": "Bu {{count}} kayıt silinsin mi?",
     "delBody": "Tutarı hesaba geri dönsün mü, yoksa bakiye olduğu gibi mi kalsın?",
-    "delBodyMany": "Tutarlar hesaplara geri dönsün mü, yoksa bakiyeler olduğu gibi mi kalsın?",
-    "delBodyLoan": "Borç veya alacak kaydı bakiyeyi koruyamaz: tutarı hesaba geri döner.",
-    "delBodyLoanMany": "Borç ve alacak kayıtları bakiyeyi koruyamaz: tutarlar hesaplara geri döner."
+    "delBodyMany": "Tutarlar hesaplara geri dönsün mü, yoksa bakiyeler olduğu gibi mi kalsın?"
   },
   "home": {
     "nothingYet": "Henüz hiçbir şey yazılmadı.",

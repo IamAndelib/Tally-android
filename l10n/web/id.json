@@ -460,9 +460,7 @@
     "delKeep": "Hapus, pertahankan saldo",
     "delTitle_other": "Hapus transaksi ini?",
     "delBody": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?",
-    "delBodyMany": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?",
-    "delBodyLoan": "Transaksi pinjaman atau piutang tidak bisa mempertahankan saldo: jumlahnya dikembalikan ke akun.",
-    "delBodyLoanMany": "Transaksi pinjaman atau piutang tidak bisa mempertahankan saldo: jumlahnya dikembalikan ke akun."
+    "delBodyMany": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?"
   },
   "home": {
     "nothingYet": "Belum ada yang dicatat.",

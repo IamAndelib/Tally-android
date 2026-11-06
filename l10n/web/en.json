@@ -464,9 +464,7 @@
     "delTitle_one": "Delete this entry?",
     "delTitle_other": "Delete these {{count}} entries?",
     "delBody": "Should its amount go back to the account, or the balance stay as it is?",
-    "delBodyMany": "Should their amounts go back to the accounts, or the balances stay as they are?",
-    "delBodyLoan": "A loan or lending entry can’t keep the balance: its amount goes back to the account.",
-    "delBodyLoanMany": "Loan and lending entries can’t keep the balance: the amounts go back to the accounts."
+    "delBodyMany": "Should their amounts go back to the accounts, or the balances stay as they are?"
   },
   "home": {
     "nothingYet": "Nothing written down yet.",

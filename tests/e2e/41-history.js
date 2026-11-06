@@ -1906,6 +1906,10 @@ const ok = (c, m) => {
           lp.btns[1] === "cd-out:Cancel",
         "a loan payment is not offered to keep the balance: " + JSON.stringify(lp)
       );
+      ok(
+        !(await page.$("#pop .dlg-x")) && !(await page.$("#pop [aria-describedby]")),
+        "a loan entry's question is its title alone, with no line under it"
+      );
       await page.click("#pop .cd-destroy");
       await pause();
       ok(!(await ids()).includes("p1"), "…and its delete works");

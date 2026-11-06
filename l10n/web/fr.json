@@ -468,9 +468,7 @@
     "delTitle_many": "Supprimer ces {{count}} d’opérations ?",
     "delTitle_other": "Supprimer ces {{count}} opérations ?",
     "delBody": "Son montant doit-il retourner sur le compte, ou le solde rester tel quel ?",
-    "delBodyMany": "Leurs montants doivent-ils retourner sur les comptes, ou les soldes rester tels quels ?",
-    "delBodyLoan": "Une opération de prêt ou d’emprunt ne peut pas garder le solde : son montant retourne sur le compte.",
-    "delBodyLoanMany": "Les opérations de prêt et d’emprunt ne peuvent pas garder le solde : les montants retournent sur les comptes."
+    "delBodyMany": "Leurs montants doivent-ils retourner sur les comptes, ou les soldes rester tels quels ?"
   },
   "home": {
     "nothingYet": "Rien de noté pour l’instant.",
