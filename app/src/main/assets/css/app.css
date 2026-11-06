@@ -1475,7 +1475,7 @@ input {
 .sug + .sug {
   border-top: 1px solid var(--outline-variant);
 }
-.sug .st,
+.sug .sgt,
 .sug .s {
   display: block;
   overflow-wrap: break-word;

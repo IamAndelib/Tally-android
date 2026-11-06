@@ -514,7 +514,7 @@ function findSugs() {
         esc(T("search.sugLabel", { group, title: s.title, count: n })) +
         '">' +
         emblem(s.emb, "em") +
-        '<span class="mid"><span class="st" dir="auto">' +
+        '<span class="mid"><span class="sgt" dir="auto">' +
         esc(s.title) +
         '</span><span class="s">' +
         esc(line) +

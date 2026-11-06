@@ -512,7 +512,7 @@ const ok = (c, m) => {
     const sugs = p =>
       p.evaluate(() =>
         [...document.querySelectorAll("#hbody .sug")].map(b => ({
-          t: b.querySelector(".st").textContent,
+          t: b.querySelector(".sgt").textContent,
           s: b.querySelector(".s").textContent,
           a: b.getAttribute("aria-label"),
           act: b.dataset.act,
@@ -536,6 +536,15 @@ const ok = (c, m) => {
     ok(
       l.every(x => x.act === "fs-pick" && x.h >= 48),
       "rows are fs-pick buttons of 48 px or more"
+    );
+    const look = await pg.evaluate(() => {
+      const t = getComputedStyle(document.querySelector("#hbody .sug .sgt")),
+        d = getComputedStyle(document.querySelector("#hbody .tx .d"));
+      return { size: t.fontSize === d.fontSize, bg: t.backgroundColor, pad: t.paddingLeft };
+    });
+    ok(
+      look.size && look.bg === "rgba(0, 0, 0, 0)" && look.pad === "0px",
+      "a suggestion's title reads like a row's title, not a status pill: " + JSON.stringify(look)
     );
     const heads = await pg.evaluate(() => {
       const b = document.querySelector("#hbody");
@@ -653,7 +662,7 @@ const ok = (c, m) => {
 
     // tapping
     const tap = async (p, t) => {
-      await p.click('#hbody .sug:has(.st:text-is("' + t + '"))');
+      await p.click('#hbody .sug:has(.sgt:text-is("' + t + '"))');
       await p.waitForTimeout(60);
       return p.evaluate(() => ({
         hf: { ...HF },
@@ -662,7 +671,7 @@ const ok = (c, m) => {
         focus: document.activeElement && document.activeElement.id,
         caret: $("#find-q").selectionStart === $("#find-q").value.length,
         chips: [...document.querySelectorAll("#app .hchip")].map(b => b.textContent.trim()),
-        sugs: [...document.querySelectorAll("#hbody .sug .st")].map(x => x.textContent),
+        sugs: [...document.querySelectorAll("#hbody .sug .sgt")].map(x => x.textContent),
       }));
     };
     await typeIn(pg, "corner cafe");
