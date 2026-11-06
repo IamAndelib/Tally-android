@@ -432,7 +432,7 @@ function histChips() {
 }
 /* the period chip (its label opens the period dialog; once set, its ✕ goes back to all time), Filters, Clear all */
 function histBar(clearHere, chips = "", off = false) {
-  if (!S.txns.length) return ""; // nothing to filter in a notebook with no entries yet
+  if (!S.txns.length && !chips && HP.period === "all") return ""; // nothing to filter in a notebook with no entries yet
   const set = HP.period !== "all",
     n = histCount();
   const h =
