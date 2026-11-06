@@ -233,6 +233,7 @@ function findEnd() {
   FIND.keep = null;
 }
 function findBack() {
+  recentKeep(HF.q);
   const { from, keep } = FIND;
   findEnd();
   V.sel = null;
@@ -270,7 +271,7 @@ function findDraw() {
   histWatch();
   /* the count, said once typing has paused (this is that pause) and only when it changed */
   const live = $("#find-live"),
-    said = p.body ? T("history.count", { count: histRows(HLIST).length }) : "";
+    said = p.body && !p.idle ? T("history.count", { count: histRows(HLIST).length }) : "";
   if (live && said !== FIND_SAID) live.textContent = FIND_SAID = said;
 }
 function findClear() {
@@ -675,6 +676,7 @@ function findSugs() {
 function findPick(i) {
   const s = SUGS[i];
   if (!s || s.q !== HF.q) return findDraw(); // the field moved on: the list is about to follow
+  recentKeep(s.q);
   HF = histNorm(s.r.f);
   if (s.r.p) Object.assign(HP, s.r.p);
   HSHOW.sig = "";
@@ -689,6 +691,79 @@ function findPick(i) {
       inp.setSelectionRange(inp.value.length, inp.value.length);
     } catch (e) {}
   }
+}
+/* ---- recent searches: up to five, newest first, kept by the shell (recentLoad / recentSave, bridge.js) when a search is
+   used: a suggestion or an entry tapped, or search mode closed. The same words again (curFold) move to the top, with
+   their newest spelling. */
+const RECENT_MAX = 5,
+  RECENT_LEN = 100; // the shell refuses longer ones
+function recentKeep(text) {
+  let t = String(text || "")
+    .trim()
+    .slice(0, RECENT_LEN);
+  if (/[\uD800-\uDBFF]$/.test(t)) t = t.slice(0, -1); // not half of a pair
+  t = t.trim();
+  if (Array.from(t).length < 2) return;
+  const f = curFold(t);
+  recentSave([t, ...recentLoad().filter(x => curFold(x) !== f)].slice(0, RECENT_MAX));
+}
+/* what the empty field shows: "" when there are none */
+function recentView() {
+  const list = recentLoad();
+  if (!list.length) return "";
+  return (
+    '<div class="sec" role="heading" aria-level="2">' +
+    TH("search.recent") +
+    '</div><div class="list">' +
+    list
+      .map(
+        (t, i) =>
+          '<div class="rec"><button class="recq" data-act="rec-use" data-v="' +
+          i +
+          '">' +
+          ic("schedule") +
+          '<span class="recw" dir="auto">' +
+          esc(t) +
+          '</span></button><button class="icon recx" data-act="rec-del" data-v="' +
+          i +
+          '" aria-label="' +
+          esc(T("search.forget", { text: t })) +
+          '">' +
+          ic("close") +
+          "</button></div>"
+      )
+      .join("") +
+    "</div>"
+  );
+}
+/* a recent search tapped: it is typed into the field (caret at its end, focus kept) and the list follows */
+function recentUse(i) {
+  const t = recentLoad()[i];
+  if (t === undefined) return;
+  HF.q = t;
+  const inp = $("#find-q");
+  if (inp) inp.value = t;
+  const c = $('#app [data-act="find-clear"]');
+  if (c) c.hidden = false;
+  findDraw();
+  if (inp) {
+    inp.focus({ preventScroll: true });
+    try {
+      inp.setSelectionRange(t.length, t.length);
+    } catch (e) {}
+  }
+}
+/* its ✕: forgotten; the focus goes to the next row's ✕, or to the field when none is left */
+function recentDel(i) {
+  const list = recentLoad();
+  if (i < 0 || i >= list.length) return;
+  list.splice(i, 1);
+  recentSave(list);
+  findDraw();
+  const next = $('#hbody .recx[data-v="' + Math.min(i, list.length - 1) + '"]'),
+    inp = $("#find-q");
+  const to = list.length ? next : inp;
+  if (to) to.focus({ preventScroll: true });
 }
 /* Enter: the list follows at once and the keyboard closes */
 function findSubmit() {

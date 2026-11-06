@@ -1,6 +1,6 @@
 /*
  * bridge.js — Talking to the Android shell (window.Android, see MainActivity.java): home-screen widget numbers, reminders,
- * notification actions, saving files, and the handlers behind the window.tally* hooks.
+ * notification actions, saving files, the recent searches, and the handlers behind the window.tally* hooks.
  */
 "use strict";
 
@@ -22,6 +22,22 @@ function syncWidget() {
   lastWidget = j;
   try {
     Android.setWidget(j);
+  } catch (e) {}
+}
+/* History search's recent searches, kept by the shell on this phone only (never in S, save(), localStorage, the shell's
+   saved copy, backups or CSV); in memory where the shell lacks the methods (tests in a browser, older shells) */
+let RECENT_MEM = [];
+function recentLoad() {
+  let a = RECENT_MEM;
+  try {
+    if (window.Android && Android.recentGet) a = JSON.parse(Android.recentGet() || "[]");
+  } catch (e) {}
+  return Array.isArray(a) ? a.filter(x => typeof x === "string" && x.trim()).slice(0, 5) : [];
+}
+function recentSave(list) {
+  RECENT_MEM = list.slice();
+  try {
+    if (window.Android && Android.recentSet) Android.recentSet(JSON.stringify(list));
   } catch (e) {}
 }
 /* "HH:MM" → {h, m} for the shell's alarms */

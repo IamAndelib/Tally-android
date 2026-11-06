@@ -286,6 +286,7 @@ document.addEventListener("click", ev => {
       openEntry(v);
       break;
     case "row-open":
+      if (V.find && V.open !== v) recentKeep(HF.q); // an entry opened from a search
       rowToggle(el, v);
       break;
     case "tx-lend":
@@ -302,6 +303,12 @@ document.addEventListener("click", ev => {
       break;
     case "fs-pick":
       findPick(+v);
+      break;
+    case "rec-use":
+      recentUse(+v);
+      break;
+    case "rec-del":
+      recentDel(+v);
       break;
     case "find-fix":
       findFix();

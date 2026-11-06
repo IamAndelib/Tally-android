@@ -554,7 +554,7 @@ function histParts() {
         (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
         "</div>"; // search mode has one that stays (#find-live, findAnnounce)
   }
-  if (idle) return { head, body: "" };
+  if (idle) return { head, body: recentView(), idle: true }; // search mode, nothing asked yet: the recent searches
   const sug = V.find && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
   if (!list.length)
     return {

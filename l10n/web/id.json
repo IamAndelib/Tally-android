@@ -622,6 +622,8 @@
     "field": "Search History",
     "suggestions": "Suggestions",
     "entries": "Entries",
+    "recent": "Recent searches",
+    "forget": "Forget: {{text}}",
     "group": {
       "pay": "Paid to",
       "payIn": "Received from",

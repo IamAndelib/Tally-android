@@ -1249,6 +1249,250 @@ const ok = (c, m) => {
     ok(worst <= 240, "10,000 entries: a keystroke's redraw " + worst.toFixed(1) + " ms (aim 80, guard 240)");
     await c10.close();
   }
+  // ---- part 5: recent searches, kept by the shell on this phone only
+  {
+    const open5 = async (withBridge = true, seed = null) => {
+      const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+      await c.addInitScript(
+        ([wb, seed]) => {
+          window.__rec = seed;
+          window.__recSets = [];
+          window.__kept = [];
+          window.Android = { getColors: () => null, setBars() {}, keepState: j => window.__kept.push(j) };
+          if (wb) {
+            Android.recentGet = () => window.__rec;
+            Android.recentSet = j => {
+              window.__recSets.push(j);
+              window.__rec = j;
+            };
+          }
+        },
+        [withBridge, seed]
+      );
+      const p = await c.newPage();
+      p.on("pageerror", e => errors.push(e.message));
+      await p.goto(appUrl);
+      await p.evaluate(() => {
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 5000, archived: false });
+        S.txns.push({
+          id: "t1",
+          ts: 1,
+          date: today(),
+          type: "expense",
+          amount: 4.75,
+          account: "b",
+          cat: "food",
+          payee: "Corner Café",
+        });
+        S.txns.push({
+          id: "t2",
+          ts: 2,
+          date: today(),
+          type: "expense",
+          amount: 9,
+          account: "b",
+          cat: "food",
+          payee: "Bakery",
+        });
+        save();
+        V.screen = "history";
+        render();
+        openFind();
+      });
+      return { c, p };
+    };
+    const rec = p => p.evaluate(() => JSON.parse(window.__rec || "[]"));
+    const rows = p =>
+      p.evaluate(() => [...document.querySelectorAll("#hbody .rec .recq")].map(b => b.textContent.trim()));
+    const type = async (p, v) => {
+      await p.fill("#find-q", v);
+      await p.waitForTimeout(220);
+    };
+    const back = async p => {
+      await p.evaluate(() => findBack());
+      await p.evaluate(() => openFind());
+    };
+
+    // none yet: nothing shown, no heading
+    let { c: c5, p: p5 } = await open5();
+    let r = await p5.evaluate(() => ({
+      html: $("#hbody").innerHTML.trim(),
+      rec: !!$("#hbody .rec"),
+      sec: !!$("#hbody .sec"),
+    }));
+    ok(r.html === "" && !r.rec && !r.sec, "no recent searches: the space stays empty: " + r.html.slice(0, 60));
+
+    // kept: a suggestion tapped
+    await type(p5, "corner");
+    await p5.click('#hbody .sug[data-act="fs-pick"]');
+    ok(
+      JSON.stringify(await rec(p5)) === '["corner"]',
+      "a suggestion tapped keeps the words as typed: " + (await p5.evaluate(() => window.__rec))
+    );
+    // kept: a row opened
+    await back(p5); // the suggestion's payee filter goes with search mode
+    await type(p5, "bakery");
+    await p5.click('#hbody [data-act="row-open"]');
+    ok(JSON.stringify(await rec(p5)) === '["bakery","corner"]', "an entry opened keeps them, newest first");
+    // kept: search mode closed; too short is not kept
+    await type(p5, "b");
+    await back(p5);
+    ok(JSON.stringify(await rec(p5)) === '["bakery","corner"]', "one character is not kept");
+    await type(p5, "  kiosk ");
+    await back(p5);
+    ok(JSON.stringify(await rec(p5)) === '["kiosk","bakery","corner"]', "closing search mode keeps it, trimmed");
+    // the same words (capitals, accents) move to the top with the newest spelling
+    await type(p5, "CORNER");
+    await back(p5);
+    ok(
+      JSON.stringify(await rec(p5)) === '["CORNER","kiosk","bakery"]',
+      "same words move to the top, newest spelling: " + (await p5.evaluate(() => window.__rec))
+    );
+    // at most five
+    for (const w of ["aa", "bb", "cc", "dd"]) {
+      await type(p5, w);
+      await back(p5);
+    }
+    ok(
+      JSON.stringify(await rec(p5)) === '["dd","cc","bb","aa","CORNER"]',
+      "at most five: " + (await p5.evaluate(() => window.__rec))
+    );
+    // shown: empty field, newest first, clock icon, a Forget button each, 48 px targets
+    r = await p5.evaluate(() => {
+      const q = [...document.querySelectorAll("#hbody .rec")];
+      const sec = $("#hbody .sec");
+      return {
+        sec: sec && sec.textContent.trim(),
+        role: sec && sec.getAttribute("role"),
+        texts: q.map(x => x.querySelector(".recq").textContent.trim()),
+        clock: q.every(x => !!x.querySelector(".recq svg, .recq .ic, .recq [class*=icon]")),
+        labels: q.map(x => x.querySelector(".recx").getAttribute("aria-label")),
+        hs: q.map(x => Math.round(x.querySelector(".recq").getBoundingClientRect().height)),
+        xs: q.map(x => {
+          const b = x.querySelector(".recx").getBoundingClientRect();
+          return Math.round(b.width) + "x" + Math.round(b.height);
+        }),
+        live: $("#find-live").textContent,
+      };
+    });
+    ok(r.sec === "Recent searches" && r.role === "heading", "heading Recent searches: " + r.sec);
+    ok(r.texts.join() === "dd,cc,bb,aa,CORNER", "five rows, newest first: " + r.texts);
+    ok(r.clock, "each row has the clock icon");
+    ok(r.labels[0] === "Forget: dd" && r.labels[4] === "Forget: CORNER", "Forget labels: " + r.labels);
+    ok(
+      r.hs.every(h => h >= 48) && r.xs.every(s => s === "48x48" || (parseInt(s) >= 48 && +s.split("x")[1] >= 48)),
+      "48 px targets: " + r.hs + " / " + r.xs
+    );
+    ok(r.live === "", "no count said for the recent list: " + JSON.stringify(r.live));
+    // a recent search tapped: in the field, caret at the end, focus kept, results as typing
+    await p5.click("#hbody .rec:nth-child(5) .recq, #hbody .list .rec:nth-of-type(5) .recq");
+    r = await p5.evaluate(() => ({
+      v: $("#find-q").value,
+      q: HF.q,
+      caret: $("#find-q").selectionStart + "/" + $("#find-q").selectionEnd,
+      focus: document.activeElement && document.activeElement.id,
+      rec: !!$("#hbody .rec"),
+      sug: !!$("#hbody .sug"),
+      clr: !$('#app [data-act="find-clear"]').hidden,
+    }));
+    ok(
+      r.v === "CORNER" && r.q === "CORNER" && r.caret === "6/6" && r.focus === "find-q",
+      "tapping fills the field, caret at the end, focus kept: " + JSON.stringify(r)
+    );
+    ok(!r.rec && r.sug && r.clr, "the list follows as typing would: " + JSON.stringify(r));
+    // forget one
+    await p5.click('#find-clear, [data-act="find-clear"]');
+    await p5.waitForTimeout(50);
+    await p5.click('#hbody [aria-label="Forget: cc"]');
+    ok(
+      JSON.stringify(await rec(p5)) === '["dd","bb","aa","CORNER"]',
+      "Forget removes just that one: " + (await p5.evaluate(() => window.__rec))
+    );
+    r = await p5.evaluate(() => ({
+      texts: [...document.querySelectorAll("#hbody .rec .recq")].map(b => b.textContent.trim()),
+      focus: document.activeElement && (document.activeElement.getAttribute("aria-label") || document.activeElement.id),
+    }));
+    ok(r.texts.join() === "dd,bb,aa,CORNER", "the row is gone at once: " + r.texts);
+    ok(r.focus === "Forget: bb", "focus moves to the next Forget: " + r.focus);
+    for (const w of ["bb", "aa", "CORNER"]) await p5.click('#hbody [aria-label="Forget: ' + w + '"]');
+    r = await p5.evaluate(() => ({
+      f: document.activeElement && document.activeElement.id,
+      rows: document.querySelectorAll("#hbody .rec").length,
+    }));
+    ok(r.rows === 1, "one left");
+    await p5.click('#hbody [aria-label="Forget: dd"]');
+    r = await p5.evaluate(() => ({
+      f: document.activeElement && document.activeElement.id,
+      html: $("#hbody").innerHTML.trim(),
+    }));
+    ok(
+      r.html === "" && r.f === "find-q" && (await p5.evaluate(() => window.__rec)) === "[]",
+      "the last forgotten: empty space, focus to the field: " + JSON.stringify(r)
+    );
+
+    // never in saved data, localStorage, the shell's copy, a backup or CSV
+    await type(p5, "zebrastripe");
+    await back(p5);
+    r = await p5.evaluate(() => {
+      const s = JSON.stringify(S),
+        ls = Object.keys(localStorage)
+          .map(k => k + "=" + localStorage.getItem(k))
+          .join("\n");
+      return {
+        rec: window.__rec.includes("zebrastripe"),
+        s: s.includes("zebrastripe"),
+        ls: ls.includes("zebrastripe"),
+        kept: window.__kept.join("").includes("zebrastripe"),
+      };
+    });
+    ok(r.rec && !r.s && !r.ls && !r.kept, "recent searches only in the shell's own list: " + JSON.stringify(r));
+    // Erase everything forgets them
+    await p5.evaluate(() => {
+      window.__recSets.length = 0;
+      wipeConfirm();
+    });
+    await p5.click('[data-act="ask-ok"]');
+    r = await p5.evaluate(() => ({ rec: window.__rec, last: window.__recSets[window.__recSets.length - 1] }));
+    ok(r.rec === "[]" && r.last === "[]", 'Erase everything calls recentSet("[]"): ' + JSON.stringify(r));
+    await c5.close();
+
+    // seeded by the shell: only five shown, a long one fits, garbage is ignored
+    ({ c: c5, p: p5 } = await open5(true, JSON.stringify(["a1", "b2", "c3", "d4", "e5", "f6", "g7"])));
+    ok((await rows(p5)).join() === "a1,b2,c3,d4,e5", "at most five shown: " + (await rows(p5)));
+    await c5.close();
+    for (const bad of ["not json", '{"a":1}', "[1,2]", "null", ""]) {
+      ({ c: c5, p: p5 } = await open5(true, bad));
+      ok(
+        (await rows(p5)).length === 0 && !(await p5.$("#hbody .sec")),
+        "an unreadable list shows nothing: " + JSON.stringify(bad)
+      );
+      await c5.close();
+    }
+    // a very long search is cut to 100 characters, not refused
+    ({ c: c5, p: p5 } = await open5());
+    await type(p5, "x".repeat(150));
+    await back(p5);
+    r = await rec(p5);
+    ok(r.length === 1 && r[0].length === 100, "a long search is cut to 100: " + r.map(x => x.length));
+    await c5.close();
+
+    // without the shell's methods (browser tests, older shells): kept in memory only
+    ({ c: c5, p: p5 } = await open5(false));
+    await type(p5, "memory");
+    await back(p5);
+    ok((await rows(p5)).join() === "memory", "no Android.recentGet: kept in memory: " + (await rows(p5)));
+    r = await p5.evaluate(() =>
+      Object.keys(localStorage)
+        .map(k => localStorage.getItem(k))
+        .join()
+        .includes("memory")
+    );
+    ok(!r, "and not in localStorage");
+    await c5.close();
+  }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();
   process.exit(fails ? 1 : 0);

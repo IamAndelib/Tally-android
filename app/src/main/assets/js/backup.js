@@ -225,6 +225,7 @@ function wipeConfirm() {
       };
       S = blank();
       Object.assign(S.settings, keep);
+      recentSave([]); // the recent searches live in the shell, not in S
       commit();
       snack(T("wipe.done"));
     },
