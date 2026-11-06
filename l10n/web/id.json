@@ -624,6 +624,9 @@
     "entries": "Transaksi",
     "recent": "Pencarian terakhir",
     "forget": "Lupakan: {{text}}",
+    "clearRecent": "Hapus semua pencarian terbaru",
+    "forgotten": "“{{text}}” dihapus dari pencarian terbaru",
+    "clearedAll": "Pencarian terbaru dihapus",
     "group": {
       "pay": "Dibayar ke",
       "payIn": "Diterima dari",

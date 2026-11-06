@@ -634,6 +634,9 @@
     "entries": "Opérations",
     "recent": "Recherches récentes",
     "forget": "Oublier : {{text}}",
+    "clearRecent": "Effacer toutes les recherches récentes",
+    "forgotten": "« {{text}} » retiré des recherches récentes",
+    "clearedAll": "Recherches récentes effacées",
     "group": {
       "pay": "Payé à",
       "payIn": "Reçu de",

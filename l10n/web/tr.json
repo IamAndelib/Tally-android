@@ -629,6 +629,9 @@
     "entries": "Kayıtlar",
     "recent": "Son aramalar",
     "forget": "Unut: {{text}}",
+    "clearRecent": "Tüm son aramaları temizle",
+    "forgotten": "“{{text}}” son aramalardan kaldırıldı",
+    "clearedAll": "Son aramalar temizlendi",
     "group": {
       "pay": "Ödenen",
       "payIn": "Gönderen",

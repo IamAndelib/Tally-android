@@ -994,9 +994,13 @@ function recentView() {
   const list = recentList();
   if (!list.length) return "";
   return (
-    '<div class="sec" role="heading" aria-level="2">' +
+    '<div class="rechead"><div class="sec" role="heading" aria-level="2">' +
     TH("search.recent") +
-    '</div><div class="list">' +
+    '</div><button class="recall" data-act="rec-clear" aria-label="' +
+    TH("search.clearRecent") +
+    '">' +
+    TH("history.clearAll") +
+    '</button></div><div class="list">' +
     list
       .map((t, i) => {
         const r = recentSug(t),
@@ -1055,8 +1059,11 @@ function recentUse(i) {
 }
 /* its ✕: forgotten; the focus goes to the next row's ✕, or to the field when none is left */
 function recentDel(i) {
-  const list = recentList();
+  const list = recentList(),
+    before = recentLoad();
   if (i < 0 || i >= list.length) return;
+  const r = recentSug(list[i]),
+    text = r ? recentText(r) : list[i];
   list.splice(i, 1);
   recentSave(list);
   findDraw();
@@ -1064,6 +1071,27 @@ function recentDel(i) {
     inp = $("#find-q");
   const to = list.length ? next : inp;
   if (to) to.focus({ preventScroll: true });
+  recentUndo(before, T("search.forgotten", { text }));
+}
+/* Clear all: the list is emptied and the field takes the focus */
+function recentClear() {
+  const before = recentLoad();
+  if (!before.length) return;
+  recentSave([]);
+  findDraw();
+  const inp = $("#find-q");
+  if (inp) inp.focus({ preventScroll: true });
+  recentUndo(before, T("search.clearedAll"));
+}
+/* the message with an Undo that puts the list back as it was (the search stays open) */
+function recentUndo(before, msg) {
+  const undo = () => {
+    recentSave(before);
+    if (V.find) findDraw();
+    snack(T("common.undone"));
+  };
+  undo.keep = true;
+  snack(msg, undo);
 }
 /* Enter: the list follows at once and the keyboard closes. A page cannot close the keyboard and keep the focus on the
    field, and a blurred field would leave TalkBack's focus on nothing, so it moves to the first suggestion or entry

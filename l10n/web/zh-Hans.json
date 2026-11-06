@@ -624,6 +624,9 @@
     "entries": "记录",
     "recent": "最近搜索",
     "forget": "删除：{{text}}",
+    "clearRecent": "清除所有最近搜索",
+    "forgotten": "已从最近搜索中移除“{{text}}”",
+    "clearedAll": "已清除最近搜索",
     "group": {
       "pay": "收款方",
       "payIn": "付款方",

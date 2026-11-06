@@ -566,6 +566,66 @@ const ok = (c, m) => {
   ok(r.m.join() === "n50,n249", "migrate keeps the newest 200: " + r.m);
   ok(r.h.join() === "200,n1,newest one", "hideName keeps the newest 200: " + r.h);
 
+  // ---- recent searches: Clear all and Undo
+  p = await open(seed);
+  await p.evaluate(() => (findBack(), recentSave([]), openFind()));
+  ok(!(await p.$(".recall")), "no recent searches: no Clear all");
+  const list5 = ["bakery", "corner", "cafe"];
+  await p.evaluate(l => (findBack(), recentSave(l), openFind()), list5);
+  r = await p.evaluate(() => {
+    const b = document.querySelector(".recall"),
+      h = document.querySelector(".rechead .sec"),
+      br = b.getBoundingClientRect(),
+      hr = h.getBoundingClientRect();
+    return {
+      label: b.getAttribute("aria-label"),
+      text: b.textContent,
+      h: Math.round(br.height),
+      w: br.width,
+      line: Math.abs(br.top + br.height / 2 - (hr.top + hr.height / 2)) < 12,
+      end: br.right > hr.right - 1,
+    };
+  });
+  ok(
+    r.label === "Clear all recent searches" && r.text === "Clear all" && r.h >= 48 && r.line && r.end,
+    "Clear all ends the heading line, 48px: " + JSON.stringify(r)
+  );
+  await p.click(".recall");
+  r = await p.evaluate(() => ({
+    rec: window.__rec,
+    rows: document.querySelectorAll("#hbody .rec").length,
+    focus: document.activeElement.id,
+    snack: document.querySelector("#snack").textContent,
+  }));
+  ok(
+    r.rec === "[]" &&
+      r.rows === 0 &&
+      r.focus === "find-q" &&
+      /Recent searches cleared/.test(r.snack) &&
+      /Undo/.test(r.snack),
+    "Clear all empties the list, focus in the field, snack: " + JSON.stringify(r)
+  );
+  await p.click('#snack [data-act="undo"]');
+  r = await p.evaluate(() => ({
+    rec: window.__rec,
+    find: V.find,
+    rows: [...document.querySelectorAll("#hbody .rec .recw")].map(x => x.textContent),
+  }));
+  ok(
+    r.rec === JSON.stringify(list5) && r.find && r.rows.join() === list5.join(),
+    "Undo puts the list back, in order, search still open: " + JSON.stringify(r)
+  );
+  await p.click('#hbody [aria-label="Forget: corner"]');
+  sn = await p.evaluate(() => document.querySelector("#snack").textContent);
+  ok(
+    /Removed “corner” from recent searches/.test(sn) &&
+      /Undo/.test(sn) &&
+      (await p.evaluate(() => window.__rec)) === '["bakery","cafe"]',
+    "a single ✕ says so with Undo: " + sn
+  );
+  await p.click('#snack [data-act="undo"]');
+  ok((await p.evaluate(() => window.__rec)) === JSON.stringify(list5), "Undo puts it back in its place");
+
   ok(errors.length === 0, "no page errors: " + errors.join(" | "));
   await browser.close();
   process.exit(fails ? 1 : 0);

@@ -1566,6 +1566,30 @@ input {
   flex: none;
   color: var(--on-surface-variant);
 }
+/* the heading of the recent searches with its Clear all at the end (it goes below the heading when the line is full) */
+.rechead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.rechead .sec {
+  margin-top: 0;
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.recall {
+  flex: none;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-align: end;
+}
 .recq .recem {
   width: 24px;
   height: 24px;

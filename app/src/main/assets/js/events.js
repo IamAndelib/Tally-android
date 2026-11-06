@@ -316,6 +316,9 @@ document.addEventListener("click", ev => {
     case "rec-del":
       recentDel(+v);
       break;
+    case "rec-clear":
+      recentClear();
+      break;
     case "find-fix":
       findFix();
       break;

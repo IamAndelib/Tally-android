@@ -629,6 +629,9 @@
     "entries": "Einträge",
     "recent": "Letzte Suchen",
     "forget": "Vergessen: {{text}}",
+    "clearRecent": "Alle letzten Suchen löschen",
+    "forgotten": "„{{text}}“ aus den letzten Suchen entfernt",
+    "clearedAll": "Letzte Suchen gelöscht",
     "group": {
       "pay": "Bezahlt an",
       "payIn": "Erhalten von",

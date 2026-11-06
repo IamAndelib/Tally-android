@@ -634,6 +634,9 @@
     "entries": "Movimientos",
     "recent": "Búsquedas recientes",
     "forget": "Olvidar: {{text}}",
+    "clearRecent": "Borrar todas las búsquedas recientes",
+    "forgotten": "«{{text}}» quitado de las búsquedas recientes",
+    "clearedAll": "Búsquedas recientes borradas",
     "group": {
       "pay": "Pagado a",
       "payIn": "Recibido de",

@@ -634,6 +634,9 @@
     "entries": "Lançamentos",
     "recent": "Buscas recentes",
     "forget": "Esquecer: {{text}}",
+    "clearRecent": "Limpar todas as buscas recentes",
+    "forgotten": "“{{text}}” removido das buscas recentes",
+    "clearedAll": "Buscas recentes limpas",
     "group": {
       "pay": "Pago a",
       "payIn": "Recebido de",
