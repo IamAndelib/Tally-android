@@ -470,6 +470,7 @@ const histMonth = t => t.date.slice(0, 7);
 function histMonths(list, i, budget) {
   let h = "";
   const stop = i + budget;
+  HLW = V.find && HF.q.trim() ? hlTerms(HF.q) : null; // search mode marks the words in the rows
   while (i < list.length && i < stop) {
     const m = histMonth(list[i]);
     let j = i;
@@ -489,6 +490,7 @@ function histMonths(list, i, budget) {
     h += dayGroups(list.slice(i, e));
     i = e;
   }
+  HLW = null;
   return { html: h, next: i };
 }
 /* the rest of the list is drawn when the marker after the last row comes within a few screens */
@@ -546,10 +548,11 @@ function histParts() {
     const clear = anySet && list.length;
     head += histBar(clear) + (chips ? '<div class="hchips">' + chips + "</div>" : "");
     /* no visible summary (the months carry their totals); a hidden status says the count after each change */
-    head +=
-      '<div class="vh" role="status">' +
-      (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
-      "</div>";
+    if (!V.find)
+      head +=
+        '<div class="vh" role="status">' +
+        (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
+        "</div>"; // search mode has one that stays (#find-live, findAnnounce)
   }
   if (idle) return { head, body: "" };
   const sug = V.find && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
@@ -559,7 +562,11 @@ function histParts() {
       body:
         sug +
         '<div class="empty">' +
-        (anySet ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn() : TH("history.none.all")) +
+        (V.find
+          ? findNone()
+          : anySet
+            ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn()
+            : TH("history.none.all")) +
         "</div>",
     };
   const r = histMonths(list, 0, Math.max(HSHOW.n, HIST_CHUNK));
@@ -618,5 +625,14 @@ function historyView() {
         : "") +
       "</header>";
   /* search mode keeps the bar and the list in two boxes of their own, so typing redraws them without the field */
-  return V.find ? h + '<div id="hhead">' + p.head + '</div><div id="hbody">' + p.body + "</div>" : h + p.head + p.body;
+  return V.find
+    ? h +
+        '<div id="find-live" class="vh" role="status">' +
+        esc(FIND_SAID) +
+        '</div><div id="hhead">' +
+        p.head +
+        '</div><div id="hbody">' +
+        p.body +
+        "</div>"
+    : h + p.head + p.body;
 }

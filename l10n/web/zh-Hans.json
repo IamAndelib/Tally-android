@@ -633,7 +633,10 @@
       "amount": "Amount"
     },
     "sugLine_other": "{{group}} · {{count}} entries",
-    "sugLabel_other": "{{group}} {{title}}, {{count}} entries"
+    "sugLabel_other": "{{group}} {{title}}, {{count}} entries",
+    "nothing": "Nothing matches “{{q}}”",
+    "noteLine": "Note: {{note}}",
+    "fixBtn_other": "Search “{{word}}” · {{count}} entries"
   },
   "nav": {
     "home": "首页",

@@ -647,7 +647,12 @@
     "sugLine_many": "{{group}} · {{count}} entries",
     "sugLabel_many": "{{group}} {{title}}, {{count}} entries",
     "sugLine_other": "{{group}} · {{count}} entries",
-    "sugLabel_other": "{{group}} {{title}}, {{count}} entries"
+    "sugLabel_other": "{{group}} {{title}}, {{count}} entries",
+    "nothing": "Nothing matches “{{q}}”",
+    "noteLine": "Note: {{note}}",
+    "fixBtn_one": "Search “{{word}}” · {{count}} entry",
+    "fixBtn_many": "Search “{{word}}” · {{count}} entries",
+    "fixBtn_other": "Search “{{word}}” · {{count}} entries"
   },
   "nav": {
     "home": "Início",

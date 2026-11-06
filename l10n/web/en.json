@@ -640,7 +640,11 @@
     "sugLine_one": "{{group}} · {{count}} entry",
     "sugLabel_one": "{{group}} {{title}}, {{count}} entry",
     "sugLine_other": "{{group}} · {{count}} entries",
-    "sugLabel_other": "{{group}} {{title}}, {{count}} entries"
+    "sugLabel_other": "{{group}} {{title}}, {{count}} entries",
+    "nothing": "Nothing matches “{{q}}”",
+    "noteLine": "Note: {{note}}",
+    "fixBtn_one": "Search “{{word}}” · {{count}} entry",
+    "fixBtn_other": "Search “{{word}}” · {{count}} entries"
   },
   "nav": {
     "home": "Home",

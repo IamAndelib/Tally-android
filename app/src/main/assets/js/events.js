@@ -303,6 +303,9 @@ document.addEventListener("click", ev => {
     case "fs-pick":
       findPick(+v);
       break;
+    case "find-fix":
+      findFix();
+      break;
     case "f-showcats": {
       const g = $("#f-catgrid");
       g.hidden = !g.hidden;

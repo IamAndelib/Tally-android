@@ -12,10 +12,9 @@
 const srFold = s => curFold(s || "").trim();
 /* scripts without spaces between words: a word may start anywhere */
 const NO_SPACES = /[぀-ヿ㐀-䶿一-鿿가-힯฀-๿]/;
-const srWords = s =>
-  srFold(s)
-    .split(/[\s.,;:!?()[\]{}"«»“”/\\|·•–—_-]+/)
-    .filter(Boolean);
+const SR_SEP_CH = /[\s.,;:!?()[\]{}"«»“”/\\|·•–—_-]/,
+  SR_SEP = new RegExp(SR_SEP_CH.source + "+");
+const srWords = s => srFold(s).split(SR_SEP).filter(Boolean);
 /* the words typed: split at spaces only, so "4.75" or "1,250" stays one number; punctuation around a word goes */
 const srTerms = s =>
   srFold(s)
@@ -52,6 +51,73 @@ function srNum(w) {
     grp = m && m[1].length === 3 && !!NUMSEP.grp && w.charAt(w.length - 4) === NUMSEP.grp, // "1,250": thousands
     d = m && !grp ? m[1].length : 0;
   return { lo: v, hi: d === 0 ? v + 1 : d === 3 ? +(v + 0.0005).toFixed(4) : v + 0.005 };
+}
+/* ---- marks: the part of a title or second line that a typed word matched, found while a row's markup is built (no walk
+   over the drawn DOM). `HLW` holds the folded words while History's rows are drawn in search mode (histMonths), else
+   null. The match is the filter's (a word starts a word of the text; scripts without spaces: anywhere; accents and
+   capitals ignored; numbers never) laid over the text as written: a character that folds to several (ß → ss, & → " and
+   ") is marked only when the match takes all of it. */
+let HLW = null;
+const hlTerms = q => {
+  const w = srTerms(q)
+    .map(x => x.replace(/ς/g, "σ")) // a final sigma is the same letter
+    .filter(x => srNum(x) == null);
+  return w.length ? w : null;
+};
+function hl(raw) {
+  const s = String(raw == null ? "" : raw);
+  if (!HLW || !s) return esc(s);
+  let f = "",
+    pos = 0;
+  const cp = [], // per character: where it is in the folded text and in the original
+    at = []; // per folded letter: its character
+  for (const ch of s) {
+    const g = curFold(ch).replace(/ς/g, "σ"),
+      o = pos;
+    pos += ch.length;
+    if (!g) {
+      if (cp.length) cp[cp.length - 1].oe = pos; // a combining mark belongs to the letter before it
+      continue;
+    }
+    cp.push({ fa: f.length, fb: f.length + g.length, os: o, oe: pos });
+    for (let i = 0; i < g.length; i++) at.push(cp.length - 1);
+    f += g;
+  }
+  const R = [],
+    add = (a, b) => {
+      const x = cp[at[a]],
+        y = cp[at[b - 1]];
+      if (x && y && x.fa === a && y.fb === b) R.push([x.os, y.oe]);
+    };
+  for (const w of HLW) {
+    if (NO_SPACES.test(w)) {
+      for (let i = f.indexOf(w); i >= 0; i = f.indexOf(w, i + w.length)) add(i, i + w.length);
+      continue;
+    }
+    for (let i = 0; i < f.length;) {
+      if (SR_SEP_CH.test(f.charAt(i))) {
+        i++;
+        continue;
+      }
+      let j = i;
+      while (j < f.length && !SR_SEP_CH.test(f.charAt(j))) j++;
+      if (j - i >= w.length && f.startsWith(w, i)) add(i, i + w.length);
+      i = j;
+    }
+  }
+  if (!R.length) return esc(s);
+  R.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  let h = "",
+    last = 0;
+  R.forEach(([a, b]) => {
+    if (a < last) {
+      if (b <= last) return;
+      a = last;
+    }
+    h += esc(s.slice(last, a)) + '<mark class="hl">' + esc(s.slice(a, b)) + "</mark>";
+    last = b;
+  });
+  return h + esc(s.slice(last));
 }
 /* what an entry can be found by: its payee, note, category, accounts and the loan's person */
 function srTexts(t) {
@@ -145,13 +211,15 @@ function srAmtLabel(amt) {
 /* ---- the mode: History with a field in its top bar (V.find). It always opens clean (all time, no filters, no words); from
    History its own filters and period wait in `keep` and come back with Back. */
 let FIND = { from: "home", keep: null },
-  FIND_T = 0;
+  FIND_T = 0,
+  FIND_SAID = ""; // what the status for TalkBack (#find-live) says now
 function openFind() {
   if (V.find) return;
   FIND = { from: V.screen, keep: V.screen === "history" ? { hf: { ...HF }, hp: { ...HP } } : null };
   HF = histBlank();
   histAllTime();
   HSHOW.sig = "";
+  FIND_SAID = "";
   Object.assign(V, { find: true, screen: "history", sel: null, open: "" });
   render();
   scrollTo(0, 0);
@@ -200,6 +268,10 @@ function findDraw() {
   fitFigures($("#app"));
   histCenter($("#app"));
   histWatch();
+  /* the count, said once typing has paused (this is that pause) and only when it changed */
+  const live = $("#find-live"),
+    said = p.body ? T("history.count", { count: histRows(HLIST).length }) : "";
+  if (live && said !== FIND_SAID) live.textContent = FIND_SAID = said;
 }
 function findClear() {
   HF.q = "";
@@ -211,6 +283,74 @@ function findClear() {
   const c = $('#app [data-act="find-clear"]');
   if (c) c.hidden = true;
   findDraw();
+}
+/* nothing found, in search mode: what was typed, a word one typo away that would find entries (never swapped in by
+   itself), then Clear all */
+let FIXW = null;
+function findNone() {
+  const q = HF.q.trim();
+  let h = q ? TH("search.nothing", { q }) : TH("history.noMatch");
+  FIXW = q ? findTypo() : null;
+  if (FIXW)
+    h +=
+      '<div class="gap"></div><button class="btn tonal" data-act="find-fix">' +
+      TH("search.fixBtn", { word: FIXW.word, count: FIXW.count }) +
+      "</button>";
+  return h + '<div class="gap"></div>' + histClearBtn();
+}
+/* the typed word (five letters or more) that one typo from a word of the entries would find most of them: {i (its place
+   among the words), word, count, q (the field it was made for)} */
+function findTypo() {
+  const toks = HF.q.trim().split(/\s+/),
+    terms = toks.map(tk => srFold(tk).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""));
+  for (let i = 0; i < terms.length; i++) {
+    const w = terms[i];
+    if (w.length < 5 || NO_SPACES.test(w) || srNum(w) != null) continue;
+    const others = terms.filter((x, j) => j !== i && x).join(" "),
+      seen = new Map(); // folded word -> {raw, n (entries with it)}
+    histPick({ ...HF, q: others }).forEach(t => {
+      const own = new Set();
+      srTexts(t).forEach(tx =>
+        tx.split(SR_SEP).forEach(raw => {
+          const f = srFold(raw);
+          if (!f || /\s/.test(f) || own.has(f) || !(oneTypo(w, f.slice(0, w.length)) || oneTypo(w, f))) return;
+          own.add(f);
+          const c = seen.get(f) || { raw: raw.toLowerCase(), n: 0 };
+          c.n++;
+          seen.set(f, c);
+        })
+      );
+    });
+    let best = null;
+    [...seen.values()]
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5)
+      .forEach(c => {
+        const n = histRows(histPick({ ...HF, q: (others + " " + srFold(c.raw)).trim() })).length;
+        if (n && (!best || n > best.count)) best = { i, word: c.raw, count: n };
+      });
+    if (best) return { ...best, q: HF.q };
+  }
+  return null;
+}
+/* the button: that word takes the misspelt one's place in the field */
+function findFix() {
+  const f = FIXW;
+  if (!f || f.q !== HF.q || f.i < 0) return findDraw(); // the field moved on: the list is about to follow
+  const toks = HF.q.trim().split(/\s+/);
+  toks[f.i] = f.word;
+  HF.q = toks.join(" ");
+  const inp = $("#find-q");
+  if (inp) inp.value = HF.q;
+  const c = $('#app [data-act="find-clear"]');
+  if (c) c.hidden = !HF.q;
+  findDraw();
+  if (inp) {
+    inp.focus({ preventScroll: true });
+    try {
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+    } catch (e) {}
+  }
 }
 /* the top bar of search mode: Back and the field (its ✕ only while there are words) */
 function findBar() {

@@ -672,7 +672,7 @@ function liabsView() {
    helps to spot it */
 const accTag = a =>
   a
-    ? '<bdi><span class="adot" style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"></span>' + esc(a.name) + "</bdi>"
+    ? '<bdi><span class="adot" style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"></span>' + hl(a.name) + "</bdi>"
     : bdi("?");
 /* An entry's row: two lines. What it was | how much (a fee under it: "+ $2.00 fee"; a transfer between currencies: what
    arrived), then its category when the title is a payee or a note (a note, for a loan) and its account with the dot of
@@ -694,7 +694,7 @@ function txLine(t) {
     const to = acc(t.to);
     em = XFER_EMB;
     cls = "xfer";
-    d = esc(t.note || T("transfer.title"));
+    d = t.note ? hl(t.note) : esc(T("transfer.title"));
     amt = esc(money(t.amount, cur));
     sub += ' <span class="ar">\u2192</span> ' + accTag(to);
     if (t.toAmount != null && to && to.currency !== cur)
@@ -710,7 +710,7 @@ function txLine(t) {
       who = l ? loanWho(l) : "?";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
     d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
-      who: { html: bdi(who) },
+      who: { html: "<bdi>" + hl(who) + "</bdi>" },
     });
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
@@ -721,15 +721,18 @@ function txLine(t) {
     cls = "xfer";
     amt = esc(signed(-t.amount, cur));
     em = l ? LOAN_EMB[l.kind === "lend" ? "lend" : "borrow"] : XFER_EMB;
-    d = esc(noteShown(t, l ? "loan.feeNote" : "transfer.feeNote"));
+    d = t.note && !autoNote(t.note) ? hl(t.note) : esc(noteShown(t, l ? "loan.feeNote" : "transfer.feeNote"));
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
     if (t.payee || t.note) {
-      d = [t.payee, t.note].filter(Boolean).map(bdi).join(" \u00b7 ");
-      sub = bdi(catName(k)) + " \u00b7 " + sub;
-    } else d = esc(catName(k));
+      d = [t.payee, t.note]
+        .filter(Boolean)
+        .map(x => "<bdi>" + hl(x) + "</bdi>")
+        .join(" \u00b7 ");
+      sub = "<bdi>" + hl(catName(k)) + "</bdi> \u00b7 " + sub;
+    } else d = hl(catName(k));
     amt = esc(signed(out ? -t.amount : t.amount, cur));
     cls = out ? "spent" : "got";
   }
@@ -741,6 +744,17 @@ function txLine(t) {
   const selMode = !!V.sel && V.screen === "history",
     on = selMode && V.sel.has(t.id),
     isOpen = !selMode && V.open === t.id;
+  /* search mode: a loan's or balance fix's note is not on its row; when a word matched it, it is a third line */
+  let noteLine = "";
+  if (HLW && t.note && (t.type === "loan" || t.type === "adjust")) {
+    const n = hl(t.note);
+    if (n.includes("<mark"))
+      noteLine = '<span class="hnote">' + TH("search.noteLine", { note: { html: "<bdi>" + n + "</bdi>" } }) + "</span>";
+  }
+  const hw = HLW; // the opened part shows no marks
+  HLW = null;
+  const opened = isOpen ? txOpenView(t) : "";
+  HLW = hw;
   return (
     '<button class="tx en' +
     (on ? " on" : "") +
@@ -762,8 +776,10 @@ function txLine(t) {
     small +
     '</span><span class="s">' +
     sub +
-    "</span></span></button>" +
-    (isOpen ? txOpenView(t) : "")
+    "</span>" +
+    noteLine +
+    "</span></button>" +
+    opened
   );
 }
 /* What an opened row adds to what the row shows: when it was written down, the balance it left (after its fee), what a

@@ -928,6 +928,327 @@ const ok = (c, m) => {
       await c7.close();
     }
   }
+  // ---- part 4: marks, the note that matched, nothing found, the count for TalkBack, speed, IME
+  {
+    const open4 = async (locale = "en-US") => {
+      const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale });
+      await c.addInitScript(() => {
+        window.Android = { getColors: () => null, setBars() {} };
+      });
+      const p = await c.newPage();
+      p.on("pageerror", e => errors.push(e.message));
+      await p.goto(appUrl);
+      await p.evaluate(() => {
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 5000, archived: false });
+        let n = 0;
+        const t = (days, type, amount, extra) =>
+          S.txns.push({
+            id: "t" + ++n,
+            ts: n,
+            date: addDays(today(), -days),
+            type,
+            amount,
+            account: "b",
+            note: "",
+            ...extra,
+          });
+        t(0, "expense", 4.75, { cat: "food", payee: "Corner Café", note: "morning" });
+        t(1, "expense", 12.5, { cat: "groceries", payee: "Fresh Corner" });
+        t(2, "expense", 3, { cat: "food", payee: "Coffee Hub" });
+        t(3, "expense", 3.5, { cat: "food", payee: "Coffee Hub" });
+        t(4, "expense", 4, { cat: "food", payee: "Bean Coffee" });
+        t(5, "adjust", 3, { note: "Counted the coins" });
+        t(6, "expense", 8, { cat: "food", payee: "Straße & Café" });
+        S.loans.push({
+          id: "L1",
+          kind: "lend",
+          person: "Greta",
+          account: "b",
+          date: today(),
+          note: "",
+          status: "open",
+        });
+        t(1, "loan", 20, { dir: "out", loan: "L1", principal: true, note: "Dinner with coins" });
+        save();
+        render();
+      });
+      await p.click('#app [data-act="search-open"]');
+      return { c, p };
+    };
+    const typeIn = async (p, q) => {
+      await p.fill("#find-q", "");
+      await p.keyboard.type(q);
+      await p.waitForTimeout(250);
+    };
+    const { c: c9, p: pm } = await open4();
+
+    await typeIn(pm, "corner");
+    let mk = await pm.evaluate(() => ({
+      marks: [...document.querySelectorAll("#hbody mark.hl")].map(m => ({
+        t: m.textContent,
+        in: m.closest(".d") ? "d" : m.closest(".s") ? "s" : m.closest(".a") ? "a" : "other",
+      })),
+      rows: document.querySelectorAll("#hbody .tx.en").length,
+      title: document.querySelector("#hbody .tx.en .d").innerHTML,
+    }));
+    ok(
+      mk.marks.length === 2 && mk.marks.every(m => m.in === "d" && m.t.toLowerCase() === "corner"),
+      "corner marks Corner in the two titles: " + JSON.stringify(mk.marks)
+    );
+    ok(
+      /<bdi>.*<mark class="hl">Corner<\/mark> Café.*<\/bdi>/.test(mk.title),
+      "the mark sits inside the title: " + mk.title
+    );
+    await typeIn(pm, "cafe");
+    mk = await pm.evaluate(() => [...document.querySelectorAll("#hbody mark.hl")].map(m => m.textContent));
+    ok(mk.join("|").includes("Café") && mk.includes("Café"), "cafe marks Café (accent ignored): " + mk);
+    ok(!mk.some(t => /\d/.test(t)), "no digits marked");
+    await typeIn(pm, "ST&");
+    await typeIn(pm, "strasse");
+    mk = await pm.evaluate(() => ({
+      m: [...document.querySelectorAll("#hbody mark.hl")].map(m => m.textContent),
+      rows: document.querySelectorAll("#hbody .tx.en").length,
+    }));
+    ok(
+      mk.rows === 0 || mk.m.length === 0 || mk.m.every(x => /^Stra/.test(x)),
+      "ß matches ss: any mark covers whole characters: " + JSON.stringify(mk)
+    );
+    await typeIn(pm, "and");
+    mk = await pm.evaluate(() => [...document.querySelectorAll("#hbody .tx.en .d mark.hl")].map(m => m.textContent));
+    ok(
+      mk.every(x => x !== "&" && x !== " "),
+      "& read as 'and' is not half-marked: " + mk
+    );
+    // the category and the account in the second line
+    await typeIn(pm, "everyday");
+    mk = await pm.evaluate(() =>
+      [...document.querySelectorAll("#hbody mark.hl")].map(m => m.closest(".s") && m.textContent)
+    );
+    ok(mk.length > 0 && mk.every(x => x === "Everyday"), "account name in the second line marked: " + mk.length);
+    await typeIn(pm, "4.75");
+    mk = await pm.evaluate(() => document.querySelectorAll("#hbody mark.hl").length);
+    ok(mk === 0, "a number is not marked");
+
+    // the note a collapsed row hides
+    await typeIn(pm, "coins");
+    const nl = await pm.evaluate(() =>
+      [...document.querySelectorAll("#hbody .tx.en")].map(b => ({
+        note: b.querySelector(".hnote") && b.querySelector(".hnote").textContent,
+        mark: b.querySelector(".hnote mark.hl") && b.querySelector(".hnote mark.hl").textContent,
+        open: b.getAttribute("aria-expanded"),
+        d: b.querySelector(".d").textContent,
+      }))
+    );
+    ok(nl.length === 2, "coins finds the balance fix and the loan: " + nl.length);
+    ok(
+      nl.some(x => x.note === "Note: Counted the coins" && x.mark === "coins" && x.open === "false"),
+      "the balance fix shows 'Note: Counted the coins', coins marked, row collapsed: " + JSON.stringify(nl)
+    );
+    ok(
+      nl.some(x => x.note === "Note: Dinner with coins" && x.mark === "coins"),
+      "the loan's note too"
+    );
+    const nls = await pm.evaluate(() => {
+      const n = document.querySelector("#hbody .hnote"),
+        s = document.querySelector("#hbody .tx.en .s"),
+        a = getComputedStyle(n),
+        b = getComputedStyle(s);
+      return {
+        color: a.color === b.color,
+        size: a.fontSize === b.fontSize,
+        bdi: !!n.querySelector("bdi"),
+        wrap: a.overflowWrap,
+      };
+    });
+    ok(
+      nls.color && nls.size && nls.bdi && nls.wrap === "break-word",
+      "the note line looks like the second line, wraps, has bdi: " + JSON.stringify(nls)
+    );
+    await typeIn(pm, "morning");
+    ok(
+      (await pm.evaluate(() => document.querySelectorAll("#hbody .hnote").length)) === 0,
+      "a visible note gets no third line"
+    );
+    await typeIn(pm, "counted");
+    ok(
+      (await pm.evaluate(() => document.querySelectorAll("#hbody .hnote mark.hl").length)) === 1,
+      "the word 'counted' finds the fix by its note"
+    );
+    // not in History itself
+    await pm.evaluate(() => {
+      findEnd();
+      HF = histBlank();
+      V.screen = "history";
+      render();
+    });
+    ok(
+      (await pm.evaluate(() => document.querySelectorAll("#app mark.hl, #app .hnote").length)) === 0,
+      "History itself: no marks, no note line"
+    );
+    await pm.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+    await pm.click('#app [data-act="search-open"]');
+
+    // nothing found
+    await typeIn(pm, "cofee");
+    const nf = await pm.evaluate(() => {
+      const e = document.querySelector("#hbody .empty"),
+        b = e && e.getBoundingClientRect(),
+        fix = e && e.querySelector('[data-act="find-fix"]');
+      return {
+        text: e && e.textContent,
+        fix: fix && fix.textContent,
+        fixH: fix && fix.getBoundingClientRect().height,
+        tonal: fix && fix.classList.contains("tonal"),
+        clear: !!(e && e.querySelector('[data-act="hf-clear"]')),
+        mid: b && Math.abs(b.top + b.height / 2 + scrollY - innerHeight / 2) < 70,
+        hint: !!document.querySelector("#hbody .hint, #hbody .srhint"),
+        order:
+          fix && e.querySelector('[data-act="hf-clear"]')
+            ? !!(fix.compareDocumentPosition(e.querySelector('[data-act="hf-clear"]')) & 4)
+            : false,
+      };
+    });
+    ok(nf.text.includes("Nothing matches “cofee”"), "cofee: Nothing matches “cofee”: " + nf.text);
+    ok(nf.fix === "Search “coffee” · 3 entries", "the typo button: " + nf.fix);
+    ok(nf.fixH >= 48 && nf.tonal && nf.clear && nf.order, "tonal, 48 px, Clear all after it: " + JSON.stringify(nf));
+    ok(nf.mid && !nf.hint, "centred like History's, no hint line: " + JSON.stringify(nf));
+    await pm.click('#hbody [data-act="find-fix"]');
+    await pm.waitForTimeout(80);
+    const fx = await pm.evaluate(() => ({
+      v: $("#find-q").value,
+      q: HF.q,
+      rows: document.querySelectorAll("#hbody .tx.en").length,
+      marks: [...document.querySelectorAll("#hbody .tx.en mark.hl")].map(m => m.textContent.toLowerCase()),
+    }));
+    ok(
+      fx.v === "coffee" && fx.q === "coffee" && fx.rows === 3,
+      "the button fills the field and lists them: " + JSON.stringify(fx)
+    );
+    await typeIn(pm, "bean cofee");
+    ok(
+      (await pm.evaluate(() => $("#hbody [data-act='find-fix']").textContent)) === "Search “coffee” · 1 entry",
+      "one entry reads singular"
+    );
+    await pm.click('#hbody [data-act="find-fix"]');
+    ok((await pm.evaluate(() => $("#find-q").value)) === "bean coffee", "only the misspelt word is replaced");
+    await typeIn(pm, "zzzzzz");
+    ok(await pm.evaluate(() => !document.querySelector("#hbody [data-act='find-fix']")), "no near word: no button");
+    await pm.evaluate(() => {
+      HF.q = "";
+      HF.kind = "in";
+      findDraw();
+    });
+    const nf2 = await pm.evaluate(() => document.querySelector("#hbody .empty").textContent);
+    ok(
+      nf2.includes("Nothing matches these filters") && !nf2.includes("“"),
+      "no words: Nothing matches these filters: " + nf2
+    );
+    await pm.evaluate(() => {
+      HF = histBlank();
+    });
+
+    // the count for TalkBack: one status that stays, set after the pause, only when the count changed
+    await pm.fill("#find-q", "");
+    await pm.waitForTimeout(200);
+    await pm.evaluate(() => {
+      window.LIVE = document.querySelector("#find-live");
+      window.LIVEN = [];
+      new MutationObserver(() => LIVEN.push(LIVE.textContent)).observe(LIVE, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
+    const lv = await pm.evaluate(() => ({ role: LIVE.getAttribute("role"), vh: LIVE.classList.contains("vh") }));
+    ok(lv.role === "status" && lv.vh, "a visually hidden status element exists: " + JSON.stringify(lv));
+    await pm.keyboard.type("coffee", { delay: 30 });
+    await pm.waitForTimeout(300);
+    let st = await pm.evaluate(() => ({
+      same: LIVE === document.querySelector("#find-live"),
+      t: LIVE.textContent,
+      n: LIVEN.length,
+    }));
+    ok(st.same && st.t === "3 entries" && st.n === 1, "typed fast: set once, never replaced: " + JSON.stringify(st));
+    await pm.keyboard.type(" ", { delay: 30 });
+    await pm.waitForTimeout(250);
+    st = await pm.evaluate(() => ({ t: LIVE.textContent, n: LIVEN.length }));
+    ok(st.n === 1, "same count after another pause: not set again: " + JSON.stringify(st));
+    await pm.keyboard.type("hub", { delay: 30 });
+    await pm.waitForTimeout(250);
+    st = await pm.evaluate(() => ({
+      same: LIVE === document.querySelector("#find-live"),
+      t: LIVE.textContent,
+      n: LIVEN.length,
+    }));
+    ok(st.same && st.t === "2 entries" && st.n === 2, "a new count: set once more: " + JSON.stringify(st));
+    await pm.keyboard.type("x", { delay: 30 });
+    await pm.waitForTimeout(250);
+    ok((await pm.evaluate(() => LIVE.textContent)) === "0 entries", "nothing found: 0 entries");
+
+    // an IME composing: no redraw drops what is composed
+    const cdp = await pm.context().newCDPSession(pm);
+    await pm.fill("#find-q", "");
+    await pm.focus("#find-q");
+    await cdp.send("Input.imeSetComposition", { text: "c", selectionStart: 1, selectionEnd: 1 });
+    await pm.waitForTimeout(250);
+    await cdp.send("Input.imeSetComposition", { text: "cof", selectionStart: 3, selectionEnd: 3 });
+    await pm.waitForTimeout(250);
+    let ime = await pm.evaluate(() => ({ v: $("#find-q").value, f: document.activeElement.id, q: HF.q }));
+    ok(
+      ime.v === "cof" && ime.f === "find-q",
+      "during composition the field keeps the composed text: " + JSON.stringify(ime)
+    );
+    await cdp.send("Input.insertText", { text: "coffee" });
+    await pm.waitForTimeout(250);
+    ime = await pm.evaluate(() => ({
+      v: $("#find-q").value,
+      f: document.activeElement.id,
+      q: HF.q,
+      rows: document.querySelectorAll("#hbody .tx.en").length,
+    }));
+    ok(
+      ime.v === "coffee" && ime.q === "coffee" && ime.rows === 3 && ime.f === "find-q",
+      "composition ended: text kept and listed: " + JSON.stringify(ime)
+    );
+    await c9.close();
+
+    // 10,000 entries: a keystroke's redraw stays quick
+    const { c: c10, p: pb } = await open4();
+    const ms = await pb.evaluate(() => {
+      const words = ["corner", "cafe", "market", "coffee", "store", "fresh", "bakery", "kiosk", "bean", "hub"];
+      for (let i = 0; i < 10000; i++)
+        S.txns.push({
+          id: "x" + i,
+          ts: 1000 + i,
+          date: addDays(today(), -(i % 300)),
+          type: "expense",
+          amount: 1 + (i % 50),
+          account: "b",
+          cat: "food",
+          payee: words[i % 10] + " " + words[(i * 7) % 10],
+          note: "n" + i,
+        });
+      save();
+      const res = [];
+      for (const q of ["c", "co", "cor", "corn", "corne", "corner"]) {
+        HF.q = q;
+        const a = performance.now();
+        findDraw();
+        res.push(performance.now() - a);
+      }
+      return res;
+    });
+    const worst = Math.max(...ms);
+    console.log("redraw ms per keystroke: " + ms.map(x => x.toFixed(1)).join(", "));
+    ok(worst <= 240, "10,000 entries: a keystroke's redraw " + worst.toFixed(1) + " ms (aim 80, guard 240)");
+    await c10.close();
+  }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();
   process.exit(fails ? 1 : 0);

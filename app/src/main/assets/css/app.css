@@ -1528,6 +1528,29 @@ input {
 .tx.en .ar {
   margin: 0 2px;
 }
+/* search mode (search.js hl): the part of a title or second line a word matched; the row's own text colour stays */
+mark.hl {
+  background: var(--mark-bg);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0;
+}
+/* a loan's or balance fix's note that a word matched, a third line under the second (search mode only) */
+.hnote {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+  line-height: 1.35;
+}
+.tx.en .hnote {
+  grid-column: 1;
+  grid-row: 3;
+}
+.list.tight .tx.en .hnote {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
 /* the account's colour as a dot before its name: the name says which account, the colour only helps to spot it */
 .adot {
   display: inline-block;
