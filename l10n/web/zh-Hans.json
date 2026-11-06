@@ -70,7 +70,7 @@
     "balanceNow": "当前余额",
     "openingHint": "在这里记第一笔之前。",
     "cardHint": "信用卡？请把欠款输入为负数。",
-    "curLockedAria": "已锁定：这个账户已有记录",
+    "curLockedAria": "货币：{{currency}}。已锁定：这个账户已有记录",
     "add": "添加账户",
     "delete": "删除账户",
     "nameIt": "请给账户起个名字",

@@ -762,15 +762,7 @@ function accForm(id, then) {
     '<div class="row"><div class="field"><span>' +
     TH("common.currency") +
     '</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"' +
-    (used
-      ? ' aria-label="' +
-        TH("common.currency") +
-        ": " +
-        esc(a.currency) +
-        ". " +
-        TH("account.curLockedAria") +
-        '" disabled'
-      : "") +
+    (used ? ' aria-label="' + TH("account.curLockedAria", { currency: a.currency }) + '" disabled' : "") +
     "><span>" +
     esc(a.currency) +
     "</span>" +

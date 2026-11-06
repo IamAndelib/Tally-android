@@ -70,7 +70,7 @@
     "balanceNow": "Şu anki bakiye",
     "openingHint": "Buradaki ilk kayıttan önce.",
     "cardHint": "Kredi kartı mı? Borcunu eksi sayı olarak gir.",
-    "curLockedAria": "Kilitli: bu hesapta kayıt var",
+    "curLockedAria": "Para birimi: {{currency}}. Kilitli: bu hesapta kayıt var",
     "add": "Hesap ekle",
     "delete": "Hesabı sil",
     "nameIt": "Hesaba bir ad ver",

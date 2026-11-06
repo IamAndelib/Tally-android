@@ -70,7 +70,7 @@
     "balanceNow": "Balance right now",
     "openingHint": "Before your first entry here.",
     "cardHint": "Credit card? Enter what you owe as a negative number.",
-    "curLockedAria": "Locked: this account has entries",
+    "curLockedAria": "Currency: {{currency}}. Locked: this account has entries",
     "add": "Add account",
     "delete": "Delete account",
     "nameIt": "Give the account a name",

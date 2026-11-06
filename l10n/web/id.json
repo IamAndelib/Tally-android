@@ -70,7 +70,7 @@
     "balanceNow": "Saldo saat ini",
     "openingHint": "Sebelum transaksi pertamamu di sini.",
     "cardHint": "Kartu kredit? Masukkan tagihanmu sebagai angka negatif.",
-    "curLockedAria": "Terkunci: akun ini punya transaksi",
+    "curLockedAria": "Mata uang: {{currency}}. Terkunci: akun ini punya transaksi",
     "add": "Tambah akun",
     "delete": "Hapus akun",
     "nameIt": "Beri nama akun",

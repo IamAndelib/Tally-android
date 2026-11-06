@@ -70,7 +70,7 @@
     "balanceNow": "Stand jetzt",
     "openingHint": "Vor deinem ersten Eintrag hier.",
     "cardHint": "Kreditkarte? Gib ein, was du schuldest, als negative Zahl.",
-    "curLockedAria": "Gesperrt: Dieses Konto hat Einträge",
+    "curLockedAria": "Währung: {{currency}}. Gesperrt: Dieses Konto hat Einträge",
     "add": "Konto hinzufügen",
     "delete": "Konto löschen",
     "nameIt": "Gib dem Konto einen Namen",

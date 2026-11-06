@@ -70,7 +70,7 @@
     "balanceNow": "Solde actuel",
     "openingHint": "Avant votre première opération ici.",
     "cardHint": "Carte de crédit ? Saisissez ce que vous devez en nombre négatif.",
-    "curLockedAria": "Verrouillée : ce compte a des opérations",
+    "curLockedAria": "Devise : {{currency}}. Verrouillée : ce compte a des opérations",
     "add": "Ajouter le compte",
     "delete": "Supprimer le compte",
     "nameIt": "Donnez un nom au compte",
