@@ -826,6 +826,22 @@ function inspect() {
     await shot("summary-months", async () => {
       await page.evaluate(() => summarySheet());
       await page.click('#sheet [data-act="sm-mode"][data-v="m"]');
+      /* the Months pie: a whole disc (no hole, no hub), square, inside the window and the sheet, above the total */
+      const pie = await page.evaluate(() => {
+        const p = document.querySelector("#sm .smpie"),
+          r = p && p.getBoundingClientRect(),
+          sh = document.querySelector("#sheet").getBoundingClientRect(),
+          big = document.querySelector("#sm .smd .big");
+        if (!r) return ["no pie"];
+        const out = [];
+        if (Math.abs(r.width - r.height) > 1) out.push("pie not square " + r.width + "x" + r.height);
+        if (r.left < sh.left - 1 || r.right > sh.right + 1 || r.right > innerWidth + 1)
+          out.push("pie outside the sheet");
+        if (p.querySelector(".c, circle[stroke]")) out.push("pie has a hub or ring stroke");
+        if (!big || big.getBoundingClientRect().top < r.bottom - 1) out.push("total not under the pie");
+        return out;
+      });
+      if (pie.length) summary[tag + " summary-months pie"] = pie;
     });
     await shot("search", async () => {
       await page.evaluate(() => {

@@ -5,14 +5,19 @@
 "use strict";
 
 let SM = null;
-/* a bar's short label in the phone's own way ("1.5K", "1,5 k", "١٫٥ ألف"), small amounts with their decimals */
-let COMPACT = null;
+/* a bar's label, the same in every tab: the whole amount grouped the phone's way, no currency sign (the title names the
+   currency), and compact ("12.4K") only from five digits. TalkBack and the figure under the chart keep the exact amount. */
+let BARNUM = null;
 const compact = n => {
+  n = Math.round(n);
   try {
-    COMPACT = COMPACT || new Intl.NumberFormat(LOC.fmt, { notation: "compact", maximumSignificantDigits: 3 });
-    return COMPACT.format(n);
+    BARNUM = BARNUM || {
+      whole: new Intl.NumberFormat(LOC.fmt, { maximumFractionDigits: 0 }),
+      short: new Intl.NumberFormat(LOC.fmt, { notation: "compact", maximumSignificantDigits: 3 }),
+    };
+    return (Math.abs(n) >= 10000 ? BARNUM.short : BARNUM.whole).format(n);
   } catch (e) {
-    return String(Math.round(n));
+    return String(n);
   }
 };
 /* weeks start on the day chosen in Settings → Region */
@@ -99,43 +104,45 @@ function catSplit(list) {
     .map(([k, v]) => [k, rnd(v)])
     .sort((p, q) => q[1] - p[1]);
 }
-/* donut of a month by category: category colours, 2px gaps, total in the middle */
+/* a month by category as a pie: category colours, true to size (a tiny share stays tiny), a hairline between slices.
+   The names, shares and amounts are in the list under it, so the drawing is hidden from screen readers. */
 function smDonut(split, total) {
-  const R = 40,
-    C = 2 * Math.PI * R,
-    gap = split.length > 1 ? 1.2 : 0;
-  let off = 0,
+  const RP = 48,
+    pt = a => (50 + RP * Math.cos(a)).toFixed(2) + " " + (50 + RP * Math.sin(a)).toFixed(2);
+  let at = -Math.PI / 2,
     segs = "";
-  split.forEach(([k, v]) => {
-    const len = Math.max(0.5, (v / total) * C - gap);
-    segs +=
-      '<circle r="' +
-      R +
-      '" cx="50" cy="50" fill="none" stroke="' +
-      cat(k).c +
-      '" stroke-width="15" stroke-dasharray="' +
-      len.toFixed(2) +
-      " " +
-      (C - len).toFixed(2) +
-      '" stroke-dashoffset="' +
-      (-off).toFixed(2) +
+  if (split.length === 1)
+    segs =
+      '<circle cx="50" cy="50" r="' +
+      RP +
+      '" fill="' +
+      cat(split[0][0]).c +
       '"><title>' +
-      esc(catName(cat(k))) +
+      esc(catName(cat(split[0][0]))) +
       "</title></circle>";
-    off += (v / total) * C;
-  });
-  if (!split.length)
-    segs = '<circle r="' + R + '" cx="50" cy="50" fill="none" stroke="var(--surface-highest)" stroke-width="15"/>';
-  return (
-    '<div class="smpie"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="rotate(-90 50 50)">' +
-    segs +
-    "</g></svg>" +
-    '<div class="c"><b>' +
-    esc(total ? compact(total) : "0") +
-    "</b><span>" +
-    TH("summary.spent") +
-    "</span></div></div>"
-  );
+  else if (!split.length) segs = '<circle cx="50" cy="50" r="' + RP + '" fill="var(--surface-highest)"/>';
+  else
+    split.forEach(([k, v]) => {
+      const a1 = at + (v / total) * 2 * Math.PI;
+      segs +=
+        '<path d="M50 50L' +
+        pt(at) +
+        "A" +
+        RP +
+        " " +
+        RP +
+        " 0 " +
+        (a1 - at > Math.PI ? 1 : 0) +
+        " 1 " +
+        pt(a1) +
+        'Z" fill="' +
+        cat(k).c +
+        '" stroke="var(--surface-high, var(--surface))" stroke-width="0.6" stroke-linejoin="round"><title>' +
+        esc(catName(cat(k))) +
+        "</title></path>";
+      at = a1;
+    });
+  return '<div class="smpie"><svg viewBox="0 0 100 100" aria-hidden="true">' + segs + "</svg></div>";
 }
 function smRender() {
   keepFocus($("#sm"), drawSm);
@@ -349,7 +356,7 @@ function drawSmYear(el) {
           '" role="img" aria-label="' +
           TH("common.labelValue", { label: capFirst(monthLabel(m)), value: money(v, cur) }) +
           '"><span class="v">' +
-          (v ? esc(money(v, cur, "whole")) : "") +
+          (v ? esc(compact(v)) : "") +
           '</span><span class="bw"><span class="b" style="height:' +
           (v ? Math.max(2, (v / max) * 100) : 0).toFixed(1) +
           '%"></span></span><span class="x">' +

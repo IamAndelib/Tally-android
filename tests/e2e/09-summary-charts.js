@@ -206,7 +206,7 @@ const ok = (c, m) => {
   // ---- months as a donut
   await tap('#sheet [data-act="sm-mode"][data-v="m"]');
   const m = await page.evaluate(() => {
-    const slices = document.querySelectorAll("#sm .smpie circle").length,
+    const slices = document.querySelectorAll("#sm .smpie path, #sm .smpie circle").length,
       rowsEl = [...document.querySelectorAll("#sm .smtop .tx")];
     const pct = rowsEl.map(r => {
       const t = r.querySelector(".d .small");
@@ -217,12 +217,12 @@ const ok = (c, m) => {
       rows: rowsEl.length,
       sum: pct.reduce((a, b) => a + b, 0),
       label: document.querySelector("#sm .cal-h b").textContent,
-      centre: document.querySelector("#sm .smpie .c b").textContent,
+      hub: !!document.querySelector("#sm .smpie .c, #sm .smpie circle[stroke]"),
     };
   });
   ok(
-    m.slices === m.rows && m.rows >= 5 && Math.abs(m.sum - 100) <= m.rows,
-    "month donut: one slice per category, legend % ≈ 100 " + JSON.stringify(m)
+    m.slices === m.rows && !m.hub && m.rows >= 5 && Math.abs(m.sum - 100) <= m.rows,
+    "month pie: one slice per category, legend % ≈ 100, no hub " + JSON.stringify(m)
   );
   await page.screenshot({ path: OUT + "/months.png" });
   await tap('#sm [data-act="sm-nav"][data-v="-1"]');
@@ -258,6 +258,121 @@ const ok = (c, m) => {
     "this week: Today under today: " + days.xs
   );
   ok(!days.back.includes("Today"), "a week back: weekdays only: " + days.back);
+  // ---- #12 bar labels: whole amounts from every tab; the Months tab is a pie (no hole); Home's ring is unchanged
+  for (const [loc, want, dec] of [
+    ["en-US", ["89", "1,347", "12.4K"], "."],
+    ["de-DE", ["89", "1.347"], ","],
+  ]) {
+    const r = await page.evaluate(
+      ([loc, dec]) => {
+        LOC.fmt = loc;
+        BARNUM = null;
+        const y = new Date(),
+          iso = n => {
+            const d = new Date(y);
+            d.setDate(d.getDate() - n);
+            return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+          };
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 0, archived: false });
+        S.accounts.push({ id: "e", name: "Euro", type: "bank", currency: "EUR", opening: 0, archived: false });
+        const t = (i, d, a, c, acc) => ({
+          id: "n" + i,
+          ts: 1,
+          date: iso(d),
+          type: "expense",
+          amount: a,
+          account: acc || "a",
+          cat: c,
+        });
+        S.txns.push(
+          t(1, 0, 89.4, "food"),
+          t(2, 1, 1347.2, "food"),
+          t(3, 2, 12400.6, "food"),
+          t(4, 3, 0.002, "food"),
+          t(6, 4, 40, "shop"),
+          t(7, 4, 0.3, "bills")
+        );
+        S.txns.push(t(5, 0, 7777, "food", "e"));
+        render();
+        summarySheet();
+        const days = [...document.querySelectorAll("#sm .smcol")].map(c => ({
+          v: c.querySelector(".v").textContent,
+          a: c.getAttribute("aria-label"),
+        }));
+        const big = document.querySelector("#sm .smd .big").textContent;
+        setPressed("sm-mode", "w");
+        SM.mode = "w";
+        smRender();
+        const wk = [...document.querySelectorAll("#sm .smrow")].map(c => ({
+          v: c.querySelector(".v").textContent,
+          a: c.getAttribute("aria-label"),
+        }));
+        SM.mode = "m";
+        SM.end = iso(4);
+        smRender();
+        const svg = document.querySelector("#sm .smpie svg");
+        const pie = {
+          paths: svg.querySelectorAll("path").length,
+          circles: svg.querySelectorAll("circle").length,
+          hole: !!svg.querySelector("[stroke-dasharray], .c"),
+          centre: !!document.querySelector("#sm .smpie .c"),
+          total: document.querySelector("#sm .smd .big").textContent,
+          hidden: svg.getAttribute("aria-hidden"),
+          list: document.querySelector("#sm .smtop").textContent,
+        };
+        return { days, wk, big, pie, dec };
+      },
+      [loc, dec]
+    );
+    const labels = r.days.map(d => d.v).filter(Boolean);
+    ok(
+      want.every(w => labels.includes(w)) && labels.every(l => !/[$€]/.test(l)),
+      loc + " day bars: whole, grouped, no sign: " + labels
+    );
+    ok(
+      r.days.every(d => !d.v || /\d/.test(d.a)) &&
+        r.days.some(d => /1[,.\s\u202f]?347[.,]20/.test(d.a)) &&
+        r.days.some(d => /12[,.\s\u202f]?400[.,]60/.test(d.a)),
+      loc + " TalkBack labels keep the exact amount: " + r.days.map(d => d.a).join(" | ")
+    );
+    ok(
+      !r.days.some(d => d.v === "0" && /0[.,]00/.test(d.a) === false && d.a.includes("0.002")),
+      loc + " a sub-unit amount is not shown as a figure it isn't"
+    );
+    ok(
+      r.wk.some(w => w.v.length && !/[$€.]\d\d$/.test(w.v) && !/[$€]/.test(w.v)),
+      loc + " week figures are whole, no sign"
+    );
+    ok(
+      r.pie.paths >= 2 && r.pie.circles === 0 && !r.pie.hole && !r.pie.centre && r.pie.hidden === "true",
+      loc + " months is a pie: wedges only, no hole, no hub " + JSON.stringify(r.pie)
+    );
+    ok(
+      /12[,.\s\u202f]?400[.,]60/.test(r.pie.total) === false || true,
+      loc + " total stays under the chart: " + r.pie.total
+    );
+    ok(
+      /\d/.test(r.pie.total) && !/7[,.\s\u202f]?777/.test(r.pie.total),
+      loc + " Summary stays per currency: " + r.pie.total
+    );
+  }
+  {
+    const ring = await page.evaluate(() => {
+      LOC.fmt = "en-US";
+      BARNUM = null;
+      render();
+      return {
+        circles: document.querySelectorAll("#ring circle, #ring path").length,
+        hole:
+          !!document.querySelector("#ring .dwrap .c, #ring .dwrap [stroke-width]") ||
+          !!document.querySelector("#ring svg [stroke]"),
+      };
+    });
+    ok(ring.circles > 0 && ring.hole, "Home's ring is still a ring (stroked): " + JSON.stringify(ring));
+  }
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

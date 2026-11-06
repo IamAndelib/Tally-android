@@ -132,8 +132,8 @@ const ok = (c, m) => {
       "earlier months fade on the left; the months still to come don't fade this one: " + s.fades
     );
     ok(
-      s.amt.every(a => !/\.\d\d$/.test(a)) && s.amt.includes("$1,600"),
-      "whole amounts on the bars: " + s.amt.join(" ")
+      s.amt.every(a => !/\.\d\d$/.test(a) && !/[$€]/.test(a)) && s.amt.includes("1,600"),
+      "whole amounts on the bars, no currency sign: " + s.amt.join(" ")
     );
     const m = +(await page.evaluate(() => today().slice(5, 7)));
     const want = 100 * m + 1500,

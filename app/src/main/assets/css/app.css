@@ -1119,22 +1119,6 @@ html[dir="rtl"] .strip.fade {
   height: 100%;
   display: block;
 }
-.smpie .c {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.smpie .c b {
-  font-size: 1.5rem;
-  letter-spacing: -0.01em;
-}
-.smpie .c span {
-  font-size: 0.8rem;
-  color: var(--on-surface-variant);
-}
 .smd {
   text-align: center;
   padding: 14px 0 6px;

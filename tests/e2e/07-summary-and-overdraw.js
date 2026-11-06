@@ -175,7 +175,7 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="sm-mode"][data-v="w"]');
   ok((await page.$$("#sheet .smrow")).length === 8, "8 week rows");
   await tap('#sheet [data-act="sm-mode"][data-v="m"]');
-  ok(!!(await page.$("#sheet .smpie svg")), "month donut");
+  ok(!!(await page.$("#sheet .smpie svg")), "month pie");
   const lbl0 = await txt("#sm .cal-h b");
   await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
   ok((await txt("#sm .cal-h b")) !== lbl0, "‹ moves the window");
