@@ -1,0 +1,1 @@
+- Saat kalkulator terbuka, mengetuk "Tambah biaya" atau kolom lain tidak lagi membuka keyboard ponsel di bawah kalkulator: kalkulator ditutup lebih dulu, dan hitungan yang Anda ketik tetap tersimpan.

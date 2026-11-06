@@ -1,0 +1,1 @@
+- Bei geöffnetem Rechner öffnet ein Tippen auf „Gebühr hinzufügen“ oder ein anderes Feld nicht mehr die Tastatur deines Handys unter dem Rechner: Der Rechner schließt sich zuerst, und die eingegebene Rechnung bleibt erhalten.

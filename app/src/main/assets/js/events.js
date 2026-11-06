@@ -11,6 +11,12 @@ let ghostTap = null,
   tapLayers = 0, // layers open when the tap began
   sheetSwap = false; // this tap swapped the entry form for Add category / Add account, or back (txQuickAdd)
 const layersUp = () => ["#sheet", "#sheet2", "#pop"].filter(id => $(id).innerHTML).length;
+/* where the press of a tap began: a backdrop closes its layer only when the tap began on it too. A tap on a field can
+   end on the backdrop when the layout moves under the finger (the calculator closing as the field takes the focus
+   shrinks the sheet), and that must not close the form and lose what was typed */
+let tapFrom = null;
+["pointerdown", "mousedown"].forEach(t => document.addEventListener(t, ev => (tapFrom = ev.target), true));
+const bgTap = (ev, el) => ev.target === el && (!ev.detail || tapFrom === el);
 document.addEventListener(
   "click",
   ev => {
@@ -39,15 +45,15 @@ document.addEventListener("click", ev => {
   const act = el.dataset.act,
     v = el.dataset.v;
   if (act === "sheet-bg") {
-    if (ev.target === el) closeSheet();
+    if (bgTap(ev, el)) closeSheet();
     return;
   }
   if (act === "sheet2-bg") {
-    if (ev.target === el) closeSheet2();
+    if (bgTap(ev, el)) closeSheet2();
     return;
   }
   if (act === "pop-bg") {
-    if (ev.target === el) closePop();
+    if (bgTap(ev, el)) closePop();
     return;
   }
   /* every tap clicks (the keypad's buttons already did, on touch-down; a time wheel ticks as its rows pass) */
@@ -331,6 +337,7 @@ document.addEventListener("click", ev => {
       F.showFee = true;
       $("#fee-wrap").hidden = false;
       el.hidden = true;
+      if (CALC) calcClose(CALC.id, calcToggleBtn(CALC.id)); // no keypad over the system keyboard
       $("#f-fee").focus();
       if (F.kind === "tr") trPreview();
       break;
@@ -629,6 +636,12 @@ document.addEventListener("click", ev => {
   if (ev.detail && (layersUp() < tapLayers || sheetSwap)) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
   tapLayers = 0;
   sheetSwap = false;
+});
+/* the calculator and the system keyboard never show together: a text field that isn't the calculator's own closes it */
+document.addEventListener("focusin", ev => {
+  const t = ev.target;
+  if (CALC && t !== CALC.inp && t.matches && t.matches("input, textarea, select, [contenteditable]"))
+    calcClose(CALC.id, calcToggleBtn(CALC.id));
 });
 document.addEventListener("input", ev => {
   const id = ev.target.id;

@@ -1,0 +1,1 @@
+- Con la calculadora abierta, tocar «Añadir comisión» u otro campo ya no abre el teclado del teléfono bajo la calculadora: la calculadora se cierra primero y la cuenta que escribiste se conserva.
