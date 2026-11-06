@@ -677,6 +677,31 @@ const ok = (c, m) => {
     await tap("hfs-kind", "");
     await page.evaluate(() => goBack());
     ok((await page.evaluate(() => HF.kind + !$("#sheet").innerHTML)) === "outtrue", "Back drops the draft");
+    // ✕ on the account chip with Transfers and one side set: the account and both sides go (the locked side with it)
+    await page.evaluate(() => {
+      HF = histBlank();
+      openHistory({ acc: "k", kind: "xfer", from: "b" });
+    });
+    await page.click('#app [data-act="hf-del"][data-v="acc"]');
+    ok(
+      (await page.evaluate(() => [HF.acc, HF.from, HF.to, HF.kind].join("|"))) === "|||xfer" &&
+        (await page.evaluate(() =>
+          [...document.querySelectorAll('#app .hchips [data-act="hf-del"]')].map(b => b.dataset.v).join()
+        )) === "kind",
+      "✕ on the account clears it and both transfer sides: " + (await page.evaluate(() => JSON.stringify(HF)))
+    );
+    // a compact chip takes taps 48px tall: just above and below it lands on it, not on what lies behind
+    await page.click('#app [data-act="hf-open"]');
+    const taps = await page.evaluate(() =>
+      [...document.querySelectorAll("#sheet .hfc")].slice(0, 6).map(c => {
+        const b = c.getBoundingClientRect(),
+          x = b.left + b.width / 2,
+          hit = y => (document.elementFromPoint(x, y) || {}).closest?.(".hfc") === c;
+        return hit(b.top - 6) && hit(b.bottom + 6);
+      })
+    );
+    ok(taps.length && taps.every(Boolean), "Filters chips take taps 6px above and below: " + taps);
+    await page.click('#sheet [data-act="close"]');
     // a state reached from outside the sheet: one side set with an account picked
     await page.evaluate(() => {
       HF = histBlank();

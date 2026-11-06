@@ -447,7 +447,7 @@ const HIST_CHUNK = 300;
 let HSHOW = { sig: "", n: HIST_CHUNK }, // what is drawn: the entries so far, for these filters and this period
   HLIST = [], // the entries it is drawn from
   HIO = null;
-const histSig = () => JSON.stringify([HF, HP.period, HP.anchor, HP.rs, HP.re]);
+const histSig = () => JSON.stringify([HF, HP.period, range(HP)]); // the dates shown, so midnight keeps the rows drawn
 const histMonth = t => t.date.slice(0, 7);
 /* the markup for list[i..] up to about `budget` entries; `next` is where the following chunk starts */
 function histMonths(list, i, budget) {

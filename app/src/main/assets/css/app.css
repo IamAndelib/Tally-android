@@ -3237,6 +3237,7 @@ body.land.calcopen #snack .snack {
 }
 .hfc {
   position: relative;
+  overflow: visible; /* the ::after tap area reaches past the chip (button{overflow:hidden} would clip it) */
   min-height: 34px;
   min-width: 48px;
   padding: 0 12px;
