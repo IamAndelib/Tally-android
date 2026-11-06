@@ -1,0 +1,1 @@
+- Behoben: Bei geöffnetem Rechner öffnete ein Tippen auf „Gebühr hinzufügen“ oder ein anderes Feld die Tastatur des Telefons unter dem Rechner, beide gleichzeitig. Der Rechner schließt sich jetzt zuerst.

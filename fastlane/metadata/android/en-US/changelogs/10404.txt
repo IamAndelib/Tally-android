@@ -1,0 +1,1 @@
+- Fixed: with the calculator open, tapping "Add a fee" or another field opened your phone's keyboard under the calculator, both on screen at once. The calculator now closes first.

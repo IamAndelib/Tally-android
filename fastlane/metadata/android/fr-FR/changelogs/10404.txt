@@ -1,0 +1,1 @@
+- Corrigé : calculatrice ouverte, toucher « Ajouter des frais » ou un autre champ ouvrait le clavier du téléphone sous la calculatrice, les deux à la fois. La calculatrice se ferme maintenant d'abord.

@@ -331,6 +331,7 @@ document.addEventListener("click", ev => {
       F.showFee = true;
       $("#fee-wrap").hidden = false;
       el.hidden = true;
+      if (CALC) calcClose(CALC.id, calcToggleBtn(CALC.id)); // no keypad over the system keyboard
       $("#f-fee").focus();
       if (F.kind === "tr") trPreview();
       break;
@@ -629,6 +630,12 @@ document.addEventListener("click", ev => {
   if (ev.detail && (layersUp() < tapLayers || sheetSwap)) ghostTap = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp };
   tapLayers = 0;
   sheetSwap = false;
+});
+/* the calculator and the system keyboard never show together: a text field that isn't the calculator's own closes it */
+document.addEventListener("focusin", ev => {
+  const t = ev.target;
+  if (CALC && t !== CALC.inp && t.matches && t.matches("input, textarea, select, [contenteditable]"))
+    calcClose(CALC.id, calcToggleBtn(CALC.id));
 });
 document.addEventListener("input", ev => {
   const id = ev.target.id;
