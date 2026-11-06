@@ -98,3 +98,9 @@ building"). "NEW DEMO" marks items whose final form was drawn in that last set.
 - Paid more than owed: lending (they paid more) → **Track as income** (filled) / Track as loan / Go back; loan (you paid
   more) → **Track as charge** (filled) / Track as lending / Go back. (Some people don't take or pay interest; "income"
   and "charge" fit everyone.)
+
+## Changes after the build started (maintainer, 2026-11-06)
+- **A1 instead:** while selecting, the period / Filters row stays where it is, dimmed and not tappable (no empty
+  space, nothing moves; the selection's filters stay in view).
+- **A15 instead:** the filter chips continue on the same line right after the Filters button, wrapping only when the
+  line is full, with Clear all as the last item (no line of its own).
