@@ -45,3 +45,7 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-05 · P3 · History has no visible summary line (the months carry their totals); a hidden status region still announces the entry count to TalkBack after each change · maintainer
 - 2026-11-05 · P3 · A loan's or balance fix's note shows only when the row is opened, under "Added at"; expenses, income and transfers keep theirs as the title · maintainer
 - 2026-11-05 · P2 · History → Search → Back keeps History's filters and period (leaving any other way still resets) · decided after the final review, waiting for the maintainer's yes; documented in docs/specs/history-filters.md
+- 2026-11-06 · P2 · Search is a mode of History (a field in its top bar, opened from every tab), not a page of its own; suggestions turn into History filters, matches are marked, and a typo gets a button · maintainer's pick from the concepts (docs/specs/search.md)
+- 2026-11-06 · P2 · The grouped Search page and its Week | Month | Year | All page with bars are retired; bars and comparisons stay in Summary · maintainer
+- 2026-11-06 · P2 · Recent searches are kept by the native shell on this phone only, left out of Android's backup and device transfer, Tally's backups, the saved copy and CSV; Erase everything forgets them · maintainer's pick, to keep typed words out of backups
+- 2026-11-06 · P3 · A payee and an amount are filters only through search (no section in the Filters sheet); they are dropped with the words when search mode closes · maintainer

@@ -68,10 +68,10 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   between, each option showing how many entries it leaves. Entries are two lines with the account marked by a dot of
   its colour; a transfer's fee sits inside it. Tap an entry to open it in place; hold one to select several and delete
   them together.
-- **Search** every entry from Home or History: as you type, matches are grouped by who was paid, who paid you,
-  category, account and loan, each with its count and total; open one to see its entries by week, month, year or all
-  time, with bars, what they come to and the change from the period before.
-  A number finds amounts; a typo still finds close matches.
+- **Search** inside History, from any tab: type a word, a number or a month and pick a suggestion (who was paid, who
+  paid you, a category, an account, a person, a kind, a period or an amount) to narrow the list, each showing how many
+  entries it leaves. Matches are marked, a typo offers the word it was close to, and your last searches wait under the
+  empty field. They stay on this phone only, never in backups.
 - **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month, or a year's 12 months by category,
   compared with the period before.
 

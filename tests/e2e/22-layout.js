@@ -471,6 +471,10 @@ function inspect() {
       await page.evaluate(() => {
         closeSheet();
         $("#pop").innerHTML = "";
+        if (V.find) {
+          V.find = false; // search mode left without keeping its words
+          histClear();
+        }
         V.screen = "home";
         render();
         scrollTo(0, 0);
@@ -784,6 +788,44 @@ function inspect() {
         await page.evaluate(() => periodDialog(V));
         await page.click('#pd [data-act="pd-tab"][data-v="' + tab + '"]');
       });
+    /* search mode (History with a field): empty with recent searches, typing with suggestions, a suggestion picked, an
+       amount, nothing found (with and without the near-word button) and a row whose note matched */
+    await page.evaluate(() => {
+      const pays = ["Corner Café", "Green Market", "Coffee Bar", "Fresh Corner"];
+      S.txns.filter(x => x.type === "expense").forEach((x, i) => (x.payee = pays[i % pays.length]));
+      const out = S.txns.filter(x => x.type === "expense");
+      out[0].amount = 50;
+      out[3].amount = 50.75;
+      save();
+    });
+    const findOpen = (typed, then) => async () => {
+      await page.evaluate(
+        ([typed, then]) => {
+          histClear();
+          openFind();
+          const inp = $("#find-q");
+          if (typed) {
+            inp.value = typed;
+            findInput(typed);
+            findDraw();
+          }
+          if (then === "pay") findPick(SUGS.findIndex(x => /^out:/.test(x.r.f.pay || "")));
+        },
+        [typed, then]
+      );
+    };
+    await page.evaluate(() =>
+      recentSave(["corner café", "coins", "50", "a rather long search of several words", "gift"])
+    );
+    await shot("search-empty-recent", findOpen(""));
+    await shot("search-typing", findOpen("corner"));
+    await shot("search-picked", findOpen("corner", "pay"));
+    await shot("search-amount", findOpen("50"));
+    await shot("search-nothing-near", findOpen("cofee"));
+    await shot("search-nothing", findOpen("qzxv"));
+    await shot("search-note", findOpen("coins"));
+    await page.evaluate(() => recentSave([]));
+    await shot("search-empty", findOpen(""));
     await seed(24);
     await shot("home-24", null);
     await shot(

@@ -16,20 +16,22 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - History shows each entry's account after a dot of the account's colour, so accounts are easy to tell apart (#37).
 - Hold and drag to reorder accounts, credit cards, loans, lendings and other assets, and Home's balance chips (#33).
   Home's chips keep an order of their own.
-- **Search** (#37), next to History on Home and in History: matches grouped by payee, category, account and loan,
-  each with its count and total, and every matching entry; amounts and close matches too. Open one to see its entries
-  by week, month, year or all time, with bars and the change from the period before.
+- **Search inside History** (#37), from Home, Assets, Liabilities and History: type words, a payee, a number or a
+  month and pick a suggestion to turn it into a History filter, each showing how many entries it leaves. The words that
+  matched are marked in the list (and in a loan's or balance fix's note), a typo offers the word it was close to, and
+  the last five searches wait under the empty field. Recent searches stay on this phone only: never in backups, device
+  transfer, exports or logs.
 - **History from all time**, with a period chip and a **Filters** sheet: by account, by kind (spent, received,
   transfers, lent, borrowed, balance fixes), category, person, or the accounts a transfer went between. Each choice
   shows how many entries it leaves; months carry their totals.
 
 ### Changed
 
-- Entries read in two lines, the same in History, Home and search: what it was and how much, then its category and
+- Entries read in two lines, the same in History and Home: what it was and how much, then its category and
   account. A tap opens the entry in place (the time it was added, the balance left, a loan's progress, any note on a
   loan or balance fix) with Edit and Delete inside.
 - A transfer's or loan payment's fee sits inside its entry (`+ $2.00 fee`) instead of a row of its own, and
-  search counts entries the same way.
+  searching counts entries the same way.
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
 - Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
 - Nothing is cut short or shrunk any more: names, notes, categories, chips, fields, tabs and buttons wrap onto another

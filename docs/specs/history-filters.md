@@ -1,12 +1,12 @@
 # History: all time, a period chip and a Filters sheet
 
-Status: approved by the maintainer on 2026-11-05 from mocks on the real app. Search will build on it later: a search result can open History with its filter set.
+Status: approved by the maintainer on 2026-11-05 from mocks on the real app. Search is now a mode of History ([search.md](search.md)) and adds three filters to it: words, payee and amount.
 
 ## Why
 
 History is where a person finds entries precisely: by account, by kind of money movement, by category, person or the
 accounts a transfer went between, over any period. Today it shows one month at a time and filters by account only.
-Search stays the way to find entries by their words; History becomes the way to find them by what they are.
+History is the way to find entries by what they are, and its search mode by their words, a payee or an amount.
 
 ## What it looks like
 
@@ -135,6 +135,19 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 - **Sideways swipes** do nothing in History: they no longer switch accounts (accounts are a filter now), and they
   don't step the period either (maintainer: no swipe). Another month is picked in the period dialog.
 
+## Words, payee and amount (added with search)
+
+Three more filters, set only from search mode ([search.md](search.md)); the Filters sheet has no section for them.
+
+- **Words** (`HF.q`): every typed word must start a word of the entry's payee, note, account, category or person (a
+  number matches an amount); the same list the other filters narrow.
+- **Payee** (`HF.pay`): one payee whatever its capitals or accents, as money spent there ("Paid to X") or money received
+  from them ("Received from X"). A payee that no longer exists is dropped like any gone target.
+- **Amount** (`HF.amt`): the amount itself (`50` means 50.00 to 50.99), more than, or less than; each entry's own amount
+  (a transfer: the amount sent or received).
+- They show as chips with ✕, count in "Filters · N" and in the Filters sheet's numbers, and **Clear all** removes them.
+  They are dropped when search mode closes.
+
 ## Accessibility and text
 
 - The period chip: "Choose a period" and "Show all time" for its two parts; each filter chip's ✕: "Remove filter:
@@ -151,7 +164,6 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
 
 ## Not in this change
 
-- Search opening History with a filter (its scope pages stay as they are for now).
 - Choosing several categories or accounts at once.
 - Saving filters across visits.
 

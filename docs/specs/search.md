@@ -1,6 +1,6 @@
 # Search inside History
 
-Status: approved design (concepts reviewed and decided by the maintainer, 2026-11-06). Built on
+Status: built (concepts reviewed and decided by the maintainer, 2026-11-06). Built on
 [History](history-filters.md). Replaces the separate Search page and its Week / Month / Year page.
 
 ## What it looks like
@@ -29,9 +29,11 @@ Every typed word must be found in the entry (the same rule as today's search):
 
 ## Suggestions
 
-While the field has text, a short list of suggestions sits above the entries, at most three per group, in this order.
-Each shows how many entries it would leave (rows, by History's fee rule, with the period, the filters and the other
-words as they are). One that would leave none, or is already set, isn't shown.
+While the field has text, a short list sits above the entries under one **Suggestions** heading (the entries follow
+under an **Entries** heading), at most three per group, in the order below. Each row has its name as a title and a
+second line with its group and how many entries it would leave: "Paid to · 19 entries" (rows, by History's fee rule,
+with the period, the filters and the other words as they are). One that would leave none, or is already set, isn't
+shown. A month's or a kind's name matches from three letters (the whole name when it is shorter).
 
 | Group | Found by | Tapping it sets | Chip |
 |---|---|---|---|
@@ -45,6 +47,8 @@ words as they are). One that would leave none, or is already set, isn't shown.
 | Amount | a number; `>50`, `<50` give only that one | the amount itself, more than, or less than | `$50.00 to $50.99` ✕, `More than $50.00` ✕, `Less than $50.00` ✕ |
 
 - Tapping a suggestion takes the words that found it out of the field; the rest stay, and the field keeps the focus.
+  One for a slot already set (a second payee, say) replaces it; a kind clears the category, person and sides that
+  depended on it, as the Filters sheet does.
 - The amount is shown in the notebook's currency when every account has it, else as a plain number in the phone's
   format; it compares each entry's own amount (a transfer: the amount sent or received).
 - A payee is one name whatever its capitals or accents (the newest spelling shown), as today.
@@ -55,8 +59,8 @@ words as they are). One that would leave none, or is already set, isn't shown.
 - **Marks**: the part of a title or second line a word matched has a soft yellow marker. A loan's or balance fix's
   note, hidden on the collapsed row, shows as a third line "Note: …" when a word matched it.
 - **Nothing found**: "Nothing matches “cofee”" (or "Nothing matches these filters" when nothing is typed), then, when a
-  word one typo away finds entries, a button "Search “coffee” · 19 entries" (never swapped in by itself), then Clear
-  all. In the middle of the window, like History's. No hint line.
+  word one typo away finds entries, a button "Search “coffee” · 19 entries" that puts that word in the place of the
+  typed one (never swapped in by itself), then Clear all. In the middle of the window, like History's. No hint line.
 - TalkBack hears the count of entries once typing pauses (History's hidden status, announced at most once per pause).
 
 ## Chips and the Filters sheet
@@ -73,7 +77,8 @@ words as they are). One that would leave none, or is already set, isn't shown.
   field.
 - A search is kept when it is used: a suggestion or an entry tapped, or search mode closed with at least two characters
   typed. The same words again move to the top (capitals and accents ignored).
-- **On this phone only**: kept by the native shell in its own preferences file, left out of Android's backup and device
+- **On this phone only**: kept by the native shell (`Android.recentGet` / `recentSet`, at most five texts of at most 100
+  characters, checked in Java; the page keeps them in memory where the shell lacks the methods) in its own preferences file, left out of Android's backup and device
   transfer (`backup_rules.xml`, `data_extraction_rules.xml`), never in saved data, Tally's backups, the shell's saved
   copy, CSV, the widget, notifications or logs. "Erase everything" forgets them too.
 
@@ -95,8 +100,10 @@ words as they are). One that would leave none, or is already set, isn't shown.
 - The field is labelled "Search History"; each suggestion reads as one line ("Paid to Corner Café, 19 entries"); a chip
   reads "Remove filter: Paid to Corner Café"; a recent search's ✕ reads "Forget: corner".
 - Every text in the catalogue in all nine languages, plurals for counts.
-- Layout checks (`22-layout.js`): search mode empty with recents, typing with suggestions, a suggestion picked, an
-  amount, nothing found; normal and large text; phones, a phone held sideways, foldables and tablets.
+- Layout checks (`22-layout.js`): search mode empty (with and without recents), typing with suggestions, a suggestion
+  picked, an amount, nothing found (with and without the near-word button) and a row with the note that matched;
+  normal and large text; phones, a phone held sideways, foldables and tablets; German, Russian and Chinese on the
+  tightest sizes, the other languages on request.
 
 ## Not in this change
 
