@@ -106,3 +106,8 @@ building"). "NEW DEMO" marks items whose final form was drawn in that last set.
   line is full, with Clear all as the last item (no line of its own).
 - **Recent searches get a "Clear all"** at the end of their heading (a text button on the heading's line); it empties the
   list and shows an Undo snackbar ("Recent searches cleared · Undo"). Mock-up sent; build with Task 2's follow-up.
+- **The charge row is a tonal card** (chosen from four concepts): a soft surface-container card holding a small
+  "Charge" label over a medium figure with its currency code, a round tonal calculator button (48 dp) and ✕ at the
+  right; under a thin line inside the same card, the preview ("● Bkash −৳1,010.00 · ● Bank +৳1,000.00"). With the
+  keypad open on the charge, the card's line and label take the accent colour and the keypad's bar names the field
+  ("Charge"); the field the keypad isn't filling looks idle. Built with the charges.
