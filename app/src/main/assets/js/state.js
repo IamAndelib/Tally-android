@@ -649,6 +649,7 @@ function guardOverdraw(mutate, date, proceed) {
    With `keep`, each account's opening balance takes over what the deleted entries did to it (the same per-account
    effect balances() adds up), so no balance changes and no entry is added. Never for loan entries (see canKeepBalance). */
 function deleteEntries(ids, keep) {
+  keep = keep && canKeepBalance([...ids]); // a loan entry never keeps the balance, whatever the caller asked
   ids = new Set(ids);
   const was = keep && S.txns;
   const isDraw = t => t.type === "loan" && t.principal,

@@ -1839,7 +1839,9 @@ const ok = (c, m) => {
         (await page.evaluate(() => document.activeElement.matches('[data-act="tx-del"]'))),
       "Cancel changes nothing and the focus returns to Delete"
     );
-    await askRow("sp").catch(() => {});
+    await page.click('#app .txo [data-act="tx-del"]'); // the row is still open after Cancel
+    await pause();
+    ok(await page.isVisible("#pop .dialog"), "the question is open before Back");
     ok(
       (await page.evaluate(() => goBack())) === true && (await snap()) === before0 && !(await page.$("#pop .dialog")),
       "Back closes the question and changes nothing"
@@ -1880,7 +1882,7 @@ const ok = (c, m) => {
       const b2 = await bals(),
         o2 = await opens();
       ok(
-        Object.keys(b0).every(k => near(b2[k], b0[k])) &&
+        Object.keys(b0).every(k => b2[k] === b0[k]) &&
           (await ids()).length === n0 - gone.length &&
           Object.keys(o0).every(k => (fx[k] === undefined ? o2[k] === o0[k] : near(o2[k], o0[k] + fx[k]))) &&
           (await page.evaluate(g => g.every(x => !S.txns.some(t => t.id === x)), gone)),
@@ -1943,7 +1945,7 @@ const ok = (c, m) => {
       await pause();
       const b1 = await bals();
       ok(
-        !(await page.$("#sheet .p")) && Object.keys(b0).every(k => near(b1[k], b0[k])) && !(await ids()).includes(id),
+        !(await page.$("#sheet .p")) && Object.keys(b0).every(k => b1[k] === b0[k]) && !(await ids()).includes(id),
         id + ": keep from the sheet closes it and every balance is the same"
       );
       await page.click('#snack [data-act="undo"]');
@@ -1978,7 +1980,7 @@ const ok = (c, m) => {
       const b1 = await bals(),
         o1 = await opens();
       ok(
-        Object.keys(b0).every(k => near(b1[k], b0[k])) &&
+        Object.keys(b0).every(k => b1[k] === b0[k]) &&
           (await ids()).join() === "d1,p1" &&
           near(o1.a, 1000 + 30.5 * -1 + 100 - 52 - 40) &&
           near(o1.b, 500 + 50 - 20) &&
@@ -2011,7 +2013,29 @@ const ok = (c, m) => {
       ok((await page.evaluate(() => V.sel && V.sel.size)) === 2, "…and the selection is still there for another try");
       await page.evaluate(() => goBack());
     }
-    ctx.close();
+    /* an archived account keeps its balance too */
+    await seedAll();
+    await page.evaluate(() => {
+      S.accounts.find(a => a.id === "b").archived = true;
+      save();
+      render();
+    });
+    {
+      const s0 = await snap(),
+        b0 = await bals();
+      await selDel(["ad"]);
+      await page.click("#pop .cd-destroy-out");
+      await pause();
+      const b1 = await bals();
+      ok(
+        b1.b === b0.b && !(await ids()).includes("ad") && (await opens()).b === 500 - 20,
+        "keep on an archived account: its balance stays the same"
+      );
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      ok((await snap()) === s0, "…and Undo restores exactly");
+    }
+    await ctx.close();
   }
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
