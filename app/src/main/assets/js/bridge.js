@@ -1,6 +1,6 @@
 /*
- * bridge.js — Talking to the Android shell (window.Android, see MainActivity.java): home-screen widget numbers, reminders,
- * notification actions, saving files, the recent searches, and the handlers behind the window.tally* hooks.
+ * bridge.js — Talking to the Android shell (window.Android, see MainActivity.java): home-screen widget numbers,
+ * reminders, notification actions, saving files, the recent searches, and the handlers behind the window.tally* hooks.
  */
 "use strict";
 

@@ -1,18 +1,20 @@
 /*
- * search.js — Search, a mode of History (#37) opened from every tab: what a typed word finds (ignoring case and accents;
- * each word must start a word of the entry, the words of Chinese, Japanese and Thai found by `Intl.Segmenter`; a
- * number matches amounts), a payee and an amount as History filters, and the mode itself: `V.find`, the field in History's top bar and
- * the list under it redrawn after typing pauses (`findInput()`, `findDraw()`), Back to where it was opened from
- * (`findBack()`), and the suggestions above the list (`findSugs()`: a payee, category, account, person, kind, month or
- * year, an amount that the typed words could mean, each with the entries it would leave; a tap sets it as a filter and
- * takes its words out of the field, `findPick()`).
+ * search.js — Search, a mode of History (#37) opened from every tab: what a typed word finds (ignoring case and
+ * accents; each word must start a word of the entry, in Chinese, Japanese and Thai as `Intl.Segmenter` finds them,
+ * except that two characters or more match anywhere in those scripts; a number matches amounts), a payee and an amount
+ * as History filters, and the mode itself: `V.find`, the field in History's top bar and the list under it redrawn
+ * after typing pauses (`findInput()`, `findDraw()`), Back to where it was opened from (`findBack()`, `findUndo()`), and
+ * the suggestions above the list (`findSugs()`: a payee, category, account, person, kind, month or year, an amount that
+ * the typed words could mean, each with the entries it would leave; a tap sets it as a filter and takes its words out
+ * of the field, `findPick()`).
  */
 "use strict";
 
 const srFold = s => curFold(s || "").trim();
-/* scripts written without spaces between words (Chinese, Japanese kana, Thai, Lao, Myanmar, Khmer): their word breaks
-   come from Intl.Segmenter, else a word may start anywhere. Korean has spaces, and is decomposed into jamo by srFold. */
-const NO_SPACES = /[฀-໿က-႟ក-៿぀-ヿ㐀-䶿一-鿿가-힯]/;
+/* scripts written without spaces between words (Chinese, Japanese kana, Thai, Lao, Myanmar, Khmer;
+   Korean too: srFold decomposes Hangul into jamo): their word breaks come from Intl.Segmenter. */
+const NO_SPACES =
+  /[\u0E00-\u0EFF\u1000-\u109F\u1100-\u11FF\u1780-\u17FF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF]/;
 const SR_SEP_CH = /[\s.,;:!?()[\]{}"«»“”/\\|·•–—_-]/,
   SR_SEP = new RegExp(SR_SEP_CH.source + "+");
 const srSplit = f => f.split(SR_SEP).filter(Boolean);
@@ -66,7 +68,8 @@ function srStarts(f) {
     if (g.isWordLike) found.push(off);
     off += g.segment.normalize("NFD").length;
   }
-  if (off === f.length) found.forEach(p => at.add(p)); // else it is not the same text: only the pieces between separators
+  // not the same text (else): only the pieces between separators
+  if (off === f.length) found.forEach(p => at.add(p));
   return [...at].sort((a, b) => a - b);
 }
 /* a folded text's words (the pieces between separators), with `.starts` (see srStarts) */
@@ -80,7 +83,10 @@ function srInfo(f) {
 function srHitFolded(t, ws, w, fuzzy) {
   if (!t) return false;
   const nospace = NO_SPACES.test(w);
-  if (nospace && !srSegmenter()) return t.replace(/\s+/g, "").includes(w); // no Intl.Segmenter: anywhere
+  /* in these scripts two characters or more match anywhere (compounds: スタンド in ガソリンスタンド); one character must
+     start a word, which needs Intl.Segmenter (without it, anywhere) */
+  if (nospace && (Array.from(w.normalize("NFC")).length >= 2 || !srSegmenter()))
+    return t.replace(/\s+/g, "").includes(w);
   if (ws.starts.some(p => t.startsWith(w, p)) || (!nospace && ws.some(x => x.startsWith(w)))) return true;
   return fuzzy && !nospace && ws.some(x => typoNear(w, x));
 }
@@ -139,11 +145,11 @@ function srNum(w) {
     d = m && !grp ? m[1].length : 0;
   return { lo: v, hi: d === 0 ? v + 1 : d === 3 ? +(v + 0.0005).toFixed(4) : v + 0.005 };
 }
-/* ---- marks: the part of a title or second line that a typed word matched, found while a row's markup is built (no walk
-   over the drawn DOM). `HLW` holds the folded words while History's rows are drawn in search mode (histMonths), else
-   null. The match is the filter's (a word starts a word of the text, by Intl.Segmenter in scripts without spaces;
-   accents and capitals ignored; numbers never) laid over the text as written: a character that folds to several (ß → ss, & → " and
-   ") is marked only when the match takes all of it. */
+/* ---- marks: the part of a title or second line that a typed word matched, found while a row's markup is built (no
+   walk over the drawn DOM). `HLW` holds the folded words while History's rows are drawn in search mode (histMonths),
+   else null. The match is the filter's (a word starts a word of the text, by Intl.Segmenter in scripts without spaces;
+   accents and capitals ignored; numbers never) laid over the text as written: a character that folds to several (ß →
+   ss, & → " and ") is marked only when the match takes all of it. */
 let HLW = null;
 const hlTerms = q => {
   const w = srTerms(q)
@@ -180,7 +186,7 @@ function hl(raw) {
     starts = seg ? srStarts(f) : [];
   for (const w of HLW) {
     const nospace = NO_SPACES.test(w);
-    if (nospace && !seg) {
+    if (nospace && (Array.from(w.normalize("NFC")).length >= 2 || !seg)) {
       for (let i = f.indexOf(w); i >= 0; i = f.indexOf(w, i + w.length)) add(i, i + w.length);
       continue;
     }
@@ -218,7 +224,8 @@ function srTexts(t) {
   if (t.type === "loan" && loan(t.loan)) out.push(loanWho(loan(t.loan)));
   return out.filter(Boolean);
 }
-/* each entry's texts folded (and split into words, by Intl.Segmenter where needed) once, kept until the next save(): a keystroke then only compares */
+/* each entry's texts folded (and split into words, by Intl.Segmenter where needed) once, kept until the next save(): a
+   keystroke then only compares */
 let SR_CACHE = new Map(),
   SR_SEQ = -1;
 function srCached(t) {
@@ -249,7 +256,8 @@ function srEntryHit(t, q, fuzzy) {
   return q.every(w => {
     const c = /^[<>]/.test(w) ? w : "", // ">50" / "<50": more / less than, as the suggestion
       n = srNum(c ? w.slice(1) : w);
-    return c ? one(t, w, n, c) : one(t, w, n) || (fee && one(fee, w, n)); // more / less than: the entry's own amount only
+    // more / less than: the entry's own amount only
+    return c ? one(t, w, n, c) : one(t, w, n) || (fee && one(fee, w, n));
   });
 }
 /* ---- the payee and amount filters of History (`HF.pay`, `HF.amt`) */
@@ -302,8 +310,8 @@ function srAmtLabel(amt) {
     ? show(lo)
     : T("history.amtRange", { from: show(lo), to: show(hi) });
 }
-/* ---- the mode: History with a field in its top bar (V.find). It always opens clean (all time, no filters, no words); from
-   History its own filters and period wait in `keep` and come back with Back. */
+/* ---- the mode: History with a field in its top bar (V.find). It always opens clean (all time, no filters, no words);
+   from History its own filters and period wait in `keep` and come back with Back. */
 let FIND = { from: "home", keep: null, y: 0, steps: [] }, // steps: what each suggestion tapped changed, for Back
   FIND_BACK = false, // findBack is drawing: render() keeps no row of the search list in view
   FIND_T = 0,
@@ -395,7 +403,8 @@ function findBack() {
     FIND_BACK = false;
   }
   scrollTo(0, keep ? keep.y : y);
-  if (keep && keep.a) toAnchor(keep.a, $("#app")); // the rows far down only have an estimated height until they are seen
+  // the rows far down only have an estimated height until they are seen
+  if (keep && keep.a) toAnchor(keep.a, $("#app"));
 }
 /* a word typed: the list under the bar follows after a short pause; the field itself is never redrawn (its caret, focus
    and an IME's composition stay) */
@@ -448,8 +457,8 @@ function findNone() {
       "</button>";
   return h + '<div class="gap"></div>' + histClearBtn();
 }
-/* the typed word (five letters or more) that a few typos (see typoMax) from a word of the entries would find most of them: {i (its place
-   among the words), word, count, q (the field it was made for)} */
+/* the typed word (five letters or more) that a few typos (see typoMax) from a word of the entries would find most of
+   them: {i (its place among the words), word, count, q (the field it was made for)} */
 function findTypo() {
   const toks = HF.q.trim().split(/\s+/),
     terms = toks.map(tk => srFold(tk).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""));
@@ -542,8 +551,8 @@ function findRestore(k) {
   } catch (e) {}
 }
 
-/* ---- suggestions: what the typed words could mean as a filter. Each one is {g (group), title, emb, idx (the typed words
-   that found it), apply() → {f, p} (the filters, and the period if it changes, that tapping sets)}. */
+/* ---- suggestions: what the typed words could mean as a filter. Each one is {g (group), title, emb, idx (the typed
+   words that found it), apply() → {f, p} (the filters, and the period if it changes, that tapping sets)}. */
 let SUGS = [];
 const SUG_MAX = 3, // shown per group
   SUG_LOOK = 8; // counted per group before the three with entries are picked
@@ -558,8 +567,9 @@ function sugTokens(q) {
       return { raw, cmp, f: cmp ? "" : srFold(raw).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "") };
     });
 }
-/* which typed words find a name: each starts one of its words (anywhere in it for scripts without spaces). `whole`: from
-   3 letters on, or the whole name, for the short fixed names (a month, a kind). */
+/* which typed words find a name, by the rule of the entries (srHitFolded): it starts one of its words, or, in scripts
+   without spaces, a word of two characters or more is anywhere in it. `whole`: from 3 letters on, or the whole name,
+   for the short fixed names (a month, a kind). */
 function sugHits(name, toks, whole) {
   const fold = srFold(name),
     ws = srInfo(fold);
@@ -866,8 +876,8 @@ function findPick(i) {
     } catch (e) {}
   }
 }
-/* ---- recent searches: up to five, newest first, kept by the shell (recentLoad / recentSave, bridge.js) when a search is
-   used: a suggestion or an entry tapped, or search mode closed. The same words again (curFold) move to the top, with
+/* ---- recent searches: up to five, newest first, kept by the shell (recentLoad / recentSave, bridge.js) when a search
+   is used: a suggestion or an entry tapped, or search mode closed. The same words again (curFold) move to the top, with
    their newest spelling. */
 const RECENT_MAX = 5,
   RECENT_LEN = 100; // the shell refuses longer ones

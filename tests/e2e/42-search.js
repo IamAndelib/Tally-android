@@ -2174,22 +2174,30 @@ const ok = (c, m) => {
         [q, payee]
       );
     for (const [q, payee, want, why] of [
-      ["京大", "東京大学", false, "Japanese: 京大 sits across two words, not at the start of one"],
+      ["京大", "東京大学", true, "Japanese: two characters match anywhere (京大 across two words)"],
       ["大学", "東京大学", true, "Japanese: 大学 starts the word 大学"],
       ["東京", "東京大学", true, "Japanese: 東京 starts the first word"],
       ["東京大", "東京大学", true, "Japanese: a start of a word, going on into the next"],
-      ["ターバ", "スターバックス", false, "Japanese katakana: ターバ is inside スター"],
+      ["スタンド", "ガソリンスタンド", true, "Japanese katakana: スタンド finds the compound ガソリンスタンド"],
       ["バックス", "スターバックス", true, "Japanese katakana: バックス starts a word"],
-      ["京烤", "北京烤鸭", false, "Chinese: 京烤 starts no word"],
+      ["京烤", "北京烤鸭", true, "Chinese: two characters match anywhere"],
       ["烤鸭", "北京烤鸭", true, "Chinese: 烤鸭 starts a word"],
       ["京", "北京烤鸭", false, "Chinese: 京 alone is inside 北京"],
       ["北京", "北京烤鸭", true, "Chinese: 北京 starts the first word"],
-      ["แฟ", "ร้านกาแฟ", false, "Thai: แฟ is inside กาแฟ"],
+      ["แฟ", "ร้านกาแฟ", true, "Thai: two characters match anywhere"],
       ["กาแฟ", "ร้านกาแฟ", true, "Thai: กาแฟ starts a word"],
       ["ร้าน", "ร้านกาแฟ", true, "Thai: ร้าน starts the first word"],
-      ["벅스", "스타벅스에서 커피", false, "Korean: 벅스 is inside a word"],
+      ["벅스", "스타벅스에서 커피", true, "Korean: two characters match anywhere"],
       ["스타", "스타벅스에서 커피", true, "Korean: 스타 starts a word"],
       ["커피", "스타벅스에서 커피", true, "Korean: a word after a space"],
+      ["都", "京都大学", false, "Chinese: one character mid-word does not match"],
+      ["大", "京都大学", true, "Chinese: one character at the start of a word matches"],
+      ["ス", "ガソリンスタンド", false, "Japanese: one character inside a word does not match"],
+      ["ガ", "ガソリンスタンド", true, "Japanese: one character at a word start matches"],
+      ["ฟ", "ร้านกาแฟ", false, "Thai: one character inside a word does not match"],
+      ["ก", "ร้านกาแฟ", true, "Thai: one character at a word start matches"],
+      ["벅", "스타벅스에서 커피", false, "Korean: one character inside a word does not match"],
+      ["스", "스타벅스에서 커피", true, "Korean: one character at a word start matches"],
       ["abc", "東京abc", true, "a Latin word right after Chinese characters starts a word"],
       ["ramen", "Ramen 東京", true, "Latin words beside Chinese characters"],
     ]) {
@@ -2207,9 +2215,10 @@ const ok = (c, m) => {
       return [
         m("大学", "東京大学"),
         m("京大", "東京大学"),
+        m("都", "京都大学"),
         m("東京大", "東京大学"),
         m("กาแฟ", "ร้านกาแฟ"),
-        m("แฟ", "ร้านกาแฟ"),
+        m("ฟ", "ร้านกาแฟ"),
         m("烤鸭", "北京烤鸭 & 酒"),
         m("ガソリン", "ｶﾞｿﾘﾝ 24h"),
         m("abc", "東京abc"),
@@ -2217,10 +2226,11 @@ const ok = (c, m) => {
     });
     [
       '東京<mark class="hl">大学</mark>',
-      "東京大学",
+      '東<mark class="hl">京大</mark>学',
+      "京都大学",
       '<mark class="hl">東京大</mark>学',
       'ร้าน<mark class="hl">กาแฟ</mark>',
-      "ร้านกาแฟ",
+      "ร้านกาแฟ", // one character inside a word: no mark
       '北京<mark class="hl">烤鸭</mark> &amp; 酒',
       '<mark class="hl">ｶﾞｿﾘﾝ</mark> 24h',
       '東京<mark class="hl">abc</mark>',
@@ -2232,14 +2242,20 @@ const ok = (c, m) => {
       saveSeq++;
       try {
         const f = (q, payee) => srEntryHit({ id: "y" + payee, payee, account: "b" }, srTerms(q), false);
-        return [f("京大", "東京大学"), f("ターバ", "スターバックス"), f("大学", "東京大学"), f("cafe", "Café")];
+        return [
+          f("京大", "東京大学"),
+          f("ターバ", "スターバックス"),
+          f("大学", "東京大学"),
+          f("cafe", "Café"),
+          f("都", "京都大学"),
+        ];
       } finally {
         Intl.Segmenter = seg;
         saveSeq++;
       }
     });
     ok(
-      JSON.stringify(r8) === "[true,true,true,true]",
+      JSON.stringify(r8) === "[true,true,true,true,true]",
       "without Intl.Segmenter these scripts match anywhere again, as before: " + r8
     );
 

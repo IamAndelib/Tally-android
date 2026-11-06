@@ -28,10 +28,12 @@ Every typed word must be found in the entry (the same rule as today's search):
 
 - it starts a word of the entry's payee, note, account (either side of a transfer), category name or loan person;
   capitals, accents and width ignored (`curFold`: Turkish İ / ı fold to i, ß to ss, full-width letters and half-width
-  katakana to the usual forms), and a typed word must start a word in every script: the word breaks of Chinese,
-  Japanese and Thai (and Lao, Khmer, Myanmar) come from `Intl.Segmenter` in the phone's number and date locale, once
-  per entry in the folded-text cache, so a short word does not match inside an unrelated word (Chrome 87+, Tally's
-  WebView floor; where it is missing, a word may start anywhere in those scripts, as before);
+  katakana to the usual forms), and a typed word must start a word: in Chinese, Japanese, Korean and Thai (and Lao,
+  Khmer, Myanmar), whose words are not separated by spaces, a word of two characters or more may match anywhere in the
+  text, so compounds are found ("スタンド" finds "ガソリンスタンド"), while a single character must start a word, as
+  `Intl.Segmenter` finds them in the phone's number and date locale (once per entry in the folded-text cache; Chrome
+  87+, Tally's WebView floor; where it is missing, a single character matches anywhere too). Latin and other scripts
+  with spaces: word starts only;
 - a number matches an amount: `45` means 45.00 to 45.99, `45.50` exactly that, read with the phone's separators
   (`evalAmt`, `NUMSEP`);
 - a fee's words and amount find its transfer or payment (a fee is never a row of its own);
