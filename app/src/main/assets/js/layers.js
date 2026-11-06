@@ -123,6 +123,68 @@ function askDialog(title, text, okText, onOk, o) {
         esc(okText) +
         "</button></div></div></div>");
 }
+/* A question with stacked, full-width answers (the backup folder, an unreadable backup, restoring a file, Delete all
+   data): choiceDialog(title, text, buttons, o). Each button is {role, label, run, confirm}; its role sets how it looks:
+     keep    green: the safe answer that keeps data (Restore, Save backup)
+     destroy red: the answer that loses data (Overwrite, Delete)
+     main    filled in the accent colour: the plain next step (Choose another folder)
+     alt     tonal: a side road (Choose another file)
+     out     outlined: the way out (Cancel, Go back); with no `run` it only closes
+   `run` happens after the dialog has closed. With `confirm: {title, text, ok}` the button first asks again: a second
+   step replaces this one in place, with Cancel and the button itself (named `ok`, else its label) side by side.
+   o.row puts two buttons side by side, as that step does.
+   Back, Escape and a tap outside close the whole dialog from any step: Back on a confirm step is the same as its Cancel
+   (nothing was done, so there is nothing to step back to), so one Back always gets out of a dialog about data.
+   Focus goes into each step through layerFocus() (the redraw drops the pressed button, so it moves to the dialog) and
+   back to where it was when the dialog closes. */
+let CHOICE = null;
+const CHOICE_CLS = { keep: "cd-keep", destroy: "cd-destroy", main: "cd-main", alt: "cd-alt", out: "cd-out" };
+function choiceDialog(title, text, buttons, o) {
+  CHOICE = buttons;
+  $("#pop").innerHTML =
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="cd-t"' +
+    (text ? ' aria-describedby="cd-x"' : "") +
+    '><h3 class="dlg-t" id="cd-t">' +
+    esc(title) +
+    "</h3>" +
+    (text ? '<p class="dlg-x" id="cd-x">' + esc(text) + "</p>" : "") +
+    '<div class="cd-btns' +
+    (o && o.row ? " cd-row" : "") +
+    '">' +
+    buttons
+      .map(
+        (b, i) =>
+          '<button class="btn ' +
+          CHOICE_CLS[b.role] +
+          '" data-act="cd" data-v="' +
+          i +
+          '">' +
+          esc(b.label) +
+          "</button>"
+      )
+      .join("") +
+    "</div></div></div>";
+}
+function choiceTap(i) {
+  const b = CHOICE && CHOICE[i];
+  if (!b) return;
+  const c = b.confirm;
+  if (!c) {
+    closePop();
+    if (b.run) b.run();
+    return;
+  }
+  choiceDialog(
+    c.title,
+    c.text,
+    [
+      { role: "out", label: T("common.cancel") },
+      { role: b.role, label: c.ok || b.label, run: b.run },
+    ],
+    { row: true }
+  );
+  sheetSwap = true; // the second tap of a double tap must not answer the new question
+}
 const miniDialog = (label, body, okAct, okText) => {
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="' +
@@ -462,6 +524,7 @@ const closePop = () => {
   DP = null;
   ASK = null;
   ASK_ALT = null;
+  CHOICE = null;
 };
 /* a sheet in its layer (#sheet, or #sheet2 for pickers opened from inside one): handle, title, ✕ and body */
 function showSheet(layer, cls, bgAct, closeAct, title, body) {

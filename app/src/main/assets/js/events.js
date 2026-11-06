@@ -208,6 +208,9 @@ document.addEventListener("click", ev => {
       if (f) f();
       break;
     }
+    case "cd":
+      choiceTap(+v);
+      break;
     case "ask-alt": {
       const f = ASK_ALT;
       closePop();

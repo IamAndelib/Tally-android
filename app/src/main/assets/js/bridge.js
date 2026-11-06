@@ -339,28 +339,37 @@ function onFolderPicked(err) {
 function folderCheck() {
   readAutoBackup(r => {
     if (r.none) return backupOn();
-    // the shell already writes to the new folder on schedule: until Restore it or Replace it, auto backup is off
+    // the shell already writes to the new folder on schedule: until Restore or Overwrite, auto backup is off
     if (S.settings.backup.on) {
       S.settings.backup.on = false;
       save();
       syncBackup();
       if (V.screen === "settings") render();
     }
-    if (typeof r.text === "string" && backupData(r.text))
-      return askDialog(
-        T("backup.found.title"),
-        T("backup.found.body"),
-        T("backup.found.restore"),
-        () => restoreText(r.text, null, backupOn),
-        { alt: [T("backup.found.replace"), backupOn], cancel: T("common.notNow") }
-      );
-    askDialog(
-      T("backup.badFile.title"),
-      sentences(r.error ? nativeErr(r.error) : T("backup.badFile.cantRead"), T("backup.badFile.replaceQ")),
-      T("backup.found.replace"),
-      backupOn,
-      { cancel: T("common.notNow") }
-    );
+    const over = { role: "destroy", label: T("backup.overwrite"), run: backupOn };
+    const plan = typeof r.text === "string" ? restorePlan(r.text) : { err: 1 };
+    if (!plan.err)
+      return choiceDialog(T("backup.found.title"), T("backup.found.body"), [
+        {
+          role: "keep",
+          label: T("restore.ok"),
+          run: () => plan.run(backupOn),
+          confirm: { title: T("restore.q"), text: sentences(T("backup.found.restoreBody"), ...plan.notes) },
+        },
+        {
+          ...over,
+          confirm: { title: T("backup.found.overwriteQ"), text: T("backup.found.overwriteBody") },
+        },
+        { role: "out", label: T("common.cancel") },
+      ]);
+    choiceDialog(T("backup.badFile.title"), r.error ? nativeErr(r.error) : T("backup.badFile.cantRead"), [
+      { role: "main", label: T("backup.badFile.other"), run: pickBackupFolder },
+      {
+        ...over,
+        confirm: { title: T("backup.found.overwriteQ"), text: T("backup.badFile.overwriteBody") },
+      },
+      { role: "out", label: T("common.cancel") },
+    ]);
   });
 }
 /* Answers from the shell's own threads (a slow folder can't freeze the page), each matched to its request by number,

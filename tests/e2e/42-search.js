@@ -1482,7 +1482,7 @@ const ok = (c, m) => {
       window.__recSets.length = 0;
       wipeConfirm();
     });
-    await p5.click('[data-act="ask-ok"]');
+    await p5.click(".cd-destroy");
     r = await p5.evaluate(() => ({ rec: window.__rec, last: window.__recSets[window.__recSets.length - 1] }));
     ok(r.rec === "[]" && r.last === "[]", 'Erase everything calls recentSet("[]"): ' + JSON.stringify(r));
     await c5.close();

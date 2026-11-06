@@ -3046,6 +3046,49 @@ body.lock {
   background: var(--primary);
   color: var(--on-primary);
 }
+/* choiceDialog(): stacked full-width answers, or two side by side (a confirm step); each role has its own look */
+.cd-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.cd-btns.cd-row {
+  flex-direction: row;
+}
+.cd-btns .btn {
+  flex: 0 0 auto;
+  min-height: 48px; /* grows with large text rather than cutting a word */
+  height: auto;
+  padding: 10px 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cd-btns.cd-row .btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.btn.cd-keep {
+  background: var(--got);
+  color: var(--surface);
+}
+.btn.cd-destroy {
+  background: var(--spent);
+  color: var(--surface);
+}
+.btn.cd-main {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn.cd-alt {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.btn.cd-out {
+  background: none;
+  border: 1px solid var(--outline);
+  color: var(--on-surface);
+}
 .dlg-act {
   display: flex;
   justify-content: space-between;

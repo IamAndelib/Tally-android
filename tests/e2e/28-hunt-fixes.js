@@ -225,7 +225,7 @@ const ok = (c, m) => {
   await seed({ txns: [{ id: "e1", ts: 1, date: t, type: "expense", amount: 5, account: "a", cat: "food", note: "" }] });
   await page.evaluate(() => wipeAll());
   await settle();
-  await page.click('#pop [data-act="ask-ok"]'); // Save backup
+  await page.click("#pop .cd-keep"); // Save backup
   await settle();
   await page.evaluate(() => window.tallySaved(false));
   await settle();
@@ -254,7 +254,7 @@ const ok = (c, m) => {
     /2 accounts and 2 entries/.test(rtext) && /1 item .*left out/.test(rtext) && /newer version/.test(rtext),
     "Restore says what it will really restore: " + rtext.replace(/\s+/g, " ")
   );
-  await page.click('#pop [data-act="ask-ok"]');
+  await page.click("#pop .cd-keep");
   await settle();
   ok((await state()).accounts.length === 2, "restored");
   await page.click('#snack [data-act="undo"]');
@@ -683,11 +683,12 @@ const ok = (c, m) => {
       !(await bp.evaluate(() => S.settings.backup.on)),
     "a picked folder that holds a backup asks before writing over it"
   );
-  await bp.click('#pop [data-act="ask-alt"]'); // Replace it
-  ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns auto backup on");
+  await bp.click("#pop .cd-destroy"); // Overwrite
+  await bp.click("#pop .cd-destroy"); // and its second question
+  ok(await bp.evaluate(() => S.settings.backup.on), "Overwrite turns auto backup on");
   // Change to another folder that holds a backup, auto backup on: nothing is written there unless the answer says so
   await bp.evaluate(() => onFolderPicked(""));
-  await bp.waitForSelector('#pop [data-act="ask-alt"]'); // the folder is read on the shell's thread
+  await bp.waitForSelector("#pop .cd-destroy"); // the folder is read on the shell's thread
   ok(
     (await bp.textContent("#pop")).includes("already has a Tally backup") &&
       !(await bp.evaluate(() => S.settings.backup.on)),
@@ -696,10 +697,11 @@ const ok = (c, m) => {
   await bp.evaluate(() => closePop()); // Not now
   ok(!(await bp.evaluate(() => S.settings.backup.on)), "Not now leaves it off: the backup there is never written over");
   await bp.evaluate(() => onFolderPicked(""));
-  await bp.waitForSelector('#pop [data-act="ask-alt"]');
-  // Replace it, as a script click: a second tap where a tap just closed a dialog is dropped on purpose
-  await bp.evaluate(() => $('#pop [data-act="ask-alt"]').click());
-  ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns it back on");
+  await bp.waitForSelector("#pop .cd-destroy");
+  // Overwrite, as a script click: a second tap where a tap just closed a dialog is dropped on purpose
+  await bp.evaluate(() => $("#pop .cd-destroy").click());
+  await bp.evaluate(() => $("#pop .cd-destroy").click()); // its second question
+  ok(await bp.evaluate(() => S.settings.backup.on), "Overwrite turns it back on");
   await bp.evaluate(() => {
     sessionStorage.setItem("cfg", JSON.stringify({ status: { folder: "", usable: false, last: 0, error: "" } }));
     V.screen = "settings";
@@ -749,16 +751,16 @@ const ok = (c, m) => {
   await bp.evaluate(() => onFolderPicked(""));
   await bp.waitForTimeout(100);
   ok(
-    (await bpop()).includes("Couldn't read this folder's backup") && !(await bp.evaluate(() => S.settings.backup.on)),
+    (await bpop()).includes("can't read the backup in this folder") && !(await bp.evaluate(() => S.settings.backup.on)),
     "a backup there that can't be read is asked about, not written over"
   );
   await bp.evaluate(() => closePop());
   await bset({ status: { folder: "Docs", usable: true, last: 0, error: "" }, auto: { text: other, when: 0 } });
   await bp.evaluate(() => onFolderPicked(""));
   await bp.waitForTimeout(100);
-  await bp.click('#pop [data-act="ask-ok"]'); // Restore it
+  await bp.click("#pop .cd-keep"); // Restore it
   await bp.waitForTimeout(100);
-  await bp.click('#pop [data-act="ask-ok"]'); // Restore
+  await bp.click("#pop .cd-keep"); // Restore
   await bp.waitForTimeout(100);
   const restored = await bp.evaluate(() => [S.accounts.map(a => a.name).join(), S.settings.backup.on]);
   await bp.click('#snack [data-act="undo"]');
@@ -796,7 +798,7 @@ const ok = (c, m) => {
     window.__calls = [];
     wipeAll();
   });
-  await bp.click('#pop [data-act="ask-ok"]'); // Save backup: Back up now
+  await bp.click("#pop .cd-keep"); // Save backup: Back up now
   await bp.evaluate(() => {
     V.screen = "home";
     render();
@@ -816,7 +818,7 @@ const ok = (c, m) => {
     backupNow();
     wipeAll();
   });
-  await bp.click('#pop [data-act="ask-ok"]');
+  await bp.click("#pop .cd-keep");
   const ids = await bnow();
   await bp.evaluate(id => window.tallyBackedUp("", id), ids[0]);
   await bp.waitForTimeout(100);

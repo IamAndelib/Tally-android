@@ -287,9 +287,9 @@ const ok = (c, m) => {
   await page.evaluate(() => wipeAll());
   await settle();
   ok(
-    (await page.textContent('#pop [data-act="ask-ok"]')).trim() === "Save backup" &&
-      (await page.textContent('#pop [data-act="ask-alt"]')).trim() === "Skip",
-    "Save backup / Skip"
+    (await page.textContent("#pop .cd-keep")).trim() === "Save backup" &&
+      (await page.textContent("#pop .cd-destroy")).trim() === "Delete without a backup",
+    "Save backup / Delete without a backup"
   );
   await page.evaluate(() => closePop());
 

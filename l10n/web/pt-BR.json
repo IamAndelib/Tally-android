@@ -34,9 +34,7 @@
     "previous": "Anterior",
     "next": "Próximo",
     "change": "Mudar",
-    "done": "Pronto",
-    "yes": "Sim",
-    "no": "Não"
+    "done": "Pronto"
   },
   "day": {
     "today": "Hoje",
@@ -132,14 +130,16 @@
     "on": "Backup automático ativo · todo dia às {{time}}",
     "found": {
       "title": "Esta pasta já tem um backup do Tally",
-      "body": "Restaurar neste celular ou substituir pelos dados deste celular daqui em diante?",
-      "restore": "Restaurar",
-      "replace": "Substituir"
+      "body": "Restaurar neste celular ou sobrescrever com os dados deste celular?",
+      "restoreBody": "Os dados deste celular serão substituídos pelos do backup.",
+      "overwriteQ": "Sobrescrever este backup?",
+      "overwriteBody": "Os dados deste backup serão perdidos, substituídos pelos deste celular."
     },
     "badFile": {
-      "title": "Não foi possível ler o backup desta pasta",
-      "cantRead": "Não é possível ler o arquivo de backup.",
-      "replaceQ": "Substituir pelos dados deste celular daqui em diante?"
+      "title": "O Tally não consegue ler o backup desta pasta",
+      "cantRead": "Pode estar danificado ou ter sido feito por uma versão mais nova do Tally.",
+      "other": "Escolher outra pasta",
+      "overwriteBody": "Não dá para ler, então tudo o que ele contém será perdido."
     },
     "unavailable": "O backup não está disponível aqui",
     "running": "Fazendo backup…",
@@ -153,7 +153,8 @@
       "title": "Proteger seus dados?",
       "body": "Ative o backup diário: o Tally guarda uma cópia em uma pasta que você escolher, para nada se perder junto com o celular.",
       "ok": "Ativar"
-    }
+    },
+    "overwrite": "Sobrescrever"
   },
   "data": {
     "saveFailed": {
@@ -810,8 +811,8 @@
     "entries_other": "{{count}} lançamentos",
     "autoQ": "Restaurar {{file}}?",
     "q": "Restaurar este backup?",
-    "body": "Substitui tudo neste celular por {{accounts}} e {{entries}}.",
-    "bodySaved": "Substitui tudo neste celular por {{accounts}} e {{entries}} · salvo: {{when}}.",
+    "body": "Os dados deste celular serão substituídos pelos do backup: {{accounts}} e {{entries}}.",
+    "bodySaved": "Os dados deste celular serão substituídos pelos do backup: {{accounts}} e {{entries}}, salvo: {{when}}.",
     "lost_one": "{{count}} item não pode ser lido e ficará de fora.",
     "lost_many": "{{count}} itens não podem ser lidos e ficarão de fora.",
     "lost_other": "{{count}} itens não podem ser lidos e ficarão de fora.",
@@ -840,12 +841,12 @@
     },
     "none": {
       "title": "Nenhum backup ainda",
-      "body": "Salvar um backup dos seus dados antes de excluí-los?"
+      "body": "Salvar um backup antes de excluir tudo?"
     },
-    "skip": "Pular",
     "title": "Excluir todos os dados?",
-    "body": "Todas as contas e lançamentos deste celular. Não dá para desfazer.",
-    "done": "Todos os dados foram excluídos"
+    "body": "Todas as contas e lançamentos deste celular serão perdidos.",
+    "done": "Todos os dados foram excluídos",
+    "noBackup": "Excluir sem backup"
   },
   "native": {
     "err": {

@@ -310,8 +310,8 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="close"]');
   await tap('[data-act="go"][data-v="settings"]');
   await tap('[data-act="wipe"]');
-  await tap('#pop [data-act="ask-alt"]'); // "No backup yet" → No (don't save one)
-  await tap('#pop [data-act="pd-close"]'); // "Delete all data?" → No
+  await tap("#pop .cd-destroy"); // "No backup yet" → No (don't save one)
+  await tap("#pop .cd-out"); // "Delete all data?" → No
   ok((await state()).accounts.length === 3, "wipe: No keeps data");
   const backup = JSON.stringify(
     Object.assign({}, seed, { accounts: seed.accounts.slice(0, 2), txns: seed.txns.filter(t => t.account !== "c") })
@@ -323,10 +323,10 @@ const ok = (c, m) => {
   });
   await page.waitForTimeout(200);
   ok(
-    (await page.isVisible('#pop [data-act="ask-ok"]')) && (await txt("#pop")).includes("2 accounts"),
+    (await page.isVisible("#pop .cd-keep")) && (await txt("#pop")).includes("2 accounts"),
     "restore asks with a Material dialog"
   );
-  await tap('#pop [data-act="ask-ok"]');
+  await tap("#pop .cd-keep");
   ok((await state()).accounts.length === 2, "restore after OK");
   await page.evaluate(s => localStorage.setItem("tally:v1", JSON.stringify(s)), seed);
   await page.reload();

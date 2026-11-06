@@ -321,6 +321,11 @@ const ok = (c, m) => {
     ["History, an opened row", () => (openHistory(), rowToggle($('#app .tx[data-v="e"]'), "e"))],
     ["a date picker", () => (txSheet(null, "expense", "food"), $("#sheet .datefld").click())],
     ["the period picker", () => ((V.screen = "home"), render(), $(".plabel").click())],
+    ["Delete all data", () => ((V.screen = "settings"), render(), wipeAll())],
+    [
+      "Delete all data, final step",
+      () => ((V.screen = "settings"), render(), wipeAll(), $("#pop .cd-destroy").click()),
+    ],
   ];
   for (const [name, open] of views) {
     await sp.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
@@ -380,6 +385,47 @@ const ok = (c, m) => {
     ok(m.weeks === 6 && m.tall >= 44 && m.fits, "sideways, " + name + ": six weeks fit, days " + m.tall + "px tall");
   }
   await side.close();
+
+  // ---- 8. the stacked-button dialogs: named and described for TalkBack, focus inside, back where it was
+  await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+  await page.evaluate(() => ((V.screen = "settings"), render()));
+  await settle();
+  await page.focus('[data-act="wipe"]');
+  await page.evaluate(() => wipeAll());
+  await settle();
+  const cdA = await page.evaluate(() => {
+    const d = document.querySelector("#pop .dialog"),
+      name = document.getElementById(d.getAttribute("aria-labelledby")),
+      desc = document.getElementById(d.getAttribute("aria-describedby"));
+    return {
+      role: d.getAttribute("role"),
+      name: name && name.textContent,
+      desc: desc && desc.textContent,
+      focus: d.contains(document.activeElement) || d === document.activeElement,
+      behind: $("#app").inert && $("#app").getAttribute("aria-hidden") === "true",
+      labelled: [...d.querySelectorAll("button")].every(b => b.textContent.trim()),
+    };
+  });
+  ok(
+    cdA.role === "alertdialog" && cdA.name && cdA.desc && cdA.focus && cdA.behind && cdA.labelled,
+    "a stacked-button dialog is an alertdialog with a name and a description, focused, the page behind hidden " +
+      JSON.stringify(cdA)
+  );
+  await page.click("#pop .cd-destroy");
+  await settle();
+  ok(
+    await page.evaluate(() => {
+      const d = document.querySelector("#pop .dialog");
+      return !!d && (d.contains(document.activeElement) || d === document.activeElement);
+    }),
+    "its second step takes the focus too"
+  );
+  await page.keyboard.press("Escape");
+  await settle();
+  ok(
+    await page.evaluate(() => !$("#pop").innerHTML && document.activeElement.dataset.act === "wipe"),
+    "Escape closes both steps and the focus is back on Delete all data"
+  );
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

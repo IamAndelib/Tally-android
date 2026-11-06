@@ -34,9 +34,7 @@
     "previous": "Anterior",
     "next": "Siguiente",
     "change": "Cambiar",
-    "done": "Listo",
-    "yes": "Sí",
-    "no": "No"
+    "done": "Listo"
   },
   "day": {
     "today": "Hoy",
@@ -132,14 +130,16 @@
     "on": "Copia automática activada · cada día a las {{time}}",
     "found": {
       "title": "Esta carpeta ya tiene una copia de Tally",
-      "body": "¿Restaurarla en este teléfono, o reemplazarla con los datos de este teléfono a partir de ahora?",
-      "restore": "Restaurarla",
-      "replace": "Reemplazarla"
+      "body": "¿Restaurarla en este teléfono, o sobrescribirla con los datos de este teléfono?",
+      "restoreBody": "Los datos de este teléfono se reemplazarán por los de la copia.",
+      "overwriteQ": "¿Sobrescribir esta copia?",
+      "overwriteBody": "Los datos de esta copia se perderán, reemplazados por los de este teléfono."
     },
     "badFile": {
-      "title": "No se pudo leer la copia de esta carpeta",
-      "cantRead": "No se puede leer el archivo de copia.",
-      "replaceQ": "¿Reemplazarla con los datos de este teléfono a partir de ahora?"
+      "title": "Tally no puede leer la copia de esta carpeta",
+      "cantRead": "Puede estar dañada o haberse hecho con una versión más reciente de Tally.",
+      "other": "Elegir otra carpeta",
+      "overwriteBody": "No se puede leer, así que se perderá lo que contenga."
     },
     "unavailable": "Las copias no están disponibles aquí",
     "running": "Haciendo copia…",
@@ -153,7 +153,8 @@
       "title": "¿Proteger tus datos?",
       "body": "Activa la copia diaria: Tally guarda una copia en una carpeta que elijas, para no perder nada si pierdes el teléfono.",
       "ok": "Activar"
-    }
+    },
+    "overwrite": "Sobrescribir"
   },
   "data": {
     "saveFailed": {
@@ -810,8 +811,8 @@
     "entries_other": "{{count}} movimientos",
     "autoQ": "¿Restaurar {{file}}?",
     "q": "¿Restaurar esta copia?",
-    "body": "Reemplaza todo lo que hay en este teléfono por {{accounts}} y {{entries}}.",
-    "bodySaved": "Reemplaza todo lo que hay en este teléfono por {{accounts}} y {{entries}} · guardada: {{when}}.",
+    "body": "Los datos de este teléfono se reemplazarán por los de la copia: {{accounts}} y {{entries}}.",
+    "bodySaved": "Los datos de este teléfono se reemplazarán por los de la copia: {{accounts}} y {{entries}}, guardada: {{when}}.",
     "lost_one": "{{count}} elemento no se puede leer y se dejará fuera.",
     "lost_many": "{{count}} elementos no se pueden leer y se dejarán fuera.",
     "lost_other": "{{count}} elementos no se pueden leer y se dejarán fuera.",
@@ -840,12 +841,12 @@
     },
     "none": {
       "title": "Aún no hay ninguna copia",
-      "body": "¿Guardar una copia de tus datos antes de eliminarlos?"
+      "body": "¿Guardar una copia antes de eliminarlo todo?"
     },
-    "skip": "Omitir",
     "title": "¿Eliminar todos los datos?",
-    "body": "Todas las cuentas y movimientos de este teléfono. No se puede deshacer.",
-    "done": "Se eliminaron todos los datos"
+    "body": "Se perderán todas las cuentas y movimientos de este teléfono.",
+    "done": "Se eliminaron todos los datos",
+    "noBackup": "Eliminar sin copia"
   },
   "native": {
     "err": {

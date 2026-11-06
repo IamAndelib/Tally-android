@@ -518,9 +518,9 @@ const stub = () => {
     (await page.textContent("#pop")).includes("No backup yet"),
     "the auto backup never wrote: a backup is offered first"
   );
-  await act("ask-alt"); // No
+  await page.click("#pop .cd-destroy"); // No
   await settle();
-  await act("ask-ok");
+  await page.click("#pop .cd-destroy");
   await settle();
   S = await state();
   ok(
@@ -634,7 +634,7 @@ const stub = () => {
   });
   await act("wipe");
   await settle();
-  await act("ask-ok");
+  await page.click("#pop .cd-keep");
   await settle();
   ok(
     (await calls("now")).length === 1 &&
@@ -645,7 +645,7 @@ const stub = () => {
   await page.evaluate(() => window.tallySaved(true));
   await settle();
   ok((await page.textContent("#pop")).includes("Delete all data?"), "saved: then the final Yes / No");
-  await act("pd-close");
+  await page.click("#pop .cd-out");
   await page.evaluate(() => {
     window.__cfg.nowErr = "";
     window.__calls = [];
@@ -656,13 +656,13 @@ const stub = () => {
     (await page.textContent("#pop")).includes("may not have your latest entries"),
     "a backup exists: still offered first, since it may miss the latest entries"
   );
-  await act("ask-ok"); // OK: auto backup is on, so it backs up into its folder now
+  await page.click("#pop .cd-keep"); // OK: auto backup is on, so it backs up into its folder now
   await settle();
   ok(
     (await calls("now")).length === 1 && (await page.textContent("#pop")).includes("Delete all data?"),
     "OK with auto backup on: Back up now, then the final Yes / No"
   );
-  await act("ask-ok");
+  await page.click("#pop .cd-destroy");
   await settle();
   await act("restore");
   await settle();
@@ -674,7 +674,7 @@ const stub = () => {
       dlg.includes("Choose another file"),
     "Restore offers the auto backup with its counts and date: " + dlg
   );
-  await act("ask-ok");
+  await page.click("#pop .cd-keep");
   await settle();
   S = await state();
   ok(
@@ -684,7 +684,7 @@ const stub = () => {
   ok(S.settings.backup.on === true, "restoring keeps this phone's auto backup on (the file's own settings had it off)");
   await act("restore");
   await settle();
-  await act("ask-alt");
+  await page.click("#pop .cd-alt");
   ok((await calls("pickRestore")).length === 1, "Choose another file opens the file picker");
   // the picked file's text comes back from the shell
   const other = base();
@@ -692,7 +692,7 @@ const stub = () => {
   await page.evaluate(t => window.tallyRestore(t, null), JSON.stringify(other));
   await settle();
   ok((await page.textContent("#pop")).includes("Restore this backup?"), "a picked file asks first");
-  await act("ask-ok");
+  await page.click("#pop .cd-keep");
   await settle();
   ok((await state()).accounts.length === 1, "and restores it");
   await page.evaluate(() => window.tallyRestore(null, null));
@@ -841,10 +841,10 @@ const stub = () => {
   await act("wipe");
   await settle();
   ok(
-    (await page.textContent("#pop")).includes("Save a backup of your data before deleting it?"),
+    (await page.textContent("#pop")).includes("Save a backup before deleting everything?"),
     "no backup: the first question"
   );
-  await act("ask-ok"); // OK
+  await page.click("#pop .cd-keep"); // OK
   await settle();
   ok((await calls("save")).length === 1 && (await calls("save"))[0][1] === "json", "OK saves a backup file");
   await page.evaluate(() => window.tallySaved(true));
@@ -854,7 +854,7 @@ const stub = () => {
       (await page.evaluate(() => S.settings.savedBackup > 0)),
     "saved: remembered, then the final Yes / No"
   );
-  await act("pd-close"); // No
+  await page.click("#pop .cd-out"); // No
   await settle();
   ok((await state()).accounts.length === 2, "No: nothing deleted");
   await act("wipe");
@@ -863,10 +863,10 @@ const stub = () => {
     (await page.textContent("#pop")).includes("Back up first?"),
     "a backup was saved here: the backup offer still comes first"
   );
-  await act("ask-alt"); // No
+  await page.click("#pop .cd-destroy"); // No
   await settle();
   ok((await page.textContent("#pop")).includes("Delete all data?"), "No: then the final Yes / No");
-  await act("pd-close");
+  await page.click("#pop .cd-out");
 
   // old page-side flags from an earlier version are dropped
   await seed(
@@ -897,6 +897,324 @@ const stub = () => {
   await page.evaluate(() => window.tallyPause());
   await settle(1000);
   ok((await calls("data")).length === 1, "and nothing more when nothing is waiting");
+
+  // ---- 10. the four stacked-button dialogs (choiceDialog): backup folder, unreadable backup, restoring, Delete all data
+  page = await newPage();
+  await page.goto(appUrl);
+  await seed(base());
+  await act("go", "settings");
+  await settle();
+  const other10 = Object.assign(base(), { accounts: [bank], txns: [], loans: [] });
+  const cdShape = () =>
+    page.evaluate(() => {
+      const d = document.querySelector("#pop .dialog");
+      if (!d) return null;
+      const lab = document.getElementById(d.getAttribute("aria-labelledby") || "-"),
+        desc = document.getElementById(d.getAttribute("aria-describedby") || "-");
+      return {
+        role: d.getAttribute("role"),
+        modal: d.getAttribute("aria-modal"),
+        title: lab ? lab.textContent : null,
+        text: desc ? desc.textContent : "",
+        btns: [...d.querySelectorAll(".btn")].map(b => [b.className.replace("btn ", ""), b.textContent]),
+        tall: [...d.querySelectorAll(".btn")].every(b => b.offsetHeight >= 48),
+        row: !!d.querySelector(".cd-row"),
+        inside: d === document.activeElement || d.contains(document.activeElement),
+        behind: document.getElementById("app").inert,
+      };
+    });
+  const shape = async (title, text, btns, row, what) => {
+    const d = await cdShape();
+    ok(
+      d &&
+        d.role === "alertdialog" &&
+        d.modal === "true" &&
+        d.title === title &&
+        d.text === text &&
+        JSON.stringify(d.btns) === JSON.stringify(btns) &&
+        d.tall &&
+        d.row === row &&
+        d.inside &&
+        d.behind,
+      what + ": " + JSON.stringify(d)
+    );
+  };
+  const popEmpty = () => page.evaluate(() => !$("#pop").innerHTML);
+  const focusOn = sel => page.evaluate(sel => document.activeElement === document.querySelector(sel), sel);
+  const goodFile = JSON.stringify(other10);
+  const folder = async text => {
+    await page.evaluate(t => {
+      window.__cfg.auto = { text: t, when: 0 };
+      S.settings.backup.on = false;
+      onFolderPicked("");
+    }, text);
+    await settle();
+  };
+  /* a tap, then a pause: a second tap right where the first was is dropped on purpose (a double tap) */
+  const cd = async r => {
+    await page.click("#pop .cd-" + r);
+    await settle(350);
+  };
+  const FOUND = [
+    "This folder already has a Tally backup",
+    "Restore it on this phone, or overwrite it with this phone's data?",
+  ];
+
+  // the backup folder: Restore green / Overwrite red / Cancel, each of the first two asks again
+  await page.focus('[data-act="wipe"]');
+  await folder(goodFile);
+  await shape(
+    FOUND[0],
+    FOUND[1],
+    [
+      ["cd-keep", "Restore"],
+      ["cd-destroy", "Overwrite"],
+      ["cd-out", "Cancel"],
+    ],
+    false,
+    "a folder holding a backup"
+  );
+  await cd("keep");
+  await shape(
+    "Restore this backup?",
+    "This phone's data will be replaced by the backup's.",
+    [
+      ["cd-out", "Cancel"],
+      ["cd-keep", "Restore"],
+    ],
+    true,
+    "Restore asks again"
+  );
+  ok((await state()).accounts.length === 2, "nothing is restored before the second answer");
+  await cd("out");
+  ok(
+    (await popEmpty()) && (await focusOn('[data-act="wipe"]')) && (await state()).accounts.length === 2,
+    "Cancel in the second step closes everything, changes nothing and gives the focus back"
+  );
+  await folder(goodFile);
+  await cd("destroy");
+  await shape(
+    "Overwrite this backup?",
+    "This backup's data will be lost, replaced by this phone's.",
+    [
+      ["cd-out", "Cancel"],
+      ["cd-destroy", "Overwrite"],
+    ],
+    true,
+    "Overwrite asks again"
+  );
+  ok(
+    (await page.evaluate(() => goBack())) === true && (await popEmpty()) && (await focusOn('[data-act="wipe"]')),
+    "Back on a confirm step closes everything (like its Cancel) and the focus returns"
+  );
+  ok(!(await page.evaluate(() => S.settings.backup.on)), "…and the folder stays unused: auto backup is still off");
+  await folder(goodFile);
+  await cd("destroy");
+  await page.keyboard.press("Escape");
+  ok(await popEmpty(), "Escape closes it from a confirm step too");
+  await folder(goodFile);
+  await cd("out");
+  ok((await popEmpty()) && !(await page.evaluate(() => S.settings.backup.on)), "Cancel on the first step closes it");
+  await folder(goodFile);
+  await page.mouse.click(3, 3);
+  ok(await popEmpty(), "a tap on the backdrop closes it");
+  // a double tap on Overwrite must not answer the second question too
+  await folder(goodFile);
+  const ow = await page.evaluate(() => {
+    const r = document.querySelector("#pop .cd-destroy").getBoundingClientRect();
+    return [r.x + r.width / 2, r.y + r.height / 2];
+  });
+  await page.mouse.click(ow[0], ow[1], { clickCount: 2 });
+  await settle();
+  ok(
+    (await cdShape()) &&
+      (await cdShape()).title === "Overwrite this backup?" &&
+      !(await page.evaluate(() => S.settings.backup.on)),
+    "a double tap on Overwrite only reaches the second question"
+  );
+  await cd("destroy");
+  await settle();
+  ok(
+    (await popEmpty()) && (await page.evaluate(() => S.settings.backup.on)),
+    "Overwrite, confirmed: this phone's data goes on to the folder (auto backup on)"
+  );
+  await folder(goodFile);
+  await cd("keep");
+  await cd("keep");
+  await settle();
+  ok(
+    (await popEmpty()) && (await state()).accounts.length === 1 && (await page.evaluate(() => S.settings.backup.on)),
+    "Restore, confirmed: the backup replaces this phone's data and auto backup turns on " +
+      JSON.stringify([
+        await popEmpty(),
+        (await state()).accounts.length,
+        await page.evaluate(() => S.settings.backup.on),
+      ])
+  );
+  await seed(base());
+  await act("go", "settings");
+  await settle();
+
+  // a backup that can't be read: Choose another folder / Overwrite (asks again) / Cancel
+  await folder('{"v":6,"accounts":[{"id":"a"');
+  await shape(
+    "Tally can't read the backup in this folder",
+    "It may be damaged, or made by a newer version of Tally.",
+    [
+      ["cd-main", "Choose another folder"],
+      ["cd-destroy", "Overwrite"],
+      ["cd-out", "Cancel"],
+    ],
+    false,
+    "a backup that can't be read"
+  );
+  await page.evaluate(() => (window.__calls = []));
+  await cd("main");
+  ok((await popEmpty()) && (await calls("pick")).length === 1, "Choose another folder opens the folder picker");
+  await folder('{"v":6,"accounts":[{"id":"a"');
+  await cd("destroy");
+  await shape(
+    "Overwrite this backup?",
+    "It can't be read, so whatever it holds will be lost.",
+    [
+      ["cd-out", "Cancel"],
+      ["cd-destroy", "Overwrite"],
+    ],
+    true,
+    "Overwrite asks again"
+  );
+  await cd("out");
+  ok(
+    (await popEmpty()) && !(await page.evaluate(() => S.settings.backup.on)),
+    "Cancel: the unreadable backup is left alone"
+  );
+  await folder('{"v":6,"accounts":[{"id":"a"');
+  await cd("destroy");
+  await cd("destroy");
+  await settle();
+  ok(
+    (await popEmpty()) && (await page.evaluate(() => S.settings.backup.on)),
+    "Overwrite, confirmed: auto backup turns on"
+  );
+
+  // restoring a file: with the auto backup's file, Restore / Choose another file / Cancel; a picked file, Cancel | Restore
+  await page.evaluate(t => {
+    window.__cfg.status = { folder: "Documents/Tally", usable: true, last: Date.now() };
+    window.__cfg.auto = { text: t, when: Date.now() };
+    S.settings.backup.on = true;
+  }, goodFile);
+  await act("restore");
+  await settle();
+  const rd = await cdShape();
+  ok(
+    rd &&
+      rd.title === "Restore Tally backup.json?" &&
+      /^This phone's data will be replaced by the backup's: 1 account and 0 entries, saved .+\.$/.test(rd.text) &&
+      JSON.stringify(rd.btns) ===
+        JSON.stringify([
+          ["cd-keep", "Restore"],
+          ["cd-alt", "Choose another file"],
+          ["cd-out", "Cancel"],
+        ]) &&
+      rd.tall &&
+      !rd.row,
+    "restoring the auto backup's file: " + JSON.stringify(rd)
+  );
+  await cd("alt");
+  ok((await popEmpty()) && (await calls("pickRestore")).length >= 1, "Choose another file opens the file picker");
+  await page.evaluate(t => window.tallyRestore(t, null), goodFile);
+  await settle();
+  await shape(
+    "Restore this backup?",
+    "This phone's data will be replaced by the backup's: 1 account and 0 entries.",
+    [
+      ["cd-out", "Cancel"],
+      ["cd-keep", "Restore"],
+    ],
+    true,
+    "a picked file"
+  );
+  await cd("out");
+  ok((await popEmpty()) && (await state()).accounts.length === 2, "Cancel restores nothing");
+  await page.evaluate(t => window.tallyRestore(t, null), goodFile);
+  await settle();
+  await cd("keep");
+  await settle();
+  ok((await popEmpty()) && (await state()).accounts.length === 1, "Restore restores");
+
+  // Delete all data: Save backup / Delete without a backup / Cancel, then the final Cancel | Delete
+  await seed(base());
+  await act("go", "settings");
+  await settle();
+  await page.focus('[data-act="wipe"]');
+  await act("wipe");
+  await settle();
+  await shape(
+    "No backup yet",
+    "Save a backup before deleting everything?",
+    [
+      ["cd-keep", "Save backup"],
+      ["cd-destroy", "Delete without a backup"],
+      ["cd-out", "Cancel"],
+    ],
+    false,
+    "Delete all data, step 1"
+  );
+  await cd("out");
+  ok(
+    (await popEmpty()) && (await focusOn('[data-act="wipe"]')) && (await state()).accounts.length === 2,
+    "Cancel keeps everything"
+  );
+  await act("wipe");
+  await settle();
+  await cd("destroy");
+  await shape(
+    "Delete all data?",
+    "Every account and entry on this phone will be lost.",
+    [
+      ["cd-out", "Cancel"],
+      ["cd-destroy", "Delete"],
+    ],
+    true,
+    "Delete without a backup asks the final question"
+  );
+  ok((await state()).accounts.length === 2, "nothing is deleted before the final answer");
+  ok((await page.evaluate(() => goBack())) === true && (await popEmpty()), "Back on the final step closes everything");
+  ok((await state()).accounts.length === 2 && (await focusOn('[data-act="wipe"]')), "…nothing deleted, focus back");
+  await act("wipe");
+  await settle();
+  await cd("destroy");
+  await cd("out");
+  ok((await popEmpty()) && (await state()).accounts.length === 2, "Cancel on the final step closes everything");
+  await act("wipe");
+  await settle();
+  await cd("destroy");
+  await cd("destroy");
+  await settle();
+  ok((await popEmpty()) && (await state()).accounts.length === 0, "Delete deletes");
+  await seed(base());
+  await act("go", "settings");
+  await settle();
+  await page.evaluate(() => (window.__calls = []));
+  await act("wipe");
+  await settle();
+  await cd("keep");
+  ok((await calls("save")).length === 1, "Save backup saves a file first");
+  await page.evaluate(() => window.tallySaved(true));
+  await settle();
+  await shape(
+    "Delete all data?",
+    "Every account and entry on this phone will be lost.",
+    [
+      ["cd-out", "Cancel"],
+      ["cd-destroy", "Delete"],
+    ],
+    true,
+    "after the backup was saved: the final Cancel | Delete"
+  );
+  await cd("destroy");
+  await settle();
+  ok((await popEmpty()) && (await state()).accounts.length === 0, "…and Delete deletes");
 
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

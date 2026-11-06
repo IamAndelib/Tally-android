@@ -85,7 +85,7 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
 | `js/state.js` | the data `S`, `migrate()`, load/save, balances, `withUndo()`, `guardOverdraw()`, `deleteEntries()` |
 | `js/theme.js` | Material 3 colour roles from the phone's palette |
 | `js/period.js` | what Home (`V`) and History (`HP`) show: day / range / month and the period dialog |
-| `js/layers.js` | bottom sheets, dialogs (`askDialog`), date/time and currency pickers |
+| `js/layers.js` | bottom sheets, dialogs (`askDialog`, `choiceDialog`), date/time and currency pickers |
 | `js/emblems.js` | emblems, colours, account types, the icon picker |
 | `js/calculator.js` | the calculator under amount fields |
 | `js/ring.js` | the category ring and donut on Home (and its Settings preview) |
@@ -129,7 +129,8 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
   `js/events.js` that calls a named function. Keep logic out of the dispatcher.
 - **Rendering:** screens are rebuilt by `render()`; an open sheet is built once and then patched in place
   (`setPressed`, `trSync`, …), never re-rendered while it's open. Always escape user text with `esc()`.
-- **Confirmations** use `askDialog()`, never `confirm()`. Dates use `dateField()` / `datePicker()`, never native
+- **Confirmations** use `askDialog()` (or `choiceDialog()`: stacked full-width answers with a role each, and an optional
+  second step that asks again), never `confirm()`. Dates use `dateField()` / `datePicker()`, never native
   pickers.
 - The calculator's minus key is the Unicode minus `−` (U+2212); any regex over keys or expressions must include it.
 - No inline scripts or `on…=` attributes: the page's Content-Security-Policy blocks them.

@@ -34,9 +34,7 @@
     "previous": "Précédent",
     "next": "Suivant",
     "change": "Modifier",
-    "done": "Terminé",
-    "yes": "Oui",
-    "no": "Non"
+    "done": "Terminé"
   },
   "day": {
     "today": "Aujourd’hui",
@@ -132,14 +130,16 @@
     "on": "Sauvegarde auto activée · chaque jour à {{time}}",
     "found": {
       "title": "Ce dossier contient déjà une sauvegarde Tally",
-      "body": "La restaurer sur ce téléphone, ou la remplacer désormais par les données de ce téléphone ?",
-      "restore": "La restaurer",
-      "replace": "La remplacer"
+      "body": "La restaurer sur ce téléphone, ou l'écraser avec les données de ce téléphone ?",
+      "restoreBody": "Les données de ce téléphone seront remplacées par celles de la sauvegarde.",
+      "overwriteQ": "Écraser cette sauvegarde ?",
+      "overwriteBody": "Les données de cette sauvegarde seront perdues, remplacées par celles de ce téléphone."
     },
     "badFile": {
-      "title": "Impossible de lire la sauvegarde de ce dossier",
-      "cantRead": "Le fichier de sauvegarde est illisible.",
-      "replaceQ": "La remplacer désormais par les données de ce téléphone ?"
+      "title": "Tally ne peut pas lire la sauvegarde de ce dossier",
+      "cantRead": "Elle est peut-être endommagée, ou créée par une version plus récente de Tally.",
+      "other": "Choisir un autre dossier",
+      "overwriteBody": "Elle est illisible, donc tout ce qu'elle contient sera perdu."
     },
     "unavailable": "La sauvegarde n’est pas disponible ici",
     "running": "Sauvegarde en cours…",
@@ -153,7 +153,8 @@
       "title": "Mettre vos données à l’abri ?",
       "body": "Activez la sauvegarde quotidienne : Tally garde une copie dans un dossier de votre choix, pour ne rien perdre si vous perdez le téléphone.",
       "ok": "Activer"
-    }
+    },
+    "overwrite": "Écraser"
   },
   "data": {
     "saveFailed": {
@@ -810,8 +811,8 @@
     "entries_other": "{{count}} opérations",
     "autoQ": "Restaurer {{file}} ?",
     "q": "Restaurer cette sauvegarde ?",
-    "body": "Remplace tout ce qui se trouve sur ce téléphone par {{accounts}} et {{entries}}.",
-    "bodySaved": "Remplace tout ce qui se trouve sur ce téléphone par {{accounts}} et {{entries}} · enregistrée : {{when}}.",
+    "body": "Les données de ce téléphone seront remplacées par celles de la sauvegarde : {{accounts}} et {{entries}}.",
+    "bodySaved": "Les données de ce téléphone seront remplacées par celles de la sauvegarde : {{accounts}} et {{entries}}, enregistrée : {{when}}.",
     "lost_one": "{{count}} élément illisible sera laissé de côté.",
     "lost_many": "{{count}} d’éléments illisibles seront laissés de côté.",
     "lost_other": "{{count}} éléments illisibles seront laissés de côté.",
@@ -840,12 +841,12 @@
     },
     "none": {
       "title": "Pas encore de sauvegarde",
-      "body": "Enregistrer une sauvegarde de vos données avant de les supprimer ?"
+      "body": "Enregistrer une sauvegarde avant de tout supprimer ?"
     },
-    "skip": "Passer",
     "title": "Supprimer toutes les données ?",
-    "body": "Tous les comptes et toutes les opérations de ce téléphone. Impossible de revenir en arrière.",
-    "done": "Toutes les données ont été supprimées"
+    "body": "Tous les comptes et toutes les opérations de ce téléphone seront perdus.",
+    "done": "Toutes les données ont été supprimées",
+    "noBackup": "Supprimer sans sauvegarde"
   },
   "native": {
     "err": {

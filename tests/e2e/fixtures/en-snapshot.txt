@@ -8409,11 +8409,11 @@ title "Tally"
 "Assets"
 "Liabilities"
 #pop
-@aria-label="Back up first?"
 "Back up first?"
 "Your last backup may not have your latest entries. Save them before deleting everything?"
-"Skip"
 "Save backup"
+"Delete without a backup"
+"Cancel"
 title "Tally"
 === wipe-confirm
 #app
@@ -8476,11 +8476,10 @@ title "Tally"
 "Assets"
 "Liabilities"
 #pop
-@aria-label="Delete all data?"
 "Delete all data?"
-"Every account and entry on this phone. This can't be undone."
-"No"
-"Yes"
+"Every account and entry on this phone will be lost."
+"Cancel"
+"Delete"
 title "Tally"
 === nudge
 #app

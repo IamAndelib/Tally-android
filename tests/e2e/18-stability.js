@@ -748,9 +748,9 @@ const ago = n => {
   await settle();
   await act("wipe");
   await settle();
-  await act("ask-alt"); // "No backup yet" → No
+  await page.click("#pop .cd-destroy"); // "No backup yet" → No
   await settle();
-  await act("ask-ok");
+  await page.click("#pop .cd-destroy");
   await settle();
   S = await state();
   ok(

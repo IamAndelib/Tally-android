@@ -34,9 +34,7 @@
     "previous": "Önceki",
     "next": "Sonraki",
     "change": "Değiştir",
-    "done": "Bitti",
-    "yes": "Evet",
-    "no": "Hayır"
+    "done": "Bitti"
   },
   "day": {
     "today": "Bugün",
@@ -132,14 +130,16 @@
     "on": "Otomatik yedek açık · her gün {{time}}",
     "found": {
       "title": "Bu klasörde zaten bir Tally yedeği var",
-      "body": "Bu telefona geri yüklensin mi, yoksa bundan sonra bu telefonun verileriyle değiştirilsin mi?",
-      "restore": "Geri yükle",
-      "replace": "Değiştir"
+      "body": "Bu telefona geri yüklensin mi, yoksa bu telefonun verileriyle üzerine mi yazılsın?",
+      "restoreBody": "Bu telefonun verileri yedekteki verilerle değiştirilecek.",
+      "overwriteQ": "Bu yedeğin üzerine yazılsın mı?",
+      "overwriteBody": "Bu yedekteki veriler kaybolacak, yerine bu telefonun verileri gelecek."
     },
     "badFile": {
-      "title": "Bu klasördeki yedek okunamadı",
-      "cantRead": "Yedek dosyası okunamıyor.",
-      "replaceQ": "Bundan sonra bu telefonun verileriyle değiştirilsin mi?"
+      "title": "Tally bu klasördeki yedeği okuyamıyor",
+      "cantRead": "Hasarlı olabilir ya da Tally'nin daha yeni bir sürümüyle yapılmış olabilir.",
+      "other": "Başka klasör seç",
+      "overwriteBody": "Okunamıyor, bu yüzden içindeki her şey kaybolacak."
     },
     "unavailable": "Yedekleme burada kullanılamıyor",
     "running": "Yedekleniyor…",
@@ -153,7 +153,8 @@
       "title": "Verilerin güvende olsun mu?",
       "body": "Günlük yedeği aç: Tally seçtiğin bir klasörde bir kopya tutar, telefon gitse de hiçbir şey kaybolmaz.",
       "ok": "Aç"
-    }
+    },
+    "overwrite": "Üzerine yaz"
   },
   "data": {
     "saveFailed": {
@@ -796,8 +797,8 @@
     "entries_other": "{{count}} kayıt",
     "autoQ": "{{file}} geri yüklensin mi?",
     "q": "Bu yedek geri yüklensin mi?",
-    "body": "Bu telefondaki her şeyin yerine {{accounts}} ve {{entries}} gelir.",
-    "bodySaved": "Bu telefondaki her şeyin yerine {{accounts}} ve {{entries}} gelir · kaydedilme: {{when}}.",
+    "body": "Bu telefonun verileri yedekteki verilerle değiştirilecek: {{accounts}} ve {{entries}}.",
+    "bodySaved": "Bu telefonun verileri yedekteki verilerle değiştirilecek: {{accounts}} ve {{entries}}, kaydedilme zamanı: {{when}}.",
     "lost_one": "İçindeki {{count}} öğe okunamıyor ve dışarıda kalacak.",
     "lost_other": "İçindeki {{count}} öğe okunamıyor ve dışarıda kalacak.",
     "newer": "Tally’nin daha yeni bir sürümüyle yapılmış: hiçbir şey dışarıda kalmasın diye önce Tally’yi güncelle.",
@@ -825,12 +826,12 @@
     },
     "none": {
       "title": "Henüz yedek yok",
-      "body": "Silmeden önce verilerinin bir yedeği kaydedilsin mi?"
+      "body": "Her şeyi silmeden önce bir yedek kaydedilsin mi?"
     },
-    "skip": "Atla",
     "title": "Tüm veriler silinsin mi?",
-    "body": "Bu telefondaki tüm hesaplar ve kayıtlar silinir. Bu geri alınamaz.",
-    "done": "Tüm veriler silindi"
+    "body": "Bu telefondaki tüm hesaplar ve kayıtlar kaybolacak.",
+    "done": "Tüm veriler silindi",
+    "noBackup": "Yedeksiz sil"
   },
   "native": {
     "err": {

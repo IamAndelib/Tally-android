@@ -34,9 +34,7 @@
     "previous": "Zurück",
     "next": "Weiter",
     "change": "Ändern",
-    "done": "Fertig",
-    "yes": "Ja",
-    "no": "Nein"
+    "done": "Fertig"
   },
   "day": {
     "today": "Heute",
@@ -132,14 +130,16 @@
     "on": "Auto-Backup an · täglich um {{time}}",
     "found": {
       "title": "In diesem Ordner liegt schon ein Tally-Backup",
-      "body": "Auf diesem Handy wiederherstellen oder ab jetzt durch die Daten dieses Handys ersetzen?",
-      "restore": "Wiederherstellen",
-      "replace": "Ersetzen"
+      "body": "Auf diesem Handy wiederherstellen oder mit den Daten dieses Handys überschreiben?",
+      "restoreBody": "Die Daten dieses Handys werden durch die des Backups ersetzt.",
+      "overwriteQ": "Dieses Backup überschreiben?",
+      "overwriteBody": "Die Daten dieses Backups gehen verloren und werden durch die dieses Handys ersetzt."
     },
     "badFile": {
-      "title": "Das Backup in diesem Ordner ist nicht lesbar",
-      "cantRead": "Die Backup-Datei kann nicht gelesen werden.",
-      "replaceQ": "Ab jetzt durch die Daten dieses Handys ersetzen?"
+      "title": "Tally kann das Backup in diesem Ordner nicht lesen",
+      "cantRead": "Es ist vielleicht beschädigt oder stammt aus einer neueren Tally-Version.",
+      "other": "Anderen Ordner wählen",
+      "overwriteBody": "Es lässt sich nicht lesen, also geht alles darin verloren."
     },
     "unavailable": "Backup ist hier nicht verfügbar",
     "running": "Wird gesichert …",
@@ -153,7 +153,8 @@
       "title": "Deine Daten absichern?",
       "body": "Schalte das tägliche Backup ein: Tally legt eine Kopie in einem Ordner deiner Wahl ab, damit mit dem Handy nichts verloren geht.",
       "ok": "Einschalten"
-    }
+    },
+    "overwrite": "Überschreiben"
   },
   "data": {
     "saveFailed": {
@@ -796,8 +797,8 @@
     "entries_other": "{{count}} Einträge",
     "autoQ": "{{file}} wiederherstellen?",
     "q": "Dieses Backup wiederherstellen?",
-    "body": "Ersetzt alles auf diesem Handy durch {{accounts}} und {{entries}}.",
-    "bodySaved": "Ersetzt alles auf diesem Handy durch {{accounts}} und {{entries}} · gespeichert {{when}}.",
+    "body": "Die Daten dieses Handys werden durch die des Backups ersetzt: {{accounts}} und {{entries}}.",
+    "bodySaved": "Die Daten dieses Handys werden durch die des Backups ersetzt: {{accounts}} und {{entries}}, gespeichert {{when}}.",
     "lost_one": "{{count}} Element darin ist nicht lesbar und wird weggelassen.",
     "lost_other": "{{count}} Elemente darin sind nicht lesbar und werden weggelassen.",
     "newer": "Es stammt aus einer neueren Tally-Version: Aktualisiere Tally zuerst, damit nichts fehlt.",
@@ -825,12 +826,12 @@
     },
     "none": {
       "title": "Noch kein Backup",
-      "body": "Vor dem Löschen ein Backup deiner Daten speichern?"
+      "body": "Vor dem Löschen von allem ein Backup speichern?"
     },
-    "skip": "Überspringen",
     "title": "Alle Daten löschen?",
-    "body": "Alle Konten und Einträge auf diesem Handy. Das lässt sich nicht rückgängig machen.",
-    "done": "Alle Daten gelöscht"
+    "body": "Alle Konten und Einträge auf diesem Handy gehen verloren.",
+    "done": "Alle Daten gelöscht",
+    "noBackup": "Ohne Backup löschen"
   },
   "native": {
     "err": {

@@ -665,6 +665,45 @@ function inspect() {
       "transfer",
       ev(() => trSheet())
     );
+    /* the stacked-button dialogs (choiceDialog) and their second steps */
+    const folderAsk = async text => {
+      await page.evaluate(t => {
+        window.__readAuto = readAutoBackup;
+        readAutoBackup = cb => cb({ text: t || JSON.stringify(S) });
+        folderCheck();
+        readAutoBackup = window.__readAuto;
+      }, text);
+    };
+    await shot("choice-folder", () => folderAsk());
+    await shot("choice-folder-restore", async () => {
+      await folderAsk();
+      await page.click("#pop .cd-keep");
+    });
+    await shot("choice-folder-overwrite", async () => {
+      await folderAsk();
+      await page.click("#pop .cd-destroy");
+    });
+    await shot("choice-unreadable", () => folderAsk('{"v":6,"accounts":['));
+    await shot("choice-unreadable-overwrite", async () => {
+      await folderAsk('{"v":6,"accounts":[');
+      await page.click("#pop .cd-destroy");
+    });
+    await shot(
+      "choice-restore-file",
+      ev(() => restoreText(JSON.stringify(S), { when: Date.now() }))
+    );
+    await shot(
+      "choice-restore-picked",
+      ev(() => restoreText(JSON.stringify(S)))
+    );
+    await shot(
+      "choice-wipe",
+      ev(() => wipeAll())
+    );
+    await shot("choice-wipe-final", async () => {
+      await page.evaluate(() => wipeAll());
+      await page.click("#pop .cd-destroy");
+    });
     await shot("transfer-fee", async () => {
       await page.evaluate(() => trSheet());
       await page.click('#sheet [data-act="add-fee"]');

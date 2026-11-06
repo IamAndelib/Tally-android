@@ -34,9 +34,7 @@
     "previous": "Previous",
     "next": "Next",
     "change": "Change",
-    "done": "Done",
-    "yes": "Yes",
-    "no": "No"
+    "done": "Done"
   },
   "day": {
     "today": "Today",
@@ -132,14 +130,16 @@
     "on": "Auto backup on · daily at {{time}}",
     "found": {
       "title": "This folder already has a Tally backup",
-      "body": "Restore it on this phone, or replace it with this phone's data from now on?",
-      "restore": "Restore it",
-      "replace": "Replace it"
+      "body": "Restore it on this phone, or overwrite it with this phone's data?",
+      "restoreBody": "This phone's data will be replaced by the backup's.",
+      "overwriteQ": "Overwrite this backup?",
+      "overwriteBody": "This backup's data will be lost, replaced by this phone's."
     },
     "badFile": {
-      "title": "Couldn't read this folder's backup",
-      "cantRead": "The backup file can't be read.",
-      "replaceQ": "Replace it with this phone's data from now on?"
+      "title": "Tally can't read the backup in this folder",
+      "cantRead": "It may be damaged, or made by a newer version of Tally.",
+      "other": "Choose another folder",
+      "overwriteBody": "It can't be read, so whatever it holds will be lost."
     },
     "unavailable": "Backup isn't available here",
     "running": "Backing up…",
@@ -153,7 +153,8 @@
       "title": "Keep your data safe?",
       "body": "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
       "ok": "Turn on"
-    }
+    },
+    "overwrite": "Overwrite"
   },
   "data": {
     "saveFailed": {
@@ -796,8 +797,8 @@
     "entries_other": "{{count}} entries",
     "autoQ": "Restore {{file}}?",
     "q": "Restore this backup?",
-    "body": "Replaces everything on this phone with {{accounts}} and {{entries}}.",
-    "bodySaved": "Replaces everything on this phone with {{accounts}} and {{entries}} · saved {{when}}.",
+    "body": "This phone's data will be replaced by the backup's: {{accounts}} and {{entries}}.",
+    "bodySaved": "This phone's data will be replaced by the backup's: {{accounts}} and {{entries}}, saved {{when}}.",
     "lost_one": "{{count}} item in it can't be read and will be left out.",
     "lost_other": "{{count}} items in it can't be read and will be left out.",
     "newer": "It was made by a newer version of Tally: update Tally first so nothing is left out.",
@@ -825,12 +826,12 @@
     },
     "none": {
       "title": "No backup yet",
-      "body": "Save a backup of your data before deleting it?"
+      "body": "Save a backup before deleting everything?"
     },
-    "skip": "Skip",
     "title": "Delete all data?",
-    "body": "Every account and entry on this phone. This can't be undone.",
-    "done": "All data deleted"
+    "body": "Every account and entry on this phone will be lost.",
+    "done": "All data deleted",
+    "noBackup": "Delete without a backup"
   },
   "native": {
     "err": {

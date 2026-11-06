@@ -34,9 +34,7 @@
     "previous": "Sebelumnya",
     "next": "Berikutnya",
     "change": "Ganti",
-    "done": "Selesai",
-    "yes": "Ya",
-    "no": "Tidak"
+    "done": "Selesai"
   },
   "day": {
     "today": "Hari ini",
@@ -132,14 +130,16 @@
     "on": "Cadangan otomatis aktif · tiap hari pukul {{time}}",
     "found": {
       "title": "Folder ini sudah berisi cadangan Tally",
-      "body": "Pulihkan di ponsel ini, atau timpa dengan data ponsel ini mulai sekarang?",
-      "restore": "Pulihkan",
-      "replace": "Timpa"
+      "body": "Pulihkan di ponsel ini, atau timpa dengan data ponsel ini?",
+      "restoreBody": "Data ponsel ini akan diganti dengan data cadangan.",
+      "overwriteQ": "Timpa cadangan ini?",
+      "overwriteBody": "Data cadangan ini akan hilang, diganti dengan data ponsel ini."
     },
     "badFile": {
-      "title": "Cadangan di folder ini tidak bisa dibaca",
-      "cantRead": "File cadangan tidak bisa dibaca.",
-      "replaceQ": "Timpa dengan data ponsel ini mulai sekarang?"
+      "title": "Tally tidak bisa membaca cadangan di folder ini",
+      "cantRead": "Mungkin rusak, atau dibuat oleh Tally versi yang lebih baru.",
+      "other": "Pilih folder lain",
+      "overwriteBody": "Tidak bisa dibaca, jadi apa pun isinya akan hilang."
     },
     "unavailable": "Cadangan tidak tersedia di sini",
     "running": "Mencadangkan…",
@@ -153,7 +153,8 @@
       "title": "Amankan datamu?",
       "body": "Nyalakan cadangan harian: Tally menyimpan salinan di folder pilihanmu, jadi datamu tidak ikut hilang bersama ponsel.",
       "ok": "Nyalakan"
-    }
+    },
+    "overwrite": "Timpa"
   },
   "data": {
     "saveFailed": {
@@ -782,8 +783,8 @@
     "entries_other": "{{count}} transaksi",
     "autoQ": "Pulihkan {{file}}?",
     "q": "Pulihkan cadangan ini?",
-    "body": "Mengganti semua yang ada di ponsel ini dengan {{accounts}} dan {{entries}}.",
-    "bodySaved": "Mengganti semua yang ada di ponsel ini dengan {{accounts}} dan {{entries}} · disimpan {{when}}.",
+    "body": "Data ponsel ini akan diganti dengan data cadangan: {{accounts}} dan {{entries}}.",
+    "bodySaved": "Data ponsel ini akan diganti dengan data cadangan: {{accounts}} dan {{entries}}, disimpan {{when}}.",
     "lost_other": "{{count}} item di dalamnya tidak bisa dibaca dan akan dilewati.",
     "newer": "Cadangan ini dibuat oleh versi Tally yang lebih baru: perbarui Tally dulu agar tidak ada yang terlewat.",
     "ok": "Pulihkan",
@@ -810,12 +811,12 @@
     },
     "none": {
       "title": "Belum ada cadangan",
-      "body": "Simpan cadangan datamu sebelum menghapusnya?"
+      "body": "Simpan cadangan sebelum menghapus semuanya?"
     },
-    "skip": "Lewati",
     "title": "Hapus semua data?",
-    "body": "Semua akun dan transaksi di ponsel ini. Ini tidak bisa dibatalkan.",
-    "done": "Semua data dihapus"
+    "body": "Semua akun dan transaksi di ponsel ini akan hilang.",
+    "done": "Semua data dihapus",
+    "noBackup": "Hapus tanpa cadangan"
   },
   "native": {
     "err": {
