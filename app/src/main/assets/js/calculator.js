@@ -44,7 +44,7 @@ const calcPanelHtml = id =>
   ).join("") +
   "</div>";
 /* a field's amount box: currency label, the input, the calculator toggle, and its (hidden) panel.
-   o: {curId} id for the currency label (so it can follow the chosen account), {label} for screen readers, {placeholder} */
+   o: {curId} id for the currency label (so it can follow the chosen account), {label} for screen readers (or {labelledBy}, an id), {placeholder} */
 function amtField(id, cur, val, o = {}) {
   return (
     '<div class="amtwrap"><span class="cur"' +
@@ -57,8 +57,7 @@ function amtField(id, cur, val, o = {}) {
     esc(o.placeholder ?? "0") +
     '" value="' +
     esc(val || "") +
-    '" aria-label="' +
-    esc(o.label || T("common.amount")) +
+    (o.labelledBy ? '" aria-labelledby="' + o.labelledBy : '" aria-label="' + esc(o.label || T("common.amount"))) +
     '"><span class="caretmirror" id="cm-' +
     id +
     '" data-act="calc-pos" data-v="' +
@@ -185,6 +184,7 @@ function calcPosFromPoint(mirror, x, y) {
   return CALC ? CALC.expr.length : 0;
 }
 function calcOpen(id, btn) {
+  if (CALC && CALC.id !== id) calcClose(CALC.id, calcToggleBtn(CALC.id)); // one calculator at a time: the other's sum is worked out
   document.querySelectorAll(".calc:not([hidden])").forEach(p => (p.hidden = true));
   document
     .querySelectorAll('[data-act="calc-toggle"][aria-expanded="true"]')

@@ -431,13 +431,13 @@ function readVals() {
 }
 /* the optional fee of a transfer or a loan payment: a field behind "Add a fee" (its label can be set later) */
 const feeField = (open, value, label, add) =>
-  '<label class="field" id="fee-wrap"' +
+  '<div class="field" id="fee-wrap"' +
   (open ? "" : " hidden") +
   '><span id="fee-lbl">' +
   esc(label) +
-  '</span><input id="f-fee" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
-  esc(value) +
-  '"></label><button class="btn text" id="fee-btn" data-act="add-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
+  "</span>" +
+  amtField("f-fee", "", value, { labelledBy: "fee-lbl" }) +
+  '</div><button class="btn text" id="fee-btn" data-act="add-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
   (open ? " hidden" : "") +
   ">" +
   ic("add") +

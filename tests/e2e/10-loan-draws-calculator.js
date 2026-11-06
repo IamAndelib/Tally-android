@@ -361,7 +361,7 @@ const ok = (c, m) => {
     !(await page.$('[data-act="calc-toggle"][data-v="f-toamt"]')),
     "no calculator on transfer's received amount (scope-trimmed)"
   );
-  ok(!(await page.$('[data-act="calc-toggle"][data-v="f-fee"]')), "no calculator on transfer's fee (scope-trimmed)");
+  ok(!!(await page.$('[data-act="calc-toggle"][data-v="f-fee"]')), "calculator on transfer's fee");
   await act("close");
 
   await act("loan-new", "lend");
