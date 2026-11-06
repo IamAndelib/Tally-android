@@ -339,6 +339,16 @@ const ok = (c, m) => {
     const { ctx, page } = await open({ uiLang: "ru", locale: "ru-RU" });
     await seed(page);
     const h = await page.evaluate(() => {
+      if (!S.txns.length)
+        S.txns.push({
+          id: "z1",
+          ts: 1,
+          date: today(),
+          type: "expense",
+          amount: 1,
+          account: S.accounts[0].id,
+          cat: "food",
+        }); // History's bar needs an entry
       V.screen = "history";
       Object.assign(HP, { period: "month", anchor: today() });
       render();

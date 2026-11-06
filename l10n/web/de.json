@@ -711,6 +711,7 @@
     "selected_one": "{{count}} ausgewählt",
     "selected_other": "{{count}} ausgewählt",
     "selAll": "Alle auswählen",
+    "clearSel": "Auswahl aufheben",
     "delSel": "Auswahl löschen",
     "select": "Einträge auswählen",
     "allTime": "Gesamte Zeit",
@@ -763,11 +764,14 @@
     "between": "Zwischen",
     "everyone": "Alle",
     "anyAccount": "Beliebiges Konto",
+    "fromAny": "Von beliebigem Konto",
+    "toAny": "Auf beliebiges Konto",
     "oneSide": "Eine Seite ist {{account}}",
     "showNone": "Keine Einträge",
     "swap": "Von und Nach tauschen",
     "show_one": "{{count}} Eintrag zeigen",
-    "show_other": "{{count}} Einträge zeigen"
+    "show_other": "{{count}} Einträge zeigen",
+    "savedGone": "Gespeichert · nicht mehr in dieser Liste"
   },
   "remind": {
     "nudge": "Abend-Erinnerung",
@@ -775,7 +779,7 @@
     "check": "Kontostand-Check",
     "checkHint": "Stimmen deine Kontostände noch?",
     "dues": "Fällige Rückzahlungen",
-    "duesHint": "Am Tag selbst, mit +1 Tag / +1 Woche",
+    "duesHint": "Am Fälligkeitstag, ohne Fälligkeitstag monatlich",
     "nudgeAt": "Abend-Erinnerung um",
     "checkAt": "Kontostand-Check um",
     "duesAt": "Fälligkeiten um"
@@ -865,5 +869,9 @@
   },
   "lang": {
     "name": "Deutsch"
+  },
+  "suggest": {
+    "removeName": "„{{name}}“ aus den Vorschlägen entfernen",
+    "removed": "„{{name}}“ aus den Vorschlägen entfernt"
   }
 }

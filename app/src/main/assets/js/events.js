@@ -238,6 +238,12 @@ document.addEventListener("click", ev => {
       if (undoFn) {
         const f = undoFn;
         undoFn = null;
+        if (f.keep) {
+          // a change inside the open form (a name taken out of its suggestions): the form stays
+          $("#snack").innerHTML = "";
+          f();
+          break;
+        }
         /* what an open layer shows may be what Undo takes away: back to the screen first */
         closePop();
         BACKTO = null;
@@ -664,6 +670,9 @@ document.addEventListener("click", ev => {
       break;
     case "calc-key":
       calcKey(v);
+      break;
+    case "name-hide":
+      hideName(v.slice(0, v.indexOf(":")), v.slice(v.indexOf(":") + 1));
       break;
     case "f-payee-pick":
       pickPayee(v);

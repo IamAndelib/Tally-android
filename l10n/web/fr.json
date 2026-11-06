@@ -720,6 +720,7 @@
     "selected_many": "{{count}} sélectionnées",
     "selected_other": "{{count}} sélectionnées",
     "selAll": "Tout sélectionner",
+    "clearSel": "Effacer la sélection",
     "delSel": "Supprimer la sélection",
     "select": "Sélectionner des opérations",
     "allTime": "Depuis le début",
@@ -774,12 +775,15 @@
     "between": "Entre",
     "everyone": "Tout le monde",
     "anyAccount": "N’importe quel compte",
+    "fromAny": "De n’importe quel compte",
+    "toAny": "Vers n’importe quel compte",
     "oneSide": "Un des côtés est {{account}}",
     "showNone": "Aucune opération",
     "swap": "Inverser De et Vers",
     "show_many": "Voir {{count}} d’opérations",
     "show_one": "Voir {{count}} opération",
-    "show_other": "Voir {{count}} opérations"
+    "show_other": "Voir {{count}} opérations",
+    "savedGone": "Enregistré · n’est plus dans cette liste"
   },
   "remind": {
     "nudge": "Rappel du soir",
@@ -787,7 +791,7 @@
     "check": "Point sur les soldes",
     "checkHint": "Vos soldes correspondent-ils toujours ?",
     "dues": "Échéances des prêts et emprunts",
-    "duesHint": "Le jour même, avec +1 jour / +1 semaine",
+    "duesHint": "Le jour de l’échéance, ou chaque mois s’il n’y en a pas",
     "nudgeAt": "Rappel du soir à",
     "checkAt": "Point sur les soldes à",
     "duesAt": "Rappels d’échéance à"
@@ -880,5 +884,9 @@
   },
   "lang": {
     "name": "Français"
+  },
+  "suggest": {
+    "removeName": "Retirer « {{name}} » des suggestions",
+    "removed": "« {{name}} » retiré des suggestions"
   }
 }

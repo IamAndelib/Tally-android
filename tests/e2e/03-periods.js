@@ -19,10 +19,10 @@ const ok = (c, m) => {
   await page.goto(appUrl);
   // welcome screen (no accounts): icons, no menu
   ok(
-    (await page.isVisible('[data-act="go"][data-v="history"]')) &&
+    !(await page.$('[data-act="go"][data-v="history"]')) && // the welcome bar holds only Settings
       (await page.isVisible('[data-act="go"][data-v="settings"]')) &&
       !(await page.$('[data-act="menu"]')),
-    "welcome: History + Settings icons, no ⋮"
+    "welcome: only the Settings icon, no ⋮"
   );
   const d = await page.evaluate(() => {
     const f = n => {

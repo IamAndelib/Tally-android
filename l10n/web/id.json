@@ -702,6 +702,7 @@
     "stopSel": "Berhenti memilih",
     "selected_other": "{{count}} dipilih",
     "selAll": "Pilih semua",
+    "clearSel": "Hapus pilihan",
     "delSel": "Hapus yang dipilih",
     "select": "Pilih transaksi",
     "allTime": "Sepanjang waktu",
@@ -752,10 +753,13 @@
     "between": "Antara",
     "everyone": "Semua orang",
     "anyAccount": "Akun mana saja",
+    "fromAny": "Dari akun mana saja",
+    "toAny": "Ke akun mana saja",
     "oneSide": "Salah satu sisi adalah {{account}}",
     "showNone": "Tidak ada transaksi",
     "swap": "Tukar Dari dan Ke",
-    "show_other": "Tampilkan {{count}} transaksi"
+    "show_other": "Tampilkan {{count}} transaksi",
+    "savedGone": "Disimpan · tidak lagi ada di daftar ini"
   },
   "remind": {
     "nudge": "Pengingat malam",
@@ -763,7 +767,7 @@
     "check": "Cek saldo",
     "checkHint": "Saldomu masih cocok?",
     "dues": "Jatuh tempo utang & piutang",
-    "duesHint": "Pada harinya, dengan +1 hari / +1 minggu",
+    "duesHint": "Pada hari jatuh tempo, atau tiap bulan jika tidak ada",
     "nudgeAt": "Pengingat malam pukul",
     "checkAt": "Cek saldo pukul",
     "duesAt": "Pengingat jatuh tempo pukul"
@@ -850,5 +854,9 @@
   },
   "lang": {
     "name": "Bahasa Indonesia"
+  },
+  "suggest": {
+    "removeName": "Hapus “{{name}}” dari saran",
+    "removed": "“{{name}}” dihapus dari saran"
   }
 }

@@ -182,7 +182,9 @@ function homeView() {
     );
   if (!act.length) {
     return (
-      tabBar("Tally") +
+      '<header class="appbar"><h1>Tally</h1>' +
+      settingsBtn() +
+      "</header>" + // a new notebook: only Settings is of use
       '<div class="welcome"><div class="big">📒</div><h2>' +
       TH("welcome.title") +
       "</h2><p>" +
@@ -390,17 +392,20 @@ function checkCard(b, cur) {
 /* Search (on every tab: Home, Assets, Liabilities), History + Settings, always one tap away in the top bar */
 const searchBtn = () =>
   '<button class="icon" data-act="search-open" aria-label="' + TH("search.title") + '">' + ic("search") + "</button>";
+const settingsBtn = () =>
+  '<button class="icon" data-act="go" data-v="settings" aria-label="' +
+  TH("settings.title") +
+  '">' +
+  ic("settings") +
+  "</button>";
 const topIcons = search =>
   (search ? searchBtn() : "") +
   '<button class="icon" data-act="go" data-v="history" aria-label="' +
   TH("common.history") +
   '">' +
   ic("history") +
-  '</button><button class="icon" data-act="go" data-v="settings" aria-label="' +
-  TH("settings.title") +
-  '">' +
-  ic("settings") +
-  "</button>";
+  "</button>" +
+  settingsBtn();
 function tabBar(title, search) {
   return '<header class="appbar"><h1>' + esc(title) + "</h1>" + topIcons(search) + "</header>";
 }
@@ -960,6 +965,10 @@ function selSync(b) {
   b.querySelector(".em.pick").innerHTML = ic(on ? "checked" : "unchecked");
   $("#app .appbar h1").textContent = T("history.selected", { count: n });
   $('#app [data-act="sel-del"]').disabled = !n;
+  const all = $('#app [data-act="sel-all"]'),
+    every = histRows(HLIST).every(t => V.sel.has(t.id)); // the button clears once everything listed is selected
+  all.setAttribute("aria-label", T(every ? "history.clearSel" : "history.selAll"));
+  all.innerHTML = every ? icDeselect() : ic("selectall");
 }
 function catGrid(kind) {
   let h = '<div class="cgrid" data-kind="' + kind + '">';

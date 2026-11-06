@@ -337,7 +337,7 @@ const ok = (c, m) => {
     await page.evaluate(
       () =>
         money(1.005, "USD") === "$1.01" &&
-        money(-0.125, "USD") === "-$0.13" &&
+        money(-0.125, "USD") === "−\u2060$0.13" &&
         signed(-0.004, "USD") === "$0.00" &&
         signed(-5, "USD") === "−\u2060$5.00"
     ),

@@ -1326,13 +1326,13 @@ const ok = (c, m) => {
     ok(r.html === "" && !r.rec && !r.sec, "no recent searches: the space stays empty: " + r.html.slice(0, 60));
 
     // kept: search mode closed by leaving History another way (not Back)
-    await type(p5, "noodle");
+    await type(p5, "bakery");
     await p5.evaluate(() => {
       V.screen = "home";
       render();
     });
     ok(
-      (await rec(p5))[0] === "noodle",
+      (await rec(p5))[0] === "bakery",
       "leaving History another way keeps the search: " + JSON.stringify(await rec(p5))
     );
     await p5.evaluate(() => {
@@ -1346,35 +1346,47 @@ const ok = (c, m) => {
     await type(p5, "corner");
     await p5.click('#hbody .sug[data-act="fs-pick"]');
     ok(
-      JSON.stringify(await rec(p5)) === '["corner"]',
-      "a suggestion tapped keeps the words as typed: " + (await p5.evaluate(() => window.__rec))
+      (await rec(p5)).length === 1 && /^\u0001pay\u0001\u0001Corner Café\u0001corner$/.test((await rec(p5))[0]),
+      "a suggestion tapped keeps that suggestion: " + JSON.stringify(await rec(p5))
     );
     // kept: a row opened
     await back(p5); // the suggestion's payee filter goes with search mode
     await type(p5, "bakery");
     await p5.click('#hbody [data-act="row-open"]');
-    ok(JSON.stringify(await rec(p5)) === '["bakery","corner"]', "an entry opened keeps them, newest first");
+    ok(
+      (await rec(p5)).length === 2 && (await rec(p5))[0] === "bakery" && /Corner Café/.test((await rec(p5))[1]),
+      "an entry opened keeps them, newest first: " + JSON.stringify(await rec(p5))
+    );
     // kept: search mode closed; too short is not kept
     await type(p5, "b");
     await back(p5);
-    ok(JSON.stringify(await rec(p5)) === '["bakery","corner"]', "one character is not kept");
-    await type(p5, "  kiosk ");
-    await back(p5);
-    ok(JSON.stringify(await rec(p5)) === '["kiosk","bakery","corner"]', "closing search mode keeps it, trimmed");
-    // the same words (capitals, accents) move to the top with the newest spelling
-    await type(p5, "CORNER");
+    ok((await rec(p5)).length === 2, "one character is not kept: " + JSON.stringify(await rec(p5)));
+    await type(p5, "  caf ");
     await back(p5);
     ok(
-      JSON.stringify(await rec(p5)) === '["CORNER","kiosk","bakery"]',
-      "same words move to the top, newest spelling: " + (await p5.evaluate(() => window.__rec))
+      (await rec(p5))[0] === "caf" && (await rec(p5)).length === 3,
+      "closing search mode keeps it, trimmed: " + JSON.stringify(await rec(p5))
+    );
+    // a search that found nothing, or under three letters, is not kept
+    await type(p5, "zzzz");
+    await back(p5);
+    await type(p5, "ca");
+    await back(p5);
+    ok((await rec(p5)).length === 3, "nothing found, and two letters, are not kept");
+    // the same words (capitals, accents) move to the top with the newest spelling
+    await type(p5, "BAKERY");
+    await back(p5);
+    ok(
+      (await rec(p5)).slice(0, 2).join() === "BAKERY,caf" && (await rec(p5)).length === 3,
+      "same words move to the top, newest spelling: " + JSON.stringify(await rec(p5))
     );
     // at most five
-    for (const w of ["aa", "bb", "cc", "dd"]) {
+    for (const w of ["cor", "corn", "corne", "bak"]) {
       await type(p5, w);
       await back(p5);
     }
     ok(
-      JSON.stringify(await rec(p5)) === '["dd","cc","bb","aa","CORNER"]',
+      JSON.stringify(await rec(p5)) === '["bak","corne","corn","cor","BAKERY"]',
       "at most five: " + (await p5.evaluate(() => window.__rec))
     );
     // shown: empty field, newest first, clock icon, a Forget button each, 48 px targets
@@ -1396,9 +1408,9 @@ const ok = (c, m) => {
       };
     });
     ok(r.sec === "Recent searches" && r.role === "heading", "heading Recent searches: " + r.sec);
-    ok(r.texts.join() === "dd,cc,bb,aa,CORNER", "five rows, newest first: " + r.texts);
+    ok(r.texts.join() === "bak,corne,corn,cor,BAKERY", "five rows, newest first: " + r.texts);
     ok(r.clock, "each row has the clock icon");
-    ok(r.labels[0] === "Forget: dd" && r.labels[4] === "Forget: CORNER", "Forget labels: " + r.labels);
+    ok(r.labels[0] === "Forget: bak" && r.labels[4] === "Forget: BAKERY", "Forget labels: " + r.labels);
     ok(
       r.hs.every(h => h >= 48) && r.xs.every(s => s === "48x48" || (parseInt(s) >= 48 && +s.split("x")[1] >= 48)),
       "48 px targets: " + r.hs + " / " + r.xs
@@ -1416,31 +1428,31 @@ const ok = (c, m) => {
       clr: !$('#app [data-act="find-clear"]').hidden,
     }));
     ok(
-      r.v === "CORNER" && r.q === "CORNER" && r.caret === "6/6" && r.focus === "find-q",
+      r.v === "BAKERY" && r.q === "BAKERY" && r.caret === "6/6" && r.focus === "find-q",
       "tapping fills the field, caret at the end, focus kept: " + JSON.stringify(r)
     );
     ok(!r.rec && r.sug && r.clr, "the list follows as typing would: " + JSON.stringify(r));
     // forget one
     await p5.click('#find-clear, [data-act="find-clear"]');
     await p5.waitForTimeout(50);
-    await p5.click('#hbody [aria-label="Forget: cc"]');
+    await p5.click('#hbody [aria-label="Forget: corn"]');
     ok(
-      JSON.stringify(await rec(p5)) === '["dd","bb","aa","CORNER"]',
+      JSON.stringify(await rec(p5)) === '["bak","corne","cor","BAKERY"]',
       "Forget removes just that one: " + (await p5.evaluate(() => window.__rec))
     );
     r = await p5.evaluate(() => ({
       texts: [...document.querySelectorAll("#hbody .rec .recq")].map(b => b.textContent.trim()),
       focus: document.activeElement && (document.activeElement.getAttribute("aria-label") || document.activeElement.id),
     }));
-    ok(r.texts.join() === "dd,bb,aa,CORNER", "the row is gone at once: " + r.texts);
-    ok(r.focus === "Forget: bb", "focus moves to the next Forget: " + r.focus);
-    for (const w of ["bb", "aa", "CORNER"]) await p5.click('#hbody [aria-label="Forget: ' + w + '"]');
+    ok(r.texts.join() === "bak,corne,cor,BAKERY", "the row is gone at once: " + r.texts);
+    ok(r.focus === "Forget: cor", "focus moves to the next Forget: " + r.focus);
+    for (const w of ["corne", "cor", "BAKERY"]) await p5.click('#hbody [aria-label="Forget: ' + w + '"]');
     r = await p5.evaluate(() => ({
       f: document.activeElement && document.activeElement.id,
       rows: document.querySelectorAll("#hbody .rec").length,
     }));
     ok(r.rows === 1, "one left");
-    await p5.click('#hbody [aria-label="Forget: dd"]');
+    await p5.click('#hbody [aria-label="Forget: bak"]');
     r = await p5.evaluate(() => ({
       f: document.activeElement && document.activeElement.id,
       html: $("#hbody").innerHTML.trim(),
@@ -1451,8 +1463,7 @@ const ok = (c, m) => {
     );
 
     // never in saved data, localStorage, the shell's copy, a backup or CSV
-    await type(p5, "zebrastripe");
-    await back(p5);
+    await p5.evaluate(() => recentKeep("zebrastripe"));
     r = await p5.evaluate(() => {
       const s = JSON.stringify(S),
         ls = Object.keys(localStorage)
@@ -1490,16 +1501,15 @@ const ok = (c, m) => {
     }
     // a very long search is cut to 100 characters, not refused
     ({ c: c5, p: p5 } = await open5());
-    await type(p5, "x".repeat(150));
-    await back(p5);
+    await p5.evaluate(() => recentKeep("x".repeat(150)));
     r = await rec(p5);
     ok(r.length === 1 && r[0].length === 100, "a long search is cut to 100: " + r.map(x => x.length));
     await c5.close();
 
     // without the shell's methods (browser tests, older shells): kept in memory only
     ({ c: c5, p: p5 } = await open5(false));
-    await type(p5, "memory");
-    await back(p5);
+    await p5.evaluate(() => recentKeep("memory"));
+    await p5.evaluate(() => (findBack(), openFind()));
     ok((await rows(p5)).join() === "memory", "no Android.recentGet: kept in memory: " + (await rows(p5)));
     r = await p5.evaluate(() =>
       Object.keys(localStorage)
@@ -1688,7 +1698,10 @@ const ok = (c, m) => {
     ok(r6 === "rain", "the suggestion leaves the rest in the field: " + r6);
     await p6.click('#app [data-act="find-back"]');
     r6 = await p6.evaluate(() => recentLoad());
-    ok(r6.length === 1 && r6[0] === "rain outdoor", "Back keeps one search: " + JSON.stringify(r6));
+    ok(
+      r6.length === 2 && r6[0] === "rain" && /Outdoor Store/.test(r6[1]),
+      "Back keeps the words left and the suggestion: " + JSON.stringify(r6)
+    );
 
     // T4: marks on hostile and folded text (hl)
     r6 = await p6.evaluate(() => {
@@ -2099,7 +2112,10 @@ const ok = (c, m) => {
     r8 = await st8();
     const rec8 = await p8.evaluate(() => recentLoad());
     ok(!r8.find && r8.screen === "assets", "the top bar's arrow leaves search mode at once: " + JSON.stringify(r8));
-    ok(rec8.length === 1 && rec8[0] === "rain outdoor", "…and keeps one recent search: " + JSON.stringify(rec8));
+    ok(
+      rec8.length === 2 && rec8[0] === "rain" && /Outdoor Store/.test(rec8[1]),
+      "…and keeps the words left and the suggestion tapped: " + JSON.stringify(rec8)
+    );
 
     // Clear all and the field's x empty the steps
     for (const how of ["hf-clear", "find-clear"]) {

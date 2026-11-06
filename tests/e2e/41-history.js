@@ -587,23 +587,23 @@ const ok = (c, m) => {
     r = await sheet();
     ok(r.secs.join() === "Account,Transactions,Between", "Transfers adds Between: " + r.secs);
     ok(
-      /From Any account/.test(r.from) && /To Any account/.test(r.to) && !r.hint,
+      /From any account/.test(r.from) && /To any account/.test(r.to) && !r.hint,
       "From any account, To any account, no hint: " + r.from + " / " + r.to
     );
     ok(r.hfd.includes('"who":""'), "changing the kind drops the person");
     await page.click('#sheet [data-act="hfs-from"]');
     await page.click('#pop [data-act="hfs-pick"][data-v="b"]');
     r = await sheet();
-    ok(/From Everyday/.test(r.from) && /To Any account/.test(r.to), "From Everyday: " + r.from + " / " + r.to);
+    ok(/From Everyday/.test(r.from) && /To any account/.test(r.to), "From Everyday: " + r.from + " / " + r.to);
     await tap("hfs-swap");
     r = await sheet();
-    ok(/From Any account/.test(r.from) && /To Everyday/.test(r.to), "swap swaps: " + r.from + " / " + r.to);
+    ok(/From any account/.test(r.from) && /To Everyday/.test(r.to), "swap swaps: " + r.from + " / " + r.to);
     await tap("hfs-swap");
     // with Credit card picked
     await tap("hfs-acc", "k");
     r = await sheet();
     ok(
-      /From Any account/.test(r.from) && /To Any account/.test(r.to) && r.hint === "One side is Credit card",
+      /From any account/.test(r.from) && /To any account/.test(r.to) && r.hint === "One side is Credit card",
       "both any, with the hint: " + r.from + " / " + r.to + " / " + r.hint
     );
     ok(r.show === "Show 3 entries", "every transfer in and out of it: " + r.show);

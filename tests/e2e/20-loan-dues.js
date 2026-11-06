@@ -106,7 +106,7 @@ const ok = (c, m) => {
   await settle();
   const head = (await page.textContent("#loan-due")).trim();
   ok(head.startsWith("Payback day") && head.endsWith(await m(300)), "due card names the 300: " + head);
-  ok((await page.inputValue("#f-amt")) === "300", "payment pre-filled with the 300 that is due");
+  ok((await page.inputValue("#f-amt")) === "300.00", "payment pre-filled with the 300 that is due");
   const m300 = await m(300),
     m1000 = await m(1000);
   for (const x of await page.$$("#sheet .tx.exp")) await x.click();
@@ -128,7 +128,7 @@ const ok = (c, m) => {
   // ---- 3. the rest of the 300 paid: the next due day moves on to the 1000's, no longer overdue
   await act("loan-open", "L");
   await settle();
-  ok((await page.inputValue("#f-amt")) === "200", "payment pre-filled with the 200 still due");
+  ok((await page.inputValue("#f-amt")) === "200.00", "payment pre-filled with the 200 still due");
   await sact("loan-pay");
   await settle();
   i = await info("L");
@@ -143,7 +143,7 @@ const ok = (c, m) => {
   );
   await act("loan-open", "L");
   await settle();
-  ok((await page.inputValue("#f-amt")) === "1,000", "nothing due yet: payment pre-filled with all that is left");
+  ok((await page.inputValue("#f-amt")) === "1,000.00", "nothing due yet: payment pre-filled with all that is left");
   ok(!(await page.textContent("#loan-due")).includes(m1000), "card heading has no amount once all that is left is due");
   for (const x of await page.$$("#sheet .tx.exp")) await x.click();
   mores = await page.$$eval("#sheet .tx.exp .more", els => els.map(e => e.textContent));

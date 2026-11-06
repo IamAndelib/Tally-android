@@ -194,7 +194,7 @@ function personCandidates(kind, cur, q) {
     if (!i.open || i.cur !== cur) return;
     if (qq && !curFold(l.person).startsWith(qq)) return;
     const key = curFold(l.person);
-    if (seen.has(key)) return;
+    if (seen.has(key) || hiddenNames("people").includes(key)) return;
     seen.add(key);
     out.push({ l, ts: i.draws.length ? i.draws[i.draws.length - 1].ts || 0 : 0 });
   });
@@ -210,16 +210,7 @@ function personSuggest(q) {
   const cur = (acc(F.account) || {}).currency,
     list = cur ? personCandidates(F.lk, cur, q || "") : [];
   el.hidden = !list.length;
-  el.innerHTML = list
-    .map(
-      l =>
-        '<button class="chip" data-act="f-person-pick" data-v="' +
-        esc(l.id) +
-        '"><span class="chn" dir="auto">' +
-        esc(l.person) +
-        "</span></button>"
-    )
-    .join("");
+  el.innerHTML = list.map(l => nameChip("people", "f-person-pick", l.id, l.person)).join("");
 }
 /* one-line feedback once a suggestion is picked: what the tab will total once this amount is added */
 function mergeHint() {
@@ -359,7 +350,7 @@ function loanOpen(id, focusPay) {
       '</h3><p class="muted small" style="margin:0">' +
       TH("loan.partOk") +
       "</p>" +
-      amtField("f-amt", i.cur, String(i.nextDue && i.nextDue <= today() ? i.dueAmt : i.left)) +
+      amtField("f-amt", i.cur, amtPre(i.nextDue && i.nextDue <= today() ? i.dueAmt : i.left, i.cur)) +
       '<div class="lbl">' +
       TH(lend ? "loan.payInto" : "loan.payFrom") +
       "</div>" +
@@ -480,7 +471,7 @@ function loanDrawEdit(txnId) {
   F.editTxn = txnId;
   F.editAcc = t.account;
   const accs = activeAccounts().filter(a => a.currency === i.cur);
-  let h = amtField("ed-amt", i.cur, String(t.amount));
+  let h = amtField("ed-amt", i.cur, amtPre(t.amount, i.cur));
   h += '<div class="lbl">' + TH("common.account") + "</div>" + accChips("ed-acc", t.account, null, accs);
   /* a payment can't be older than the first draw */
   const first = !t.principal && i.draws.length ? i.draws[0].date : "";

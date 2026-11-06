@@ -223,7 +223,7 @@ const ok = (c, m) => {
       const sug = q => {
         $("#f-payee").value = q;
         $("#f-payee").dispatchEvent(new Event("input", { bubbles: true }));
-        return [...document.querySelectorAll("#f-payee-sug .chip")].map(c => c.textContent);
+        return [...document.querySelectorAll("#f-payee-sug .nchip")].map(c => c.textContent);
       };
       return { ist: sug("ist"), caf: sug("caf"), exact: sug("corner shop"), none: sug("") };
     });
@@ -234,7 +234,7 @@ const ok = (c, m) => {
     ok(r.caf.join("|") === "ISTANBUL Cafe", "a word of the name matches too: " + r.caf);
     ok(!r.exact.length && !r.none.length, "nothing offered for a name typed out in full, or nothing typed");
     await page.fill("#f-payee", "cor");
-    await page.click("#f-payee-sug .chip");
+    await page.click("#f-payee-sug .nchip");
     ok(
       (await page.inputValue("#f-payee")) === "Corner Shop" && (await page.evaluate(() => $("#f-payee-sug").hidden)),
       "a tap fills the box"

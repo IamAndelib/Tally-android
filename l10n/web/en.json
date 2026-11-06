@@ -711,6 +711,7 @@
     "selected_one": "{{count}} selected",
     "selected_other": "{{count}} selected",
     "selAll": "Select all",
+    "clearSel": "Clear selection",
     "delSel": "Delete selected",
     "select": "Select entries",
     "allTime": "All time",
@@ -763,11 +764,14 @@
     "between": "Between",
     "everyone": "Everyone",
     "anyAccount": "Any account",
+    "fromAny": "From any account",
+    "toAny": "To any account",
     "oneSide": "One side is {{account}}",
     "show_one": "Show {{count}} entry",
     "show_other": "Show {{count}} entries",
     "showNone": "No entries",
-    "swap": "Swap From and To"
+    "swap": "Swap From and To",
+    "savedGone": "Saved · no longer in this list"
   },
   "remind": {
     "nudge": "Evening nudge",
@@ -775,7 +779,7 @@
     "check": "Balance check",
     "checkHint": "Do your balances still match?",
     "dues": "Loan & lending due days",
-    "duesHint": "On the day, with +1 day / +1 week",
+    "duesHint": "On the due day, or monthly when there is none",
     "nudgeAt": "Evening nudge at",
     "checkAt": "Balance check at",
     "duesAt": "Due-day reminders at"
@@ -865,5 +869,9 @@
   },
   "lang": {
     "name": "English"
+  },
+  "suggest": {
+    "removeName": "Remove “{{name}}” from suggestions",
+    "removed": "Removed “{{name}}” from suggestions"
   }
 }

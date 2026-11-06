@@ -720,6 +720,7 @@
     "selected_many": "{{count}} selecionados",
     "selected_other": "{{count}} selecionados",
     "selAll": "Selecionar tudo",
+    "clearSel": "Limpar seleção",
     "delSel": "Excluir selecionados",
     "select": "Selecionar lançamentos",
     "allTime": "Todo o período",
@@ -774,12 +775,15 @@
     "between": "Entre",
     "everyone": "Todos",
     "anyAccount": "Qualquer conta",
+    "fromAny": "De qualquer conta",
+    "toAny": "Para qualquer conta",
     "oneSide": "Um dos lados é {{account}}",
     "showNone": "Nenhum lançamento",
     "swap": "Inverter origem e destino",
     "show_many": "Mostrar {{count}} lançamentos",
     "show_one": "Mostrar {{count}} lançamento",
-    "show_other": "Mostrar {{count}} lançamentos"
+    "show_other": "Mostrar {{count}} lançamentos",
+    "savedGone": "Salvo · não está mais nesta lista"
   },
   "remind": {
     "nudge": "Lembrete da noite",
@@ -787,7 +791,7 @@
     "check": "Conferir saldos",
     "checkHint": "Seus saldos ainda conferem?",
     "dues": "Vencimentos de dívidas e empréstimos",
-    "duesHint": "No dia, com +1 dia / +1 semana",
+    "duesHint": "No dia do vencimento, ou todo mês se não houver",
     "nudgeAt": "Lembrete da noite às",
     "checkAt": "Conferir saldos às",
     "duesAt": "Lembretes de vencimento às"
@@ -880,5 +884,9 @@
   },
   "lang": {
     "name": "Português (Brasil)"
+  },
+  "suggest": {
+    "removeName": "Remover “{{name}}” das sugestões",
+    "removed": "“{{name}}” removido das sugestões"
   }
 }

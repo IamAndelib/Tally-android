@@ -352,7 +352,14 @@ const ago = n => {
   ok((await snackText()).includes("Couldn't read that file"), "a file that can't be read says so");
 
   // ---- 12. Today in the Day | Range | Month picker always means today, even from the Month tab
-  await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank], txns: [], loans: [], assets: [] });
+  await seed({
+    v: 6,
+    settings: { cur: "CAD" },
+    accounts: [bank],
+    txns: [{ id: "e1", ts: 1, date: ago(2), type: "expense", amount: 1, account: bank.id, cat: "groceries" }], // History has its period chip once there is an entry
+    loans: [],
+    assets: [],
+  });
   const lastMonth = ago(40).slice(0, 7);
   await act("period-open");
   await act("pd-tab", "month");

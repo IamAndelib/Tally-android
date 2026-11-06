@@ -338,14 +338,16 @@ function openFind() {
   const inp = $("#find-q");
   if (inp) inp.focus();
 }
-/* search mode ends (Back, or History left another way): the words typed are kept as a recent search first, unless a
+/* search mode ends (Back, or History left another way): the words typed are kept as a recent search first when they
+   found something (and are 3 letters or more), unless a
    suggestion just kept them (they are among the newest search's words), the mode's words, payee and amount are
    forgotten and History's period is put back: its own when search was opened from History, else all time (the caller
    sets the screen) */
 function findEnd() {
-  const last = srTerms(recentLoad()[0] || ""),
+  const last = recentTerms(recentLoad()[0] || ""),
     mine = srTerms(HF.q);
-  if (!(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
+  /* only words that found something, and not ones a suggestion just kept */
+  if (HLIST.length && !(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
   clearTimeout(FIND_T);
   V.find = false;
   if (FIND.keep) Object.assign(HP, FIND.keep.hp);
@@ -575,7 +577,7 @@ function sugHits(name, toks, whole) {
     ws = srInfo(fold);
   const out = [];
   toks.forEach((t, i) => {
-    if (!t.f) return;
+    if (Array.from(t.f).length < 2) return; // suggestions start from two typed letters
     const starts = srHitFolded(fold, ws, t.f, false);
     if (whole ? t.f === fold || (t.f.length >= 3 && starts) : starts) out.push(i);
   });
@@ -722,12 +724,60 @@ function sugFind(toks) {
         () => HF.kind === k
       );
   });
-  /* a month: for each year that has entries in it, newest first; a year that has entries */
+  /* a month, with a year or a day typed beside it, is one period: "may 2025" the month, "jun 14" the day in each year
+     that has entries on it (newest first), "jun 14 2026" that day. Those take the typed words they used, so the plain
+     month and the plain year for the same words are left out. Else a month: for each year that has entries in it,
+     newest first; a year that has entries. */
   const have = new Set(S.txns.map(t => t.date.slice(0, 7))),
-    months = [];
-  sugMonths().forEach((names, m) => {
-    const idx = [...new Set(names.flatMap(n => hit(n, true)))];
+    days = [...new Set(S.txns.map(t => t.date))].sort().reverse(),
+    isYear = t => /^\d{4}$/.test(t.f),
+    isDay = t => /^\d{1,2}$/.test(t.f) && +t.f >= 1 && +t.f <= 31,
+    months = [],
+    usedMon = new Set(),
+    usedYear = new Set(),
+    combos = [];
+  const mnames = sugMonths().map((names, m) => ({ m, idx: [...new Set(names.flatMap(n => hit(n, true)))] }));
+  mnames.forEach(({ m, idx }) => {
     if (!idx.length) return;
+    const i = idx[0],
+      dayToks = toks.map((t, j) => (j !== i && isDay(t) ? j : -1)).filter(j => j >= 0),
+      yearToks = toks.map((t, j) => (j !== i && isYear(t) ? j : -1)).filter(j => j >= 0);
+    dayToks.forEach(j =>
+      (yearToks.length ? yearToks : [-1]).forEach(k => {
+        days
+          .filter(d => +d.slice(5, 7) === m + 1 && +d.slice(8) === +toks[j].f && (k < 0 || d.slice(0, 4) === toks[k].f))
+          .forEach(d => {
+            combos.push({
+              title: dayFull(d),
+              idx: k < 0 ? [i, j] : [i, j, k],
+              p: { period: "day", anchor: d, rs: null, re: null },
+              on: () => HP.period === "day" && HP.anchor === d,
+            });
+            usedMon.add(m);
+            if (k >= 0) usedYear.add(k);
+          });
+      })
+    );
+    if (!dayToks.length)
+      yearToks.forEach(k => {
+        const ym = toks[k].f + "-" + pad(m + 1);
+        if (!have.has(ym)) return;
+        combos.push({
+          title: capFirst(monthLabel(ym, true)),
+          idx: [i, k],
+          p: { period: "month", anchor: ym + "-01", rs: null, re: null },
+          on: () => HP.period === "month" && HP.anchor.slice(0, 7) === ym,
+        });
+        usedMon.add(m);
+        usedYear.add(k);
+      });
+  });
+  combos.forEach(c => {
+    add("period", c.title, SUG_PERIOD_EMB, c.idx, 0, f => ({ f, p: c.p }), c.on);
+    out[out.length - 1].first = true; // listed before the other groups
+  });
+  mnames.forEach(({ m, idx }) => {
+    if (!idx.length || usedMon.has(m)) return;
     [...have].filter(ym => +ym.slice(5) === m + 1).forEach(ym => months.push({ ym, idx }));
   });
   months
@@ -744,7 +794,7 @@ function sugFind(toks) {
       )
     );
   toks.forEach((t, i) => {
-    if (!/^\d{4}$/.test(t.f) || !S.txns.some(x => x.date.slice(0, 4) === t.f)) return;
+    if (!isYear(t) || usedYear.has(i) || !S.txns.some(x => x.date.slice(0, 4) === t.f)) return;
     add(
       "period",
       t.f,
@@ -792,7 +842,7 @@ function findSugs() {
       return !seen.has(k) && !!seen.add(k);
     });
   let rows = "";
-  SUG_GROUPS.forEach(g => {
+  (all.some(s => s.first) ? ["period"].concat(SUG_GROUPS.filter(g => g !== "period")) : SUG_GROUPS).forEach(g => {
     const mine = all.filter(s => s.g === g && !s.set());
     /* the most used first (the months already newest first), then counted: the first few that leave something */
     /* a name that is the typed words themselves comes first, whatever its use, so the cut to three never drops it */
@@ -844,7 +894,7 @@ function findSugs() {
 function findPick(i) {
   const s = SUGS[i];
   if (!s || s.q !== HF.q) return findDraw(); // the field moved on: the list is about to follow
-  recentKeep(s.q);
+  recentKeepSug(s);
   /* what the tap changes, to be undone alone: each filter and period field as [before, set], the words it takes out of
      the field with their places */
   const next = histNorm(s.r.f),
@@ -887,9 +937,42 @@ function recentKeep(text) {
     .slice(0, RECENT_LEN);
   if (/[\uD800-\uDBFF]$/.test(t)) t = t.slice(0, -1); // not half of a pair
   t = t.trim();
-  if (Array.from(t).length < 2) return;
+  if (Array.from(t).length < 3) return; // a fragment is not a search
   const f = curFold(t);
-  recentSave([t, ...recentLoad().filter(x => curFold(x) !== f)].slice(0, RECENT_MAX));
+  recentSave([t, ...recentLoad().filter(x => recentSug(x) || curFold(x) !== f)].slice(0, RECENT_MAX));
+}
+/* a suggestion tapped is kept as that suggestion: a text of its group, label, name and the words that found it, apart
+   by U+0001 (the shell keeps plain strings), shown with its emblem and applied again when tapped */
+const REC_SEP = "\u0001";
+function recentSug(x) {
+  if (x.charAt(0) !== REC_SEP) return null;
+  const [, g, label, title, words] = x.split(REC_SEP);
+  return title === undefined ? null : { g, label, title, words };
+}
+function recentKeepSug(s) {
+  const tk = sugTokens(s.q),
+    item = REC_SEP + [s.g, s.label || "", s.title, s.idx.map(i => tk[i].raw).join(" ")].join(REC_SEP);
+  if (item.length > RECENT_LEN) return recentKeep(s.q);
+  recentSave([item, ...recentLoad().filter(x => x !== item)].slice(0, RECENT_MAX));
+}
+/* the words a recent search stands for, as terms */
+const recentTerms = x => {
+  const r = recentSug(x);
+  return srTerms(r ? r.words : x);
+};
+/* the suggestion a kept one stands for now (None when the notebook has changed): found again from its words */
+function recentFind(r) {
+  const toks = sugTokens(r.words);
+  return (
+    sugFind(toks).find(x => x.g === r.g && srFold(x.title) === srFold(r.title) && (x.label || "") === r.label) || null
+  );
+}
+/* what a kept suggestion says: its filter's own chip */
+function recentText(r) {
+  if (r.g === "pay" || r.g === "payIn") return T(r.g === "pay" ? "history.payOut" : "history.payIn", { name: r.title });
+  if (r.label === "whoLend" || r.label === "whoBorrow")
+    return T(r.label === "whoLend" ? "history.lentTo" : "history.borrowedFrom", { who: r.title });
+  return r.title;
 }
 /* what the empty field shows: "" when there are none */
 function recentView() {
@@ -900,35 +983,53 @@ function recentView() {
     TH("search.recent") +
     '</div><div class="list">' +
     list
-      .map(
-        (t, i) =>
+      .map((t, i) => {
+        const r = recentSug(t),
+          f = r && recentFind(r),
+          text = r ? recentText(r) : t;
+        return (
           '<div class="rec"><button class="recq" data-act="rec-use" data-v="' +
           i +
           '">' +
-          ic("schedule") +
+          (f ? emblem(f.emb, "recem") : ic("schedule")) +
           '<span class="recw" dir="auto">' +
-          esc(t) +
+          esc(text) +
           '</span></button><button class="icon recx" data-act="rec-del" data-v="' +
           i +
           '" aria-label="' +
-          esc(T("search.forget", { text: t })) +
+          esc(T("search.forget", { text })) +
           '">' +
           ic("close") +
           "</button></div>"
-      )
+        );
+      })
       .join("") +
     "</div>"
   );
 }
-/* a recent search tapped: it is typed into the field (caret at its end, focus kept) and the list follows */
+/* a recent search tapped: words are typed into the field (caret at its end, focus kept) and the list follows; a kept
+   suggestion is applied as a suggestion again (its words typed, then it tapped), or its words are typed when it no
+   longer exists */
 function recentUse(i) {
-  const t = recentLoad()[i];
-  if (t === undefined) return;
+  const item = recentLoad()[i];
+  if (item === undefined) return;
+  const r = recentSug(item),
+    t = r ? r.words : item;
   HF.q = t;
   const inp = $("#find-q");
   if (inp) inp.value = t;
   const c = $('#app [data-act="find-clear"]');
-  if (c) c.hidden = false;
+  if (c) c.hidden = !t;
+  if (r) {
+    const f = recentFind(r);
+    if (f) {
+      findDraw();
+      const at = SUGS.findIndex(
+        x => x.g === f.g && srFold(x.title) === srFold(f.title) && (x.label || "") === (f.label || "")
+      );
+      if (at >= 0) return findPick(at);
+    }
+  }
   findDraw();
   if (inp) {
     inp.focus({ preventScroll: true });

@@ -232,6 +232,7 @@ add_circle: other add plus income
 trending_down: loss down
 swap_horiz: transfer swap move exchange
 balance: balance fix adjust scale correction
+deselect: deselect clear selection select none
 """.strip().splitlines()
 
 seen, out, missing = set(), {}, []

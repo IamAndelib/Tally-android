@@ -109,6 +109,9 @@ const P = {
   edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
 };
 const ic = n => '<svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="' + P[n] + '"/></svg>';
+/* the Clear selection glyph: Material Symbols' deselect from icons.js (the emblems' set, viewBox "0 -960 960 960") */
+const icDeselect = () =>
+  '<svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' + ICONS.deselect[0] + '"/></svg>';
 const $ = s => document.querySelector(s);
 const esc = s =>
   String(s ?? "").replace(
@@ -188,12 +191,13 @@ const LOCAL_SYM = {
   VES: "Bs.S",
   XCG: "Cg.",
 };
-/* f's text for v, with LOCAL_SYM's sign in place of a bare code (f.sym, set in money()) */
+/* f's text for v, with LOCAL_SYM's sign in place of a bare code (f.sym, set in money()); a negative amount's minus is
+   the true one, "−", kept on the amount's line (a word joiner), as signed() writes it */
 const fmtSym = (f, v) =>
-  f.sym
+  f.sym || v < 0
     ? f
         .formatToParts(v)
-        .map(p => (p.type === "currency" ? f.sym : p.value))
+        .map(p => (p.type === "currency" && f.sym ? f.sym : p.type === "minusSign" ? "−\u2060" : p.value))
         .join("")
     : f.format(v);
 /* formatters are slow to build and money() runs for every row, so each kind is built once */
@@ -239,6 +243,18 @@ function shown(n, cur) {
   money(0, cur);
   const f = NF.get(cur || S.settings.cur);
   return f ? toDp(n, f.dp) : rnd(n);
+}
+/* an amount put into a field (a form for an entry already saved, an amount worked out): the currency's own decimals
+   ("4167.50" for 4167.5 dollars, "4167" for yen), more when the amount has more (kept to 3), in the canonical form the
+   field groups when the sheet opens */
+function amtPre(n, cur) {
+  if (n == null || n === "") return "";
+  const v = rnd(n);
+  money(0, cur);
+  const f = NF.get(cur || S.settings.cur),
+    dp = f ? Math.round(Math.log10(f.dp)) : 0,
+    own = (String(v).split(".")[1] || "").length;
+  return f ? v.toFixed(Math.max(dp, own)) : String(v);
 }
 /* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none, where the phone's language puts it
    (€ −5,00 in Dutch, beside the number in Arabic), as a true minus or a plus, kept on the amount's line (a word joiner) */
@@ -302,6 +318,18 @@ function dayLabel(d) {
     DAY_DTF[y] = new Intl.DateTimeFormat(DATE_LOC, o);
   }
   return isNaN(x) ? "" : DAY_DTF[y].format(x); // no date (an open loan without a due day): nothing to write
+}
+/* a day in full, with its year whichever it is: "Sun, Jun 14, 2026" */
+let FULL_DTF = null,
+  FULL_KEY = "";
+function dayFull(d) {
+  const x = parseISO(d);
+  if (isNaN(x)) return "";
+  if (FULL_KEY !== String(DATE_LOC)) {
+    FULL_KEY = String(DATE_LOC);
+    FULL_DTF = new Intl.DateTimeFormat(DATE_LOC, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  return FULL_DTF.format(x);
 }
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
 const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));

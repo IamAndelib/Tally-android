@@ -804,6 +804,61 @@ body.land .pnav .plabel.long {
 #f-person-sug {
   margin-top: 8px;
 }
+/* the names offered under a field (sheets.js nameChip): the Filters sheet's compact chip (34px to see; the row gap makes
+   up 48px to tap, each button's ::after reaches 8px up and down), the name that picks it and its own ✕ */
+#f-payee-sug,
+#f-person-sug {
+  gap: 14px 8px;
+}
+.nchip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--on-surface-variant);
+}
+.nchip-pick,
+.nchip-x {
+  position: relative;
+  overflow: visible; /* the ::after tap area reaches past the chip (button{overflow:hidden} would clip it) */
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.nchip-pick {
+  min-width: 0;
+  padding: 0 4px 0 12px;
+  text-align: start;
+}
+.nchip-x {
+  flex: none;
+  justify-content: center;
+  width: 32px;
+}
+.nchip-pick::after,
+.nchip-x::after {
+  content: "";
+  position: absolute;
+  inset: -8px -8px;
+}
+.nchip-pick::after {
+  inset: -8px 0 -8px -1px;
+}
+.nchip .chn {
+  min-width: 0;
+  padding: 4px 0;
+  overflow-wrap: anywhere;
+}
+.nchip-x .ic {
+  width: 18px;
+  height: 18px;
+}
 /* Material 3 filter chip: 16px either side, 8px before a leading emblem or icon and between it and the name */
 .chip {
   min-height: 48px;
@@ -1510,6 +1565,11 @@ input {
   fill: currentColor;
   flex: none;
   color: var(--on-surface-variant);
+}
+.recq .recem {
+  width: 24px;
+  height: 24px;
+  font-size: 0.7rem;
 }
 .recw {
   flex: 1;

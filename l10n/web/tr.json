@@ -711,6 +711,7 @@
     "selected_one": "{{count}} seçildi",
     "selected_other": "{{count}} seçildi",
     "selAll": "Tümünü seç",
+    "clearSel": "Seçimi temizle",
     "delSel": "Seçilenleri sil",
     "select": "Kayıt seç",
     "allTime": "Tüm zamanlar",
@@ -763,11 +764,14 @@
     "between": "Arasında",
     "everyone": "Herkes",
     "anyAccount": "Herhangi bir hesap",
+    "fromAny": "Nereden: herhangi bir hesap",
+    "toAny": "Nereye: herhangi bir hesap",
     "oneSide": "Taraflardan biri {{account}}",
     "showNone": "Kayıt yok",
     "swap": "Nereden ile Nereyi değiştir",
     "show_one": "{{count}} kaydı göster",
-    "show_other": "{{count}} kaydı göster"
+    "show_other": "{{count}} kaydı göster",
+    "savedGone": "Kaydedildi · artık bu listede değil"
   },
   "remind": {
     "nudge": "Akşam hatırlatması",
@@ -775,7 +779,7 @@
     "check": "Bakiye kontrolü",
     "checkHint": "Bakiyelerin hâlâ tutuyor mu?",
     "dues": "Borç ve alacak vadeleri",
-    "duesHint": "Vade günü, +1 gün / +1 hafta seçenekleriyle",
+    "duesHint": "Vade gününde, vade yoksa her ay",
     "nudgeAt": "Akşam hatırlatması saati",
     "checkAt": "Bakiye kontrolü saati",
     "duesAt": "Vade hatırlatması saati"
@@ -865,5 +869,9 @@
   },
   "lang": {
     "name": "Türkçe"
+  },
+  "suggest": {
+    "removeName": "“{{name}}” adını önerilerden kaldır",
+    "removed": "“{{name}}” önerilerden kaldırıldı"
   }
 }

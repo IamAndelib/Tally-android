@@ -1,0 +1,396 @@
+// The design round's small items for History and search (A2–A14 and A16 of docs/specs/design-round.md): period
+// suggestions for "may 2025" and "jun 14", suggestions from two letters, recent searches kept as used, the snack for an
+// entry that leaves the list, "any account", suggestions hidden while selecting, Clear selection, an empty notebook's
+// History, prefilled amounts with the currency's decimals, the true minus in money(), the welcome bar, the reminder
+// line, and the name chips with ✕ and Undo (hidden names kept in the settings, migrated, in backups).
+const { chromium, appUrl, launchOptions } = require("./harness");
+let fails = 0;
+const ok = (c, m) => {
+  console.log((c ? "PASS " : "FAIL ") + m);
+  if (!c) fails++;
+};
+(async () => {
+  const browser = await chromium.launch(launchOptions);
+  const errors = [];
+  const open = async seed => {
+    const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+    await ctx.addInitScript(() => {
+      window.__rec = "[]";
+      window.Android = {
+        getColors: () => null,
+        setBars() {},
+        recentGet: () => window.__rec,
+        recentSet: j => (window.__rec = j),
+      };
+    });
+    const page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message));
+    await page.goto(appUrl);
+    await page.evaluate(seed, null);
+    return page;
+  };
+  const seed = () => {
+    const e = (id, date, type, amount, extra) => ({ id, ts: +id.slice(1), date, type, amount, account: "a", ...extra });
+    S = blank();
+    S.settings.cur = "USD";
+    S.settings.lastCheck = today();
+    S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 50000, archived: false });
+    S.accounts.push({ id: "b", name: "Cash", type: "cash", currency: "USD", opening: 1000, archived: false });
+    S.txns.push(e("t1", "2025-05-10", "expense", 4.5, { payee: "Corner Café", cat: "food" }));
+    S.txns.push(e("t2", "2025-05-20", "expense", 12, { payee: "Corner Café", cat: "food" }));
+    S.txns.push(e("t3", "2025-06-14", "expense", 7, { payee: "Bakery", cat: "food" }));
+    S.txns.push(e("t4", "2024-06-14", "expense", 9, { payee: "Bakery", cat: "food" }));
+    S.txns.push(e("t5", "2024-06-14", "income", 100, { payee: "Corner Café", cat: "salary" }));
+    S.txns.push(e("t6", "2025-06-01", "expense", 3, { account: "b", cat: "food", note: "kiosk" }));
+    S.loans.push({ id: "L1", kind: "lend", person: "Sam", account: "a", date: "2025-06-01", note: "", status: "open" });
+    S.loans.push({
+      id: "L2",
+      kind: "lend",
+      person: "Mahin",
+      account: "a",
+      date: "2025-06-02",
+      note: "",
+      status: "open",
+    });
+    S.txns.push(
+      e("t7", "2025-06-01", "loan", 10, { dir: "out", loan: "L1", principal: true }),
+      e("t8", "2025-06-02", "loan", 10, { dir: "out", loan: "L2", principal: true })
+    );
+    save();
+    V.screen = "history";
+    render();
+    openFind();
+  };
+  const type = async (p, v) => {
+    await p.fill("#find-q", v);
+    await p.waitForTimeout(220);
+  };
+  const sugs = p =>
+    p.evaluate(() =>
+      [...document.querySelectorAll("#hbody .sug")].map(b => ({
+        t: b.querySelector(".sgt").textContent,
+        s: b.querySelector(".s").textContent,
+      }))
+    );
+
+  // ---- A2: "may 2025" is one Period suggestion, first; nothing says "Nothing matches" under it
+  let p = await open(seed);
+  await type(p, "may 2025");
+  let s = await sugs(p);
+  ok(
+    s[0] && s[0].t === "May 2025" && /^Period · 2 entries$/.test(s[0].s),
+    "A2: May 2025 first: " + JSON.stringify(s[0])
+  );
+  ok(s.filter(x => /Period/.test(x.s)).length === 1, "A2: one Period suggestion only: " + JSON.stringify(s));
+  ok(!(await p.$("#hbody .empty")), "A2: no 'Nothing matches' under it");
+  await p.click("#hbody .sug");
+  let r = await p.evaluate(() => ({ hp: { ...HP }, q: HF.q, label: periodLabel(HP) }));
+  ok(
+    r.hp.period === "month" && r.hp.anchor === "2025-05-01" && r.q === "",
+    "A2: tapped: that month, words gone: " + JSON.stringify(r)
+  );
+
+  // ---- A3: "jun 14" is that day, in each year that has entries on it
+  p = await open(seed);
+  await type(p, "jun 14");
+  s = await sugs(p);
+  ok(
+    s[0] && s[0].t === "Sat, Jun 14, 2025" && s[0].s === "Period · 1 entry",
+    "A3: the day with weekday and year: " + JSON.stringify(s.slice(0, 2))
+  );
+  ok(
+    s[1] && s[1].t === "Fri, Jun 14, 2024" && s[1].s === "Period · 2 entries",
+    "A3: older year after it: " + JSON.stringify(s[1])
+  );
+  ok(!(await p.$("#hbody .empty")), "A3: no 'Nothing matches'");
+  await p.click("#hbody .sug");
+  r = await p.evaluate(() => ({ ...HP, q: HF.q }));
+  ok(r.period === "day" && r.anchor === "2025-06-14" && r.q === "", "A3: tapped: that day: " + JSON.stringify(r));
+
+  // ---- A4: suggestions start from two letters
+  p = await open(seed);
+  await type(p, "c");
+  ok((await sugs(p)).length === 0, "A4: one letter, no suggestions");
+  ok(
+    (await p.$$("#hbody .tx, #hbody .row")).length > 0 || (await p.$$("#hbody [data-act='row-open']")).length > 0,
+    "A4: the entries are listed"
+  );
+  await type(p, "co");
+  ok((await sugs(p)).length > 0, "A4: two letters, suggestions");
+
+  // ---- A5: recent searches kept as used
+  p = await open(seed);
+  await type(p, "co");
+  await p.click("#hbody .sug"); // the payee Corner Café (most used)
+  let rec = await p.evaluate(() => recentLoad());
+  ok(rec.length === 1, "A5: the suggestion is kept: " + JSON.stringify(rec));
+  await p.evaluate(() => findBack());
+  await p.evaluate(() => openFind());
+  let rows = await p.evaluate(() =>
+    [...document.querySelectorAll("#hbody .rec .recq")].map(b => ({
+      t: b.querySelector(".recw").textContent,
+      emb: !!b.querySelector(".emb"),
+      clock: !!b.querySelector(".ic"),
+    }))
+  );
+  ok(
+    rows.length === 1 && rows[0].t === "Paid to Corner Café" && rows[0].emb && !rows[0].clock,
+    "A5: shown with its emblem, no clock: " + JSON.stringify(rows)
+  );
+  await p.click("#hbody .rec .recq");
+  r = await p.evaluate(() => ({
+    pay: HF.pay,
+    q: HF.q,
+    chip: [...document.querySelectorAll(".hchip")].map(c => c.textContent.trim()),
+  }));
+  ok(r.pay === "out:corner cafe" && r.q === "", "A5: tapping it sets the filter again: " + JSON.stringify(r));
+  // nothing found, and under three letters: not kept
+  await p.evaluate(() => (recentSave([]), findBack(), openFind()));
+  await type(p, "zzzzz");
+  await p.evaluate(() => findBack());
+  ok((await p.evaluate(() => recentLoad())).length === 0, "A5: a search that found nothing is not kept");
+  await p.evaluate(() => openFind());
+  await type(p, "ko");
+  await p.evaluate(() => findBack());
+  ok((await p.evaluate(() => recentLoad())).length === 0, "A5: under three letters is not kept");
+  await p.evaluate(() => openFind());
+  await type(p, "kiosk");
+  await p.evaluate(() => findBack());
+  ok(
+    JSON.stringify(await p.evaluate(() => recentLoad())) === '["kiosk"]',
+    "A5: words that found something are kept on Back"
+  );
+
+  // ---- A6: an entry saved out of the list
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    HF = { ...histBlank(), acc: "a" };
+    render();
+    withUndo(T("common.saved"), () => (entry("t1").account = "b"), { row: "t1" });
+  });
+  let sn = await p.evaluate(() => document.querySelector("#snack").textContent);
+  ok(/Saved · no longer in this list/.test(sn) && /Undo/.test(sn), "A6: the snack says so with Undo: " + sn);
+  await p.evaluate(() => withUndo(T("common.saved"), () => (entry("t2").note = "x"), { row: "t2" }));
+  sn = await p.evaluate(() => document.querySelector("#snack").textContent);
+  ok(/^Saved\s*Undo/.test(sn) && !/no longer/.test(sn), "A6: one still listed: plain Saved: " + sn);
+
+  // ---- A7: "any account" in lower case
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    HF = { ...histBlank(), kind: "xfer" };
+    filtersSheet();
+  });
+  const chips = await p.evaluate(() =>
+    [...document.querySelectorAll('#sheet [data-act^="hfs-from"], #sheet [data-act="hfs-to"]')].map(b =>
+      b.textContent.trim()
+    )
+  );
+  ok(
+    chips.includes("From any account") && chips.includes("To any account"),
+    "A7: From any account / To any account: " + chips
+  );
+
+  // ---- A8: no suggestions while selecting
+  p = await open(seed);
+  await type(p, "co");
+  ok((await sugs(p)).length > 0, "A8: suggestions before selecting");
+  await p.evaluate(() => {
+    V.sel = new Set(["t1"]);
+    render();
+  });
+  ok((await sugs(p)).length === 0, "A8: hidden while selecting");
+
+  // ---- A9: everything selected, the button clears
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    V.screen = "history";
+    V.sel = new Set(["t1"]);
+    render();
+  });
+  const sel = () =>
+    p.evaluate(() => {
+      const b = document.querySelector('[data-act="sel-all"]');
+      return { label: b.getAttribute("aria-label"), vb: b.querySelector("svg").getAttribute("viewBox") };
+    });
+  let b9 = await sel();
+  ok(b9.label === "Select all", "A9: not all selected: Select all: " + b9.label);
+  await p.click('[data-act="sel-all"]');
+  b9 = await sel();
+  ok(b9.label === "Clear selection", "A9: all selected: Clear selection: " + b9.label);
+  ok(!!(await p.evaluate(() => TALLY_ICONS.deselect)), "A9: the deselect icon is in icons.js");
+  await p.click('[data-act="sel-all"]');
+  ok(await p.evaluate(() => V.sel === null || V.sel.size === 0), "A9: tapping it clears the selection");
+
+  // ---- A10: an empty notebook's History keeps Search only
+  p = await open(() => {
+    S = blank();
+    S.settings.cur = "USD";
+    S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 0, archived: false });
+    save();
+    V.screen = "history";
+    render();
+  });
+  r = await p.evaluate(() => ({
+    hp: !!document.querySelector(".hp"),
+    f: !!document.querySelector(".hfbtn"),
+    s: !!document.querySelector('[data-act="search-open"]'),
+  }));
+  ok(!r.hp && !r.f && r.s, "A10: no period chip or Filters, Search stays: " + JSON.stringify(r));
+  await p.evaluate(() => {
+    S.txns.push({ id: "t1", ts: 1, date: today(), type: "expense", amount: 1, account: "a", cat: "food" });
+    save();
+    render();
+  });
+  ok(!!(await p.$(".hfbtn")) && !!(await p.$(".hp")), "A10: back with the first entry");
+
+  // ---- A11: prefilled amounts keep the currency's decimals
+  p = await open(seed);
+  await p.evaluate(() => {
+    S.txns.push({ id: "t9", ts: 9, date: today(), type: "expense", amount: 4167.5, account: "a", cat: "food" });
+    S.accounts.push({ id: "j", name: "Yen", type: "cash", currency: "JPY", opening: 0, archived: false });
+    S.txns.push({ id: "t10", ts: 10, date: today(), type: "expense", amount: 4167, account: "j", cat: "food" });
+    S.txns.push({ id: "t11", ts: 11, date: today(), type: "expense", amount: 1.125, account: "a", cat: "food" });
+    save();
+    findBack();
+  });
+  const pre = id => p.evaluate(id => (txSheet(id, "expense"), document.querySelector("#f-amt").value), id);
+  ok((await pre("t9")) === "4,167.50", "A11: 4,167.50: " + (await pre("t9")));
+  await p.evaluate(() => closeSheet());
+  ok((await pre("t10")) === "4,167", "A11: a yen has none: " + (await pre("t10")));
+  await p.evaluate(() => closeSheet());
+  ok((await pre("t11")) === "1.125", "A11: more decimals than the currency's are kept: " + (await pre("t11")));
+  await p.evaluate(() => closeSheet());
+
+  // ---- A12: money() writes the true minus
+  r = await p.evaluate(() => [money(-5, "USD"), money(5, "USD"), money(-0.001, "USD"), signed(-5, "USD")]);
+  ok(
+    r[0] === "−⁠$5.00" && r[1] === "$5.00" && r[2] === "$0.00" && r[3] === "−⁠$5.00",
+    "A12: true minus: " + JSON.stringify(r)
+  );
+
+  // ---- A13: the welcome screen's bar holds only Settings
+  p = await open(() => {
+    S = blank();
+    save();
+    V.screen = "home";
+    render();
+  });
+  r = await p.evaluate(() =>
+    [...document.querySelectorAll("header.appbar button")].map(b => b.dataset.act + ":" + (b.dataset.v || ""))
+  );
+  ok(r.length === 1 && r[0] === "go:settings", "A13: only Settings: " + JSON.stringify(r));
+
+  // ---- A14: the reminder line
+  r = await p.evaluate(() => T("remind.duesHint"));
+  ok(r === "On the due day, or monthly when there is none", "A14: reminder text: " + r);
+
+  // ---- A16: name chips with ✕ and Undo
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    V.screen = "home";
+    render();
+    loanForm("lend");
+  });
+  const names = () =>
+    p.evaluate(() =>
+      [...document.querySelectorAll("#f-person-sug .nchip")].map(c => c.querySelector(".chn").textContent)
+    );
+  ok((await names()).join() === "Mahin,Sam", "A16: people as chips: " + (await names()));
+  r = await p.evaluate(() => {
+    const c = document.querySelector("#f-person-sug .nchip"),
+      x = c.querySelector(".nchip-x"),
+      pk = c.querySelector(".nchip-pick"),
+      b = c.getBoundingClientRect(),
+      xr = x.getBoundingClientRect(),
+      after = getComputedStyle(x, "::after");
+    return {
+      h: Math.round(b.height),
+      label: x.getAttribute("aria-label"),
+      pick: pk.dataset.act,
+      xh: xr.height,
+      afterH: parseFloat(after.height),
+    };
+  });
+  ok(r.h === 34 || r.h === 35, "A16: compact 34px chip: " + r.h);
+  ok(
+    r.label === "Remove “Mahin” from suggestions" && r.pick === "f-person-pick",
+    "A16: labelled ✕, name still picks: " + JSON.stringify(r)
+  );
+  await p.click("#f-person-sug .nchip .nchip-x");
+  ok((await names()).join() === "Sam", "A16: Mahin gone from the chips");
+  sn = await p.evaluate(() => document.querySelector("#snack").textContent);
+  ok(/Removed “Mahin” from suggestions/.test(sn) && /Undo/.test(sn), "A16: the snack with Undo: " + sn);
+  r = await p.evaluate(() => ({ h: S.settings.hiddenPeople, loans: S.loans.length, txns: S.txns.length }));
+  ok(
+    JSON.stringify(r.h) === '["mahin"]' && r.loans === 2 && r.txns === 8,
+    "A16: stored folded, entries untouched: " + JSON.stringify(r)
+  );
+  await p.click('#snack [data-act="undo"]');
+  ok(
+    (await names()).join() === "Mahin,Sam" && (await p.evaluate(() => S.settings.hiddenPeople.length)) === 0,
+    "A16: Undo brings it back"
+  );
+  await p.click("#f-person-sug .nchip .nchip-x");
+  await p.evaluate(() => closeSheet());
+  await p.evaluate(() => loanForm("lend"));
+  ok((await names()).join() === "Sam", "A16: still hidden in the next form: " + (await names()));
+  // payees, after a letter
+  await p.evaluate(() => (closeSheet(), txSheet(null, "expense", "food")));
+  await p.fill("#f-payee", "co");
+  let pn = await p.evaluate(() => [...document.querySelectorAll("#f-payee-sug .nchip .chn")].map(c => c.textContent));
+  ok(pn.join() === "Corner Café", "A16: payees as chips: " + pn);
+  await p.click("#f-payee-sug .nchip .nchip-x");
+  sn = await p.evaluate(() => document.querySelector("#snack").textContent);
+  ok(/Removed “Corner Café” from suggestions/.test(sn), "A16: payee snack: " + sn);
+  r = await p.evaluate(() => ({
+    h: S.settings.hiddenPayees,
+    hp: S.settings.hiddenPeople,
+    n: document.querySelectorAll("#f-payee-sug .nchip").length,
+  }));
+  ok(
+    JSON.stringify(r.h) === '["corner cafe"]' && r.n === 0 && r.hp.join() === "mahin",
+    "A16: payees kept apart from people: " + JSON.stringify(r)
+  );
+  await p.evaluate(() => (closeSheet(), txSheet(null, "income")));
+  await p.fill("#f-payee", "co");
+  ok((await p.$$("#f-payee-sug .nchip")).length === 0, "A16: hidden for money in too (the same payees)");
+  // typing the full name is still possible and picking works
+  await p.evaluate(() => closeSheet());
+
+  // migration and backups
+  r = await p.evaluate(() => {
+    const many = Array.from({ length: 250 }, (_, i) => "n" + i);
+    const m = migrate({
+      v: 9,
+      settings: { cur: "USD", hiddenPeople: ["Sam", "SAM", 5, null, "Émile", ""], hiddenPayees: many },
+    });
+    const old = migrate({ v: 9, settings: { cur: "USD" } });
+    const bad = migrate({ v: 9, settings: { cur: "USD", hiddenPeople: "x", hiddenPayees: { a: 1 } } });
+    const back = migrate(JSON.parse(JSON.stringify(S)));
+    return {
+      people: m.settings.hiddenPeople,
+      payees: m.settings.hiddenPayees.length,
+      old: [old.settings.hiddenPeople, old.settings.hiddenPayees],
+      bad: [bad.settings.hiddenPeople, bad.settings.hiddenPayees],
+      back: [back.settings.hiddenPeople, back.settings.hiddenPayees],
+    };
+  });
+  ok(
+    JSON.stringify(r.people) === '["sam","emile"]',
+    "A16 migrate: strings, folded, unique: " + JSON.stringify(r.people)
+  );
+  ok(r.payees === 200, "A16 migrate: capped at 200: " + r.payees);
+  ok(
+    JSON.stringify(r.old) === "[[],[]]" && JSON.stringify(r.bad) === "[[],[]]",
+    "A16 migrate: older saves and junk get []: " + JSON.stringify([r.old, r.bad])
+  );
+  ok(JSON.stringify(r.back) === '[["mahin"],["corner cafe"]]', "A16: a backup carries them: " + JSON.stringify(r.back));
+
+  ok(errors.length === 0, "no page errors: " + errors.join(" | "));
+  await browser.close();
+  process.exit(fails ? 1 : 0);
+})();

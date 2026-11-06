@@ -125,8 +125,8 @@ const today = () => {
   await page.evaluate(() => txSheet("t1"));
   await settle();
   ok(
-    (await page.inputValue("#f-amt")) === "3,500",
-    "an existing 3500 opens as 3,500: " + (await page.inputValue("#f-amt"))
+    (await page.inputValue("#f-amt")) === "3,500.00",
+    "an existing 3500 opens as 3,500.00: " + (await page.inputValue("#f-amt"))
   );
   await page.click('[data-act="tx-save"]');
   await settle();

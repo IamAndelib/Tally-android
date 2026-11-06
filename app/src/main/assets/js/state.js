@@ -22,6 +22,8 @@ function blank() {
       donut: "both",
       remind: { daily: true, time: "21:00", dues: true, dueTime: "09:00", check: true, checkTime: "08:00" },
       backup: { on: false, time: "23:00" },
+      hiddenPeople: [], // folded names taken out of the people suggestions (Lend, Borrow)
+      hiddenPayees: [], // … and out of the payee suggestions (Spent, Money in)
     },
     accounts: [],
     types: [],
@@ -222,6 +224,16 @@ function migrate(o) {
     .map(sid)
     .filter(id => accIds.has(id) && !seen.has(id) && seen.add(id));
   if (!s.settings.chipOrder.length) delete s.settings.chipOrder;
+  /* names taken out of the Lent to / Borrowed from and Paid to / Received from suggestions, folded (curFold) and
+     once each; at most 200 */
+  ["hiddenPeople", "hiddenPayees"].forEach(k => {
+    const once = new Set();
+    s.settings[k] = (Array.isArray(os[k]) ? os[k] : [])
+      .filter(v => typeof v === "string")
+      .map(v => curFold(v).trim())
+      .filter(v => v && !once.has(v) && once.add(v))
+      .slice(0, 200);
+  });
   const okAcc = new Set(s.accounts.map(a => a.id));
   s.txns = (Array.isArray(o.txns) ? o.txns : [])
     .filter(t => t && t.id && isDay(t.date) && okNum(t.amount) && okAcc.has(sid(t.account)))
@@ -578,7 +590,11 @@ function withUndo(msg, change, fx, after) {
   FX = fx || {};
   commit();
   FX = {};
-  snack(typeof msg === "function" ? msg() : msg, entries => {
+  let said = typeof msg === "function" ? msg() : msg;
+  /* an entry saved while History is filtered, no longer fitting the list it was opened from: say so */
+  if (said === T("common.saved") && fx && fx.row && V.screen === "history" && histGone(fx.row))
+    said = T("history.savedGone");
+  snack(said, entries => {
     Object.assign(S, before);
     commit();
     if (after) after(entries); // whether the entries list was open when Undo was tapped (it is closed by then)

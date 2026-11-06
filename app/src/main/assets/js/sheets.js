@@ -192,27 +192,63 @@ function payeeIndex() {
     (a, b) => (b.same ? 1 : 0) - (a.same ? 1 : 0) || cmpDay(b.date, a.date) || b.ts - a.ts
   ));
 }
+/* a name offered under a field (a payee, a person): a compact chip (as the Filters sheet's: 34px to see, 48px to tap
+   through the row gap), the name that picks it and its own ✕ that takes it out of the suggestions (`kind`: "people" or
+   "payees"; hideName) */
+const nameChip = (kind, act, v, name) =>
+  '<span class="nchip"><button class="nchip-pick" data-act="' +
+  act +
+  '" data-v="' +
+  esc(v) +
+  '"><span class="chn" dir="auto">' +
+  esc(name) +
+  '</span></button><button class="nchip-x" data-act="name-hide" data-v="' +
+  kind +
+  ":" +
+  esc(name) +
+  '" aria-label="' +
+  esc(T("suggest.removeName", { name })) +
+  '">' +
+  ic("close") +
+  "</button></span>";
+/* the names taken out of the suggestions (folded), per kind */
+const hiddenNames = kind => S.settings[kind === "people" ? "hiddenPeople" : "hiddenPayees"] || [];
+/* a name's ✕: it leaves the suggestions (the entries keep it), with an Undo that leaves the form as it is */
+function hideName(kind, name) {
+  const key = kind === "people" ? "hiddenPeople" : "hiddenPayees",
+    f = curFold(name).trim();
+  if (!f || hiddenNames(kind).includes(f)) return;
+  const redraw = () => {
+    if (kind === "people") personSuggest(($("#f-person") || {}).value || "");
+    else payeeSuggest(($("#f-payee") || {}).value || "");
+  };
+  S.settings[key] = [...hiddenNames(kind), f].slice(-200);
+  save();
+  redraw();
+  const undo = () => {
+    S.settings[key] = hiddenNames(kind).filter(x => x !== f);
+    save();
+    redraw();
+    snack(T("common.undone"));
+  };
+  undo.keep = true; // the open form stays
+  snack(T("suggest.removed", { name }), undo);
+}
 /* up to four earlier payees whose name or one of its words starts with what's typed (not one typed out in full) */
 function payeeSuggest(q) {
   const el = $("#f-payee-sug"),
     qq = curFold(q.trim());
   if (!el || !F) return;
-  const list = qq
-    ? payeeIndex()
-        .filter(p => p.key !== qq && (p.key.startsWith(qq) || p.words.some(w => w.startsWith(qq))))
-        .slice(0, 4)
-    : [];
+  const gone = hiddenNames("payees"),
+    list = qq
+      ? payeeIndex()
+          .filter(
+            p => p.key !== qq && !gone.includes(p.key) && (p.key.startsWith(qq) || p.words.some(w => w.startsWith(qq)))
+          )
+          .slice(0, 4)
+      : [];
   el.hidden = !list.length;
-  el.innerHTML = list
-    .map(
-      p =>
-        '<button class="chip" data-act="f-payee-pick" data-v="' +
-        esc(p.name) +
-        '"><span class="chn" dir="auto">' +
-        esc(p.name) +
-        "</span></button>"
-    )
-    .join("");
+  el.innerHTML = list.map(p => nameChip("payees", "f-payee-pick", p.name, p.name)).join("");
 }
 function pickPayee(name) {
   const el = $("#f-payee");
@@ -295,9 +331,14 @@ function txSheet(id, type, catId, pre, draft) {
       ">" +
       catBtns(list, F.cat) +
       "</div>";
-  h += amtField("f-amt", a ? a.currency : "", t ? String(t.amount) : pre ? String(pre.amount) : "", {
-    curId: "amt-cur",
-  });
+  h += amtField(
+    "f-amt",
+    a ? a.currency : "",
+    t ? amtPre(t.amount, a && a.currency) : pre ? amtPre(pre.amount, a && a.currency) : "",
+    {
+      curId: "amt-cur",
+    }
+  );
   h +=
     '<div class="lbl">' +
     TH(inc ? "entry.into" : "entry.paidFrom") +
@@ -469,12 +510,15 @@ function trSheet(id) {
     ic("swapv") +
     "</button></div>";
   h += '<div class="lbl">' + TH("transfer.to") + "</div>" + accChips("tr-to", F.to, F.from, list);
-  h += amtField("f-amt", "", t ? String(t.amount) : "", { curId: "tr-cur", label: T("transfer.sent") });
+  h += amtField("f-amt", "", t ? amtPre(t.amount, (acc(t.account) || {}).currency) : "", {
+    curId: "tr-cur",
+    label: T("transfer.sent"),
+  });
   h +=
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
-    esc(t && t.toAmount != null ? String(t.toAmount) : "") +
+    esc(t && t.toAmount != null ? amtPre(t.toAmount, (acc(t.to) || {}).currency) : "") +
     '"></label>';
-  h += feeField(F.showFee, fee ? String(fee.amount) : "", "", T("transfer.addFee"));
+  h += feeField(F.showFee, fee ? amtPre(fee.amount, (acc(fee.account) || {}).currency) : "", "", T("transfer.addFee"));
   h += '<div class="preview" id="tr-prev"></div>';
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="' +
@@ -599,7 +643,10 @@ function accOpen(id) {
     '</h3><p class="muted small" style="margin:0">' +
     TH("account.mismatchHint") +
     "</p>" +
-    amtField("f-actual", a.currency, "", { label: T("account.actual"), placeholder: groupDigits(rnd(bal)) }) +
+    amtField("f-actual", a.currency, "", {
+      label: T("account.actual"),
+      placeholder: groupDigits(amtPre(bal, a.currency)),
+    }) +
     '<div class="preview" id="fix-prev"></div><div class="gap"></div><button class="btn" data-act="fix-save">' +
     TH("account.update") +
     "</button></div>";

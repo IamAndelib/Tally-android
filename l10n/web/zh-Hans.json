@@ -702,6 +702,7 @@
     "stopSel": "退出选择",
     "selected_other": "已选{{count}}项",
     "selAll": "全选",
+    "clearSel": "清除选择",
     "delSel": "删除所选",
     "select": "选择记录",
     "allTime": "全部时间",
@@ -752,10 +753,13 @@
     "between": "之间",
     "everyone": "所有人",
     "anyAccount": "任意账户",
+    "fromAny": "转出：任意账户",
+    "toAny": "转入：任意账户",
     "oneSide": "其中一方是{{account}}",
     "showNone": "没有记录",
     "swap": "交换转出和转入",
-    "show_other": "显示{{count}}条记录"
+    "show_other": "显示{{count}}条记录",
+    "savedGone": "已保存 · 已不在此列表中"
   },
   "remind": {
     "nudge": "晚间提醒",
@@ -763,7 +767,7 @@
     "check": "余额核对",
     "checkHint": "你的余额还对得上吗？",
     "dues": "借贷到期日",
-    "duesHint": "到期当天提醒，可选 +1 天 / +1 周",
+    "duesHint": "到期当天提醒；没有到期日则每月提醒",
     "nudgeAt": "晚间提醒时间",
     "checkAt": "余额核对时间",
     "duesAt": "到期提醒时间"
@@ -850,5 +854,9 @@
   },
   "lang": {
     "name": "简体中文"
+  },
+  "suggest": {
+    "removeName": "从建议中移除“{{name}}”",
+    "removed": "已从建议中移除“{{name}}”"
   }
 }

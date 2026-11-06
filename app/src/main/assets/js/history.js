@@ -127,6 +127,12 @@ function openHistory(f = {}) {
   render();
 }
 
+/* an entry just saved that the History list (its filters, words and period) no longer holds: its own row, or the one
+   its fee is shown in */
+function histGone(id) {
+  const filtered = HP.period !== "all" || histCount() > 0 || !!(V.find && HF.q.trim());
+  return filtered && !!entry(id) && !HLIST.some(t => t.id === id || t.feeOf === id || t.feeId === id);
+}
 /* the filters that are set and shown as chips and counted: with an account picked, a transfer side that is that account
    is implied by the other side (the sheet shows it locked), so it is neither */
 const histSet = () =>
@@ -194,7 +200,7 @@ const hfName = s => '<span class="chn" dir="auto">' + esc(s) + "</span>";
 function hfSideChip(side) {
   const id = HFD[side],
     a = id && acc(id),
-    label = T("history." + side + "Acc", { account: a ? a.name : T("history.anyAccount") }),
+    label = a ? T("history." + side + "Acc", { account: a.name }) : T("history." + side + "Any"),
     lock = !!(HFD.acc && id === HFD.acc),
     inner = (a ? '<span class="adot"' + histAccVar(a) + "></span>" : "") + hfName(label);
   if (lock) return '<span class="chip hfc lock tinted"' + histAccVar(a) + ">" + inner + "</span>";
@@ -426,6 +432,7 @@ function histChips() {
 }
 /* the period chip (its label opens the period dialog; once set, its ✕ goes back to all time), Filters, Clear all */
 function histBar(clearHere) {
+  if (!S.txns.length) return ""; // nothing to filter in a notebook with no entries yet
   const set = HP.period !== "all",
     n = histCount();
   return (
@@ -562,7 +569,9 @@ function histParts() {
         "</div>"; // search mode has one that stays (#find-live)
   }
   if (idle) return { head, body: recentView(), idle: true }; // search mode, nothing asked yet: the recent searches
-  const sug = V.find && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
+  const sug = V.find && !V.sel && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
+  /* a Period suggestion ("may 2025") is the answer: nothing is said about the words finding no entries */
+  if (!list.length && sug && SUGS.some(s => s.g === "period")) return { head, body: sug };
   if (!list.length)
     return {
       head,
@@ -591,7 +600,8 @@ function historyView() {
   const p = histParts();
   let h;
   if (V.sel) {
-    const n = V.sel.size;
+    const n = V.sel.size,
+      all = n > 0 && histRows(HLIST).every(t => V.sel.has(t.id)); // everything listed is selected
     h =
       '<header class="appbar"><button class="icon" data-act="sel-cancel" aria-label="' +
       TH("history.stopSel") +
@@ -601,9 +611,9 @@ function historyView() {
       TH("history.selected", { count: n }) +
       "</h1>" +
       '<button class="icon" data-act="sel-all" aria-label="' +
-      TH("history.selAll") +
+      TH(all ? "history.clearSel" : "history.selAll") +
       '">' +
-      ic("selectall") +
+      (all ? icDeselect() : ic("selectall")) +
       "</button>" +
       '<button class="icon" data-act="sel-del" aria-label="' +
       TH("history.delSel") +
