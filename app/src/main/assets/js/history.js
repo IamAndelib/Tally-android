@@ -100,19 +100,26 @@ function histLines(list, kind) {
   order.forEach(key =>
     Object.entries(sums[key] || {})
       .filter(e => e[1])
-      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .sort((a, b) => (a[0] === S.settings.cur ? -1 : b[0] === S.settings.cur ? 1 : a[0] < b[0] ? -1 : 1))
       .forEach(([cur, amount]) => lines.push({ key, tone: HIST_TONE[key], cur, amount }))
   );
   return lines;
 }
 /* a line in words ("$X spent", "Transferred $X"): what a screen reader says */
-const histSay = l =>
-  T(l.key === "spent" || l.key === "received" ? "search." + l.key : "history.words." + l.key, {
-    amount: money(l.amount, l.cur),
+const histSay = ls =>
+  T(ls[0].key === "spent" || ls[0].key === "received" ? "search." + ls[0].key : "history.words." + ls[0].key, {
+    amount: ls.map(l => money(l.amount, l.cur)).join(" + "),
   });
-/* what a heading says to a screen reader: its title and the lines in words, as one sentence */
-const histHeadSay = (title, lines) =>
-  lines.length ? T("history.headSay", { title, parts: lines.map(histSay).join(", ") }) : title;
+/* what a heading says to a screen reader: its title and each kind once ("$X + €Y spent"), as one sentence */
+function histHeadSay(title, lines) {
+  const kinds = [];
+  lines.forEach(l => {
+    const k = kinds.find(g => g[0].key === l.key);
+    if (k) k.push(l);
+    else kinds.push([l]);
+  });
+  return kinds.length ? T("history.headSay", { title, parts: kinds.map(histSay).join(", ") }) : title;
+}
 /* the stacked column at the right of a month or day heading: signed figures (+ green over − red), or words
    (Transfers). Hidden from screen readers: the heading's own name says it all (histHeadSay). */
 function histColumn(lines) {
@@ -122,7 +129,7 @@ function histColumn(lines) {
     (l.tone === "in" || l.tone === "out" ? "hcl hcf " : "hcl ") +
     HIST_CLS[l.tone] +
     '">' +
-    esc(l.tone === "in" || l.tone === "out" ? signed(l.tone === "in" ? l.amount : -l.amount, l.cur) : histSay(l)) +
+    esc(l.tone === "in" || l.tone === "out" ? signed(l.tone === "in" ? l.amount : -l.amount, l.cur) : histSay([l])) +
     "</span>";
   return '<span class="hcol" aria-hidden="true">' + lines.map(one).join("") + "</span>";
 }

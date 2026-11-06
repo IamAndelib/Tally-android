@@ -115,7 +115,7 @@ const ok = (c, m) => {
       t("expense", 1, "b", { id: "fy", cat: "fees", feeOf: "t11" });
     });
     const r = await page.evaluate(() => {
-      const W = (l, k) => histLines(l, k).map(histSay),
+      const W = (l, k) => histLines(l, k).map(x => histSay([x])),
         ids = l => l.map(t => t.id).join();
       const x = histList({ ...HF, kind: "xfer" });
       const got = histList({ ...HF, kind: "in" });
@@ -178,12 +178,12 @@ const ok = (c, m) => {
       "transfer words: " + JSON.stringify(r.xwords)
     );
     ok(
-      JSON.stringify(r.in) === '["€80.00 received","$150.00 received"]',
+      JSON.stringify(r.in) === '["$150.00 received","€80.00 received"]',
       "received words, a line per currency: " + JSON.stringify(r.in)
     );
     ok(JSON.stringify(r.lend) === '["$50.00 lent"]', "lent words, no zero got back: " + JSON.stringify(r.lend));
     const back = await page.evaluate(() => {
-      const W = (l, k) => histLines(l, k).map(histSay);
+      const W = (l, k) => histLines(l, k).map(x => histSay([x]));
       const e = (kind, dir) => ({ type: "loan", loan: kind === "lend" ? "L1" : "L2", dir, amount: 20, account: "c" });
       return {
         lendIn: W([e("lend", "in")], "lend"),
@@ -208,7 +208,7 @@ const ok = (c, m) => {
     );
     ok(JSON.stringify(r.fix) === '["$10.00 added","$4.00 taken off"]', "fix words: " + JSON.stringify(r.fix));
     ok(
-      JSON.stringify(r.all) === '["€80.00 received","$150.00 received","$33.00 spent"]',
+      JSON.stringify(r.all) === '["$150.00 received","€80.00 received","$33.00 spent"]',
       "all words (fees inside spent; loans and transfers are neither): " + JSON.stringify(r.all)
     );
     ok(JSON.stringify(r.spent) === '["$30.00 spent"]', "spent words: " + JSON.stringify(r.spent));
@@ -309,14 +309,14 @@ const ok = (c, m) => {
       "default: month headings " + h.mon.map(m => m.title)
     );
     ok(
-      J(h.mon[0].lines) === J(["+$150.00", "−€10.00", "−$47.75"]),
-      "default month: + received over − spent, a line per currency (by code), the fees inside spent: " +
+      J(h.mon[0].lines) === J(["+$150.00", "−$47.75", "−€10.00"]),
+      "default month: + received over − spent, a line per currency (own currency first), the fees inside spent: " +
         J(h.mon[0].lines)
     );
     ok(J(h.mon[1].lines) === "[]", "default month with only a transfer: no column: " + J(h.mon[1].lines));
     const day = d => h.day.find(x => x.title.includes(d));
     ok(
-      J(day("Jun 17").lines) === J(["+$150.00", "−€10.00", "−$45.25"]),
+      J(day("Jun 17").lines) === J(["+$150.00", "−$45.25", "−€10.00"]),
       "a day with income and spending, the purchase's charge inside: " + J(day("Jun 17").lines)
     );
     ok(J(day("Jun 10").lines) === J(["−$2.50"]), "a day with only a fee: spent " + J(day("Jun 10").lines));
@@ -327,18 +327,18 @@ const ok = (c, m) => {
     );
     // TalkBack: one sentence, with the words
     ok(
-      h.mon[0].label === "June 2026, $150.00 received, €10.00 spent, $47.75 spent",
+      h.mon[0].label === "June 2026, $150.00 received, $47.75 + €10.00 spent",
       "the month reads as one sentence: " + h.mon[0].label
     );
     ok(
-      day("Jun 17").label.endsWith(", $150.00 received, €10.00 spent, $45.25 spent") &&
+      day("Jun 17").label.endsWith(", $150.00 received, $45.25 + €10.00 spent") &&
         day("Jun 17").label.startsWith("Wed, Jun 17"),
       "the day reads as one sentence: " + day("Jun 17").label
     );
     ok(h.mon[1].label === "May 2026", "a heading with nothing to add says only its name: " + h.mon[1].label);
     // the Spent view: fees add to spent too
     h = await heads("out");
-    ok(J(h.mon[0].lines) === J(["−€10.00", "−$45.25"]), "Spent: " + J(h.mon[0].lines));
+    ok(J(h.mon[0].lines) === J(["−$45.25", "−€10.00"]), "Spent: " + J(h.mon[0].lines));
     // Transfers: words, Fees only when there are fees
     h = await heads("xfer");
     ok(
