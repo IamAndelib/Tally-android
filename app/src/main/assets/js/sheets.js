@@ -341,7 +341,7 @@ function txSheet(id, type, catId, pre, draft) {
   );
   h +=
     '<div class="lbl">' +
-    TH(inc ? "entry.into" : "entry.paidFrom") +
+    TH("common.account") +
     "</div>" +
     accChips(
       "f-acc",
@@ -762,22 +762,26 @@ function accForm(id, then) {
     '<div class="row"><div class="field"><span>' +
     TH("common.currency") +
     '</span><button class="fieldbtn" id="f-cur" data-act="pick-acccur"' +
-    (used ? " disabled" : "") +
+    (used
+      ? ' aria-label="' +
+        TH("common.currency") +
+        ": " +
+        esc(a.currency) +
+        ". " +
+        TH("account.curLockedAria") +
+        '" disabled'
+      : "") +
     "><span>" +
     esc(a.currency) +
     "</span>" +
-    ic("down") +
+    (used ? ic("lock") : ic("down")) +
     "</button></div>" +
     '<label class="field"><span>' +
     TH(id ? "account.opening" : "account.balanceNow") +
     '</span><input id="f-open" inputmode="decimal" autocomplete="off" value="' +
     esc(a.opening === "" ? "" : a.opening) +
     '" placeholder="0"></label></div>';
-  h +=
-    '<p class="hint">' +
-    TH(id ? "account.openingHint" : "account.cardHint") +
-    (used ? " " + TH("account.curLocked") : "") +
-    "</p>";
+  h += '<p class="hint">' + TH(id ? "account.openingHint" : "account.cardHint") + "</p>";
   h +=
     '<div class="gap"></div><button class="btn" data-act="acc-save">' +
     TH(id ? "common.save" : "account.add") +

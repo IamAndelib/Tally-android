@@ -249,7 +249,7 @@ const ok = (c, m) => {
     acc: (document.querySelector('#sheet [data-act="f-acc"][aria-pressed="true"]') || {}).dataset.v,
   }));
   ok(
-    form.title === "Money in" && /^300(\.00)?$/.test(form.amt) && form.note === "Extra from Swarna" && !form.picked,
+    form.title === "Received" && /^300(\.00)?$/.test(form.amt) && form.note === "Extra from Swarna" && !form.picked,
     "the income form: 300, its note, no category picked for the user " + JSON.stringify(form)
   );
   ok(form.acc === "k", "into the account the payment went to");

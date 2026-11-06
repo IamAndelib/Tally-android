@@ -105,7 +105,7 @@ const ok = (c, m) => {
   await act("loan-open", "L");
   await settle();
   const head = (await page.textContent("#loan-due")).trim();
-  ok(head.startsWith("Payback day") && head.endsWith(await m(300)), "due card names the 300: " + head);
+  ok(head.startsWith("Due") && head.endsWith(await m(300)), "due card names the 300: " + head);
   ok((await page.inputValue("#f-amt")) === "300.00", "payment pre-filled with the 300 that is due");
   const m300 = await m(300),
     m1000 = await m(1000);

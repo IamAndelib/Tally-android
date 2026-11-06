@@ -88,13 +88,10 @@ function loanInfo(l) {
     open: st !== "cleared" && st !== "writeoff",
   };
 }
-/* "Payback day · 29 Sep", with the amount when only part of the tab is due then */
+/* "Due · $150.00": the amount only when part of the tab is due then (the date is in the field below) */
 function dueHead(l, i) {
   if (!i.nextDue) return T("loan.noDueYet");
-  return (
-    T(l.kind === "lend" ? "loan.paybackHead" : "loan.returnHead", { date: dayLabel(i.nextDue) }) +
-    (i.dueAmt < i.left ? " · " + money(i.dueAmt, i.cur) : "")
-  );
+  return T("tx.due") + (i.dueAmt < i.left ? " · " + money(i.dueAmt, i.cur) : "");
 }
 function stLabel(l, st) {
   return T("loan.st." + (st === "writeoff" ? (l.kind === "lend" ? "writtenOff" : "forgiven") : st));
@@ -247,9 +244,8 @@ function loanForm(kind) {
   h += '<div class="chips" id="f-person-sug" hidden></div>';
   h += amtField("f-amt", acc(def).currency, "", { curId: "amt-cur" });
   h += '<p class="hint" id="f-mergehint" hidden></p>';
-  const dueLbl = T(lend ? "loan.paybackDay" : "loan.returnBy");
-  h +=
-    '<div class="lbl">' + TH(lend ? "loan.fromAccount" : "loan.intoAccount") + "</div>" + accChips("f-acc", F.account);
+  const dueLbl = T("tx.due");
+  h += '<div class="lbl">' + TH("common.account") + "</div>" + accChips("f-acc", F.account);
   h +=
     '<div class="row" style="margin-top:4px"><div class="field"><span>' +
     TH("common.date") +
@@ -262,10 +258,10 @@ function loanForm(kind) {
     dateField("f-due", "", { min: "today", opt: true, none: T("loan.pickDay"), label: dueLbl }) +
     "</div></div>";
   h +=
-    '<label class="field"><span>' +
+    '<label class="field"><input id="f-note" placeholder="' +
+    TH("entry.notePh") +
+    '" aria-label="' +
     TH("common.note") +
-    '</span><input id="f-note" placeholder="' +
-    TH("common.optional") +
     '" maxlength="80"></label>';
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="loan-save">' +
@@ -352,7 +348,7 @@ function loanOpen(id, focusPay) {
       "</p>" +
       amtField("f-amt", i.cur, amtPre(i.nextDue && i.nextDue <= today() ? i.dueAmt : i.left, i.cur)) +
       '<div class="lbl">' +
-      TH(lend ? "loan.payInto" : "loan.payFrom") +
+      TH("common.account") +
       "</div>" +
       (payAccs.length
         ? accChips("f-acc", F.account, null, payAccs)
@@ -484,7 +480,7 @@ function loanDrawEdit(txnId) {
   if (t.principal)
     h +=
       '<div class="field"><span>' +
-      TH("loan.dueOptional") +
+      TH("tx.due") +
       "</span>" +
       dateField("ed-due", t.due || "", { min: t.date, opt: true, none: T("loan.noDue") }) +
       "</div>";
