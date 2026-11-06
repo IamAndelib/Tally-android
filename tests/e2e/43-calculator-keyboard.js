@@ -1,6 +1,8 @@
 // The calculator and the system keyboard never show together: focusing any field that isn't the calculator's own
 // closes the calculator, "Add a fee" included (it used to focus the fee with the keypad still up, so Android's keyboard
-// stacked over it). The fee field has its own calculator, which opens for the fee and closes the amount's.
+// stacked over it). The fee field has its own calculator, which opens for the fee and closes the amount's. A tap on a
+// field above the keypad must not close the form: the keypad closing shrinks the sheet under the finger, so the tap can
+// end on the backdrop, which closes its layer only when the tap began on it.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("43-calculator-keyboard");
 let fails = 0;
@@ -152,6 +154,84 @@ const ok = (c, m) => {
   ok(!!other, "entry form has another field: " + other);
   await page.focus("#" + other);
   ok(!(await snap()).open, "entry form: focusing another field closes the calculator");
+
+  await page.evaluate(() => closeSheet());
+  await page.waitForTimeout(150);
+
+  // a tap on a field above the keypad (mouse and touch, phone size) keeps the form open and works the sum out
+  for (const touch of [false, true]) {
+    const c2 = await browser.newContext({
+      viewport: { width: 412, height: 915 },
+      locale: "en-US",
+      hasTouch: touch,
+      isMobile: touch,
+    });
+    await c2.addInitScript(() => {
+      window.Android = {
+        setWidget() {},
+        setReminders() {},
+        takeActions: () => "[]",
+        getColors: () => null,
+        setBars() {},
+      };
+    });
+    const p2 = await c2.newPage();
+    p2.on("pageerror", e => errors.push(e.message));
+    await p2.goto(appUrl);
+    await p2.evaluate(
+      s => localStorage.setItem("tally:v1", s),
+      await page.evaluate(() => localStorage.getItem("tally:v1"))
+    );
+    await p2.reload();
+    await p2.waitForTimeout(200);
+    const how = touch ? "touch" : "mouse";
+    const tap = async sel => {
+      const b = await (await p2.$(sel)).boundingBox();
+      if (touch) await p2.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+      else await p2.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+      await p2.waitForTimeout(350);
+    };
+    for (const [form, field] of [
+      [() => txSheet(null, "expense"), "#f-payee"],
+      [() => txSheet(null, "income"), "#f-payee"],
+      [() => loanForm("lend"), "#f-person"],
+    ]) {
+      await p2.evaluate(form);
+      await p2.waitForTimeout(400);
+      await p2.evaluate(() => {
+        const c = $('#sheet [data-act="f-cat"]');
+        if (c) c.click();
+      });
+      await p2.waitForTimeout(200);
+      await tap('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
+      for (const k of ["2", "5", "0", "+", "4", "0"]) await tap(`#calc-f-amt [data-act="calc-key"][data-v="${k}"]`);
+      await tap(field);
+      const r = await p2.evaluate(
+        f => ({
+          open: !!$("#sheet").innerHTML,
+          focus: !!$(f) && document.activeElement === $(f),
+          calc: document.body.classList.contains("calcopen"),
+          amt: ($("#f-amt") || {}).value,
+        }),
+        field
+      );
+      ok(
+        r.open && r.focus && !r.calc,
+        how + ": tapping " + field + " with the keypad open keeps the form: " + JSON.stringify(r)
+      );
+      ok(r.amt === "290", how + ": and the sum is worked out: " + r.amt);
+      await p2.evaluate(() => closeSheet());
+      await p2.waitForTimeout(400);
+    }
+    // a tap on the backdrop itself still closes the form
+    await p2.evaluate(() => txSheet(null, "expense"));
+    await p2.waitForTimeout(400);
+    if (touch) await p2.touchscreen.tap(200, 8);
+    else await p2.mouse.click(200, 8);
+    await p2.waitForTimeout(400);
+    ok(!(await p2.evaluate(() => !!$("#sheet").innerHTML)), how + ": a tap on the backdrop still closes the form");
+    await c2.close();
+  }
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
