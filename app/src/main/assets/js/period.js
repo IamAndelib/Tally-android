@@ -20,6 +20,7 @@ const V = {
   cur: null,
   showArchived: false,
   sel: null,
+  find: false, // search mode (search.js): History with a field in its top bar
   open: "", // the entry whose row is opened in place (txOpenView), one at a time
 };
 /* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month"|"year", anchor, rs, re}; History

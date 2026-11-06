@@ -621,25 +621,10 @@
   },
   "search": {
     "title": "Ara",
-    "placeholder": "Kayıtlarda ara",
     "clear": "Temizle",
-    "unscope": "Yalnızca {{name}} değil, tüm sonuçlara dön",
-    "none": "“{{q}}” ile eşleşen bir şey yok.",
-    "close": "Tam eşleşme yok. Benzerleri:",
     "spent": "{{amount}} harcandı",
     "received": "{{amount}} alındı",
-    "cats": "Kategoriler",
-    "people": "Borçlar",
-    "entries": "Kayıtlar",
-    "showAll": "{{n}} kaydın tümünü göster",
-    "allTime": "{{entries}} · tüm zamanlar",
-    "span": {
-      "w": "Hafta",
-      "m": "Ay",
-      "y": "Yıl",
-      "a": "Tümü"
-    },
-    "avg": "ortalama {{amount}}"
+    "field": "Search History"
   },
   "nav": {
     "home": "Ana sayfa",
@@ -679,8 +664,6 @@
     "borrowedFrom": "Borç aldın: {{who}}",
     "theyPaidBack": "{{who}} geri ödedi",
     "youPaidBack": "Geri ödedin: {{who}}",
-    "lending": "Alacak",
-    "loan": "Borç",
     "feeLine": "+ {{amount}} masraf",
     "addedAt": "Eklenme: {{time}}",
     "addedOn": "Eklenme: {{date}}, {{time}}",
@@ -708,10 +691,7 @@
     "select": "Kayıt seç",
     "allTime": "Tüm zamanlar",
     "none": {
-      "all": "Henüz hiçbir şey yazılmamış.",
-      "month": "O ay hiçbir şey yazılmamış.",
-      "range": "O günlerde hiçbir şey yazılmamış.",
-      "year": "O yıl hiçbir şey yazılmamış."
+      "all": "Henüz hiçbir şey yazılmamış."
     },
     "deleted_one": "{{count}} kayıt silindi",
     "deleted_other": "{{count}} kayıt silindi",

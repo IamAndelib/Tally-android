@@ -626,25 +626,10 @@
   },
   "search": {
     "title": "Buscar",
-    "placeholder": "Buscar lançamentos",
     "clear": "Limpar",
-    "unscope": "Voltar a todos os resultados, não só {{name}}",
-    "none": "Nada corresponde a “{{q}}”.",
-    "close": "Nenhum resultado exato. Estes são parecidos:",
     "spent": "{{amount}} gastos",
     "received": "{{amount}} recebidos",
-    "cats": "Categorias",
-    "people": "Empréstimos",
-    "entries": "Lançamentos",
-    "showAll": "Ver todos os {{n}}",
-    "allTime": "{{entries}} · desde sempre",
-    "span": {
-      "w": "Semana",
-      "m": "Mês",
-      "y": "Ano",
-      "a": "Tudo"
-    },
-    "avg": "{{amount}} em média"
+    "field": "Search History"
   },
   "nav": {
     "home": "Início",
@@ -684,8 +669,6 @@
     "borrowedFrom": "Dívida com {{who}}",
     "theyPaidBack": "{{who}} devolveu",
     "youPaidBack": "Devolvido a {{who}}",
-    "lending": "Empréstimo",
-    "loan": "Dívida",
     "feeLine": "+ taxa de {{amount}}",
     "addedAt": "Adicionado às {{time}}",
     "addedOn": "Adicionado em {{date}} às {{time}}",
@@ -714,10 +697,7 @@
     "select": "Selecionar lançamentos",
     "allTime": "Todo o período",
     "none": {
-      "all": "Nada anotado ainda.",
-      "month": "Nada anotado nesse mês.",
-      "range": "Nada anotado nesses dias.",
-      "year": "Nada anotado nesse ano."
+      "all": "Nada anotado ainda."
     },
     "deleted_one": "{{count}} lançamento excluído",
     "deleted_many": "{{count}} lançamentos excluídos",

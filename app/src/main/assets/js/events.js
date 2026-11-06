@@ -292,27 +292,13 @@ document.addEventListener("click", ev => {
       loanOpen(v);
       break;
     case "search-open":
-      openSearch();
+      openFind();
       break;
-    case "sr-back":
-      searchBack();
+    case "find-back":
+      findBack();
       break;
-    case "sr-clear":
-      $("#sr-q").value = "";
-      searchInput("");
-      $("#sr-q").focus();
-      break;
-    case "sr-scope":
-      srScope(v);
-      break;
-    case "sr-unscope":
-      searchBack();
-      break;
-    case "sr-span":
-      srSpan(v);
-      break;
-    case "sr-nav":
-      srNav(+v);
+    case "find-clear":
+      findClear();
       break;
     case "f-showcats": {
       const g = $("#f-catgrid");
@@ -733,7 +719,7 @@ document.addEventListener("input", ev => {
   else if (id === "f-actual") fixPreview();
   else if (id === "cur-q") curList(ev.target.value);
   else if (id === "ic-q") icList(ev.target.value);
-  else if (id === "sr-q") searchInput(ev.target.value);
+  else if (id === "find-q") findInput(ev.target.value);
   else if (id === "hx-in") hexPreview();
   else if (id === "f-person" && F && F.kind === "loanf") {
     /* a name typed out in full that has an open tab (same kind and currency) adds to it, as picking it would: the

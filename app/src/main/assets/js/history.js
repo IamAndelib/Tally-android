@@ -118,6 +118,7 @@ function histClear() {
 }
 /* History with the given filters (an account's "Open in History"), on all time */
 function openHistory(f = {}) {
+  if (V.find) findEnd();
   HF = histNorm({ ...histBlank(), ...f });
   histAllTime();
   HSHOW.sig = "";
@@ -522,9 +523,11 @@ function histCenter(app) {
   const b = e.getBoundingClientRect();
   e.style.marginTop = Math.max(0, Math.round(innerHeight / 2 - (b.top + scrollY) - b.height / 2)) + "px";
 }
-function historyView() {
-  histDrop();
-  const list = histList(HF, ""); // nothing skipped
+/* what sits under the top bar: the period chip, Filters, the chips and a hidden status (`head`), then the entries
+   (`body`). In search mode nothing is listed until there is something to look for: words, a filter or a period. */
+function histParts() {
+  const idle = V.find && !V.sel && !HF.q.trim() && histCount() === 0 && HP.period === "all",
+    list = idle ? [] : histList(HF, ""); // nothing skipped
   if (HSHOW.sig !== histSig()) HSHOW = { sig: histSig(), n: HIST_CHUNK };
   HLIST = list;
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
@@ -533,6 +536,35 @@ function historyView() {
     const listed = new Set(list.map(t => t.id));
     V.sel = new Set([...V.sel].filter(id => listed.has(id)));
   }
+  const chips = histChips(),
+    anySet = HP.period !== "all" || histCount() > 0 || !!(V.find && HF.q.trim());
+  let head = "";
+  if (!V.sel) {
+    /* Clear all sits after the chips; with none (only a period set) beside the Filters button; not at all when the
+       list is empty (its message has one) */
+    const clear = anySet && list.length;
+    head += histBar(clear) + (chips ? '<div class="hchips">' + chips + "</div>" : "");
+    /* no visible summary (the months carry their totals); a hidden status says the count after each change */
+    head +=
+      '<div class="vh" role="status">' +
+      (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
+      "</div>";
+  }
+  if (idle) return { head, body: "" };
+  if (!list.length)
+    return {
+      head,
+      body:
+        '<div class="empty">' +
+        (anySet ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn() : TH("history.none.all")) +
+        "</div>",
+    };
+  const r = histMonths(list, 0, Math.max(HSHOW.n, HIST_CHUNK));
+  return { head, body: r.html + (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : "") };
+}
+function historyView() {
+  histDrop();
+  const p = histParts();
   let h;
   if (V.sel) {
     const n = V.sel.size;
@@ -556,7 +588,8 @@ function historyView() {
       ">" +
       ic("delete") +
       "</button></header>";
-  } else
+  } else if (V.find) h = findBar();
+  else
     h =
       '<header class="appbar"><button class="icon" data-act="home" aria-label="' +
       TH("common.back") +
@@ -566,7 +599,7 @@ function historyView() {
       TH("common.history") +
       "</h1>" +
       searchBtn() +
-      (list.length
+      (HLIST.length
         ? '<button class="icon" data-act="sel-start" aria-label="' +
           TH("history.select") +
           '">' +
@@ -574,26 +607,6 @@ function historyView() {
           "</button>"
         : "") +
       "</header>";
-  const chips = histChips(),
-    anySet = HP.period !== "all" || histCount() > 0;
-  if (!V.sel) {
-    /* Clear all sits after the chips; with none (only a period set) beside the Filters button; not at all when the
-       list is empty (its message has one) */
-    const clear = anySet && list.length;
-    h += histBar(clear) + (chips ? '<div class="hchips">' + chips + "</div>" : "");
-    /* no visible summary (the months carry their totals); a hidden status says the count after each change */
-    h +=
-      '<div class="vh" role="status">' +
-      (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
-      "</div>";
-  }
-  if (!list.length)
-    return (
-      h +
-      '<div class="empty">' +
-      (anySet ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn() : TH("history.none.all")) +
-      "</div>"
-    );
-  const r = histMonths(list, 0, Math.max(HSHOW.n, HIST_CHUNK));
-  return h + r.html + (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : "");
+  /* search mode keeps the bar and the list in two boxes of their own, so typing redraws them without the field */
+  return V.find ? h + '<div id="hhead">' + p.head + '</div><div id="hbody">' + p.body + "</div>" : h + p.head + p.body;
 }

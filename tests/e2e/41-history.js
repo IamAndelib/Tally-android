@@ -1051,10 +1051,10 @@ const ok = (c, m) => {
     });
     ok(other.includes("tr1:row-open") && !other.includes("fee1"), "Home's entries: the same rows: " + other);
     const sr = await page.evaluate(() => {
-      openSearch();
-      $("#sr-q").value = "everyday";
-      searchInput("everyday");
-      return [...document.querySelectorAll("#sr .tx[data-v]")].map(r => r.dataset.v + ":" + r.dataset.act).join();
+      openFind();
+      HF.q = "everyday";
+      findDraw();
+      return [...document.querySelectorAll("#hbody .tx[data-v]")].map(r => r.dataset.v + ":" + r.dataset.act).join();
     });
     ok(sr.includes("tr1:row-open") && !sr.includes("fee1"), "search: the same rows: " + sr);
     await ctx.close();
@@ -1299,10 +1299,10 @@ const ok = (c, m) => {
     /* search counts the rows it shows; a fee that matches makes its entry the hit, listed once */
     const sr = await page.evaluate(() => {
       V.screen = "home";
-      openSearch();
-      $("#sr-q").value = "2";
-      searchInput("2");
-      const ids = [...document.querySelectorAll("#sr .tx[data-act='row-open']")].map(r => r.dataset.v);
+      openFind();
+      HF.q = "2";
+      findDraw();
+      const ids = [...document.querySelectorAll("#hbody .tx[data-act='row-open']")].map(r => r.dataset.v);
       const q = srTerms("2");
       return {
         ids,
@@ -1317,22 +1317,6 @@ const ok = (c, m) => {
     );
     ok(sr.ids.filter(x => x === "xf").length === 1, "listed once");
     ok(sr.ids.slice().sort().join() === sr.hits.join(), "the rows shown are the hits: " + sr.ids + " / " + sr.hits);
-    const acctCount = await page.evaluate(() => {
-      const q = srTerms("everyday");
-      searchInput("everyday");
-      const sub = [...document.querySelectorAll("#sr [data-act='sr-scope'] .s")].map(x => x.textContent);
-      SR.scope = { k: "acc", v: "b" };
-      return {
-        sub,
-        scoped: srList().length,
-        rows: histRows(S.txns.filter(t => t.account === "b" || t.to === "b")).length,
-      };
-    });
-    ok(
-      acctCount.sub.some(x => x.startsWith(acctCount.rows + " ")),
-      "an account's count is its rows: " + acctCount.sub + " / " + acctCount.rows
-    );
-    ok(acctCount.scoped === acctCount.rows, "the scoped list is its rows: " + acctCount.scoped);
     await ctx.close();
   }
 
@@ -1439,7 +1423,7 @@ const ok = (c, m) => {
       render();
     });
     await page.click('#app [data-act="search-open"]');
-    await page.evaluate(() => searchBack());
+    await page.evaluate(() => findBack());
     let r = await page.evaluate(() => ({ s: V.screen, hf: JSON.stringify(HF), p: HP.period }));
     ok(
       r.s === "history" && r.hf.includes('"acc":"k"') && r.hf.includes('"kind":"out"') && r.p === "month",
@@ -1457,7 +1441,7 @@ const ok = (c, m) => {
     );
     await page.evaluate(() => {
       openHistory({ acc: "k" });
-      openSearch();
+      openFind();
       V.screen = "home";
       render();
     });

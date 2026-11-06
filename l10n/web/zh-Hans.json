@@ -616,25 +616,10 @@
   },
   "search": {
     "title": "搜索",
-    "placeholder": "搜索记录",
     "clear": "清除",
-    "unscope": "返回全部结果，而不只是{{name}}",
-    "none": "没有与“{{q}}”匹配的内容。",
-    "close": "没有完全匹配的结果，以下相近：",
     "spent": "支出{{amount}}",
     "received": "收入{{amount}}",
-    "cats": "分类",
-    "people": "借款与借出",
-    "entries": "记录",
-    "showAll": "显示全部{{n}}条",
-    "allTime": "{{entries}} · 全部时间",
-    "span": {
-      "w": "周",
-      "m": "月",
-      "y": "年",
-      "a": "全部"
-    },
-    "avg": "平均 {{amount}}"
+    "field": "Search History"
   },
   "nav": {
     "home": "首页",
@@ -674,8 +659,6 @@
     "borrowedFrom": "向{{who}}借入",
     "theyPaidBack": "{{who}}还款",
     "youPaidBack": "还给{{who}}",
-    "lending": "借出",
-    "loan": "借入",
     "feeLine": "+手续费{{amount}}",
     "addedAt": "添加于{{time}}",
     "addedOn": "添加于{{date}} {{time}}",
@@ -702,10 +685,7 @@
     "select": "选择记录",
     "allTime": "全部时间",
     "none": {
-      "all": "还没有记录。",
-      "month": "那个月没有记录。",
-      "range": "这段时间没有记录。",
-      "year": "那一年没有记录。"
+      "all": "还没有记录。"
     },
     "deleted_other": "已删除{{count}}条记录",
     "words": {

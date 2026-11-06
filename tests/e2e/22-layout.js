@@ -690,18 +690,10 @@ function inspect() {
     });
     await shot("search", async () => {
       await page.evaluate(() => {
-        openSearch();
-        $("#sr-q").value = "a";
-        searchInput("a");
-      });
-    });
-    await shot("search-scope", async () => {
-      await page.evaluate(() => {
-        openSearch();
-        $("#sr-q").value = "a";
-        searchInput("a");
-        const b = $('#sr [data-act="sr-scope"]');
-        if (b) b.click();
+        openFind();
+        $("#find-q").value = "a";
+        findInput("a");
+        findDraw();
       });
     });
     await shot("summary-year", async () => {

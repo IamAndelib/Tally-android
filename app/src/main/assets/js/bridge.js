@@ -510,8 +510,8 @@ function goBack() {
     render();
     return true;
   }
-  if (V.screen === "search") {
-    searchBack();
+  if (V.find) {
+    findBack();
     return true;
   }
   if (V.screen !== "home") {

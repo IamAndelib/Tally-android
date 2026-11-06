@@ -621,25 +621,10 @@
   },
   "search": {
     "title": "Suchen",
-    "placeholder": "Einträge suchen",
     "clear": "Löschen",
-    "unscope": "Zurück zu allen Ergebnissen, nicht nur {{name}}",
-    "none": "Nichts passt zu „{{q}}“.",
-    "close": "Keine genauen Treffer. Diese sind ähnlich:",
     "spent": "{{amount}} ausgegeben",
     "received": "{{amount}} erhalten",
-    "cats": "Kategorien",
-    "people": "Geliehen und verliehen",
-    "entries": "Einträge",
-    "showAll": "Alle {{n}} zeigen",
-    "allTime": "{{entries}} · insgesamt",
-    "span": {
-      "w": "Woche",
-      "m": "Monat",
-      "y": "Jahr",
-      "a": "Alles"
-    },
-    "avg": "durchschnittlich {{amount}}"
+    "field": "Search History"
   },
   "nav": {
     "home": "Start",
@@ -679,8 +664,6 @@
     "borrowedFrom": "Von {{who}} geliehen",
     "theyPaidBack": "{{who}} hat zurückgezahlt",
     "youPaidBack": "An {{who}} zurückgezahlt",
-    "lending": "Verliehen",
-    "loan": "Geliehen",
     "feeLine": "+ {{amount}} Gebühr",
     "addedAt": "Hinzugefügt um {{time}}",
     "addedOn": "Hinzugefügt am {{date}} um {{time}}",
@@ -708,10 +691,7 @@
     "select": "Einträge auswählen",
     "allTime": "Gesamte Zeit",
     "none": {
-      "all": "Noch nichts notiert.",
-      "month": "In diesem Monat nichts notiert.",
-      "range": "In diesem Zeitraum nichts notiert.",
-      "year": "In diesem Jahr nichts notiert."
+      "all": "Noch nichts notiert."
     },
     "deleted_one": "{{count}} Eintrag gelöscht",
     "deleted_other": "{{count}} Einträge gelöscht",

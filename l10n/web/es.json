@@ -626,25 +626,10 @@
   },
   "search": {
     "title": "Buscar",
-    "placeholder": "Buscar movimientos",
     "clear": "Borrar",
-    "unscope": "Volver a todos los resultados, no solo {{name}}",
-    "none": "Nada coincide con «{{q}}».",
-    "close": "Ninguna coincidencia exacta. Estas se parecen:",
     "spent": "{{amount}} gastados",
     "received": "{{amount}} recibidos",
-    "cats": "Categorías",
-    "people": "Préstamos",
-    "entries": "Movimientos",
-    "showAll": "Ver los {{n}}",
-    "allTime": "{{entries}} · desde siempre",
-    "span": {
-      "w": "Semana",
-      "m": "Mes",
-      "y": "Año",
-      "a": "Todo"
-    },
-    "avg": "{{amount}} de media"
+    "field": "Search History"
   },
   "nav": {
     "home": "Inicio",
@@ -684,8 +669,6 @@
     "borrowedFrom": "Prestado por {{who}}",
     "theyPaidBack": "Devolución de {{who}}",
     "youPaidBack": "Devolución a {{who}}",
-    "lending": "Préstamo",
-    "loan": "Deuda",
     "feeLine": "+ {{amount}} de comisión",
     "addedAt": "Añadido a las {{time}}",
     "addedOn": "Añadido el {{date}} a las {{time}}",
@@ -714,10 +697,7 @@
     "select": "Seleccionar movimientos",
     "allTime": "Todo el tiempo",
     "none": {
-      "all": "Aún no hay nada anotado.",
-      "month": "No anotaste nada ese mes.",
-      "range": "No anotaste nada en esos días.",
-      "year": "No anotaste nada ese año."
+      "all": "Aún no hay nada anotado."
     },
     "deleted_one": "Se eliminó {{count}} movimiento",
     "deleted_many": "Se eliminaron {{count}} movimientos",

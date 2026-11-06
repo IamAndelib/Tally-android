@@ -179,7 +179,7 @@ a {
   height: 64px;
   margin: 0 -8px;
 }
-/* Search: the box fills the top bar beside Back; an opened group item shows as a chip in it */
+/* Search: the box fills the top bar beside Back */
 .srbox {
   flex: 1;
   min-width: 0;
@@ -210,26 +210,6 @@ a {
 }
 .srbox input::-webkit-search-cancel-button {
   display: none;
-}
-.chip.srscope {
-  min-width: 0;
-  border: 0;
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
-}
-.srhint {
-  margin: 16px 4px;
-  text-align: center;
-}
-.srsum {
-  margin: 8px 0 4px;
-}
-/* one result by Week, Month, Year or All: the Summary's tabs and bars (green for money received) */
-.seg.srspan {
-  margin: 8px 0 4px;
-}
-.srbars.got .smcol .b {
-  background: var(--got);
 }
 .appbar h1 {
   font-size: 1.35rem;

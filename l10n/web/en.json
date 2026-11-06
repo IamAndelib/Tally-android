@@ -621,25 +621,10 @@
   },
   "search": {
     "title": "Search",
-    "placeholder": "Search entries",
     "clear": "Clear",
-    "unscope": "Back to all results, not just {{name}}",
-    "none": "Nothing matches “{{q}}”.",
-    "close": "No exact matches. These are close:",
     "spent": "{{amount}} spent",
     "received": "{{amount}} received",
-    "cats": "Categories",
-    "people": "Loans and lendings",
-    "entries": "Entries",
-    "showAll": "Show all {{n}}",
-    "allTime": "{{entries}} · all time",
-    "span": {
-      "w": "Week",
-      "m": "Month",
-      "y": "Year",
-      "a": "All"
-    },
-    "avg": "{{amount}} on average"
+    "field": "Search History"
   },
   "nav": {
     "home": "Home",
@@ -679,8 +664,6 @@
     "borrowedFrom": "Borrowed from {{who}}",
     "theyPaidBack": "{{who}} paid back",
     "youPaidBack": "Paid back {{who}}",
-    "lending": "Lending",
-    "loan": "Loan",
     "feeLine": "+ {{amount}} fee",
     "addedAt": "Added at {{time}}",
     "addedOn": "Added {{date}} at {{time}}",
@@ -708,10 +691,7 @@
     "select": "Select entries",
     "allTime": "All time",
     "none": {
-      "all": "Nothing written down yet.",
-      "month": "Nothing written down that month.",
-      "range": "Nothing written down in those days.",
-      "year": "Nothing written down that year."
+      "all": "Nothing written down yet."
     },
     "deleted_one": "Deleted {{count}} entry",
     "deleted_other": "Deleted {{count}} entries",

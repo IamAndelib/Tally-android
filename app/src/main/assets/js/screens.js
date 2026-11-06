@@ -35,9 +35,11 @@ let RINGW = 0;
    that was in view where it was (rowAnchor) */
 let drawnScreen = "";
 function render() {
-  const a = V.screen === drawnScreen ? rowAnchor($("#app")) : null;
+  const a = V.screen === drawnScreen ? rowAnchor($("#app")) : null,
+    f = V.find ? findKeep() : null; // search mode: the caret in the field comes back too
   keepFocus($("#app"), drawScreen);
   drawnScreen = V.screen;
+  if (f) findRestore(f);
   if (a) toAnchor(a, $("#app"));
 }
 /* The row in the middle of the view (an entry, an account) and where it is in it, {v, top}, so toAnchor() can put it back
@@ -87,8 +89,9 @@ function drawScreen() {
   if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
   if (V.screen !== "history") {
     V.sel = null;
-    /* leaving History forgets its filters, except for Search opened from it: Back there brings it back as it was */
-    if (!(V.screen === "search" && SR && SR.from === "history")) HF = histBlank();
+    /* leaving History forgets its filters, and ends search mode (its words and payee / amount with them) */
+    if (V.find) findEnd();
+    HF = histBlank();
     histUnwatch();
   }
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
@@ -111,8 +114,7 @@ function drawScreen() {
   if (V.screen === "history") {
     app.innerHTML = historyView();
     histWatch();
-  } else if (V.screen === "search") app.innerHTML = searchView();
-  else if (V.screen === "assets") app.innerHTML = assetsView();
+  } else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
   else if (V.screen === "settings") {
     app.innerHTML = settingsView();
@@ -879,12 +881,12 @@ function rowsClose(scope) {
   scope.querySelectorAll('.tx[aria-expanded="true"]').forEach(x => x.setAttribute("aria-expanded", "false"));
 }
 /* a tap on a row: it opens in place (the one open before closes), or closes. Only that row's part is added or removed,
-   not the whole (long) list drawn anew. One row is open at a time, in the list that was tapped (the page, search or
+   not the whole (long) list drawn anew. One row is open at a time, in the list that was tapped (the page or
    the entries sheet, never the page behind a sheet): a list in a sheet starts with none open and the page's row behind
    it is closed (entriesSheet), and closing that sheet leaves none open (closeSheet). */
 function rowToggle(row, id) {
   const was = V.open === id;
-  rowsClose(row.closest("#sheet, #sr, #app") || document);
+  rowsClose(row.closest("#sheet, #app") || document);
   V.open = was ? "" : id;
   const t = entry(id);
   if (was || !t) return;

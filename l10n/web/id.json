@@ -616,25 +616,10 @@
   },
   "search": {
     "title": "Cari",
-    "placeholder": "Cari transaksi",
     "clear": "Hapus",
-    "unscope": "Kembali ke semua hasil, bukan hanya {{name}}",
-    "none": "Tidak ada yang cocok dengan “{{q}}”.",
-    "close": "Tidak ada yang persis cocok. Yang mirip:",
     "spent": "{{amount}} keluar",
     "received": "{{amount}} masuk",
-    "cats": "Kategori",
-    "people": "Pinjaman",
-    "entries": "Transaksi",
-    "showAll": "Lihat semua {{n}}",
-    "allTime": "{{entries}} · sepanjang waktu",
-    "span": {
-      "w": "Minggu",
-      "m": "Bulan",
-      "y": "Tahun",
-      "a": "Semua"
-    },
-    "avg": "rata-rata {{amount}}"
+    "field": "Search History"
   },
   "nav": {
     "home": "Beranda",
@@ -674,8 +659,6 @@
     "borrowedFrom": "Dipinjam dari {{who}}",
     "theyPaidBack": "{{who}} membayar kembali",
     "youPaidBack": "Bayar ke {{who}}",
-    "lending": "Piutang",
-    "loan": "Utang",
     "feeLine": "+ biaya {{amount}}",
     "addedAt": "Ditambahkan pukul {{time}}",
     "addedOn": "Ditambahkan {{date}} pukul {{time}}",
@@ -702,10 +685,7 @@
     "select": "Pilih transaksi",
     "allTime": "Sepanjang waktu",
     "none": {
-      "all": "Belum ada catatan.",
-      "month": "Tidak ada catatan bulan itu.",
-      "range": "Tidak ada catatan di hari-hari itu.",
-      "year": "Tidak ada catatan tahun itu."
+      "all": "Belum ada catatan."
     },
     "deleted_other": "{{count}} transaksi dihapus",
     "words": {

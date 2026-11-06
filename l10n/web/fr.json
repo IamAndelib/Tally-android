@@ -626,25 +626,10 @@
   },
   "search": {
     "title": "Rechercher",
-    "placeholder": "Rechercher des opérations",
     "clear": "Effacer",
-    "unscope": "Revenir à tous les résultats, pas seulement {{name}}",
-    "none": "Rien ne correspond à « {{q}} ».",
-    "close": "Aucun résultat exact. Résultats proches :",
     "spent": "{{amount}} dépensés",
     "received": "{{amount}} reçus",
-    "cats": "Catégories",
-    "people": "Prêts et emprunts",
-    "entries": "Opérations",
-    "showAll": "Voir les {{n}}",
-    "allTime": "{{entries}} · depuis le début",
-    "span": {
-      "w": "Semaine",
-      "m": "Mois",
-      "y": "Année",
-      "a": "Tout"
-    },
-    "avg": "{{amount}} en moyenne"
+    "field": "Search History"
   },
   "nav": {
     "home": "Accueil",
@@ -684,8 +669,6 @@
     "borrowedFrom": "Emprunté à {{who}}",
     "theyPaidBack": "{{who}} a remboursé",
     "youPaidBack": "Remboursé à {{who}}",
-    "lending": "Prêt",
-    "loan": "Emprunt",
     "feeLine": "+ {{amount}} de frais",
     "addedAt": "Ajouté à {{time}}",
     "addedOn": "Ajouté le {{date}} à {{time}}",
@@ -714,10 +697,7 @@
     "select": "Sélectionner des opérations",
     "allTime": "Depuis le début",
     "none": {
-      "all": "Rien de noté pour l’instant.",
-      "month": "Rien de noté ce mois-là.",
-      "range": "Rien de noté sur ces jours.",
-      "year": "Rien de noté cette année-là."
+      "all": "Rien de noté pour l’instant."
     },
     "deleted_one": "{{count}} opération supprimée",
     "deleted_many": "{{count}} d’opérations supprimées",

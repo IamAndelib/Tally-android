@@ -158,6 +158,332 @@ const ok = (c, m) => {
   const mixed = await page.evaluate(() => [srAmtLabel("gt:50"), srAmtLabel("eq:50:51")]);
   ok(mixed[0] === "More than 50.00" && mixed[1] === "50.00 to 50.99", "several currencies: plain numbers: " + mixed);
 
+  await ctx.close();
+
+  // ---- part 2: search as a mode of History, opened from every tab
+  {
+    const fs = require("fs"),
+      path = require("path");
+    const openApp = async (locale = "en-US") => {
+      const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale });
+      await c.addInitScript(() => {
+        window.Android = { getColors: () => null, setBars() {} };
+      });
+      const p = await c.newPage();
+      p.on("pageerror", e => errors.push(e.message));
+      await p.goto(appUrl);
+      await p.evaluate(() => {
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push(
+          { id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 5000, archived: false },
+          { id: "c", name: "Cash", type: "cash", currency: "USD", opening: 300, archived: false }
+        );
+        let n = 0;
+        const t = (days, type, amount, account, extra) =>
+          S.txns.push({
+            id: "t" + ++n,
+            ts: n,
+            date: addDays(today(), -days),
+            type,
+            amount,
+            account,
+            note: "",
+            ...extra,
+          });
+        t(0, "expense", 36.8, "b", { cat: "groceries", payee: "Green Market" });
+        t(1, "expense", 41.3, "b", { cat: "groceries", payee: "green market" });
+        t(2, "expense", 12.5, "b", { cat: "groceries", payee: "Fresh Corner" });
+        t(3, "expense", 4.75, "c", { cat: "food", payee: "Corner Café", note: "Coffee" });
+        t(4, "expense", 45.2, "c", { cat: "shopping", payee: "Outdoor Store", note: "Rain jacket" });
+        t(5, "expense", 9, "c", { cat: "food", payee: "茶餐厅", note: "午饭" });
+        t(6, "income", 150, "c", { cat: "gift", payee: "Grandma" });
+        t(7, "transfer", 200, "b", { to: "c" });
+        S.loans.push({
+          id: "L1",
+          kind: "lend",
+          person: "Greta",
+          account: "c",
+          date: today(),
+          note: "",
+          status: "open",
+        });
+        t(1, "loan", 20, "c", { dir: "out", loan: "L1", principal: true });
+        save();
+        render();
+      });
+      return { c, p };
+    };
+    const { c: c2, p: pg } = await openApp();
+    const st = () =>
+      pg.evaluate(() => ({
+        find: !!V.find,
+        screen: V.screen,
+        q: HF.q,
+        period: HP.period,
+        kind: HF.kind,
+        n: histCount(),
+        focus: document.activeElement && document.activeElement.id,
+        val: ($("#find-q") || {}).value,
+      }));
+    const rows = () => pg.evaluate(() => [...document.querySelectorAll("#hbody .tx .d")].map(d => d.textContent));
+    const type = async q => {
+      await pg.fill("#find-q", "");
+      await pg.keyboard.type(q);
+      await pg.waitForTimeout(250);
+    };
+    const SB = '#app [data-act="search-open"]';
+
+    // from Home, Assets and Liabilities
+    for (const [scr, label] of [
+      ["home", "Home"],
+      ["assets", "Assets"],
+      ["liabs", "Liabilities"],
+    ]) {
+      await pg.evaluate(x => {
+        V.screen = x;
+        render();
+      }, scr);
+      await pg.click(SB);
+      let r = await st();
+      ok(
+        r.find && r.screen === "history" && r.focus === "find-q" && r.period === "all" && r.n === 0 && r.q === "",
+        label + ": Search opens History in search mode, the field focused, clean: " + JSON.stringify(r)
+      );
+      await pg.evaluate(() => goBack());
+      r = await st();
+      ok(!r.find && r.screen === scr, label + ": Back returns to it: " + JSON.stringify(r));
+    }
+
+    // from History: always clean, and Back puts its filters and period back
+    await pg.evaluate(() => {
+      openHistory({ kind: "out" });
+      Object.assign(HP, { period: "month", anchor: today() });
+      render();
+    });
+    await pg.click(SB);
+    let r = await st();
+    ok(
+      r.find && r.period === "all" && r.kind === "" && r.n === 0 && r.focus === "find-q",
+      "History: opens clean (all time, no filters): " + JSON.stringify(r)
+    );
+    await pg.click('#app [data-act="find-back"]');
+    r = await st();
+    ok(
+      !r.find && r.screen === "history" && r.kind === "out" && r.period === "month",
+      "History: Back restores its filter and period: " + JSON.stringify(r)
+    );
+    await pg.evaluate(() => {
+      openHistory();
+    });
+
+    // the top bar and the empty state
+    await pg.click(SB);
+    const bar = await pg.evaluate(() => ({
+      field: !!$('#app .appbar input#find-q[type="search"]'),
+      label: $("#find-q").getAttribute("aria-label"),
+      ph: $("#find-q").placeholder,
+      back: !!$('#app .appbar [data-act="find-back"]'),
+      sbtn: !!$('#app .appbar [data-act="search-open"]'),
+      sel: !!$('#app .appbar [data-act="sel-start"]'),
+      h1: !!$("#app .appbar h1"),
+      hbar: !!$("#app .hbar .hpl") && !!$("#app .hbar .hfbtn"),
+      body: $("#hbody").innerHTML,
+    }));
+    ok(
+      bar.field && bar.back && !bar.sbtn && !bar.sel && !bar.h1 && bar.hbar,
+      "search mode: Back and the field in the bar, no Search or Select, period and Filters under it: " +
+        JSON.stringify(bar)
+    );
+    ok(bar.ph === "Search History" && bar.label === "Search History", "the field is labelled Search History");
+    ok(bar.body === "", "nothing typed, no filter, all time: #hbody shows nothing");
+
+    // typing: after a pause, only #hbody (and the bar) change; the field keeps its caret, focus and element
+    await pg.evaluate(() => {
+      $("#find-q").__mark = 1;
+    });
+    await pg.evaluate(() => {
+      const i = $("#find-q");
+      i.value = "gr";
+      i.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    ok((await pg.evaluate(() => $("#hbody").innerHTML)) === "", "the list waits for a pause in typing");
+    await pg.waitForTimeout(250);
+    let list = await rows();
+    ok(
+      list.filter(x => /green market/i.test(x)).length === 2 && list.length >= 4,
+      "typing filters the list: " + JSON.stringify(list)
+    );
+    ok(
+      await pg.evaluate(() => $("#find-q").__mark === 1 && document.activeElement === $("#find-q") && HF.q === "gr"),
+      "the field is the same element, still focused"
+    );
+    await type("cafe COF");
+    list = await rows();
+    ok(
+      list.length === 1 && /Corner Café/.test(list[0]),
+      "cafe COF: the coffee at Corner Café only: " + JSON.stringify(list)
+    );
+    await type("rket");
+    ok(
+      (await rows()).length === 0 && (await pg.textContent("#hbody .empty")).includes("Nothing matches"),
+      "the middle of a word doesn't count"
+    );
+    await type("午");
+    ok((await rows()).length === 1, "Chinese matches anywhere in the text");
+    await type("4.75");
+    list = await rows();
+    ok(list.length === 1 && /Corner Café/.test(list[0]), "4.75 finds the 4.75 entry");
+    await type("45");
+    list = await rows();
+    ok(list.length === 1 && /Outdoor Store/.test(list[0]), "45 finds 45.20, not 4.75");
+
+    // nothing found: History's message and Clear all (which also empties the field)
+    await type("zzz");
+    ok(!!(await pg.$("#hbody .empty [data-act='hf-clear']")), "nothing found: History's message with Clear all");
+    await pg.click("#hbody .empty [data-act='hf-clear']");
+    r = await st();
+    ok(
+      r.find && r.val === "" && r.q === "",
+      "Clear all empties the field and stays in search mode: " + JSON.stringify(r)
+    );
+
+    // the field's x empties it and stays
+    await type("gr");
+    ok(await pg.evaluate(() => !$('#app [data-act="find-clear"]').hidden), "the x shows once there are words");
+    await pg.click('#app [data-act="find-clear"]');
+    r = await st();
+    ok(
+      r.find && r.val === "" && r.focus === "find-q" && (await pg.evaluate(() => $("#hbody").innerHTML)) === "",
+      "the x empties the field, keeps search mode and the focus: " + JSON.stringify(r)
+    );
+
+    // a filter set from the sheet: the list shows without words; layers close first
+    await pg.click('#app [data-act="hf-open"]');
+    ok(!!(await pg.$("#sheet .sheet, #sheet .p, #sheet [role=dialog]")), "Filters opens from search mode");
+    await pg.evaluate(() => goBack());
+    r = await st();
+    ok(r.find && !(await pg.evaluate(() => $("#sheet").innerHTML)), "Back closes the sheet first, search mode stays");
+    await pg.evaluate(() => {
+      HF.kind = "in";
+      render();
+    });
+    list = await rows();
+    ok(list.length === 1 && /Grandma/.test(list[0]), "a filter alone lists its entries: " + JSON.stringify(list));
+    await pg.evaluate(() => {
+      HF.kind = "";
+      render();
+    });
+
+    // render() in search mode rebuilds the field with the text and puts the caret back
+    await type("green");
+    await pg.evaluate(() => $("#find-q").setSelectionRange(2, 2));
+    await pg.evaluate(() => render());
+    r = await pg.evaluate(() => ({
+      v: $("#find-q").value,
+      f: document.activeElement === $("#find-q"),
+      s: $("#find-q").selectionStart,
+      e: $("#find-q").selectionEnd,
+    }));
+    ok(
+      r.v === "green" && r.f && r.s === 2 && r.e === 2,
+      "render() keeps the words, focus and caret: " + JSON.stringify(r)
+    );
+
+    // rotation keeps the words and the focus
+    await pg.evaluate(() => $("#find-q").setSelectionRange(3, 3));
+    await pg.setViewportSize({ width: 852, height: 393 });
+    await pg.waitForTimeout(300);
+    r = await pg.evaluate(() => ({
+      v: $("#find-q").value,
+      f: document.activeElement === $("#find-q"),
+      s: $("#find-q").selectionStart,
+      find: !!V.find,
+    }));
+    ok(
+      r.v === "green" && r.f && r.s === 3 && r.find,
+      "rotation keeps the words, focus and caret: " + JSON.stringify(r)
+    );
+    await pg.setViewportSize({ width: 393, height: 852 });
+    await pg.waitForTimeout(300);
+    r = await st();
+    ok(r.find && r.val === "green" && r.focus === "find-q", "and back upright: " + JSON.stringify(r));
+
+    // an opened row, a held row (selection), then Back
+    await pg.click("#hbody .tx[data-act='row-open']");
+    ok(!!(await pg.$("#hbody .txo")), "a result opens in place");
+    await pg.evaluate(() => {
+      V.sel = new Set([S.txns[0].id]);
+      render();
+    });
+    ok(
+      !!(await pg.$('#app .appbar [data-act="sel-cancel"]')) && !(await pg.$("#find-q")),
+      "holding a row starts selection (the selection bar replaces the field)"
+    );
+    await pg.evaluate(() => goBack());
+    r = await st();
+    ok(
+      r.find && r.val === "green",
+      "Back ends the selection first, search mode stays with its words: " + JSON.stringify(r)
+    );
+
+    // leaving History another way ends search mode and forgets the words
+    await pg.evaluate(() => {
+      HF.pay = "out:green market";
+      V.screen = "liabs";
+      render();
+    });
+    r = await pg.evaluate(() => ({ find: !!V.find, q: HF.q, pay: HF.pay, amt: HF.amt, keep: !!FIND.keep }));
+    ok(
+      !r.find && r.q === "" && r.pay === "" && r.amt === "" && !r.keep,
+      "leaving History another way ends search mode: " + JSON.stringify(r)
+    );
+    await pg.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+
+    // opened from History, then left by another way: nothing is restored
+    await pg.evaluate(() => {
+      openHistory({ kind: "out" });
+    });
+    await pg.click(SB);
+    await pg.evaluate(() => {
+      V.screen = "assets";
+      render();
+    });
+    r = await pg.evaluate(() => ({ find: !!V.find, kind: HF.kind, keep: !!FIND.keep }));
+    ok(!r.find && r.kind === "" && !r.keep, "History's kept filters are forgotten when search ends elsewhere");
+
+    // history's own Search button reaches the same mode
+    await pg.evaluate(() => openHistory());
+    ok(!!(await pg.$('#app .appbar [data-act="search-open"]')), "History has the Search button");
+
+    // no old Search page left
+    const walk = d =>
+      fs.readdirSync(d, { withFileTypes: true }).flatMap(e => {
+        const f = path.join(d, e.name);
+        return e.isDirectory() ? (e.name === "i18n" ? [] : walk(f)) : /\.(js|html|css)$/.test(e.name) ? [f] : [];
+      });
+    const old = /V\.screen === "search"|searchView|srGroups|srScope|srScoped|srSpan|srNav|SR_SPANS|"sr-|#sr\b|\bSR\./;
+    const left = walk(path.join(__dirname, "..", "..", "app", "src", "main", "assets")).filter(f =>
+      old.test(fs.readFileSync(f, "utf8"))
+    );
+    ok(left.length === 0, "the old Search screen is gone from the code: " + left.join(", "));
+    await c2.close();
+
+    // a German phone: amounts typed the German way
+    {
+      const { c: c3, p: p3 } = await openApp("de-DE");
+      await p3.click(SB);
+      await p3.keyboard.type("4,75");
+      await p3.waitForTimeout(250);
+      const got = await p3.evaluate(() => [...document.querySelectorAll("#hbody .tx .d")].map(d => d.textContent));
+      ok(got.length === 1 && /Corner Café/.test(got[0]), "German: 4,75 finds the 4.75 entry: " + got);
+      await c3.close();
+    }
+  }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();
   process.exit(fails ? 1 : 0);
