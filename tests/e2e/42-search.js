@@ -1325,6 +1325,23 @@ const ok = (c, m) => {
     }));
     ok(r.html === "" && !r.rec && !r.sec, "no recent searches: the space stays empty: " + r.html.slice(0, 60));
 
+    // kept: search mode closed by leaving History another way (not Back)
+    await type(p5, "noodle");
+    await p5.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+    ok(
+      (await rec(p5))[0] === "noodle",
+      "leaving History another way keeps the search: " + JSON.stringify(await rec(p5))
+    );
+    await p5.evaluate(() => {
+      recentSave([]);
+      V.screen = "history";
+      render();
+      openFind();
+    });
+
     // kept: a suggestion tapped
     await type(p5, "corner");
     await p5.click('#hbody .sug[data-act="fs-pick"]');

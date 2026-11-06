@@ -227,13 +227,14 @@ function openFind() {
   if (inp) inp.focus();
 }
 /* search mode over, its words and payee / amount forgotten (the caller sets the screen) */
+/* search mode ends (Back, or History left another way): the words typed are kept as a recent search first */
 function findEnd() {
+  recentKeep(HF.q);
   clearTimeout(FIND_T);
   V.find = false;
   FIND.keep = null;
 }
 function findBack() {
-  recentKeep(HF.q);
   const { from, keep } = FIND;
   findEnd();
   V.sel = null;
