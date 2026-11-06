@@ -456,7 +456,7 @@ function fitFigures(root) {
     }
     fadeStrip(el);
   });
-  /* Home's balance bar: its figures (together, to stay in their column) a tenth smaller at a time, never cut */
+  /* Home's balance bar: its figures (together, to stay in their column) a tenth smaller at a time down to 60%, never cut */
   root.querySelectorAll(".balbar .bt").forEach(el => {
     const bs = el.querySelectorAll("b"),
       f = parseFloat(getComputedStyle(bs[0]).fontSize);
@@ -699,7 +699,7 @@ function balBar(b, n) {
     entries = T("home.entries", { count: n }),
     line = (c, i) =>
       '<span class="bcl">' +
-      (one ? "" : '<span class="bcc">' + esc(c) + "</span>") +
+      (one ? "" : '<span class="bcc">' + (say[i].includes(c) ? "" : esc(c)) + "</span>") +
       "<b>" +
       esc(say[i]) +
       "</b></span>";

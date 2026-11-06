@@ -317,6 +317,28 @@ const ok = (c, m) => {
     bb.say === "1 entry. Total: " + bb.figs.join(", ") && bb.hidden,
     "TalkBack reads every currency in one sentence: " + bb.say
   );
+  // a currency the phone's locale has no symbol for prints its code in the figure: the code column stays empty then
+  await page.evaluate(() => {
+    S.accounts.push({ id: "h1", name: "Franc", type: "bank", currency: "CHF", opening: 1234, archived: false });
+    render();
+  });
+  const chf = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll(".balbar .bcc")].map(e => e.textContent.trim());
+    const fig = [...document.querySelectorAll(".balbar b")].map(e => e.textContent.trim());
+    return { rows, fig };
+  });
+  const chfAt = chf.fig.findIndex(f => f.includes("CHF"));
+  ok(
+    chfAt >= 0 &&
+      chf.rows[chfAt] === "" &&
+      chf.rows.length === chf.fig.length &&
+      chf.rows.filter(c => c === "USD").length === 1,
+    "a currency printed with its code shows it once: " + JSON.stringify(chf)
+  );
+  await page.evaluate(() => {
+    S.accounts = S.accounts.filter(a => a.id !== "h1");
+    render();
+  });
   /* the ring's ⇄ only changes the ring: the bar keeps every currency */
   const ringCur = () => page.evaluate(() => document.querySelector(".curbtn").textContent.trim());
   const r0 = await ringCur();

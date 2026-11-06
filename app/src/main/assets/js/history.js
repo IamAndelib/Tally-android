@@ -323,7 +323,7 @@ function hfBody() {
       hfSideChip("to") +
       "</div>";
     const a = d.acc && acc(d.acc);
-    if (a) h += '<div class="hfhint">' + TH("history.oneSide", { account: a.name }) + "</div>";
+    if (a) h += '<div class="hfhint">' + TH("history.oneSide", { account: { html: accTag(a) } }) + "</div>";
   }
   return h;
 }
