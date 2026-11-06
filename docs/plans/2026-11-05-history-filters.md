@@ -192,7 +192,7 @@ J1 (option B), K1–K3, PA3.
 **Files:**
 - Modify: `l10n/web/*.json` (9), `js/i18n/*.js` (generated), `tests/e2e/22-layout.js` (states: History default,
   filtered with chips, the sheet for Spent, Lent, Transfers with an account, an opened transfer and loan row),
-  `CHANGELOG.md`, `README.md`, `docs/plans/2026-11-01-release-1.4.4.md` (item 12), `docs/decisions.md`, store media
+  `CHANGELOG.md`, `README.md`, `docs/plans/2026-11-01-release-1.4.5.md` (item 12), `docs/decisions.md`, store media
 - Test: `22-layout.js`, `32-i18n-static.js`, full suite
 
 - [ ] **Step 1:** Add every new key's translation (de, es, fr, id, pt-BR, ru, tr, zh-Hans) with plurals for counts;

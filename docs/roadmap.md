@@ -1,7 +1,7 @@
 # Tally roadmap
 
 - **1.4.4** · the calculator closes when another field takes the focus (a fix release, 2026-11-06)
-- **1.4.5** · fixes, Year view, search, account colours and order, polish · docs/plans/2026-11-01-release-1.4.4.md
+- **1.4.5** · fixes, Year view, search, account colours and order, polish · docs/plans/2026-11-01-release-1.4.5.md
 - **1.5.0**, the big update (later) · exit: maintainer-tested on a phone
   - Budgeting / planning: the Plan tab with repeating items and what's due, work in progress on
     `claude/plan-wip` (2 commits on top of 1.4.1; its Tally Dev APK: a985307, 2026-10-26). Covers #26 recurring and

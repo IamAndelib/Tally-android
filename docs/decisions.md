@@ -3,7 +3,7 @@
 Product decisions and their reasons. Format: `- YYYY-MM-DD · P? · decision · why` (P0 security or data loss, P1 broken
 core, P2 minor, P3 cosmetic).
 
-- 2026-11-01 · P2 · 1.4.4 scope: #41 Year view (period, Summary tab, start-period setting), #37 account colour in History, #33 account reorder, global search, calculator grouping, reminders for loans without a due day, UI polish · maintainer's selection; plan in docs/plans/2026-11-01-release-1.4.4.md
+- 2026-11-01 · P2 · 1.4.4 scope: #41 Year view (period, Summary tab, start-period setting), #37 account colour in History, #33 account reorder, global search, calculator grouping, reminders for loans without a due day, UI polish · maintainer's selection; plan in docs/plans/2026-11-01-release-1.4.5.md
 - 2026-11-01 · P2 · Versions: the next update is 1.4.4 (versionCode 10404); 1.5.0 is the big update with budgeting / planning and security · maintainer's choice, as with 1.4.1–1.4.3 which also added features
 - 2026-11-01 · P2 · Not in 1.4.4: per-account chart, category hold-total, recurring/future entries (#26), budget account (#24), CSV import (#36), split payments (#31) · maintainer's selection; recurring entries and budgets come in 1.5.0, the rest is undecided (docs/roadmap.md)
 - 2026-11-01 · P2 · Calculator shows thousands grouping while typing (phone's separators) · maintainer's request

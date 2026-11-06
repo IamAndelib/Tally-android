@@ -107,6 +107,6 @@ CSS; tests 36, 24, 22.
 
 ### Task 10: Words, layout, docs, build
 **Files:** `docs/design.md` (the design philosophy, approved; CONTRIBUTING's design section points to it), CHANGELOG,
-README, CONTRIBUTING, `docs/decisions.md`, `docs/plans/2026-11-01-release-1.4.4.md`, store media.
+README, CONTRIBUTING, `docs/decisions.md`, `docs/plans/2026-11-01-release-1.4.5.md`, store media.
 - [ ] Every new key in nine languages checked; 22 in all nine languages; full `npm test`, lint; `npm run media`.
   Commit (the controller pushes and sends the test APK).

@@ -5,7 +5,7 @@ Guidance for Claude Code working in this repository. Read [README.md](README.md)
 this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
 what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 
-Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: the first unticked box), then
+Current work: [the 1.4.5 plan](docs/plans/2026-11-01-release-1.4.5.md) (next: the first unticked box), then
 [the roadmap](docs/roadmap.md). Notes per feature are in `docs/specs/`, decisions and their reasons in
 [docs/decisions.md](docs/decisions.md); add to them as you go.
 
@@ -16,7 +16,7 @@ Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: th
   jargon, and wait for a yes.
 - **Demo before code.** Every interface or feature change starts with screenshots of the proposal (the real app with
   the change mocked on top by a throwaway script in the scratchpad), discussed with the maintainer; only what they
-  agree is built (docs/plans/2026-11-01-release-1.4.4.md → How each item is built).
+  agree is built (docs/plans/2026-11-01-release-1.4.5.md → How each item is built).
 - **No analytics, tracking or network use, ever.** Tally has no `INTERNET` permission and a CSP that blocks every
   request; README, the privacy policy and the store listings promise this.
 - **No Claude session links anywhere public** (no `Claude-Session:` line or `claude.ai/code/session_…` URL in commits,
