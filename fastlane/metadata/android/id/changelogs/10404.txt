@@ -1,1 +1,1 @@
-- Diperbaiki: saat kalkulator terbuka, mengetuk "Tambah biaya" atau kolom lain membuka keyboard ponsel di bawah kalkulator, keduanya tampil bersamaan. Kini kalkulator ditutup lebih dulu.
+- Saat kalkulator terbuka, mengetuk "Tambah biaya" atau kolom lain tidak lagi membuka keyboard ponsel di bawah kalkulator: kalkulator ditutup lebih dulu, dan hitungan yang Anda ketik tetap tersimpan.

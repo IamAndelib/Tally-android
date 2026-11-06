@@ -1,1 +1,1 @@
-- Düzeltildi: hesap makinesi açıkken "Masraf ekle"ye ya da başka bir alana dokunmak, telefonun klavyesini hesap makinesinin altında açıyordu; ikisi aynı anda ekrandaydı. Artık önce hesap makinesi kapanıyor.
+- Hesap makinesi açıkken "Masraf ekle"ye ya da başka bir alana dokunmak artık telefonun klavyesini hesap makinesinin altında açmıyor: önce hesap makinesi kapanıyor ve yazdığınız işlem korunuyor.

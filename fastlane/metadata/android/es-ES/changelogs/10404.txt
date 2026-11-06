@@ -1,1 +1,1 @@
-- Corregido: con la calculadora abierta, tocar «Añadir comisión» u otro campo abría el teclado del teléfono bajo la calculadora, los dos a la vez. Ahora la calculadora se cierra primero.
+- Con la calculadora abierta, tocar «Añadir comisión» u otro campo ya no abre el teclado del teléfono bajo la calculadora: la calculadora se cierra primero y la cuenta que escribiste se conserva.

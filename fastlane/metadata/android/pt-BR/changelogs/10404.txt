@@ -1,1 +1,1 @@
-- Corrigido: com a calculadora aberta, tocar em "Adicionar taxa" ou em outro campo abria o teclado do celular sob a calculadora, os dois ao mesmo tempo. Agora a calculadora fecha primeiro.
+- Com a calculadora aberta, tocar em "Adicionar taxa" ou em outro campo não abre mais o teclado do celular sob a calculadora: a calculadora fecha primeiro, e a conta digitada é mantida.
