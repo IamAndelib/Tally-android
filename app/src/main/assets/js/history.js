@@ -431,12 +431,14 @@ function histChips() {
   return h.join("");
 }
 /* the period chip (its label opens the period dialog; once set, its ✕ goes back to all time), Filters, Clear all */
-function histBar(clearHere) {
+function histBar(clearHere, chips = "", off = false) {
   if (!S.txns.length) return ""; // nothing to filter in a notebook with no entries yet
   const set = HP.period !== "all",
     n = histCount();
-  return (
-    '<div class="hbar"><div class="hp' +
+  const h =
+    '<div class="hbar' +
+    (off ? " hoff" : "") +
+    '"><div class="hp' +
     (set ? " set" : "") +
     '"><button class="hpl" data-act="hp-open" aria-haspopup="dialog" aria-label="' +
     esc(T("history.choosePeriod", { period: periodLabel(HP) })) +
@@ -455,9 +457,12 @@ function histBar(clearHere) {
     "<span>" +
     TH(n ? "history.filtersN" : "history.filters", { count: n }) +
     "</span></button>" +
+    (chips ? '<div class="hchips">' + chips + "</div>" : "") +
     (clearHere ? histClearBtn() : "") +
-    "</div>"
-  );
+    "</div>";
+  /* while selecting the row stays where it is, dimmed and out of reach (disabled buttons take no focus, and TalkBack
+     says so) */
+  return off ? h.replace(/<button /g, "<button disabled ") : h;
 }
 /* after a chip, the period or Clear all is gone, the focus goes on: to the chip now in the removed one's place (else the
    one before it), else the Filters button, so it never falls back to the page */
@@ -555,12 +560,10 @@ function histParts() {
   }
   const chips = histChips(),
     anySet = HP.period !== "all" || histCount() > 0 || !!(V.find && HF.q.trim());
-  let head = "";
+  /* the chips and Clear all follow the Filters button on its line, wrapping when it is full; Clear all is left out when
+     the list is empty (its message has one) */
+  let head = histBar(anySet && list.length, chips, !!V.sel);
   if (!V.sel) {
-    /* Clear all sits after the chips; with none (only a period set) beside the Filters button; not at all when the
-       list is empty (its message has one) */
-    const clear = anySet && list.length;
-    head += histBar(clear) + (chips ? '<div class="hchips">' + chips + "</div>" : "");
     /* no visible summary (the months carry their totals); a hidden status says the count after each change */
     if (!V.find)
       head +=

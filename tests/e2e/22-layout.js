@@ -783,6 +783,15 @@ function inspect() {
         render();
       })
     );
+    /* selecting in a filtered History: the same row and chips, dimmed */
+    await shot(
+      "history-select-filtered",
+      ev(() => {
+        openHistory({ kind: "out", acc: "b", cat: "groceries" });
+        V.sel = new Set();
+        render();
+      })
+    );
     for (const tab of ["range", "month"])
       await shot("period-" + tab, async () => {
         await page.evaluate(() => periodDialog(V));

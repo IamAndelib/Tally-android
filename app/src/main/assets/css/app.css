@@ -3239,18 +3239,21 @@ body.land.calcopen #snack .snack {
 
 /* History: the period chip (label and ✕ are two targets), Filters, one chip per set filter, and a
    heading for each month */
-.hbar,
-.hchips {
+.hbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-.hbar {
   margin-top: 4px;
 }
+/* the filter chips are items of the bar's own line, after Filters (a wrapper only for the code that finds them) */
 .hchips {
-  margin-top: 8px;
+  display: contents;
+}
+/* selecting: the same row, dimmed and out of reach */
+.hbar.hoff {
+  opacity: 0.45;
+  pointer-events: none;
 }
 .hp {
   display: inline-flex;

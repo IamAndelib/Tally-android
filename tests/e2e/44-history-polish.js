@@ -390,6 +390,79 @@ const ok = (c, m) => {
   );
   ok(JSON.stringify(r.back) === '[["mahin"],["corner cafe"]]', "A16: a backup carries them: " + JSON.stringify(r.back));
 
+  // ---- A1: while selecting, the period / Filters row stays, dimmed and out of reach
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    HF = { ...histBlank(), kind: "out", cat: "food" };
+    V.screen = "history";
+    V.sel = null;
+    render();
+  });
+  const top = () =>
+    p.evaluate(() => {
+      const y = sel => Math.round(document.querySelector(sel).getBoundingClientRect().top + scrollY); // in the page: the view may follow its middle row
+      const bar = document.querySelector(".hbar");
+      return {
+        bar: y(".hfbtn"),
+        chip: y(".hchip"),
+        row: y("#app .tx, #app [data-act='row-open']"),
+        off: [...document.querySelectorAll(".hbar button")].every(b => b.disabled),
+        dim: +getComputedStyle(bar).opacity,
+        pe: getComputedStyle(bar).pointerEvents,
+      };
+    });
+  await p.evaluate(() => (render(), scrollTo(0, 0)));
+  const before = await top();
+  await p.evaluate(() => {
+    V.sel = new Set(["t1"]);
+    render();
+  });
+  const during = await top();
+  ok(
+    before.bar === during.bar && before.row === during.row && before.chip === during.chip,
+    "A1: nothing moves when selecting starts: " + JSON.stringify([before, during])
+  );
+  ok(
+    during.off && during.dim < 0.6 && during.pe === "none",
+    "A1: the row is there, dimmed, not tappable and not focusable: " + JSON.stringify(during)
+  );
+  ok(!before.off && before.dim === 1, "A1: normal before selecting");
+  await p.evaluate(() => {
+    V.sel = null;
+    render();
+  });
+  const after = await top();
+  ok(
+    after.bar === before.bar && after.row === before.row && !after.off,
+    "A1: nothing moves when it ends: " + JSON.stringify(after)
+  );
+
+  // ---- A15: the chips continue on the Filters line, Clear all last
+  r = await p.evaluate(() => {
+    const bar = document.querySelector(".hbar"),
+      f = document.querySelector(".hfbtn").getBoundingClientRect(),
+      chips = [...document.querySelectorAll(".hbar .hchip")],
+      c0 = chips[0].getBoundingClientRect(),
+      kids = [...bar.querySelectorAll("button")],
+      clear = bar.querySelector('[data-act="hf-clear"]');
+    return {
+      n: chips.length,
+      sameLine: Math.abs(c0.top + c0.height / 2 - (f.top + f.height / 2)) < 6,
+      after: c0.left >= f.right,
+      lastIsClear: kids[kids.length - 1] === clear,
+      oneBlock:
+        !document.querySelector("#app > .hchips, #app > div > .hchips") ||
+        getComputedStyle(document.querySelector(".hchips")).display === "contents",
+      h: chips.map(c => Math.round(c.getBoundingClientRect().height)),
+    };
+  });
+  ok(r.n === 2 && r.sameLine && r.after, "A15: the first chip sits on the Filters line: " + JSON.stringify(r));
+  ok(
+    r.lastIsClear && r.oneBlock && r.h.every(h => h >= 48),
+    "A15: Clear all is the last item, chips keep 48px: " + JSON.stringify(r)
+  );
+
   ok(errors.length === 0, "no page errors: " + errors.join(" | "));
   await browser.close();
   process.exit(fails ? 1 : 0);

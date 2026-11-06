@@ -396,15 +396,15 @@ const ok = (c, m) => {
       }),
       "Filters calls filtersSheet()"
     );
-    // selection hides the rows above; Select all takes the listed
+    // selection keeps the rows above, out of reach; Select all takes the listed
     await page.evaluate(() => {
       HF.acc = "c";
       render();
     });
     await act("sel-start");
     ok(
-      (await page.$("#app .hbar")) === null && (await page.$("#app .hchips")) === null,
-      "selection hides the period and filter rows"
+      await page.$$eval("#app .hbar button", bs => bs.length > 0 && bs.every(b => b.disabled)),
+      "selection keeps the period and filter row, dimmed and out of reach"
     );
     await act("sel-all");
     ok((await page.evaluate(() => V.sel.size)) === 3, "Select all selects only the listed entries");
