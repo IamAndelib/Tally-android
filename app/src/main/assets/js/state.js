@@ -579,6 +579,9 @@ function applyEntry(b, t) {
 function currencies() {
   return [...new Set(activeAccounts().map(a => a.currency))];
 }
+/* currency codes in the order every total is listed in: the notebook's own first, the others by code (History's
+   headings, Home's balance bar) */
+const mainFirst = (a, b) => (a === S.settings.cur ? -1 : b === S.settings.cur ? 1 : a < b ? -1 : 1);
 /* Every add/edit/delete of entries goes through here: snapshot entries, loans, accounts and assets, apply the change,
    save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. msg may be
    a function, read after the change. */

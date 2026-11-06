@@ -306,6 +306,15 @@ body.land .pnav .plabel.long {
   padding: 4px 16px 8px;
   scrollbar-width: none;
 }
+/* it fades toward the edge it still scrolls to: the end of the line (the left in a right-to-left language) */
+.strip.fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+}
+html[dir="rtl"] .strip.fade {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+}
 .strip::-webkit-scrollbar {
   display: none;
 }
@@ -629,32 +638,75 @@ body.land .pnav .plabel.long {
 }
 
 /* balance bar + fabs */
-/* a balance too long for the line moves under the label, still on the right */
+/* "4 entries ›" on the left, the totals on the right (one currency: "Total in USD" over the figure; several: "Total", then
+   a line each, the code in a column and the figures right-aligned in the other); the bar grows downward, and a block too
+   wide for the line moves under the label, still on the right */
 .balbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   width: 100%;
   margin-top: 12px;
   background: var(--secondary-container);
   color: var(--on-secondary-container);
   border-radius: 20px;
-  padding: 14px 16px;
+  padding: 12px 16px;
+  min-height: 56px;
   text-align: left;
 }
 .balbar .l {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
   font-size: 0.9rem;
+  font-weight: 600;
+}
+.balbar .l .ic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-inline-end: -2px;
+}
+.balbar .bt {
+  margin-inline-start: auto;
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  row-gap: 1px;
+  align-items: baseline;
+  justify-items: end;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.balbar .bt.one {
+  grid-template-columns: auto;
+}
+.balbar .bcap {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  opacity: 0.85;
+}
+.balbar .bcl {
+  display: contents;
+}
+.balbar .bcc {
+  justify-self: start;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
 }
 .balbar b {
-  margin-left: auto;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .balbar .ic {
-  opacity: 0.7;
+  opacity: 1;
 }
 .fabs {
   display: flex;

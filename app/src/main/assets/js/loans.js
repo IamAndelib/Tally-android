@@ -143,20 +143,17 @@ function deleteLoanEntry(id) {
     deleteEntries([id]); // a payment's fee goes with it
   });
 }
+/* "person | what's left", then "● Everyday · Due Tue, Jun 30 | status": the account's dot and name, when it's due (a loan
+   that is over: when it was made), the status under the amount. How much of it is due is on the loan's own sheet. */
 function loanRow(l, i = loanInfo(l)) {
-  const lend = l.kind === "lend";
-  const a = acc(l.account),
-    date = dayLabel(i.open ? i.nextDue : l.date);
-  const sub =
-    T(lend ? "loan.from" : "loan.into", { account: a ? a.name : "?" }) +
-    " · " +
-    (i.open
+  const lend = l.kind === "lend",
+    date = dayLabel(i.open ? i.nextDue : l.date),
+    when = i.open
       ? i.nextDue
-        ? i.dueAmt < i.left
-          ? T("loan.dueAmount", { amount: money(i.dueAmt, i.cur), date })
-          : T(lend ? "loan.paybackOn" : "loan.returnOn", { date })
+        ? T("loan.rowDue", { date })
         : T("loan.noDue")
-      : T(lend ? "loan.lentOn" : "loan.borrowedOn", { date }));
+      : T(lend ? "loan.lentOn" : "loan.borrowedOn", { date }),
+    sub = accTag(acc(l.account)) + " · " + esc(when);
   return (
     '<button class="tx stk' +
     (FX.row === l.id ? " flash" : "") +
@@ -169,7 +166,7 @@ function loanRow(l, i = loanInfo(l)) {
     '<span class="mid"><div class="d" dir="auto">' +
     esc(loanWho(l)) +
     '</div><div class="s">' +
-    esc(sub) +
+    sub +
     "</div></span>" +
     '<span class="a">' +
     esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) + // written off: what was let go
@@ -293,7 +290,7 @@ function loanOpen(id, focusPay) {
   const heroLine =
     i.draws.length <= 1
       ? TH(lend ? "loan.youLent" : "loan.youBorrowed", {
-          account: (acc(l.account) || {}).name || "?",
+          account: { html: accTag(acc(l.account)) },
           date: dayLabel(l.date),
         })
       : TH(lend ? "loan.lendingsSince" : "loan.loansSince", { count: i.draws.length, date: dayLabel(l.date) });
@@ -305,7 +302,9 @@ function loanOpen(id, focusPay) {
     "</div>" +
     '<div class="t">' +
     (i.open || i.st === "writeoff"
-      ? TH(i.open ? "loan.leftOf" : "loan.ofTotal", { total: money(i.total, i.cur) }) + " · "
+      ? i.left === i.total
+        ? "" // nothing paid back yet: "left of $X" would repeat the figure above it
+        : TH(i.open ? "loan.leftOf" : "loan.ofTotal", { total: money(i.total, i.cur) }) + " · "
       : "") +
     '<span class="st ' +
     i.st +
@@ -373,23 +372,23 @@ function loanOpen(id, focusPay) {
           f = t.feeId && entry(t.feeId);
         const r = runBal()[t.id] || {},
           canDel = !t.principal || i.draws.length > 1,
-          name = a ? a.name : "?",
+          name = { html: accTag(a) },
           more = (
             t.principal
               ? [
-                  T(lend ? "loan.drawLent" : "loan.drawBorrowed", { account: name, date: dayLabel(t.date) }),
-                  t.due && T("loan.dueOn", { date: dayLabel(t.due) }),
+                  TH(lend ? "loan.drawLent" : "loan.drawBorrowed", { account: name, date: dayLabel(t.date) }),
+                  t.due && TH("loan.dueOn", { date: dayLabel(t.due) }),
                   i.open &&
-                    (i.rem[t.id] > 0 ? T("loan.leftAmt", { amount: money(i.rem[t.id], i.cur) }) : T("loan.paidOff")),
-                  t.note,
+                    (i.rem[t.id] > 0 ? TH("loan.leftAmt", { amount: money(i.rem[t.id], i.cur) }) : TH("loan.paidOff")),
+                  t.note && esc(t.note),
                 ]
               : [
-                  dayLabel(t.date),
-                  T(lend ? "loan.intoAcc" : "loan.fromAcc", { account: name }),
-                  f && T("loan.feeAmt", { amount: money(f.amount, i.cur) }),
+                  esc(dayLabel(t.date)),
+                  TH(lend ? "loan.intoAcc" : "loan.fromAcc", { account: name }),
+                  f && TH("loan.feeAmt", { amount: money(f.amount, i.cur) }),
                   r.ls === "cleared"
-                    ? T(lend ? "loan.clearedLend" : "loan.clearedBorrow")
-                    : T("loan.leftAfter", { amount: money(r.left || 0, i.cur) }),
+                    ? TH(lend ? "loan.clearedLend" : "loan.clearedBorrow")
+                    : TH("loan.leftAfter", { amount: money(r.left || 0, i.cur) }),
                 ]
           )
             .filter(Boolean)
@@ -412,7 +411,7 @@ function loanOpen(id, focusPay) {
           ic("down") +
           "</span></button>" +
           '<div class="more">' +
-          esc(more) +
+          more +
           '<div class="medit"><button class="btn text" data-act="loandraw-edit" data-v="' +
           t.id +
           '">' +

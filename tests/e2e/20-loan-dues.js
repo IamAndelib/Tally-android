@@ -101,7 +101,22 @@ const ok = (c, m) => {
   await act("tab", "assets");
   await settle();
   const row = (await page.textContent('[data-act="loan-open"][data-v="L"]')).trim();
-  ok(row.includes((await m(300)) + " due") && row.includes(await m(1300)), "row shows 300 due and 1,300 left: " + row);
+  ok(
+    row.includes(await m(1300)) && !row.includes((await m(300)) + " due"),
+    "row shows the 1,300 left, not the part due: " + row
+  );
+  const sub = await page.$eval('[data-act="loan-open"][data-v="L"] .s', e => ({
+    text: e.textContent.trim(),
+    dot: !!e.querySelector(".adot"),
+  }));
+  ok(
+    sub.dot && /^\S.* · Due /.test(sub.text) && !/^(Into|From) /.test(sub.text) && !sub.text.includes(await m(300)),
+    "row line is ● account · Due date, with no Into/From word and no part-due amount: " + sub.text
+  );
+  ok(
+    (await page.textContent('[data-act="loan-open"][data-v="L"] .a small .st')).trim() === "Overdue",
+    "the row keeps its status chip under the amount"
+  );
   await act("loan-open", "L");
   await settle();
   const head = (await page.textContent("#loan-due")).trim();

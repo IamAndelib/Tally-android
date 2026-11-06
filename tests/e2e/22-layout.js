@@ -282,6 +282,34 @@ function inspect() {
     if (ring && ring.querySelectorAll(".rt").length > 16) continue;
     if (vis(e) && e.scrollWidth > e.clientWidth + 1) out.push("name cut " + name(e) + " '" + e.textContent + "'");
   }
+  // 2b. Home's balance bar: every figure and code lies wholly inside the bar, the codes in one column, the figures
+  //     right-aligned in the other; a row of chips that scrolls fades at its edge
+  for (const bar of layer.querySelectorAll(".balbar")) {
+    if (!vis(bar)) continue;
+    const bt = bar.querySelector(".bt"),
+      br = bar.getBoundingClientRect();
+    if (bt.scrollWidth > bt.clientWidth + 1) out.push("balance bar figures wider than their box");
+    for (const e of bar.querySelectorAll("b, .bcc, .bcap, .l")) {
+      const r = e.getBoundingClientRect();
+      if (r.left < br.left - 0.5 || r.right > br.right + 0.5)
+        out.push("balance bar text outside the bar: " + e.textContent);
+    }
+    const fig = [...bar.querySelectorAll("b")].map(e => Math.round(e.getBoundingClientRect().right));
+    if (new Set(fig).size > 1) out.push("balance bar figures not right-aligned " + fig);
+    const lr = bar.querySelector(".l").getBoundingClientRect();
+    for (const e of bt.children) {
+      const r = e.getBoundingClientRect();
+      if (r.width && r.top < lr.bottom - 1 && r.left < lr.right - 1) out.push("balance bar block overlaps its label");
+    }
+  }
+  for (const st of layer.querySelectorAll(".strip"))
+    if (
+      vis(st) &&
+      st.scrollWidth > st.clientWidth + 1 &&
+      st.scrollLeft + st.clientWidth < st.scrollWidth - 2 &&
+      !st.classList.contains("fade")
+    )
+      out.push("the scrolling chip row does not fade");
   // 3. controls overlapping, 4. tap targets too small
   const ctl = all.filter(
     e =>
@@ -523,6 +551,44 @@ function inspect() {
       S.settings.lastCheck = today();
       save();
     });
+    /* B9: three currencies stack down the bar; B10 / B11: loan rows with dots, the loan sheets, a balance fix */
+    await shot(
+      "home-3cur",
+      ev(() => {
+        S.accounts.push({ id: "g", name: "Pound account", type: "bank", currency: "GBP", opening: 380 });
+        render();
+      })
+    );
+    await shot(
+      "loan-paid",
+      ev(() => {
+        S.txns.push({
+          id: "p1",
+          ts: 9000,
+          date: today(),
+          type: "loan",
+          dir: "in",
+          loan: "L1",
+          amount: 400,
+          account: "c",
+        });
+        loanOpen("L1");
+        document.querySelectorAll("#sheet .tx.exp .txh").forEach(b => b.click());
+      })
+    );
+    await page.evaluate(() => {
+      S.txns = S.txns.filter(t => t.id !== "p1");
+      S.accounts = S.accounts.filter(a => a.id !== "g");
+      save();
+    });
+    await shot(
+      "loan-unpaid",
+      ev(() => loanOpen("L2"))
+    );
+    await shot(
+      "balance-fix",
+      ev(() => adjSheet(S.txns.find(t => t.type === "adjust").id))
+    );
     await shot(
       "assets",
       ev(() => {

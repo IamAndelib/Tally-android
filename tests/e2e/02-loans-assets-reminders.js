@@ -163,9 +163,13 @@ const ok = (c, m) => {
     "You owe = loan 5000 + card 500: " + (await page.textContent(".sumcard"))
   );
   ok((await page.textContent(`[data-act="loan-open"][data-v="${L1.id}"]`)).includes("Active"), "loan is Active");
+  const sub1 = await page.$eval(`[data-act="loan-open"][data-v="${L1.id}"] .s`, e => ({
+    text: e.textContent.trim(),
+    dot: !!e.querySelector(".adot"),
+  }));
   ok(
-    (await page.textContent(`[data-act="loan-open"][data-v="${L1.id}"]`)).includes("Into bKash"),
-    "loan row shows Into bKash"
+    sub1.dot && sub1.text.startsWith("bKash") && !sub1.text.includes("Into"),
+    "loan row names bKash after its dot: " + sub1.text
   );
   await page.screenshot({ path: OUT + "/liabs.png" });
 
@@ -238,9 +242,13 @@ const ok = (c, m) => {
     (await page.textContent(`[data-act="loan-open"][data-v="${L2.id}"]`)).includes("Overdue"),
     "lending past payback day → Overdue"
   );
+  const sub2 = await page.$eval(`[data-act="loan-open"][data-v="${L2.id}"] .s`, e => ({
+    text: e.textContent.trim(),
+    dot: !!e.querySelector(".adot"),
+  }));
   ok(
-    (await page.textContent(`[data-act="loan-open"][data-v="${L2.id}"]`)).includes("From Wallet"),
-    "lending row shows From Wallet"
+    sub2.dot && sub2.text.startsWith("Wallet") && !sub2.text.includes("From"),
+    "lending row names Wallet after its dot: " + sub2.text
   );
   ok((await page.textContent(".sumcard")) === nw0, "net worth unchanged by lending: " + nw0);
   await page.screenshot({ path: OUT + "/assets.png", fullPage: true });

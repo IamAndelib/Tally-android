@@ -100,7 +100,7 @@ function histLines(list, kind) {
   order.forEach(key =>
     Object.entries(sums[key] || {})
       .filter(e => e[1])
-      .sort((a, b) => (a[0] === S.settings.cur ? -1 : b[0] === S.settings.cur ? 1 : a[0] < b[0] ? -1 : 1))
+      .sort((a, b) => mainFirst(a[0], b[0]))
       .forEach(([cur, amount]) => lines.push({ key, tone: HIST_TONE[key], cur, amount }))
   );
   return lines;

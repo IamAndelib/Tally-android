@@ -218,6 +218,134 @@ const ok = (c, m) => {
   await act("ic-emo-ok");
   ok((await page.textContent("#f-cprev")).includes("🐶"), "emoji still applies");
 
+  // ---- B9: the account chips fade at the edge they still scroll toward; the balance bar is stacked
+  await page.evaluate(() => {
+    closeSheet2();
+    closeSheet();
+    S = blank();
+    S.settings.cur = "USD";
+    S.settings.lastCheck = today();
+    const add = (id, name, currency, opening) =>
+      S.accounts.push({ id, name, type: "bank", currency, opening, archived: false });
+    add("u1", "Everyday", "USD", 4167.5);
+    add("u2", "Cash", "USD", 106.35);
+    add("u3", "Card", "USD", 20);
+    add("u4", "Rent savings", "USD", 20);
+    S.txns.push({ id: "z1", ts: 1, date: today(), type: "expense", amount: 5, account: "u1", cat: "food", note: "" });
+    save();
+    V.screen = "home";
+    V.cur = "";
+    render();
+  });
+  const strip = () =>
+    page.evaluate(() => {
+      const s = document.querySelector(".strip"),
+        cs = getComputedStyle(s);
+      return {
+        fade: s.classList.contains("fade"),
+        mask: cs.webkitMaskImage || cs.maskImage,
+        over: s.scrollWidth > s.clientWidth,
+      };
+    });
+  let st = await strip();
+  ok(
+    st.over && st.fade && /linear-gradient/.test(st.mask),
+    "the chip row fades where it still scrolls: " + JSON.stringify(st)
+  );
+  await page.evaluate(() => (document.querySelector(".strip").scrollLeft = 1e5));
+  await page.waitForTimeout(100);
+  st = await strip();
+  ok(
+    !st.fade && !/linear-gradient/.test(st.mask),
+    "no fade once the row is scrolled to its end: " + JSON.stringify(st)
+  );
+  await page.evaluate(() => (document.documentElement.dir = "rtl"));
+  await page.evaluate(() => (document.querySelector(".strip").scrollLeft = 0));
+  await page.waitForTimeout(100);
+  const rtl = await page.evaluate(() => {
+    const s = document.querySelector(".strip");
+    s.classList.add("fade");
+    return (getComputedStyle(s).webkitMaskImage || getComputedStyle(s).maskImage).includes("to left");
+  });
+  ok(rtl, "in a right-to-left language the fade is on the left edge");
+  await page.evaluate(() => (document.documentElement.dir = ""));
+  const bar = () =>
+    page.evaluate(() => {
+      const b = document.querySelector(".balbar"),
+        q = (s, r = b) => [...r.querySelectorAll(s)].map(e => e.textContent.trim()),
+        rect = e => e.getBoundingClientRect();
+      const bt = b.querySelector(".bt");
+      return {
+        left: q(".l")[0],
+        cap: q(".bcap")[0],
+        codes: q(".bcc"),
+        figs: q("b"),
+        say: b.getAttribute("aria-label"),
+        hidden: [b.querySelector(".l"), bt].every(e => e.getAttribute("aria-hidden") === "true"),
+        leftOfRight: rect(b.querySelector(".l")).right <= rect(bt).left + 1,
+        rights: [...b.querySelectorAll("b")].map(e => Math.round(rect(e).right)),
+        codeLefts: [...b.querySelectorAll(".bcc")].map(e => Math.round(rect(e).left)),
+        inside: rect(bt).right <= rect(b).right && rect(bt).left >= rect(b).left,
+        h: rect(b).height,
+      };
+    });
+  const M = (v, c) => page.evaluate(([v, c]) => money(v, c), [v, c]);
+  const usd = await M(4308.85, "USD");
+  let bb = await bar();
+  ok(
+    bb.left === "1 entry" && bb.cap === "Total in USD" && bb.codes.length === 0 && bb.figs.join() === usd,
+    "one currency: '1 entry ›' on the left, 'Total in USD' over the figure on the right " + JSON.stringify(bb)
+  );
+  ok(bb.say === "1 entry. Total in USD: " + usd && bb.hidden, "TalkBack reads the bar as one sentence: " + bb.say);
+  await page.evaluate(() => {
+    S.accounts.push({ id: "g1", name: "Pounds", type: "bank", currency: "GBP", opening: 380, archived: false });
+    S.accounts.push({ id: "e1", name: "Euros", type: "bank", currency: "EUR", opening: 4758, archived: false });
+    render();
+  });
+  bb = await bar();
+  ok(
+    bb.cap === "Total" &&
+      bb.codes.join() === "USD,EUR,GBP" &&
+      bb.figs.join() === [usd, await M(4758, "EUR"), await M(380, "GBP")].join(),
+    "three currencies: one 'Total', a line each, the notebook's own first then the others by code " + JSON.stringify(bb)
+  );
+  ok(
+    new Set(bb.rights).size === 1 && new Set(bb.codeLefts).size === 1 && bb.leftOfRight && bb.inside,
+    "the codes line up in one column and the figures are right-aligned in the other " + JSON.stringify(bb)
+  );
+  ok(
+    bb.say === "1 entry. Total: " + bb.figs.join(", ") && bb.hidden,
+    "TalkBack reads every currency in one sentence: " + bb.say
+  );
+  /* the ring's ⇄ only changes the ring: the bar keeps every currency */
+  const ringCur = () => page.evaluate(() => document.querySelector(".curbtn").textContent.trim());
+  const r0 = await ringCur();
+  await page.click('[data-act="cur-next"]');
+  const r1 = await ringCur();
+  const bb2 = await bar();
+  ok(
+    r0 !== r1 && bb2.figs.join() === bb.figs.join() && bb2.cap === "Total",
+    "the ring's ⇄ " + r0 + " → " + r1 + " leaves the bar as it was"
+  );
+  await page.evaluate(() => {
+    S.settings.cur = "EUR";
+    V.cur = "";
+    render();
+  });
+  ok(
+    (await bar()).codes.join() === "EUR,GBP,USD",
+    "the notebook's own currency comes first whichever it is: " + (await bar()).codes.join()
+  );
+  await page.evaluate(() => {
+    S.settings.cur = "USD";
+    S.txns = [];
+    render();
+  });
+  ok(
+    (await page.textContent(".balbar .l")).trim() === "0 entries",
+    "with no entries the bar says so: " + (await page.textContent(".balbar .l"))
+  );
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

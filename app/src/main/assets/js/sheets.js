@@ -561,7 +561,7 @@ function trSync() {
     });
   $("#tr-cur").textContent = fa ? fa.currency : "";
   $("#recv-wrap").hidden = !diff;
-  if (diff) $("#recv-lbl").textContent = T("transfer.arrived", { account: ta.name, cur: ta.currency });
+  if (diff) $("#recv-lbl").innerHTML = TH("transfer.arrived", { account: { html: accTag(ta) }, cur: ta.currency });
   $("#fee-lbl").textContent = T("fee.label", { cur: fa ? fa.currency : "" });
   trPreview();
 }
@@ -603,7 +603,9 @@ function adjSheet(id) {
   openSheet(
     T("fix.title"),
     '<div class="hero"><div class="t">' +
-      esc((a ? a.name : "?") + " · " + dayLabel(t.date)) +
+      accTag(a) +
+      " · " +
+      esc(dayLabel(t.date)) +
       '</div><div class="v">' +
       esc(signed(t.amount, a ? a.currency : "")) +
       "</div></div>" +

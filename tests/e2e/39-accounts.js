@@ -318,6 +318,156 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  /* B11 / B10: an account's colour dot before its name on the loan rows, in a loan's sheet and on a balance fix; a loan
+     row reads "person | what's left", then "● account · Due date | status"; the loan sheet says each thing once */
+  {
+    const { ctx, page } = await open("light");
+    await page.evaluate(() => {
+      const d = n => {
+        const x = new Date();
+        x.setDate(x.getDate() + n);
+        return iso(x);
+      };
+      S.loans.push({ id: "L1", kind: "borrow", person: "Maya", account: "b", date: d(-30) });
+      S.txns.push({
+        id: "m1",
+        ts: 2,
+        date: d(-30),
+        type: "loan",
+        loan: "L1",
+        principal: true,
+        dir: "in",
+        amount: 400,
+        account: "b",
+        due: d(5),
+        note: "",
+      });
+      S.txns.push({
+        id: "m2",
+        ts: 3,
+        date: d(-10),
+        type: "loan",
+        loan: "L1",
+        dir: "out",
+        amount: 250,
+        account: "b",
+        note: "",
+      });
+      S.loans.push({ id: "L2", kind: "lend", person: "Sam", account: "c", date: d(-3) });
+      S.txns.push({
+        id: "s1",
+        ts: 4,
+        date: d(-3),
+        type: "loan",
+        loan: "L2",
+        principal: true,
+        dir: "out",
+        amount: 50,
+        account: "c",
+        due: d(40),
+        note: "",
+      });
+      S.txns.push({ id: "f1", ts: 5, date: d(-1), type: "adjust", amount: -3.4, account: "c", note: "" });
+      save();
+      V.screen = "liabs";
+      render();
+    });
+    const row = id =>
+      page.evaluate(id => {
+        const r = document.querySelector('#app [data-act="loan-open"][data-v="' + id + '"]'),
+          s = r.querySelector(".s"),
+          dot = s.querySelector(".adot");
+        return {
+          who: r.querySelector(".d").textContent.trim(),
+          amt: r.querySelector(".a").childNodes[0].textContent.trim(),
+          line: s.textContent.trim(),
+          dot: dot ? getComputedStyle(dot).backgroundColor : "",
+          chip: (r.querySelector(".a .st") || {}).textContent,
+          want: "rgb(" + hexRgb(accEmb(acc(loan(id).account)).c).join(", ") + ")",
+          due: dayLabel(loanInfo(loan(id)).nextDue),
+        };
+      }, id);
+    const maya = await row("L1");
+    ok(
+      maya.who === "Maya" &&
+        maya.amt === "$150.00" &&
+        maya.line === "Bank · Due " + maya.due &&
+        maya.chip === "Partly paid",
+      "a loan row: Maya | what's left, then 'Bank · Due <date>' | the status chip: " + JSON.stringify(maya)
+    );
+    ok(maya.dot === maya.want, "the loan row's dot is its account's colour: " + maya.dot + " vs " + maya.want);
+    ok(
+      !/Into|From|due /.test(maya.line) && !/\$100\b|\$150/.test(maya.line),
+      "no Into/From word and no part-due amount on the row: " + maya.line
+    );
+    await page.evaluate(() => {
+      V.screen = "assets";
+      render();
+    });
+    const sam = await row("L2");
+    ok(
+      sam.who === "Sam" && sam.line === "Cash · Due " + sam.due && sam.chip === "Active" && sam.dot === sam.want,
+      "a lending row reads the same way, with its own dot: " + JSON.stringify(sam)
+    );
+    /* the loan's sheet: the account's dot in its first line; "left of" only once something is paid back; the chip kept */
+    const sheet = () =>
+      page.evaluate(() => {
+        const h = document.querySelector("#sheet .hero"),
+          ts = [...h.querySelectorAll(".t")];
+        return {
+          first: ts[0].textContent.trim(),
+          dot: !!ts[0].querySelector(".adot"),
+          second: ts[1].textContent.replace(/\s+/g, " ").trim(),
+          chip: (h.querySelector(".st") || {}).textContent,
+          big: h.querySelector(".v").textContent.trim(),
+          due: document.querySelector("#loan-due").textContent.trim(),
+        };
+      });
+    await page.evaluate(() => loanOpen("L2"));
+    const s2 = await sheet();
+    ok(
+      s2.dot &&
+        s2.first.startsWith("You lent from Cash") &&
+        s2.second === "Active" &&
+        s2.due === "Due" &&
+        !s2.second.includes(s2.big),
+      "nothing paid back: no 'left of' repeating the figure, only the chip, and the due card says just 'Due': " +
+        JSON.stringify(s2)
+    );
+    await page.evaluate(() => {
+      closeSheet();
+      loanOpen("L1");
+    });
+    const s1 = await sheet();
+    ok(
+      s1.dot && s1.second === "left of $400.00 · Partly paid" && /^Due( · \$150\.00)?$/.test(s1.due),
+      "paid back in part: 'left of $400.00 · Partly paid' and the due card: " + JSON.stringify(s1)
+    );
+    ok(s1.due === "Due", "all of what is due is due: the card says just 'Due': " + s1.due);
+    /* the loan's own list: every account name has its dot */
+    const more = await page.evaluate(() => {
+      document.querySelectorAll("#sheet .tx.exp .txh").forEach(b => b.click());
+      return [...document.querySelectorAll("#sheet .tx.exp .more")].map(m => ({
+        text: m.textContent.replace(/\s+/g, " "),
+        dots: m.querySelectorAll(".adot").length,
+      }));
+    });
+    ok(
+      more.length === 2 && more.every(m => m.dots === 1 && /Bank/.test(m.text)),
+      "the loan's entries name their account after its dot: " + JSON.stringify(more)
+    );
+    await page.evaluate(() => {
+      closeSheet();
+      adjSheet("f1");
+    });
+    const fix = await page.evaluate(() => {
+      const t = document.querySelector("#sheet .hero .t");
+      return { text: t.textContent.trim(), dot: !!t.querySelector(".adot") };
+    });
+    ok(fix.dot && fix.text.startsWith("Cash · "), "a balance fix names its account after the dot: " + fix.text);
+    await ctx.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

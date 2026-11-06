@@ -291,7 +291,6 @@ function homeView() {
   got = rnd(got);
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
-  const total = balanceIn(cur, b);
   const n = histRows(periodTxns()).length; // a fee is part of its entry
   if (!atHomePeriod()) {
     const back = S.settings.home === "day" ? T("day.today") : T("settings.opens." + S.settings.home);
@@ -303,15 +302,7 @@ function homeView() {
       esc(back) +
       "</button></div>";
   }
-  h +=
-    '<button class="balbar" data-act="entries">' +
-    ic("list") +
-    '<span class="l">' +
-    TH("home.balance") +
-    (n ? " · " + TH("home.entries", { count: n }) : "") +
-    "</span><b>" +
-    esc(money(total, cur)) +
-    "</b></button>";
+  h += balBar(b, n);
   h +=
     '<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="' +
     TH("home.addOut") +
@@ -424,7 +415,7 @@ function perCur(add) {
    word doesn't fit beside it; a name that wrapped gets a box as wide as its longest line (fitWrapped). */
 function fitFigures(root) {
   root
-    .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style], .hcol[style]")
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style], .hcol[style], .balbar b[style]")
     .forEach(el => el.removeAttribute("style"));
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   root
@@ -457,6 +448,21 @@ function fitFigures(root) {
   });
   /* a month's or day's figures (History's heading column): the whole column is set smaller, never cut */
   root.querySelectorAll(".hcol").forEach(el => shrink(el, () => el.scrollWidth > el.clientWidth + 1));
+  /* Home's account chips fade at the edge the row still scrolls toward (not at its end, nor when it all fits) */
+  root.querySelectorAll(".strip").forEach(el => {
+    if (!el.fadeOn) {
+      el.fadeOn = true;
+      el.addEventListener("scroll", () => fadeStrip(el), { passive: true });
+    }
+    fadeStrip(el);
+  });
+  /* Home's balance bar: its figures (together, to stay in their column) a tenth smaller at a time, never cut */
+  root.querySelectorAll(".balbar .bt").forEach(el => {
+    const bs = el.querySelectorAll("b"),
+      f = parseFloat(getComputedStyle(bs[0]).fontSize);
+    for (let k = 0.9; k > 0.55 && el.scrollWidth > el.clientWidth + 1; k -= 0.1)
+      bs.forEach(x => (x.style.fontSize = f * k + "px"));
+  });
   /* a day's list far off screen isn't laid out (content-visibility, .dl): its rows are fitted as they come near */
   const fitRow = el => {
     const row = el.closest(".tx");
@@ -496,6 +502,12 @@ function fitFigures(root) {
     )
       el.style.fontSize = px + "px";
   });
+}
+function fadeStrip(el) {
+  el.classList.toggle(
+    "fade",
+    el.scrollWidth > el.clientWidth + 1 && Math.abs(el.scrollLeft) + el.clientWidth < el.scrollWidth - 2
+  );
 }
 /* A box sizes a wrapped text to the room it had, not to the text: a chip whose name took two lines would keep empty
    space beside its shorter line. These get the width of their longest line instead. */
@@ -674,6 +686,37 @@ function liabsView() {
     ? '<div class="sec">' + TH("liabs.cards") + "</div>" + zoneList("cards", cards.map(a => accRow(a, b)).join(""))
     : "";
   return tabBar(T("nav.liabs"), true) + panes(h, right);
+}
+/* Home's balance bar: what a tap opens ("4 entries ›") on the left, the totals on the right: with one currency "Total in
+   USD" over the figure, with several one "Total", then a line each (its code in one column, the figures right-aligned in
+   the other): the notebook's currency first, the others by code. The ring's ⇄ only changes the ring. A screen reader
+   gets one sentence. */
+function balBar(b, n) {
+  const cs = currencies().sort(mainFirst),
+    say = cs.map(c => money(balanceIn(c, b), c)),
+    one = cs.length < 2,
+    cap = one ? T("home.totalIn", { cur: cs[0] }) : T("home.total"),
+    entries = T("home.entries", { count: n }),
+    line = (c, i) =>
+      '<span class="bcl">' +
+      (one ? "" : '<span class="bcc">' + esc(c) + "</span>") +
+      "<b>" +
+      esc(say[i]) +
+      "</b></span>";
+  return (
+    '<button class="balbar" data-act="entries" aria-label="' +
+    esc(T("home.barSay", { entries, total: T("common.labelValue", { label: cap, value: say.join(", ") }) })) +
+    '"><span class="l" aria-hidden="true">' +
+    esc(entries) +
+    ic("right") +
+    '</span><span class="bt' +
+    (one ? " one" : "") +
+    '" aria-hidden="true"><span class="bcap">' +
+    esc(cap) +
+    "</span>" +
+    cs.map(line).join("") +
+    "</span></button>"
+  );
 }
 /* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
    helps to spot it */
