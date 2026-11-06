@@ -527,7 +527,7 @@ function goBack() {
     return true;
   }
   if (V.find) {
-    findBack();
+    if (!findUndo()) findBack(); // a suggestion tapped is undone first, then search mode ends
     return true;
   }
   if (V.screen !== "home") {

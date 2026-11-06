@@ -12,9 +12,14 @@ Status: built (concepts reviewed and decided by the maintainer, 2026-11-06). Bui
   what search finds.
 - **It always starts clean**: all time, no filters, an empty field, wherever it was opened from. Opened from History,
   History's own filters and period are put back as they were when search mode closes.
-- **Back** closes search mode and returns to the screen it was opened from (a tab, or History as it was: its filters,
-  period, place in the list, opened row and drawn rows). The field's ✕
-  empties the field and keeps search mode open.
+- **The top bar's ←** leaves search mode at once and returns to the screen it was opened from (a tab, or History as it
+  was: its filters, period, place in the list, opened row and drawn rows). **Android's Back** first undoes the last
+  suggestion tapped, one tap per Back: its filter comes off and its words go back in the field where they were, the
+  caret at the end; what was chosen or typed after it (the Filters sheet, typed words, other suggestions) stays. With
+  no tap left it leaves like ←. Clear all and the field's ✕ forget the taps; a Filters sheet or a dialog that is open
+  closes first. The field's ✕ empties the field and keeps search mode open.
+- **However search mode is left** (Back, ←, a tab, a link in an opened row), History's period is put back: its own
+  when search was opened from History, all time when it was opened from a tab.
 - **Nothing typed yet**: the recent searches (below). No hint line.
 
 ## What a word finds
@@ -22,7 +27,11 @@ Status: built (concepts reviewed and decided by the maintainer, 2026-11-06). Bui
 Every typed word must be found in the entry (the same rule as today's search):
 
 - it starts a word of the entry's payee, note, account (either side of a transfer), category name or loan person;
-  capitals and accents ignored (`curFold`: Turkish İ / ı fold to i), scripts written without spaces matched anywhere;
+  capitals, accents and width ignored (`curFold`: Turkish İ / ı fold to i, ß to ss, full-width letters and half-width
+  katakana to the usual forms), and a typed word must start a word in every script: the word breaks of Chinese,
+  Japanese and Thai (and Lao, Khmer, Myanmar) come from `Intl.Segmenter` in the phone's number and date locale, once
+  per entry in the folded-text cache, so a short word does not match inside an unrelated word (Chrome 87+, Tally's
+  WebView floor; where it is missing, a word may start anywhere in those scripts, as before);
 - a number matches an amount: `45` means 45.00 to 45.99, `45.50` exactly that, read with the phone's separators
   (`evalAmt`, `NUMSEP`);
 - a fee's words and amount find its transfer or payment (a fee is never a row of its own);
@@ -32,9 +41,11 @@ Every typed word must be found in the entry (the same rule as today's search):
 
 While the field has text, a short list sits above the entries under one **Suggestions** heading (the entries follow
 under an **Entries** heading), at most three per group, in the order below. Each row has its name as a title and a
-second line with its group (named in the singular: Category, Account, Person, Kind) and how many entries it would leave: "Paid to · 19 entries" (rows, by History's fee rule,
-with the period, the filters and the other words as they are). One that would leave none, or is already set, isn't
-shown. A month's or a kind's name matches from three letters (the whole name when it is shorter).
+second line with its group (named in the singular: Category, Account, Kind; a person reads "Lent to" or "Borrowed from",
+or "Person" when they have both kinds) and how many entries it would leave: "Paid to · 19 entries" (rows, by History's
+fee rule, with the period, the filters and the other words as they are). One that would leave none, or is already set,
+isn't shown. A name that is exactly the typed words comes first in its group, whatever its use, so the cut to three
+never drops it. A month's or a kind's name matches from three letters (the whole name when it is shorter).
 
 | Group | Found by | Tapping it sets | Chip |
 |---|---|---|---|
@@ -42,16 +53,17 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
 | Received from | a payee of money received | the payee, income only | Received from X ✕ |
 | Category | the category's name on screen | the category | X ✕ |
 | Account | the account's name | the account | ● X ✕ |
-| Person | a loan's or lending's person | the person | X ✕ |
+| Person | a loan's or lending's person ("Lent to", "Borrowed from", or "Person") | the person | X ✕ |
 | Kind | the kind's name (Spent, Transfers, …) | the kind | X ✕ |
-| Period | a month's name in the phone's language (full or short), or a four-digit year | that month (each year that has entries, newest first) or year | the period chip |
-| Amount | a number; `>50`, `<50` give only that one | the amount itself, more than, or less than | `$50.00 to $50.99` ✕, `More than $50.00` ✕, `Less than $50.00` ✕ |
+| Period | a month's name (full or short), or a year | that month (each year with entries) or year | period chip |
+| Amount | a number; `>50`, `<50` give only that one | the amount, more than, or less than | `$50.00 to $50.99` ✕, … |
 
 - Tapping a suggestion takes the words that found it out of the field; the rest stay, and the field keeps the focus.
   One for a slot already set (a second payee, say) replaces it; a kind clears the category, person and sides that
   depended on it, as the Filters sheet does.
 - The amount is shown in the notebook's currency when every account has it, else as a plain number in the phone's
-  format; it compares each entry's own amount (a transfer: the amount sent or received).
+  format; it compares each entry's own amount (a transfer: the amount sent or received), never its fee's, in the list
+  of a typed `>50` / `<50` as in the suggestion.
 - A payee is one name whatever its capitals or accents (the newest spelling shown), as today.
 
 ## The list
@@ -60,7 +72,8 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
 - **Marks**: the part of a title or second line a word matched has a soft yellow marker. A loan's or balance fix's
   note, hidden on the collapsed row, shows as a third line "Note: …" when a word matched it.
 - **Nothing found**: "Nothing matches “cofee”" (or "Nothing matches these filters" when nothing is typed), then, when a
-  word one typo away finds entries, a button "Search “coffee” · 19 entries" that puts that word in the place of the
+  word a few typos away finds entries (one typo from five letters, two from nine; a letter changed, missing, extra or
+  two neighbours swapped), a button "Search “coffee” · 19 entries" that puts that word in the place of the
   typed one (never swapped in by itself), then Clear all. In the middle of the window, like History's. No hint line.
 - TalkBack hears the count of entries once typing pauses (History's hidden status, announced at most once per pause).
 
@@ -69,9 +82,9 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
 - The payee and amount filters are History filters: they show as chips, count in "Filters · N", are counted in the
   Filters sheet's numbers, and are cleared by Clear all. The sheet has no sections for them; they are set only from
   search.
-- Clear all, beside Filters in the bar, also empties the field. The Filters sheet's own Clear all clears only the sheet's
-  choices (account, kind, category, person, transfer sides): the words, the payee and the amount stay, and Show keeps
-  them.
+- Clear all, beside Filters in the bar, also empties the field. The Filters sheet's own Clear all clears only the
+  sheet's choices (account, kind, category, person, transfer sides): the words, the payee and the amount stay, and Show
+  keeps them.
 - A person set from a suggestion has no kind, so its chip reads just the name; with a kind (from History) it reads
   "Lent to X" / "Borrowed from X".
 - A payee or amount filter is dropped when search mode closes, with the words.
@@ -84,8 +97,9 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
   typed. The same words again move to the top (capitals and accents ignored).
 - **On this phone only**: kept by the native shell (`Android.recentGet` / `recentSet`, at most five texts of at most 100
   characters, checked in Java; the page keeps them in memory where the shell lacks the methods) in its own preferences
-  file, left out of Android's backup and device transfer (`backup_rules.xml`, `data_extraction_rules.xml`), never in saved data, Tally's backups, the shell's saved
-  copy, CSV, the widget, notifications or logs. "Erase everything" forgets them too.
+  file, left out of Android's backup and device transfer (`backup_rules.xml`, `data_extraction_rules.xml`), never in
+  saved data, Tally's backups, the shell's saved copy, CSV, the widget, notifications or logs. "Erase everything"
+  forgets them too.
 
 ## Retired
 

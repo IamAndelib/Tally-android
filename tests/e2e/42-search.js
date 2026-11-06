@@ -1629,6 +1629,11 @@ const ok = (c, m) => {
     await p6.click("#app .hfbtn");
     let r6 = await p6.evaluate(() => ({ q: HFD.q, count: $("#hfs-foot").textContent }));
     ok(r6.q === "coffee", "the sheet is opened with the words in it: " + JSON.stringify(r6));
+    const want6 = await p6.evaluate(() => histRows(HLIST).length);
+    ok(
+      want6 === 2 && new RegExp("\\b" + want6 + "\\b").test(r6.count),
+      "the sheet's count includes the words, the payee and the amount (" + want6 + "): " + JSON.stringify(r6.count)
+    );
     await p6.evaluate(() => HFD && ($('#sheet [data-act="hfs-acc"][data-v="b"]') || { click() {} }).click());
     await p6.click('#sheet [data-act="hfs-clear"]');
     r6 = await p6.evaluate(() => ({ q: HFD.q, pay: HFD.pay, amt: HFD.amt, acc: HFD.acc }));
@@ -1892,8 +1897,8 @@ const ok = (c, m) => {
     await p7.evaluate(() => goBack());
     r7 = await p7.evaluate(() => ({ find: V.find, field: $("#find-q").value, pay: HF.pay }));
     ok(
-      r7.find && r7.field === "corner" && !r7.pay,
-      "the earlier tap is undone by the next Back: " + JSON.stringify(r7)
+      r7.find && r7.field === "corner everyday" && !r7.pay,
+      "the earlier tap is undone by the next Back (the words typed since stay): " + JSON.stringify(r7)
     );
     await p7.evaluate(() => goBack());
     r7 = await p7.evaluate(() => ({ find: V.find, screen: V.screen }));
@@ -1933,6 +1938,418 @@ const ok = (c, m) => {
       await p7.click('#app [data-act="search-open"]');
     }
     await c7.close();
+  }
+
+  // ---- part 8 (round 2a): a typed < or > on an entry with a fee, Back undoes one suggestion, the period put back,
+  // word starts from Intl.Segmenter, the typo ladder, folding per language
+  {
+    const c8 = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+    await c8.addInitScript(() => {
+      window.Android = { getColors: () => null, setBars() {} };
+    });
+    const p8 = await c8.newPage();
+    p8.on("pageerror", e => errors.push(e.message));
+    await p8.goto(appUrl);
+    await p8.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push(
+        { id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 500000, archived: false },
+        { id: "c", name: "Cash", type: "cash", currency: "USD", opening: 3000, archived: false }
+      );
+      let n = 0;
+      const t = (days, type, amount, extra) =>
+        S.txns.push({
+          id: "t" + ++n,
+          ts: n,
+          date: addDays(today(), -days),
+          type,
+          amount,
+          account: "b",
+          note: "",
+          ...extra,
+        });
+      t(0, "expense", 49.99, { cat: "food", payee: "Kiosk", note: "coffee" });
+      t(1, "transfer", 1000, { to: "c", toAmount: 1000, feeId: "t3" });
+      t(1, "expense", 2, { feeOf: "t2", note: "transfer fee" });
+      t(2, "expense", 70, { cat: "food", payee: "Outdoor Store", note: "rain jacket" });
+      t(3, "expense", 12, { cat: "food", payee: "Corner Café", note: "lunch" });
+      save();
+      V.screen = "assets";
+      render();
+    });
+    const type8 = async q => {
+      await p8.fill("#find-q", "");
+      await p8.keyboard.type(q);
+      await p8.waitForTimeout(250);
+    };
+    const st8 = () =>
+      p8.evaluate(() => ({
+        find: V.find,
+        screen: V.screen,
+        field: $("#find-q") ? $("#find-q").value : null,
+        q: HF.q,
+        pay: HF.pay,
+        acc: HF.acc,
+        kind: HF.kind,
+        period: HP.period,
+        anchor: HP.anchor,
+        steps: FIND.steps.length,
+      }));
+    const openS = () => p8.click('#app [data-act="search-open"]');
+    const toAssets = () =>
+      p8.evaluate(() => {
+        V.screen = "assets";
+        render();
+      });
+
+    // N1: a typed < or > compares the entry's own amount, never its fee's
+    await openS();
+    await type8("<50");
+    let r8 = await p8.evaluate(() => {
+      const sug = [...document.querySelectorAll("#hbody .sug")].find(x => x.textContent.includes("Less than"));
+      return {
+        ids: HLIST.map(t => t.id).sort(),
+        said: sug && /(\d+) entr/.exec(sug.textContent)[1],
+        rows: histRows(HLIST).length,
+      };
+    });
+    ok(
+      JSON.stringify(r8.ids) === JSON.stringify(["t1", "t5"]),
+      "<50 lists only the entries of less than 50, not the $1,000 transfer with its $2 fee: " + r8.ids
+    );
+    ok(r8.said === String(r8.rows), "<50: the suggestion's count (" + r8.said + ") is the list's (" + r8.rows + ")");
+    await type8(">50");
+    r8 = await p8.evaluate(() => ({ ids: HLIST.map(t => t.id).sort() }));
+    ok(
+      JSON.stringify(r8.ids) === JSON.stringify(["t2", "t3", "t4"]),
+      ">50 lists the transfer (its own amount), its fee following it: " + r8.ids
+    );
+
+    // Ruling 7: Back undoes only the suggestion tapped; what was chosen after it stays
+    await p8.fill("#find-q", "");
+    await type8("rain outdoor");
+    await p8.click('#hbody .sug:has-text("Outdoor Store")');
+    await p8.click("#app .hfbtn");
+    await p8.click('#sheet [data-act="hfs-acc"][data-v="b"]');
+    await p8.click('#sheet [data-act="hfs-show"]');
+    await type8("rain jacket");
+    await p8.evaluate(() => goBack());
+    r8 = await st8();
+    const caret = await p8.evaluate(() => [
+      $("#find-q").selectionStart,
+      $("#find-q").selectionEnd,
+      $("#find-q").value.length,
+      document.activeElement === $("#find-q"),
+    ]);
+    ok(
+      r8.find && !r8.pay && r8.acc === "b" && r8.field === "rain outdoor jacket" && r8.q === r8.field,
+      "Back after a tap: the payee comes off, its word returns, the account and the typed word stay: " +
+        JSON.stringify(r8)
+    );
+    ok(
+      caret[0] === caret[2] && caret[1] === caret[2] && caret[3],
+      "Back after a tap: the caret is at the end of the field, which has the focus: " + caret
+    );
+    await p8.evaluate(() => goBack());
+    r8 = await st8();
+    ok(!r8.find && r8.screen === "assets", "the next Back leaves search mode: " + JSON.stringify(r8));
+
+    // two taps, a typed word, Back twice: the last tap first, the period too
+    await openS();
+    await type8("outdoor");
+    await p8.click('#hbody .sug:has-text("Outdoor Store")');
+    await type8(await p8.evaluate(() => today().slice(0, 4)));
+    await p8.click('#hbody .sug:has-text("Spent"), #hbody .sug >> text=/^\\d{4}/');
+    r8 = await st8();
+    ok(
+      r8.period === "year" && r8.pay && r8.steps === 2,
+      "two taps: the year and the payee are set: " + JSON.stringify(r8)
+    );
+    await p8.evaluate(() => goBack());
+    r8 = await st8();
+    ok(
+      r8.find && r8.period === "all" && !!r8.pay && r8.field === (await p8.evaluate(() => today().slice(0, 4))),
+      "Back one: the year comes off and its word returns, the payee stays: " + JSON.stringify(r8)
+    );
+    await p8.evaluate(() => goBack());
+    r8 = await st8();
+    ok(r8.find && !r8.pay && r8.field.includes("outdoor"), "Back two: the payee comes off: " + JSON.stringify(r8));
+
+    // a choice that replaced the suggestion's filter is the user's now: Back leaves it
+    await p8.evaluate(() => (histClear(), findClear(), FIND.steps.splice(0), render()));
+    await type8("everyday");
+    await p8.click('#hbody .sug:has-text("Everyday")');
+    await p8.click("#app .hfbtn");
+    await p8.click('#sheet [data-act="hfs-acc"][data-v="c"]');
+    await p8.click('#sheet [data-act="hfs-show"]');
+    await p8.evaluate(() => goBack());
+    r8 = await st8();
+    ok(
+      r8.find && r8.acc === "c" && r8.field === "everyday",
+      "a later account choice stays after Back: " + JSON.stringify(r8)
+    );
+
+    // the top bar's arrow leaves at once, and the words are kept as one recent search
+    await p8.evaluate(() => (histClear(), findClear(), FIND.steps.splice(0), recentSave([]), render()));
+    await type8("rain outdoor");
+    await p8.click('#hbody .sug:has-text("Outdoor Store")');
+    await p8.click('#app [data-act="find-back"]');
+    r8 = await st8();
+    const rec8 = await p8.evaluate(() => recentLoad());
+    ok(!r8.find && r8.screen === "assets", "the top bar's arrow leaves search mode at once: " + JSON.stringify(r8));
+    ok(rec8.length === 1 && rec8[0] === "rain outdoor", "…and keeps one recent search: " + JSON.stringify(rec8));
+
+    // Clear all and the field's x empty the steps
+    for (const how of ["hf-clear", "find-clear"]) {
+      await openS();
+      await type8("outdoor");
+      await p8.click('#hbody .sug:has-text("Outdoor Store")');
+      const n1 = await p8.evaluate(() => FIND.steps.length);
+      if (how === "find-clear") await type8("zz");
+      await p8.click('#app [data-act="' + how + '"]');
+      const n2 = await p8.evaluate(() => FIND.steps.length);
+      ok(n1 === 1 && n2 === 0, how + " empties the steps: " + [n1, n2]);
+      await p8.click('#app [data-act="find-back"]');
+    }
+
+    // Ruling 8: History's period is put back by every way out of search mode
+    const yr = await p8.evaluate(() => today().slice(0, 4));
+    const tapYear = async () => {
+      await type8(yr);
+      await p8.click("#hbody .sug >> nth=0");
+      return (await st8()).period;
+    };
+    for (const [how, leave] of [
+      ["Back", () => p8.evaluate(() => (goBack(), goBack()))],
+      ["the arrow", () => p8.click('#app [data-act="find-back"]')],
+      ["a tab", () => p8.evaluate(() => ((V.screen = "home"), render()))],
+      ["a link to History", () => p8.evaluate(() => openHistory({ acc: "b" }))],
+    ]) {
+      await toAssets();
+      await openS();
+      const during = await tapYear();
+      await leave();
+      r8 = await st8();
+      ok(
+        during === "year" && r8.period === "all",
+        "from a tab, leaving by " + how + ": all time again: " + JSON.stringify([during, r8.period])
+      );
+    }
+    for (const [how, leave] of [
+      ["Back", () => p8.evaluate(() => (goBack(), goBack()))],
+      ["the arrow", () => p8.click('#app [data-act="find-back"]')],
+      ["a tab", () => p8.evaluate(() => ((V.screen = "home"), render()))],
+    ]) {
+      await p8.evaluate(() => {
+        openHistory({ kind: "out" });
+        Object.assign(HP, { period: "month", anchor: today(), rs: null, re: null });
+        render();
+      });
+      await openS();
+      const during = await tapYear();
+      await leave();
+      r8 = await st8();
+      ok(
+        during === "year" && r8.period === "month" && r8.anchor === (await p8.evaluate(() => today())),
+        "from History, leaving by " + how + ": its own period again: " + JSON.stringify([during, r8.period, r8.anchor])
+      );
+      if (how !== "a tab") ok(r8.screen === "history" && r8.kind === "out", "…and its filter: " + JSON.stringify(r8));
+    }
+    await toAssets();
+
+    // 6a: word starts from Intl.Segmenter
+    const hit8 = (q, payee) =>
+      p8.evaluate(
+        ([q, payee]) => {
+          const saved = [S.txns, S.accounts];
+          S.txns = [{ id: "x1", ts: 1, date: today(), type: "expense", amount: 5, account: "b", payee, cat: "food" }];
+          saveSeq++;
+          const r = histMatch(S.txns[0], { ...histBlank(), q });
+          [S.txns, S.accounts] = saved;
+          saveSeq++;
+          return r;
+        },
+        [q, payee]
+      );
+    for (const [q, payee, want, why] of [
+      ["京大", "東京大学", false, "Japanese: 京大 sits across two words, not at the start of one"],
+      ["大学", "東京大学", true, "Japanese: 大学 starts the word 大学"],
+      ["東京", "東京大学", true, "Japanese: 東京 starts the first word"],
+      ["東京大", "東京大学", true, "Japanese: a start of a word, going on into the next"],
+      ["ターバ", "スターバックス", false, "Japanese katakana: ターバ is inside スター"],
+      ["バックス", "スターバックス", true, "Japanese katakana: バックス starts a word"],
+      ["京烤", "北京烤鸭", false, "Chinese: 京烤 starts no word"],
+      ["烤鸭", "北京烤鸭", true, "Chinese: 烤鸭 starts a word"],
+      ["京", "北京烤鸭", false, "Chinese: 京 alone is inside 北京"],
+      ["北京", "北京烤鸭", true, "Chinese: 北京 starts the first word"],
+      ["แฟ", "ร้านกาแฟ", false, "Thai: แฟ is inside กาแฟ"],
+      ["กาแฟ", "ร้านกาแฟ", true, "Thai: กาแฟ starts a word"],
+      ["ร้าน", "ร้านกาแฟ", true, "Thai: ร้าน starts the first word"],
+      ["벅스", "스타벅스에서 커피", false, "Korean: 벅스 is inside a word"],
+      ["스타", "스타벅스에서 커피", true, "Korean: 스타 starts a word"],
+      ["커피", "스타벅스에서 커피", true, "Korean: a word after a space"],
+      ["abc", "東京abc", true, "a Latin word right after Chinese characters starts a word"],
+      ["ramen", "Ramen 東京", true, "Latin words beside Chinese characters"],
+    ]) {
+      const got = await hit8(q, payee);
+      ok(got === want, why + ": " + q + " in " + payee + " → " + got);
+    }
+    // marks use the same word starts and map back exactly
+    r8 = await p8.evaluate(() => {
+      const m = (q, text) => {
+        HLW = hlTerms(q);
+        const h = hl(text);
+        HLW = null;
+        return h;
+      };
+      return [
+        m("大学", "東京大学"),
+        m("京大", "東京大学"),
+        m("東京大", "東京大学"),
+        m("กาแฟ", "ร้านกาแฟ"),
+        m("แฟ", "ร้านกาแฟ"),
+        m("烤鸭", "北京烤鸭 & 酒"),
+        m("ガソリン", "ｶﾞｿﾘﾝ 24h"),
+        m("abc", "東京abc"),
+      ];
+    });
+    [
+      '東京<mark class="hl">大学</mark>',
+      "東京大学",
+      '<mark class="hl">東京大</mark>学',
+      'ร้าน<mark class="hl">กาแฟ</mark>',
+      "ร้านกาแฟ",
+      '北京<mark class="hl">烤鸭</mark> &amp; 酒',
+      '<mark class="hl">ｶﾞｿﾘﾝ</mark> 24h',
+      '東京<mark class="hl">abc</mark>',
+    ].forEach((want, i) => ok(r8[i] === want, "mark " + (i + 1) + ": " + r8[i]));
+    // no Intl.Segmenter: today's behaviour (a short word matches anywhere in these scripts)
+    r8 = await p8.evaluate(() => {
+      const seg = Intl.Segmenter;
+      Intl.Segmenter = undefined;
+      saveSeq++;
+      try {
+        const f = (q, payee) => srEntryHit({ id: "y" + payee, payee, account: "b" }, srTerms(q), false);
+        return [f("京大", "東京大学"), f("ターバ", "スターバックス"), f("大学", "東京大学"), f("cafe", "Café")];
+      } finally {
+        Intl.Segmenter = seg;
+        saveSeq++;
+      }
+    });
+    ok(
+      JSON.stringify(r8) === "[true,true,true,true]",
+      "without Intl.Segmenter these scripts match anywhere again, as before: " + r8
+    );
+
+    // 6b: the typo ladder: 1 typo from 5 letters, 2 from 9, only through the near-word button
+    await p8.evaluate(() => {
+      S.txns.push(
+        {
+          id: "w1",
+          ts: 90,
+          date: today(),
+          type: "expense",
+          amount: 3,
+          account: "b",
+          cat: "food",
+          payee: "Coffee House",
+        },
+        {
+          id: "w2",
+          ts: 91,
+          date: today(),
+          type: "expense",
+          amount: 3,
+          account: "b",
+          cat: "food",
+          payee: "Supermarket",
+        },
+        { id: "w3", ts: 92, date: today(), type: "expense", amount: 3, account: "b", cat: "food", payee: "Pharmacy" }
+      );
+      save();
+    });
+    await openS();
+    for (const [typed, want, why] of [
+      ["cofee", "coffee", "5 letters, one letter missing"],
+      ["cofe", "", "4 letters: no typo allowed"],
+      ["cofeee", "coffee", "6 letters, a letter missing and one more (one typo of two)"],
+      ["pharmcy", "pharmacy", "7 letters, one typo"],
+      ["pharmcey", "", "8 letters, two typos: only one allowed"],
+      ["sopermrket", "supermarket", "10 letters, two typos"],
+      ["sopermrkat", "", "10 letters, three typos"],
+      ["supermakret", "supermarket", "11 letters, a swapped pair"],
+    ]) {
+      await type8(typed);
+      const got = await p8.evaluate(() => ({
+        word: FIXW ? FIXW.word : "",
+        rows: histRows(HLIST).length,
+        field: $("#find-q").value,
+        btn: !!$('#hbody [data-act="find-fix"]'),
+      }));
+      ok(
+        got.word === want && got.btn === !!want && got.rows === 0 && got.field === typed,
+        why + ": " + typed + " → '" + got.word + "', nothing swapped in by itself: " + JSON.stringify(got)
+      );
+    }
+    r8 = await p8.evaluate(() => {
+      const e = (q, payee) => srEntryHit({ id: "z" + payee + q, payee, account: "b" }, [q], true);
+      saveSeq++;
+      return [
+        e("cofee", "Coffee"),
+        e("cofe", "Coffee"),
+        e("pharmcey", "Pharmacy"),
+        e("sopermrket", "Supermarket"),
+        e("sopermrket", "Supper"),
+      ];
+    });
+    ok(JSON.stringify(r8) === "[true,false,false,true,false]", "the ladder in the entry match too: " + r8);
+    await p8.click('#app [data-act="find-back"]');
+
+    // 6c: folding per language: typed plain, the written form is found
+    r8 = await p8.evaluate(() => {
+      const out = [];
+      const pairs = [
+        ["German", "Straße Müller Bäckerei Köln", "strasse muller backerei koln"],
+        ["German ß", "Fußgängerzone", "fussgangerzone"],
+        ["Turkish", "İstanbul Şehir Müzesi Doğan Işık ığdır", "istanbul sehir muzesi dogan isik igdir"],
+        ["Russian ё", "Ёжик Мёд", "ежик мед"],
+        ["Russian й", "Йогурт Чай", "иогурт чаи"],
+        ["Vietnamese", "Phở Bò Việt Nam Đà Nẵng", "pho bo viet nam da nang"],
+        ["Spanish", "Peña Niño Pingüino", "pena nino pinguino"],
+        ["French", "Œuf Cœur Façade", "oeuf coeur facade"],
+        ["Portuguese", "São João Coração", "sao joao coracao"],
+        ["Indonesian", "Warung Makan Bu Siti", "warung makan siti"],
+        ["Chinese full-width", "ＳＴＡＲＢＵＣＫＳ ＡＢＣ１２３", "starbucks abc123"],
+        ["Japanese half-width katakana", "ﾄﾖﾀ ｶﾞｿﾘﾝ", "トヨタ ガソリン"],
+      ];
+      S.accounts = S.accounts.slice(0, 2);
+      pairs.forEach(([name, written, typed]) => {
+        saveSeq++;
+        const t = {
+          id: "f-" + name,
+          ts: 1,
+          date: today(),
+          type: "expense",
+          amount: 5,
+          account: "b",
+          payee: written,
+          cat: "food",
+        };
+        S.txns.push(t);
+        const found = srEntryHit(t, srTerms(typed), false);
+        HLW = hlTerms(typed);
+        const h = hl(written);
+        HLW = null;
+        out.push([name, found, (h.match(/<mark/g) || []).length]);
+      });
+      return out;
+    });
+    r8.forEach(([name, found, marks]) =>
+      ok(found && marks >= 1, name + ": typed plain, the written form is found and marked: " + [found, marks])
+    );
+    await c8.close();
   }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();

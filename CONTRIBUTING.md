@@ -9,10 +9,10 @@ please read *Design principles* before proposing a new feature.
   `cd app/src/main/assets && python3 -m http.server 8000`. No build step.
 - **Tests and checks:** `cd tests && npm ci && npx playwright install chromium`, then `npm test` and `npm run lint`
   (`npm run format` applies Prettier). If you already have Chromium, point `CHROMIUM_PATH` at it instead of installing.
-- **Android app:** JDK 17+ (CI and releases use 21) + Android SDK 35, then `./gradlew assembleDebug`, or open the project
-  in Android Studio. Debug builds install as *Tally Dev* (`app.tally.expenses.dev`), signed with your machine's debug
-  key; a release build (`./gradlew assembleRelease`) is signed only when `TALLY_KEYSTORE` and `TALLY_KEYSTORE_PASSWORD`
-  point at a keystore.
+- **Android app:** JDK 17+ (CI and releases use 21) + Android SDK 35, then `./gradlew assembleDebug`, or open the
+  project in Android Studio. Debug builds install as *Tally Dev* (`app.tally.expenses.dev`), signed with your machine's
+  debug key; a release build (`./gradlew assembleRelease`) is signed only when `TALLY_KEYSTORE` and
+  `TALLY_KEYSTORE_PASSWORD` point at a keystore.
 - In a browser there are no notifications, widget or file saving, and the colours are the baseline scheme.
 - CI runs the same checks on every push, builds the APKs, and publishes the latest test build of each branch to the
   [`builds`](https://github.com/IamAndelib/Tally-android/tree/builds) branch.
@@ -60,18 +60,18 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
   `setReminders` / `takeActions` / `requestNotifications`, `setWidget`, `getVersion`, `getLocale` / `appLanguage`
   (`Lang.java`: the texts' language and the number format), `is24h`, `fontScale`, `reminderHealth` /
   `openSetting` / `permsIntro` (permissions), `keepState` / `keptStatus` / `keptState` (the shell's own copy
-  of every save, `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
-  `backupNow`, Restore's `readAutoBackup` / `pickRestoreFile`, and History search's `recentGet` / `recentSet` (the last
-  five searches, in the `tally_recent` preferences file, excluded from Android's backup and device transfer in
-  `backup_rules.xml` and `data_extraction_rules.xml`, and never part of Tally's own backups). In the other direction it
-  calls the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`,
-  `tallyFolder`, `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that
-  arrive before the page is up wait in a queue (`callPage`), and background threads answer through the activity on
-  screen (`deliver`).
+  of every save, `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` /
+  `backupStatus` / `backupNow`, Restore's `readAutoBackup` / `pickRestoreFile`, and History search's `recentGet` /
+  `recentSet` (the last five searches, in the `tally_recent` preferences file, excluded from Android's backup and device
+  transfer in `backup_rules.xml` and `data_extraction_rules.xml`, and never part of Tally's own backups). In the other
+  direction it calls the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`,
+  `tallySaved`, `tallyFolder`, `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js`
+  installs last; answers that arrive before the page is up wait in a queue (`callPage`), and background threads answer
+  through the activity on screen (`deliver`).
 - **`ReminderReceiver` / `BootReceiver`** schedule and show notifications from the reminder settings the page sends;
   **`BackupReceiver`** writes the daily backup file from the copy of the data the page mirrors to it;
-  **`TallyWidget` / `QuickAddActivity` / `OpenActivity`** are the home-screen widget. The page is always the source of truth: it sends
-  ready-formatted numbers to the widget and a list of due dates to the reminders.
+  **`TallyWidget` / `QuickAddActivity` / `OpenActivity`** are the home-screen widget. The page is always the source of
+  truth: it sends ready-formatted numbers to the widget and a list of due dates to the reminders.
 - **The page** is plain HTML/CSS/JS. `index.html` loads `css/colors.css`, then an empty `<style id="dyn">` that
   `js/theme.js` fills with the wallpaper palette, then `css/app.css`, then the scripts in order. The scripts are
   classic scripts that share one global scope (no modules, no bundler): a file may use anything defined in any file,
@@ -80,8 +80,8 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
 | File | What's in it |
 | --- | --- |
 | `js/i18n.js` | the language (`LOC`) and the text lookup: `T()` plain text, `TH()` HTML; texts in `js/i18n/<code>.js` |
-| `js/core.js` | built-in categories and account types, inline icons, DOM/date/number helpers, money formatting, snackbar |
-| `js/currencies.js` | every currency's English name and the countries using each (Unicode CLDR), for the currency picker |
+| `js/core.js` | built-in categories and account types, icons, DOM/date/number helpers, money formatting, snackbar |
+| `js/currencies.js` | every currency's English name and its countries (Unicode CLDR), for the currency picker |
 | `js/state.js` | the data `S`, `migrate()`, load/save, balances, `withUndo()`, `guardOverdraw()`, `deleteEntries()` |
 | `js/theme.js` | Material 3 colour roles from the phone's palette |
 | `js/period.js` | what Home (`V`) and History (`HP`) show: day / range / month and the period dialog |
@@ -93,8 +93,8 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
 | `js/sheets.js` | entry, transfer, balance-fix, account, category and asset sheets |
 | `js/summary.js` | the spending summary |
 | `js/screens.js` | `render()` and the Home, Assets, Liabilities and Settings screens |
-| `js/history.js` | History: the screen (period chip, Filters button, chips, months drawn in chunks), the Filters sheet, which entries a filter leaves, which are rows, their totals in words |
-| `js/search.js` | Search, a mode of History: the words, payee and amount filters, the field in the top bar, suggestions, marks, the nothing-found button and the recent searches |
+| `js/history.js` | History: the screen (period chip, Filters, chips, months in chunks), the Filters sheet, rows |
+| `js/search.js` | Search, a mode of History: word, payee and amount filters, the field, suggestions, marks, recents |
 | `js/bridge.js` | talking to the Android shell; `goBack()` |
 | `js/backup.js` | CSV export, backup, restore, delete all |
 | `js/gestures.js` | touch and mouse: press states, swipes, long-press, drag and drop |
@@ -129,7 +129,8 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
   `js/events.js` that calls a named function. Keep logic out of the dispatcher.
 - **Rendering:** screens are rebuilt by `render()`; an open sheet is built once and then patched in place
   (`setPressed`, `trSync`, …), never re-rendered while it's open. Always escape user text with `esc()`.
-- **Confirmations** use `askDialog()`, never `confirm()`. Dates use `dateField()` / `datePicker()`, never native pickers.
+- **Confirmations** use `askDialog()`, never `confirm()`. Dates use `dateField()` / `datePicker()`, never native
+  pickers.
 - The calculator's minus key is the Unicode minus `−` (U+2212); any regex over keys or expressions must include it.
 - No inline scripts or `on…=` attributes: the page's Content-Security-Policy blocks them.
 - Formatting is Prettier's (`npm run format`); `npm run lint` must pass (it also refuses CSS selectors newer than
@@ -178,8 +179,8 @@ Tally is for people who want to write things down quickly and move on:
 `tests/e2e/NN-name.js` are plain Node scripts that drive the page in headless Chromium with a stubbed `window.Android`
 and print `PASS` / `FAIL` lines; `npm test` runs them all against a throwaway local server (`npm test -- 15` runs only
 suites starting with 15). They run on a fixed date, 2026-06-17, so results don't depend on the day
-(`TALLY_TODAY=YYYY-MM-DD npm test` runs them on another; some suites assume a day in the middle of a month). Screenshots go to
-`tests/e2e/output/`. Add or extend a suite for every fix and feature.
+(`TALLY_TODAY=YYYY-MM-DD npm test` runs them on another; some suites assume a day in the middle of a month). Screenshots
+go to `tests/e2e/output/`. Add or extend a suite for every fix and feature.
 
 ## Pull requests
 

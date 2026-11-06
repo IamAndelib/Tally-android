@@ -1,7 +1,7 @@
 /*
  * search.js — Search, a mode of History (#37) opened from every tab: what a typed word finds (ignoring case and accents;
- * each word must start a word of the entry, anywhere in it for scripts written without spaces; a number matches
- * amounts), a payee and an amount as History filters, and the mode itself: `V.find`, the field in History's top bar and
+ * each word must start a word of the entry, the words of Chinese, Japanese and Thai found by `Intl.Segmenter`; a
+ * number matches amounts), a payee and an amount as History filters, and the mode itself: `V.find`, the field in History's top bar and
  * the list under it redrawn after typing pauses (`findInput()`, `findDraw()`), Back to where it was opened from
  * (`findBack()`), and the suggestions above the list (`findSugs()`: a payee, category, account, person, kind, month or
  * year, an amount that the typed words could mean, each with the entries it would leave; a tap sets it as a filter and
@@ -10,11 +10,12 @@
 "use strict";
 
 const srFold = s => curFold(s || "").trim();
-/* scripts without spaces between words: a word may start anywhere */
-const NO_SPACES = /[぀-ヿ㐀-䶿一-鿿가-힯฀-๿]/;
+/* scripts written without spaces between words (Chinese, Japanese kana, Thai, Lao, Myanmar, Khmer): their word breaks
+   come from Intl.Segmenter, else a word may start anywhere. Korean has spaces, and is decomposed into jamo by srFold. */
+const NO_SPACES = /[฀-໿က-႟ក-៿぀-ヿ㐀-䶿一-鿿가-힯]/;
 const SR_SEP_CH = /[\s.,;:!?()[\]{}"«»“”/\\|·•–—_-]/,
   SR_SEP = new RegExp(SR_SEP_CH.source + "+");
-const srWords = s => srFold(s).split(SR_SEP).filter(Boolean);
+const srSplit = f => f.split(SR_SEP).filter(Boolean);
 /* the words typed: split at spaces only, so "4.75" or "1,250" stays one number; punctuation around a word goes, except
    the ">" or "<" in front of a number ("<50": less than 50) */
 const srTerms = s =>
@@ -26,13 +27,94 @@ const srTerms = s =>
       return cmp && srNum(rest) != null ? cmp + rest : rest;
     })
     .filter(Boolean);
-/* a typed word against one folded text: it starts one of its words, or is one typo (a letter changed, missing, extra or
-   two swapped) from one, for a word of five letters or more, when fuzzy */
+/* the word segmenter of the phone's number and date locale (Chrome 87 on), null where it is missing */
+let SEG = null,
+  SEG_KEY = "";
+function srSegmenter() {
+  if (typeof Intl.Segmenter !== "function") return null;
+  const key = String(LOC.fmt);
+  if (SEG_KEY !== key) {
+    SEG_KEY = key;
+    try {
+      SEG = new Intl.Segmenter(LOC.fmt, { granularity: "word" });
+    } catch (e) {
+      try {
+        SEG = new Intl.Segmenter("en", { granularity: "word" });
+      } catch (e2) {
+        SEG = null;
+      }
+    }
+  }
+  return SEG;
+}
+/* where the words of a folded text start, when it holds a script written without spaces (else none are needed: the
+   words are the pieces between separators): the starts of the pieces and of every word the segmenter finds */
+function srStarts(f) {
+  const seg = NO_SPACES.test(f) && srSegmenter();
+  if (!seg) return [];
+  const at = new Set();
+  for (let i = 0, was = true; i < f.length; i++) {
+    const sep = SR_SEP_CH.test(f.charAt(i));
+    if (was && !sep) at.add(i);
+    was = sep;
+  }
+  /* the segmenter does not find the breaks in decomposed kana (バ as ハ + ゛), so it reads the composed text and each
+     start is counted back into the folded one */
+  let off = 0;
+  const found = [];
+  for (const g of seg.segment(f.normalize("NFC"))) {
+    if (g.isWordLike) found.push(off);
+    off += g.segment.normalize("NFD").length;
+  }
+  if (off === f.length) found.forEach(p => at.add(p)); // else it is not the same text: only the pieces between separators
+  return [...at].sort((a, b) => a - b);
+}
+/* a folded text's words (the pieces between separators), with `.starts` (see srStarts) */
+function srInfo(f) {
+  const ws = srSplit(f);
+  ws.starts = srStarts(f);
+  return ws;
+}
+/* a typed word against one folded text: it starts one of its words, or is a few typos (a letter changed, missing, extra
+   or two swapped) from one, when fuzzy: one typo from five letters, two from nine */
 function srHitFolded(t, ws, w, fuzzy) {
   if (!t) return false;
-  if (NO_SPACES.test(w)) return t.replace(/\s+/g, "").includes(w);
-  if (ws.some(x => x.startsWith(w))) return true;
-  return fuzzy && w.length >= 5 && ws.some(x => oneTypo(w, x.slice(0, w.length)) || oneTypo(w, x));
+  const nospace = NO_SPACES.test(w);
+  if (nospace && !srSegmenter()) return t.replace(/\s+/g, "").includes(w); // no Intl.Segmenter: anywhere
+  if (ws.starts.some(p => t.startsWith(w, p)) || (!nospace && ws.some(x => x.startsWith(w)))) return true;
+  return fuzzy && !nospace && ws.some(x => typoNear(w, x));
+}
+/* the typos a word of this length may have: none under 5 letters, one from 5, two from 9 */
+const typoMax = n => (n >= 9 ? 2 : n >= 5 ? 1 : 0);
+/* the typed word is within its typos of a word, or of the start of one as long as the typed word */
+function typoNear(w, x) {
+  const k = typoMax(w.length);
+  if (!k) return false;
+  if (typos(w, x, k)) return true;
+  for (let n = Math.max(1, w.length - k); n <= w.length + k && n < x.length; n++)
+    if (typos(w, x.slice(0, n), k)) return true;
+  return false;
+}
+/* Damerau–Levenshtein distance of at most `max` (a letter changed, missing, extra, or two neighbours swapped) */
+function typos(a, b, max) {
+  if (max <= 1) return oneTypo(a, b);
+  if (Math.abs(a.length - b.length) > max) return false;
+  let prev2 = null,
+    prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    let low = i;
+    for (let j = 1; j <= b.length; j++) {
+      let d = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d = Math.min(d, prev2[j - 2] + 1);
+      row.push(d);
+      if (d < low) low = d;
+    }
+    if (low > max) return false; // every way on is already too far
+    prev2 = prev;
+    prev = row;
+  }
+  return prev[b.length] <= max;
 }
 /* Damerau–Levenshtein distance of at most 1 */
 function oneTypo(a, b) {
@@ -59,8 +141,8 @@ function srNum(w) {
 }
 /* ---- marks: the part of a title or second line that a typed word matched, found while a row's markup is built (no walk
    over the drawn DOM). `HLW` holds the folded words while History's rows are drawn in search mode (histMonths), else
-   null. The match is the filter's (a word starts a word of the text; scripts without spaces: anywhere; accents and
-   capitals ignored; numbers never) laid over the text as written: a character that folds to several (ß → ss, & → " and
+   null. The match is the filter's (a word starts a word of the text, by Intl.Segmenter in scripts without spaces;
+   accents and capitals ignored; numbers never) laid over the text as written: a character that folds to several (ß → ss, & → " and
    ") is marked only when the match takes all of it. */
 let HLW = null;
 const hlTerms = q => {
@@ -94,21 +176,26 @@ function hl(raw) {
         y = cp[at[b - 1]];
       if (x && y && x.fa === a && y.fb === b) R.push([x.os, y.oe]);
     };
+  const seg = srSegmenter(),
+    starts = seg ? srStarts(f) : [];
   for (const w of HLW) {
-    if (NO_SPACES.test(w)) {
+    const nospace = NO_SPACES.test(w);
+    if (nospace && !seg) {
       for (let i = f.indexOf(w); i >= 0; i = f.indexOf(w, i + w.length)) add(i, i + w.length);
       continue;
     }
-    for (let i = 0; i < f.length;) {
+    const hits = new Set(starts.filter(p => f.startsWith(w, p))); // the segmenter's words
+    for (let i = 0; !nospace && i < f.length;) {
       if (SR_SEP_CH.test(f.charAt(i))) {
         i++;
         continue;
       }
       let j = i;
       while (j < f.length && !SR_SEP_CH.test(f.charAt(j))) j++;
-      if (j - i >= w.length && f.startsWith(w, i)) add(i, i + w.length);
+      if (j - i >= w.length && f.startsWith(w, i)) hits.add(i);
       i = j;
     }
+    hits.forEach(i => add(i, i + w.length));
   }
   if (!R.length) return esc(s);
   R.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
@@ -131,7 +218,7 @@ function srTexts(t) {
   if (t.type === "loan" && loan(t.loan)) out.push(loanWho(loan(t.loan)));
   return out.filter(Boolean);
 }
-/* each entry's texts folded (and split into words) once, kept until the next save(): a keystroke then only compares */
+/* each entry's texts folded (and split into words, by Intl.Segmenter where needed) once, kept until the next save(): a keystroke then only compares */
 let SR_CACHE = new Map(),
   SR_SEQ = -1;
 function srCached(t) {
@@ -142,7 +229,7 @@ function srCached(t) {
   let c = SR_CACHE.get(t.id);
   if (!c) {
     const texts = srTexts(t).map(srFold).filter(Boolean);
-    texts.words = texts.map(srWords); // each text's words, for srHitFolded
+    texts.words = texts.map(srInfo); // each text's words and where they start, for srHitFolded
     c = { texts, pay: t.payee ? srFold(t.payee) : "" };
     SR_CACHE.set(t.id, c);
   }
@@ -150,7 +237,7 @@ function srCached(t) {
 }
 const srFolded = t => srCached(t).texts;
 /* an entry is found by its own words and amounts, or by its fee's (a fee has no row of its own: it is shown inside its
-   transfer or payment, so that is the hit, listed once) */
+   transfer or payment, so that is the hit, listed once); ">50" and "<50" compare only the entry's own amount */
 function srEntryHit(t, q, fuzzy) {
   const fee = t.feeId && entry(t.feeId),
     one = (x, w, n, c) => {
@@ -162,7 +249,7 @@ function srEntryHit(t, q, fuzzy) {
   return q.every(w => {
     const c = /^[<>]/.test(w) ? w : "", // ">50" / "<50": more / less than, as the suggestion
       n = srNum(c ? w.slice(1) : w);
-    return one(t, w, n, c) || (fee && one(fee, w, n, c));
+    return c ? one(t, w, n, c) : one(t, w, n) || (fee && one(fee, w, n)); // more / less than: the entry's own amount only
   });
 }
 /* ---- the payee and amount filters of History (`HF.pay`, `HF.amt`) */
@@ -217,7 +304,7 @@ function srAmtLabel(amt) {
 }
 /* ---- the mode: History with a field in its top bar (V.find). It always opens clean (all time, no filters, no words); from
    History its own filters and period wait in `keep` and come back with Back. */
-let FIND = { from: "home", keep: null, y: 0, steps: [] }, // steps: the state before each suggestion tapped, for Back
+let FIND = { from: "home", keep: null, y: 0, steps: [] }, // steps: what each suggestion tapped changed, for Back
   FIND_BACK = false, // findBack is drawing: render() keeps no row of the search list in view
   FIND_T = 0,
   FIND_SAID = ""; // what the status for TalkBack (#find-live) says now
@@ -244,36 +331,50 @@ function openFind() {
   if (inp) inp.focus();
 }
 /* search mode ends (Back, or History left another way): the words typed are kept as a recent search first, unless a
-   suggestion just kept them (they are among the newest search's words), and the mode's words, payee and amount are
-   forgotten (the caller sets the screen) */
+   suggestion just kept them (they are among the newest search's words), the mode's words, payee and amount are
+   forgotten and History's period is put back: its own when search was opened from History, else all time (the caller
+   sets the screen) */
 function findEnd() {
   const last = srTerms(recentLoad()[0] || ""),
     mine = srTerms(HF.q);
   if (!(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
   clearTimeout(FIND_T);
   V.find = false;
+  if (FIND.keep) Object.assign(HP, FIND.keep.hp);
+  else histAllTime();
   FIND.keep = null;
 }
-function findBack() {
-  /* a suggestion tapped is undone first: the words, the filters and the period as they were */
+/* Android's Back in search mode: the last suggestion tapped is undone (its filter comes off, its words go back in the
+   field at the places they were, the caret at the end); what was chosen or typed since stays. Returns false when no
+   suggestion is left to undo. */
+function findUndo() {
   const st = FIND.steps.pop();
-  if (st) {
-    HF = st.hf;
-    Object.assign(HP, st.hp);
-    HSHOW.sig = "";
-    const inp = $("#find-q"),
-      c = $('#app [data-act="find-clear"]');
-    if (inp) inp.value = HF.q;
-    if (c) c.hidden = !HF.q;
-    findDraw();
-    if (inp) {
-      inp.focus({ preventScroll: true });
-      try {
-        inp.setSelectionRange(inp.value.length, inp.value.length);
-      } catch (e) {}
-    }
-    return;
+  if (!st) return false;
+  const back = {};
+  Object.keys(st.hf).forEach(k => {
+    if (HF[k] === st.hf[k][1]) back[k] = st.hf[k][0]; // not if it was changed again since
+  });
+  const words = HF.q.trim().split(/\s+/).filter(Boolean);
+  st.words.forEach(([i, raw]) => words.splice(Math.min(i, words.length), 0, raw));
+  HF = histNorm({ ...HF, ...back, q: words.join(" ") });
+  if (st.hp && Object.keys(st.hp).every(k => HP[k] === st.hp[k][1]))
+    Object.keys(st.hp).forEach(k => (HP[k] = st.hp[k][0]));
+  HSHOW.sig = "";
+  const inp = $("#find-q"),
+    c = $('#app [data-act="find-clear"]');
+  if (inp) inp.value = HF.q;
+  if (c) c.hidden = !HF.q;
+  findDraw();
+  if (inp) {
+    inp.focus({ preventScroll: true });
+    try {
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+    } catch (e) {}
   }
+  return true;
+}
+/* the top bar's arrow: search mode ends at once, whatever suggestions were tapped */
+function findBack() {
   const { from, keep, y } = FIND;
   findEnd();
   V.sel = null;
@@ -281,12 +382,10 @@ function findBack() {
   HSHOW.sig = "";
   if (keep) {
     HF = keep.hf;
-    Object.assign(HP, keep.hp);
     V.screen = "history";
     HSHOW = { sig: histSig(), n: keep.n }; // the rows drawn so far, so the place can be reached
     if (keep.open && entry(keep.open)) V.open = keep.open;
   } else {
-    histAllTime();
     V.screen = from; // drawScreen forgets History's filters
   }
   FIND_BACK = true;
@@ -349,7 +448,7 @@ function findNone() {
       "</button>";
   return h + '<div class="gap"></div>' + histClearBtn();
 }
-/* the typed word (five letters or more) that one typo from a word of the entries would find most of them: {i (its place
+/* the typed word (five letters or more) that a few typos (see typoMax) from a word of the entries would find most of them: {i (its place
    among the words), word, count, q (the field it was made for)} */
 function findTypo() {
   const toks = HF.q.trim().split(/\s+/),
@@ -364,7 +463,7 @@ function findTypo() {
       srTexts(t).forEach(tx =>
         tx.split(SR_SEP).forEach(raw => {
           const f = srFold(raw);
-          if (!f || /\s/.test(f) || own.has(f) || !(oneTypo(w, f.slice(0, w.length)) || oneTypo(w, f))) return;
+          if (!f || /\s/.test(f) || own.has(f) || !typoNear(w, f)) return;
           own.add(f);
           const c = seen.get(f) || { raw: raw.toLowerCase(), n: 0 };
           c.n++;
@@ -463,12 +562,11 @@ function sugTokens(q) {
    3 letters on, or the whole name, for the short fixed names (a month, a kind). */
 function sugHits(name, toks, whole) {
   const fold = srFold(name),
-    ws = srWords(name),
-    flat = fold.replace(/\s+/g, "");
+    ws = srInfo(fold);
   const out = [];
   toks.forEach((t, i) => {
     if (!t.f) return;
-    const starts = NO_SPACES.test(t.f) ? flat.includes(t.f) : ws.some(w => w.startsWith(t.f));
+    const starts = srHitFolded(fold, ws, t.f, false);
     if (whole ? t.f === fold || (t.f.length >= 3 && starts) : starts) out.push(i);
   });
   return out;
@@ -737,8 +835,23 @@ function findPick(i) {
   const s = SUGS[i];
   if (!s || s.q !== HF.q) return findDraw(); // the field moved on: the list is about to follow
   recentKeep(s.q);
-  FIND.steps.push({ hf: { ...HF }, hp: { ...HP } });
-  HF = histNorm(s.r.f);
+  /* what the tap changes, to be undone alone: each filter and period field as [before, set], the words it takes out of
+     the field with their places */
+  const next = histNorm(s.r.f),
+    tk = sugTokens(s.q),
+    step = { hf: {}, hp: null, words: s.idx.map(n => [n, tk[n].raw]) };
+  Object.keys(next).forEach(k => {
+    if (k !== "q" && next[k] !== HF[k]) step.hf[k] = [HF[k], next[k]];
+  });
+  if (s.r.p) {
+    const hp = {};
+    Object.keys(s.r.p).forEach(k => {
+      if (s.r.p[k] !== HP[k]) hp[k] = [HP[k], s.r.p[k]];
+    });
+    step.hp = hp;
+  }
+  FIND.steps.push(step);
+  HF = next;
   if (s.r.p) Object.assign(HP, s.r.p);
   HSHOW.sig = "";
   const inp = $("#find-q");
