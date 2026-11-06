@@ -220,7 +220,17 @@ const ok = (c, m) => {
   await p.click('[data-act="sel-all"]');
   b9 = await sel();
   ok(b9.label === "Clear selection", "A9: all selected: Clear selection: " + b9.label);
-  ok(!!(await p.evaluate(() => TALLY_ICONS.deselect)), "A9: the deselect icon is in icons.js");
+  ok(
+    await p.evaluate(
+      () =>
+        !iconSearch("").includes("deselect") && !iconSearch("clear selection").includes("deselect") && !ICONS.deselect
+    ),
+    "A9: the deselect icon is not an emblem the picker offers"
+  );
+  ok(
+    await p.evaluate(() => document.querySelector('[data-act="sel-all"] svg path').getAttribute("d").length > 100),
+    "A9: the button draws it"
+  );
   await p.click('[data-act="sel-all"]');
   ok(await p.evaluate(() => V.sel === null || V.sel.size === 0), "A9: tapping it clears the selection");
 
@@ -462,6 +472,99 @@ const ok = (c, m) => {
     r.lastIsClear && r.oneBlock && r.h.every(h => h >= 48),
     "A15: Clear all is the last item, chips keep 48px: " + JSON.stringify(r)
   );
+
+  // ---- fix round: malformed recents, one CJK character, the dimmed row hidden from TalkBack, one cap
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    recentSave([
+      "\u0001pay\u0001\u0001",
+      "\u0001",
+      "\u0001nope\u0001\u0001Corner Café\u0001co",
+      "\u0001pay\u0001\u0001Gone Shop\u0001gone",
+      "plain words",
+    ]);
+    openFind();
+  });
+  r = await p.evaluate(() => ({
+    rows: [...document.querySelectorAll("#hbody .rec .recw")].map(x => x.textContent),
+    raw: document.querySelector("#hbody").textContent.includes("\u0001"),
+  }));
+  ok(
+    r.rows.join("|") === "plain words" && !r.raw,
+    "malformed or gone recents are dropped, plain words stay words, nothing raw: " + JSON.stringify(r)
+  );
+  await p.evaluate(
+    () => (findBack(), recentSave(["\u0001pay\u0001\u0001", "\u0001pay\u0001\u0001Corner Café\u0001co"]), openFind())
+  );
+  await p.click("#hbody .rec .recq");
+  ok((await p.evaluate(() => HF.pay)) === "out:corner cafe", "a valid one still applies, beside a malformed one");
+
+  p = await open(seed);
+  await p.evaluate(() => {
+    S.txns.push({
+      id: "t20",
+      ts: 20,
+      date: "2025-05-11",
+      type: "expense",
+      amount: 2,
+      account: "a",
+      cat: "food",
+      payee: "茶館",
+    });
+    save();
+    render();
+  });
+  await type(p, "茶");
+  ok(
+    (await sugs(p)).length > 0,
+    "one CJK character is a word: suggestions start from it: " + JSON.stringify(await sugs(p))
+  );
+  await type(p, "c");
+  ok((await sugs(p)).length === 0, "one Latin letter still gives none");
+
+  p = await open(seed);
+  await p.evaluate(() => {
+    findBack();
+    V.sel = new Set(["t1"]);
+    render();
+  });
+  r = await p.evaluate(() => {
+    const bar = document.querySelector(".hbar");
+    return {
+      hidden: bar.getAttribute("aria-hidden"),
+      all: [...bar.querySelectorAll("button")].every(b => b.disabled && b.tabIndex === -1),
+    };
+  });
+  ok(
+    r.hidden === "true" && r.all,
+    "A1: the dimmed row is aria-hidden and its controls are out of the tab order: " + JSON.stringify(r)
+  );
+  await p.evaluate(() => {
+    V.sel = null;
+    render();
+  });
+  r = await p.evaluate(() => {
+    const bar = document.querySelector(".hbar");
+    return {
+      hidden: bar.getAttribute("aria-hidden"),
+      all: [...bar.querySelectorAll("button")].every(b => !b.disabled && b.tabIndex === 0),
+    };
+  });
+  ok(r.hidden === null && r.all, "A1: the row comes back after selecting: " + JSON.stringify(r));
+
+  r = await p.evaluate(() => {
+    const names = Array.from({ length: 250 }, (_, i) => "n" + i);
+    const m = migrate({ v: 9, settings: { cur: "USD", hiddenPeople: names, hiddenPayees: names } });
+    S.settings.hiddenPayees = names.slice(0, 200).map(n => curFold(n));
+    hideName("payees", "Newest One");
+    return {
+      m: [m.settings.hiddenPeople[0], m.settings.hiddenPeople[199]],
+      h: [S.settings.hiddenPayees.length, S.settings.hiddenPayees[0], S.settings.hiddenPayees[199]],
+    };
+  });
+  ok(r.m.join() === "n50,n249", "migrate keeps the newest 200: " + r.m);
+  ok(r.h.join() === "200,n1,newest one", "hideName keeps the newest 200: " + r.h);
 
   ok(errors.length === 0, "no page errors: " + errors.join(" | "));
   await browser.close();

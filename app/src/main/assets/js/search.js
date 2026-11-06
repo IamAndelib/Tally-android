@@ -577,7 +577,7 @@ function sugHits(name, toks, whole) {
     ws = srInfo(fold);
   const out = [];
   toks.forEach((t, i) => {
-    if (Array.from(t.f).length < 2) return; // suggestions start from two typed letters
+    if (Array.from(t.f).length < 2 && !NO_SPACES.test(t.f)) return; // from two typed letters (one character is a word in scripts without spaces)
     const starts = srHitFolded(fold, ws, t.f, false);
     if (whole ? t.f === fold || (t.f.length >= 3 && starts) : starts) out.push(i);
   });
@@ -939,27 +939,42 @@ function recentKeep(text) {
   t = t.trim();
   if (Array.from(t).length < 3) return; // a fragment is not a search
   const f = curFold(t);
-  recentSave([t, ...recentLoad().filter(x => recentSug(x) || curFold(x) !== f)].slice(0, RECENT_MAX));
+  recentSave(
+    [t, ...recentLoad().filter(x => (recentSug(x) ? !recentSug(x).bad : curFold(x) !== f))].slice(0, RECENT_MAX)
+  );
 }
 /* a suggestion tapped is kept as that suggestion: a text of its group, label, name and the words that found it, apart
    by U+0001 (the shell keeps plain strings), shown with its emblem and applied again when tapped */
 const REC_SEP = "\u0001";
 function recentSug(x) {
   if (x.charAt(0) !== REC_SEP) return null;
-  const [, g, label, title, words] = x.split(REC_SEP);
-  return title === undefined ? null : { g, label, title, words };
+  const p = x.split(REC_SEP),
+    ok =
+      p.length === 5 &&
+      SUG_GROUPS.includes(p[1]) &&
+      ["", "who", "whoLend", "whoBorrow"].includes(p[2]) &&
+      p[3].trim() &&
+      p[4].trim();
+  return ok ? { g: p[1], label: p[2], title: p[3], words: p[4] } : { bad: true }; // anything else with the marker is junk
 }
 function recentKeepSug(s) {
   const tk = sugTokens(s.q),
     item = REC_SEP + [s.g, s.label || "", s.title, s.idx.map(i => tk[i].raw).join(" ")].join(REC_SEP);
   if (item.length > RECENT_LEN) return recentKeep(s.q);
-  recentSave([item, ...recentLoad().filter(x => x !== item)].slice(0, RECENT_MAX));
+  recentSave([item, ...recentLoad().filter(x => x !== item && !(recentSug(x) || {}).bad)].slice(0, RECENT_MAX));
 }
 /* the words a recent search stands for, as terms */
 const recentTerms = x => {
   const r = recentSug(x);
-  return srTerms(r ? r.words : x);
+  return r && r.bad ? [] : srTerms(r ? r.words : x);
 };
+/* the recent searches to show: words as they are, a kept suggestion only while it still exists (a payee, category,
+   account or person that is gone, or a malformed value, is left out) */
+const recentList = () =>
+  recentLoad().filter(x => {
+    const r = recentSug(x);
+    return !r || (!r.bad && !!recentFind(r));
+  });
 /* the suggestion a kept one stands for now (None when the notebook has changed): found again from its words */
 function recentFind(r) {
   const toks = sugTokens(r.words);
@@ -976,7 +991,7 @@ function recentText(r) {
 }
 /* what the empty field shows: "" when there are none */
 function recentView() {
-  const list = recentLoad();
+  const list = recentList();
   if (!list.length) return "";
   return (
     '<div class="sec" role="heading" aria-level="2">' +
@@ -1011,7 +1026,7 @@ function recentView() {
    suggestion is applied as a suggestion again (its words typed, then it tapped), or its words are typed when it no
    longer exists */
 function recentUse(i) {
-  const item = recentLoad()[i];
+  const item = recentList()[i];
   if (item === undefined) return;
   const r = recentSug(item),
     t = r ? r.words : item;
@@ -1040,7 +1055,7 @@ function recentUse(i) {
 }
 /* its ✕: forgotten; the focus goes to the next row's ✕, or to the field when none is left */
 function recentDel(i) {
-  const list = recentLoad();
+  const list = recentList();
   if (i < 0 || i >= list.length) return;
   list.splice(i, 1);
   recentSave(list);

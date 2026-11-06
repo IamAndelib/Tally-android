@@ -460,9 +460,12 @@ function histBar(clearHere, chips = "", off = false) {
     (chips ? '<div class="hchips">' + chips + "</div>" : "") +
     (clearHere ? histClearBtn() : "") +
     "</div>";
-  /* while selecting the row stays where it is, dimmed and out of reach (disabled buttons take no focus, and TalkBack
-     says so) */
-  return off ? h.replace(/<button /g, "<button disabled ") : h;
+  /* while selecting the row stays where it is, dimmed and out of reach (disabled, out of the tab order and hidden from screen readers; `inert` where the web view knows it) */
+  return off
+    ? h
+        .replace(/<button /g, '<button disabled tabindex="-1" ')
+        .replace('class="hbar hoff"', 'class="hbar hoff" aria-hidden="true" inert')
+    : h;
 }
 /* after a chip, the period or Clear all is gone, the focus goes on: to the chip now in the removed one's place (else the
    one before it), else the Filters button, so it never falls back to the page */

@@ -232,7 +232,7 @@ function migrate(o) {
       .filter(v => typeof v === "string")
       .map(v => curFold(v).trim())
       .filter(v => v && !once.has(v) && once.add(v))
-      .slice(0, 200);
+      .slice(-200); // the newest 200 (hideName adds at the end)
   });
   const okAcc = new Set(s.accounts.map(a => a.id));
   s.txns = (Array.isArray(o.txns) ? o.txns : [])
