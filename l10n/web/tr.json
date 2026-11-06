@@ -653,7 +653,6 @@
   "assets": {
     "dragTip": "İpucu: geri getirmek için bir satırı basılı tutup yukarıdaki boş yere sürükle.",
     "netWorth": "Net varlık",
-    "netWorthHint": "Sahip olduğun ve alacağın, eksi borcun",
     "noAccounts": "Henüz hesap yok",
     "dropShow": "Tekrar göstermek için buraya bırak",
     "showArchived": "Arşivdekileri göster ({{count}})",

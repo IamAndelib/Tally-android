@@ -717,6 +717,26 @@ function inspect() {
       "income",
       ev(() => txSheet(null, "income"))
     );
+    // design round, task 9: Received's category chip with its grid open, a picked account's tint, the emblem's pen
+    await shot("income-cats", async () => {
+      await page.evaluate(() => txSheet(null, "income"));
+      await page.click("#f-catchip");
+    });
+    await shot(
+      "spend-account-picked",
+      ev(() => {
+        txSheet(null, "expense", "groceries");
+        pickAccount(S.accounts[S.accounts.length - 1].id);
+        $("#sheet .p").scrollTop = 1e5;
+      })
+    );
+    await shot(
+      "lend-note",
+      ev(() => {
+        loanForm("lend");
+        $("#sheet .p").scrollTop = 1e5;
+      })
+    );
     await shot("quick-add", async () => {
       await page.evaluate(() => {
         txSheet(null, "expense", "groceries");

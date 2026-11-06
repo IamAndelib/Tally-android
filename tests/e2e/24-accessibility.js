@@ -427,6 +427,118 @@ const ok = (c, m) => {
     "Escape closes both steps and the focus is back on Delete all data"
   );
 
+  // ---- design round, task 9: the emblem is its own 48dp button; the net worth card; History's Select icon
+  {
+    await page.evaluate(() => {
+      render();
+      catForm("food", "out");
+    });
+    await settle();
+    const e = await page.evaluate(() => {
+      const b = $('#sheet .cprevbtn[data-act="f-icon"]'),
+        r = b.getBoundingClientRect(),
+        pen = b.querySelector(":scope > .ic");
+      const veil = getComputedStyle(b, "::after").backgroundColor;
+      return {
+        name: b.getAttribute("aria-label"),
+        w: r.width,
+        h: r.height,
+        pen: !!pen && getComputedStyle(pen).color,
+        veil,
+        textBtn: !!$('#sheet .btn.text[data-act="f-icon"]'),
+        count: document.querySelectorAll('#sheet [data-act="f-icon"]').length,
+      };
+    });
+    ok(e.name === "Change emblem", "the emblem button is called Change emblem for TalkBack");
+    ok(e.w >= 48 && e.h >= 48, "the emblem button is at least 48px: " + e.w + "x" + e.h);
+    ok(
+      e.pen === "rgb(255, 255, 255)" && /rgba\(0, 0, 0, 0\.5\)/.test(e.veil),
+      "a white pen over a 50% dark veil: " + e.pen + " " + e.veil
+    );
+    ok(!e.textBtn && e.count === 1, "the 'Change emblem' text button is gone");
+    await page.click('#sheet .cprevbtn[data-act="f-icon"]');
+    await settle();
+    ok(await page.evaluate(() => !!$("#ic-q") || !!$("#sheet2 .icgrid, #sheet .icgrid")), "it opens the emblem picker");
+    await page.evaluate(() => {
+      closeSheet();
+      closeSheet();
+    });
+    await settle();
+
+    // net worth: no explaining line, the same soft container as You owe, both themes; still named
+    for (const scheme of ["light", "dark"]) {
+      await page.evaluate(th => {
+        S.settings.theme = th;
+        applyTheme();
+        V.screen = "assets";
+        render();
+      }, scheme);
+      await settle();
+      const n = await page.evaluate(() => {
+        const c = $(".sumcard.soft"),
+          cs = getComputedStyle(c),
+          sc = getComputedStyle(document.documentElement).getPropertyValue("--secondary-container").trim();
+        const probe = document.createElement("i");
+        probe.style.background = sc;
+        document.body.append(probe);
+        const want = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return { text: c.textContent, bg: cs.backgroundColor, want, small: !!c.querySelector(".small"), fg: cs.color };
+      });
+      ok(
+        /^Net worth/.test(n.text) && !n.small && !/minus what you owe/.test(n.text),
+        scheme + ": net worth has its title and no explaining line: " + n.text
+      );
+      ok(n.bg === n.want, scheme + ": net worth uses the soft container " + n.bg);
+      const rgb = x =>
+        x
+          .match(/[\d.]+/g)
+          .slice(0, 3)
+          .map(Number);
+      const lum = c => {
+        const f = v => ((v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+        return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+      };
+      const a = lum(rgb(n.bg)),
+        b = lum(rgb(n.fg));
+      ok((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 4.5, scheme + ": net worth text passes AA");
+    }
+    await page.evaluate(() => {
+      S.settings.theme = "light";
+      applyTheme();
+    });
+
+    // History's Select icon is the outlined checklist (not the old checked box), 48px, still named Select
+    await page.evaluate(() => {
+      V.screen = "history";
+      render();
+    });
+    await settle();
+    const sel = await page.evaluate(() => {
+      const b = $('[data-act="sel-start"]');
+      return (
+        b && {
+          name: b.getAttribute("aria-label"),
+          same: b.querySelector("path").getAttribute("d") === P.checklist,
+          old: "checkbox" in P,
+          w: b.getBoundingClientRect().width,
+        }
+      );
+    });
+    ok(
+      sel && sel.name === "Select entries" && sel.same && sel.w >= 48 && !sel.old,
+      "History's Select icon is the checklist: " + (sel && sel.name)
+    );
+    ok(
+      !(await page.evaluate(() => Object.keys(window.TALLY_ICONS).some(k => /checklist|deselect/i.test(k)))),
+      "the checklist is not offered as a category emblem"
+    );
+    await page.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

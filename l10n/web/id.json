@@ -644,7 +644,6 @@
   "assets": {
     "dragTip": "Tips: tahan satu baris lalu geser ke slot kosong untuk menampilkannya lagi.",
     "netWorth": "Kekayaan bersih",
-    "netWorthHint": "Yang kamu punya dan piutangmu, dikurangi utangmu",
     "noAccounts": "Belum ada akun",
     "dropShow": "Lepas di sini untuk menampilkannya lagi",
     "showArchived": "Tampilkan arsip ({{count}})",

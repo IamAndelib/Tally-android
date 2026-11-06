@@ -662,7 +662,6 @@
   "assets": {
     "dragTip": "Astuce : maintenez une ligne et faites-la glisser vers l’emplacement vide pour la réafficher.",
     "netWorth": "Patrimoine net",
-    "netWorthHint": "Ce que vous avez et ce qu’on vous doit, moins ce que vous devez",
     "noAccounts": "Aucun compte pour l’instant",
     "dropShow": "Déposez ici pour le réafficher",
     "showArchived": "Afficher les archivés ({{count}})",

@@ -187,7 +187,6 @@ let HFD = null,
   HFSIDE = "";
 const histAcc = a => a && (!a.archived || S.txns.some(t => t.account === a.id || t.to === a.id));
 const histAccs = () => S.accounts.filter(histAcc);
-const histAccVar = a => ' style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"';
 /* what picking one side (From or To) gives; with an account picked the other side is that account (an empty side
    empties both) */
 function hfSide(d, side, id) {
@@ -244,15 +243,15 @@ function hfSideChip(side) {
     a = id && acc(id),
     label = a ? T("history." + side + "Acc", { account: a.name }) : T("history." + side + "Any"),
     lock = !!(HFD.acc && id === HFD.acc),
-    inner = (a ? '<span class="adot"' + histAccVar(a) + "></span>" : "") + hfName(label);
-  if (lock) return '<span class="chip hfc lock tinted"' + histAccVar(a) + ">" + inner + "</span>";
+    inner = (a ? '<span class="adot"' + accVar(a) + "></span>" : "") + hfName(label);
+  if (lock) return '<span class="chip hfc lock tinted"' + accVar(a) + ">" + inner + "</span>";
   return (
     '<button class="chip hfc' +
     (a ? " tinted tk" : "") +
     '" data-act="' +
     (side === "from" ? "hfs-from" : "hfs-to") +
     '" aria-haspopup="dialog"' +
-    (a ? histAccVar(a) : "") +
+    (a ? accVar(a) : "") +
     ">" +
     (a ? HF_TICK : "") +
     inner +
@@ -272,11 +271,11 @@ function hfBody() {
       a.id,
       d.acc === a.id,
       '<span class="adot"' +
-        histAccVar(a) +
+        accVar(a) +
         "></span>" +
         hfName(a.name + (a.archived ? " (" + T("account.archivedTag") + ")" : "")),
       n,
-      { cls: "acct", attrs: histAccVar(a) }
+      { cls: "acct", attrs: accVar(a) }
     );
   });
   h += '</div><div class="sec">' + TH("history.transactions") + '</div><div class="hfrow">';
@@ -383,7 +382,7 @@ function hfMenu(side, btn) {
           '"' +
           (dim ? ' aria-disabled="true"' : "") +
           ">" +
-          (x ? '<span class="adot"' + histAccVar(x) + "></span>" : "") +
+          (x ? '<span class="adot"' + accVar(x) + "></span>" : "") +
           hfName(name) +
           (id ? ' <span class="hfn">' + n + "</span>" : "") +
           (on ? ic("check") : "") +
@@ -690,7 +689,7 @@ function historyView() {
         ? '<button class="icon" data-act="sel-start" aria-label="' +
           TH("history.select") +
           '">' +
-          ic("checkbox") +
+          ic("checklist") +
           "</button>"
         : "") +
       "</header>";

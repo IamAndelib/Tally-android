@@ -127,7 +127,9 @@ const ok = (c, m) => {
   // income sheet cycling
   await act("add-in");
   await tagSheet();
+  await sact("f-showcats"); // Received has Spent's category chip: the grid opens from it
   await sact("f-cat", "gift");
+  await sact("f-showcats");
   await sact("f-cat", "income");
   ok(await sameSheet(), "income sheet not rebuilt");
   await page.fill("#f-amt", "100");

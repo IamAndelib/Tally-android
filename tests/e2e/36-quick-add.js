@@ -133,6 +133,7 @@ const ok = (c, m) => {
       txSheet(null, "income");
       $("#f-amt").value = "50";
     });
+    await page.click("#f-catchip"); // money in has the same category chip as spending: the grid opens from it
     await page.click('#sheet .catgrid [data-act="f-cat-new"]');
     ok((await page.getAttribute("#f-cname", "placeholder")) === "e.g. Freelance, Refunds", "money in: its own example");
     await page.fill("#f-cname", "Freelance");
@@ -193,6 +194,140 @@ const ok = (c, m) => {
       );
     });
     ok(m, "an untouched date is still today's, to move at midnight");
+    await ctx.close();
+  }
+
+  // ---- design round, task 9: forms and small marks
+  {
+    const { ctx, page } = await open();
+    // Received uses Spent's category control: the chip (Income ▾) opens the grid; picking closes it and says the pick
+    await page.evaluate(() => txSheet(null, "income"));
+    const r = await page.evaluate(() => ({
+      chip: $("#f-catchip").textContent.trim(),
+      expanded: $("#f-catchip").getAttribute("aria-expanded"),
+      gridHidden: $("#f-catgrid").hidden,
+      payee: $("#f-payee").placeholder,
+      payeeInRow: !!$("#f-catrow #f-payee"),
+    }));
+    ok(
+      r.chip === "Income" && r.gridHidden && r.expanded === "false",
+      "Received: the chip says Income, the grid is closed"
+    );
+    ok(r.payee === "Received from" && r.payeeInRow, "Received: 'Received from' sits next to the chip");
+    await page.click("#f-catchip");
+    ok(!(await page.evaluate(() => $("#f-catgrid").hidden)), "Received: the chip opens the grid");
+    await page.evaluate(() => $('#f-catgrid [data-act="f-cat"]:not([aria-pressed="true"])').click());
+    const r2 = await page.evaluate(() => ({
+      gridHidden: $("#f-catgrid").hidden,
+      chip: $("#f-catchip").textContent.trim(),
+      cat: F.cat,
+    }));
+    ok(
+      r2.gridHidden && r2.cat && r2.chip !== "Income",
+      "Received: picking another category closes the grid and shows it on the chip"
+    );
+    // quick add and a typed payee still work
+    await page.fill("#f-payee", "Employer");
+    await page.fill("#f-amt", "10");
+    await page.click('#sheet [data-act="tx-save"]');
+    const saved = await page.evaluate(() => S.txns.filter(t => t.type === "income").map(t => t.payee + "|" + t.amount));
+    ok(saved.join() === "Employer|10", "Received: saved with its payee " + saved);
+
+    // one note style on every form: a field with no label, the placeholder "Note (optional)", the name "Note"
+    const forms = {
+      spent: () => txSheet(null, "expense"),
+      received: () => txSheet(null, "income"),
+      transfer: () => trSheet(),
+      lend: () => loanForm("lend"),
+      borrow: () => loanForm("borrow"),
+    };
+    for (const [k, open1] of Object.entries(forms)) {
+      await page.evaluate(open1);
+      const n = await page.evaluate(() => {
+        const el = $("#sheet #f-note");
+        return (
+          el && {
+            ph: el.placeholder,
+            name: el.getAttribute("aria-label"),
+            label: !!(el.closest("label") && el.closest("label").querySelector("span")),
+            lbl:
+              !!$("#sheet .lbl") &&
+              [...document.querySelectorAll("#sheet .lbl")].some(l => /^Note/.test(l.textContent)),
+          }
+        );
+      });
+      ok(
+        n && n.ph === "Note (optional)" && n.name === "Note" && !n.label && !n.lbl,
+        k + ": the note is one unlabelled field " + JSON.stringify(n)
+      );
+      await page.evaluate(() => closeSheet());
+    }
+
+    // a picked account is tinted in its own colour (alpha of the account's colour), the ✓ stays, text stays AA
+    for (const scheme of ["light", "dark"]) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.evaluate(() => {
+        S.accounts[0].c = "#8E24AA";
+        txSheet(null, "expense");
+      });
+      const t = await page.evaluate(() => {
+        const on = $('#sheet [data-act="f-acc"][aria-pressed="true"]'),
+          off = $('#sheet [data-act="f-acc"][aria-pressed="false"]');
+        const cs = getComputedStyle(on);
+        const m = cs.backgroundColor.match(/[\d.]+/g).map(Number);
+        let sheet = "rgb(255,255,255)";
+        for (let n = on.parentElement; n; n = n.parentElement) {
+          const b = getComputedStyle(n).backgroundColor;
+          if (b !== "rgba(0, 0, 0, 0)" && b !== "transparent") {
+            sheet = b;
+            break;
+          }
+        }
+        return {
+          bg: m,
+          offBg: getComputedStyle(off).backgroundColor,
+          fg: cs.color,
+          tick: !!on.querySelector(".emb .ic"),
+          page: sheet,
+        };
+      });
+      const lum = c => {
+        const f = v => ((v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+        return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+      };
+      const surf = t.page.match(/[\d.]+/g).map(Number);
+      const a = t.bg[3] == null ? 1 : t.bg[3];
+      const mix = [0, 1, 2].map(i => t.bg[i] * a + surf[i] * (1 - a));
+      const fg = t.fg.match(/[\d.]+/g).map(Number);
+      const L1 = lum(mix),
+        L2 = lum(fg);
+      const cr = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+      ok(
+        t.bg[0] === 142 && t.bg[1] === 36 && t.bg[2] === 170 && a > 0.1 && a < 0.6,
+        scheme + ": the picked account chip is tinted in its colour " + t.bg
+      );
+      ok(t.tick, scheme + ": the picked chip keeps its check");
+      ok(cr >= 4.5, scheme + ": the tinted chip's text passes AA (" + cr.toFixed(1) + ":1)");
+      await page.evaluate(() => closeSheet());
+    }
+    // the same tint in the other forms' chips
+    await page.evaluate(() => trSheet());
+    ok(
+      await page.evaluate(() =>
+        [...document.querySelectorAll('#sheet [data-act="tr-from"], #sheet [data-act="tr-to"]')].every(
+          c => c.classList.contains("acchip") && /--acr/.test(c.getAttribute("style"))
+        )
+      ),
+      "transfer From / To chips carry the account colour"
+    );
+    await page.evaluate(() => closeSheet());
+    await page.evaluate(() => loanForm("lend"));
+    ok(
+      await page.evaluate(() =>
+        [...document.querySelectorAll('#sheet [data-act="f-acc"]')].every(c => c.classList.contains("acchip"))
+      ),
+      "Lend's account chips carry the account colour"
+    );
     await ctx.close();
   }
 

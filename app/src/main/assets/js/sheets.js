@@ -92,19 +92,20 @@ function deleteAsset() {
     S.assets = S.assets.filter(x => x.id !== id);
   });
 }
-/* account chips; addAct: a dashed "Add account" chip at the end */
+/* account chips; the picked one is tinted in its account's colour (.acchip); addAct: a dashed "Add account" chip at the end */
 const accChips = (act, sel, disabled, list, addAct) =>
   '<div class="chips">' +
   (list || activeAccounts())
     .map(
       a =>
-        '<button class="chip lead" data-act="' +
+        '<button class="chip lead acchip" data-act="' +
         act +
         '" data-v="' +
         a.id +
         '" aria-pressed="' +
         (a.id === sel) +
         '"' +
+        accVar(a) +
         (a.id === disabled ? " disabled" : "") +
         ">" +
         chipEmb(accEmb(a)) +
@@ -164,9 +165,7 @@ const payeeField = (inc, v) =>
   TH(inc ? "entry.receivedFrom" : "entry.paidTo") +
   '" value="' +
   esc(v) +
-  '"' +
-  (inc ? ' class="payee-in"' : "") +
-  ">";
+  '">';
 const payeeSug = '<div class="chips" id="f-payee-sug" hidden></div>';
 /* every payee written so far, once per name whatever its case or accents (curFold), in its newest spelling: names used
    on this kind of entry first, then newest first. Made at the first letter typed, kept while the form is open. */
@@ -309,28 +308,26 @@ function txSheet(id, type, catId, pre, draft) {
   if (k && !list.includes(k)) list = list.concat([k]);
   const payee = (d ? d.payee : t ? t.payee : "") || "";
   let h = "";
-  if (inc) h += '<div class="catgrid">' + catBtns(list, F.cat) + "</div>" + payeeField(true, payee) + payeeSug;
-  else
-    h +=
-      /* the picked category and who was paid, side by side (the box wraps below when the row is too narrow) */
-      '<div class="row catrow" id="f-catrow"' +
-      (k ? "" : " hidden") +
-      '><button class="catchip" id="f-catchip" data-act="f-showcats" aria-expanded="false">' +
-      (k ? catChipInner(k) : "") +
-      "</button>" +
-      payeeField(false, payee) +
-      "</div>" +
-      payeeSug +
-      '<div class="lbl" id="f-catlbl" style="margin-top:0"' +
-      (k ? " hidden" : "") +
-      ">" +
-      TH("entry.whatFor") +
-      "</div>" +
-      '<div class="catgrid" id="f-catgrid" style="margin-top:8px"' +
-      (k ? " hidden" : "") +
-      ">" +
-      catBtns(list, F.cat) +
-      "</div>";
+  h +=
+    /* the picked category and who was paid, side by side (the box wraps below when the row is too narrow) */
+    '<div class="row catrow" id="f-catrow"' +
+    (k ? "" : " hidden") +
+    '><button class="catchip" id="f-catchip" data-act="f-showcats" aria-expanded="false">' +
+    (k ? catChipInner(k) : "") +
+    "</button>" +
+    payeeField(inc, payee) +
+    "</div>" +
+    payeeSug +
+    '<div class="lbl" id="f-catlbl" style="margin-top:0"' +
+    (k ? " hidden" : "") +
+    ">" +
+    TH("entry.whatFor") +
+    "</div>" +
+    '<div class="catgrid" id="f-catgrid" style="margin-top:8px"' +
+    (k ? " hidden" : "") +
+    ">" +
+    catBtns(list, F.cat) +
+    "</div>";
   h += amtField(
     "f-amt",
     a ? a.currency : "",
@@ -433,7 +430,6 @@ function openEntry(id) {
 function pickCat(id) {
   F.cat = id;
   setPressed("f-cat", id);
-  if (F.type === "income") return;
   const chip = $("#f-catchip");
   chip.innerHTML = catChipInner(cat(id));
   $("#f-catrow").hidden = false;

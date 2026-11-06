@@ -662,7 +662,6 @@
   "assets": {
     "dragTip": "Consejo: mantén presionada una fila y arrástrala hasta el hueco vacío para recuperarla.",
     "netWorth": "Patrimonio",
-    "netWorthHint": "Lo que tienes y te deben, menos lo que debes",
     "noAccounts": "Aún no hay cuentas",
     "dropShow": "Suelta aquí para volver a mostrarla",
     "showArchived": "Mostrar archivadas ({{count}})",

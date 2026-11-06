@@ -644,7 +644,6 @@
   "assets": {
     "dragTip": "提示：长按一行，拖到上方空位即可恢复。",
     "netWorth": "净资产",
-    "netWorthHint": "你拥有的加上别人欠你的，减去你欠别人的",
     "noAccounts": "还没有账户",
     "dropShow": "拖到这里重新显示",
     "showArchived": "显示已归档（{{count}}）",

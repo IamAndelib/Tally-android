@@ -584,7 +584,10 @@ const ago = n => {
     loans: [],
     assets: [],
   });
-  await page.evaluate(() => txSheet(null, "income"));
+  await page.evaluate(() => {
+    txSheet(null, "income");
+    $("#f-catchip").click(); // the grid opens from the chip, as on Spent
+  });
   await settle();
   const room = await page.evaluate(() => {
     const b = document.querySelector('.catgrid .cat[aria-pressed="true"]') || document.querySelector(".catgrid .cat");

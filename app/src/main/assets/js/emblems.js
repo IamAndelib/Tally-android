@@ -70,6 +70,8 @@ const typeName = k => (TYPES[k] ? T("type." + k) : (ctype(k) || {}).name || T("a
 const typeIcon = k => TYPE_ICON[k] || (ctype(k) || {}).i || "account_balance_wallet";
 const typeCol = k => TYPE_COL[k] || (ctype(k) || {}).c || "#5f7389";
 const accEmb = a => ({ i: a.i || (a.e ? "" : typeIcon(a.type)), e: a.e, c: a.c || typeCol(a.type) });
+/* an account's colour as the --acr custom property (r g b), for a tint of it (the Filters sheet's chips, the forms' picked account) */
+const accVar = a => ' style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"';
 /* a chip's leading emblem, with the check its picked state shows in place of the glyph (css .chip.lead) */
 const chipEmb = o => emblem(o, "sm", ic("check"));
 const typeChip = (k, sel) =>
@@ -205,13 +207,13 @@ function icList(q) {
 /* form part shared by category / account / asset editors: big preview (tap to change) + colour swatches */
 function emblemEditor(o) {
   return (
-    '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 4px"><button class="cprevbtn" data-act="f-icon" aria-label="' +
+    /* the whole emblem is the button: a dark veil with a white pen says it can be changed */
+    '<div class="embedit"><button class="cprevbtn" data-act="f-icon" aria-label="' +
     TH("icon.change") +
     '"><span id="f-cprev">' +
     emblem(o, "cprev") +
-    '</span></button><button class="btn text" data-act="f-icon" style="width:auto">' +
+    "</span>" +
     ic("edit") +
-    TH("icon.change") +
     "</button></div>" +
     '<div class="lbl">' +
     TH("color.label") +

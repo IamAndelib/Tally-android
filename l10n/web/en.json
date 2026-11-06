@@ -653,7 +653,6 @@
   "assets": {
     "dragTip": "Tip: hold a row and drag it up to the empty slot to bring it back.",
     "netWorth": "Net worth",
-    "netWorthHint": "What you have and are owed, minus what you owe",
     "noAccounts": "No accounts yet",
     "dropShow": "Drop here to show it again",
     "showArchived": "Show archived ({{count}})",

@@ -573,14 +573,7 @@ const dragTip = () =>
 function assetsView() {
   const b = balances();
   let h = "";
-  h +=
-    '<div class="sumcard"><div class="t">' +
-    TH("assets.netWorth") +
-    "</div>" +
-    curLines(netWorth()) +
-    '<div class="t small">' +
-    TH("assets.netWorthHint") +
-    "</div></div>";
+  h += '<div class="sumcard soft"><div class="t">' + TH("assets.netWorth") + "</div>" + curLines(netWorth()) + "</div>";
   const accs = activeAccounts().filter(a => a.type !== "card"),
     arch = S.accounts.filter(a => a.archived);
   h +=

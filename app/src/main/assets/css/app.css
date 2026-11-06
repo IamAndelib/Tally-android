@@ -841,8 +841,7 @@ html[dir="rtl"] .strip.fade {
 .row.catrow > input {
   flex: 1 1 128px;
 }
-#f-payee-sug,
-.payee-in {
+#f-payee-sug {
   margin-top: 8px;
 }
 .gap {
@@ -2221,8 +2220,44 @@ mark.hl {
   width: 32px;
   height: 32px;
 }
+/* the category / account / asset form's emblem: the whole of it is the button (72px, over the 48dp minimum), a
+   half-dark veil over it with a white pen says "change" (over a dark glyph the pen sits on the glyph) */
+.embedit {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 4px;
+}
 .cprevbtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  min-width: 48px;
+  min-height: 48px;
   border-radius: 50%;
+}
+.cprevbtn .cprev {
+  margin: 0;
+}
+.cprevbtn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+}
+.cprevbtn > .ic {
+  position: absolute;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+}
+/* an account's colour tints its picked chip in a form, as the Filters sheet's chips do (--acr from accVar) */
+.chip.acchip[aria-pressed="true"] {
+  background: rgb(var(--acr) / var(--tint-a));
+  color: var(--on-surface);
 }
 .icgrid {
   display: grid;
@@ -2507,7 +2542,8 @@ body.hasnav .snack {
   padding: 16px 18px;
   margin-top: 4px;
 }
-.sumcard.owe {
+.sumcard.owe,
+.sumcard.soft {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
 }

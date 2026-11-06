@@ -653,7 +653,6 @@
   "assets": {
     "dragTip": "Tipp: Halte eine Zeile und zieh sie nach oben auf den leeren Platz, um sie zurückzuholen.",
     "netWorth": "Nettovermögen",
-    "netWorthHint": "Was du hast und noch bekommst, minus was du schuldest",
     "noAccounts": "Noch keine Konten",
     "dropShow": "Hier ablegen, um es wieder zu zeigen",
     "showArchived": "Archivierte zeigen ({{count}})",
