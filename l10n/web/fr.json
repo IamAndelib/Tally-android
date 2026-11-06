@@ -633,7 +633,7 @@
     "suggestions": "Suggestions",
     "entries": "Opérations",
     "recent": "Recherches récentes",
-    "forget": "Oublier : {{text}}",
+    "forget": "Oublier : {{text}}",
     "group": {
       "pay": "Payé à",
       "payIn": "Reçu de",
@@ -650,11 +650,11 @@
     "sugLabel_many": "{{group}} {{title}}, {{count}} d’opérations",
     "sugLine_other": "{{group}} · {{count}} opérations",
     "sugLabel_other": "{{group}} {{title}}, {{count}} opérations",
-    "nothing": "Rien ne correspond à « {{q}} »",
-    "noteLine": "Note : {{note}}",
-    "fixBtn_one": "Rechercher « {{word}} » · {{count}} opération",
-    "fixBtn_many": "Rechercher « {{word}} » · {{count}} d’opérations",
-    "fixBtn_other": "Rechercher « {{word}} » · {{count}} opérations"
+    "nothing": "Rien ne correspond à « {{q}} »",
+    "noteLine": "Note : {{note}}",
+    "fixBtn_one": "Rechercher « {{word}} » · {{count}} opération",
+    "fixBtn_many": "Rechercher « {{word}} » · {{count}} d’opérations",
+    "fixBtn_other": "Rechercher « {{word}} » · {{count}} opérations"
   },
   "nav": {
     "home": "Accueil",
