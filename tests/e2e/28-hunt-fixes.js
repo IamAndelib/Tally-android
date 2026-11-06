@@ -1072,8 +1072,10 @@ const ok = (c, m) => {
     "a one-day range of yesterday says Yesterday"
   );
   ok(
-    await page.evaluate(() => compact(1500) === "1.5K" && compact(0.25) === "0.25"),
-    "chart labels in the phone's own short form"
+    await page.evaluate(
+      () => compact(1500) === "1,500" && compact(0.25) === "0" && compact(-0.4) === "0" && compact(12400) === "12.4K"
+    ),
+    "chart labels are whole amounts, in the phone's own short form only from five digits"
   );
   await seed({
     settings: { cur: "USD", clock: "24", lastCheck: t, dragTip: true, donut: "none" },

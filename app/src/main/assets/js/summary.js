@@ -9,7 +9,7 @@ let SM = null;
    currency), and compact ("12.4K") only from five digits. TalkBack and the figure under the chart keep the exact amount. */
 let BARNUM = null;
 const compact = n => {
-  n = Math.round(n);
+  n = Math.round(n) || 0; // never "-0"
   try {
     BARNUM = BARNUM || {
       whole: new Intl.NumberFormat(LOC.fmt, { maximumFractionDigits: 0 }),
@@ -106,7 +106,7 @@ function catSplit(list) {
 }
 /* a month by category as a pie: category colours, true to size (a tiny share stays tiny), a hairline between slices.
    The names, shares and amounts are in the list under it, so the drawing is hidden from screen readers. */
-function smDonut(split, total) {
+function smPie(split, total) {
   const RP = 48,
     pt = a => (50 + RP * Math.cos(a)).toFixed(2) + " " + (50 + RP * Math.sin(a)).toFixed(2);
   let at = -Math.PI / 2,
@@ -238,7 +238,7 @@ function drawSm() {
         })
         .join("") +
       "</div>";
-  else h += '<div class="smchart">' + smDonut(split, b.v) + "</div>";
+  else h += '<div class="smchart">' + smPie(split, b.v) + "</div>";
   /* details for the chosen bar */
   /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
   const len = x => daysBetween(x.s, x.e) + 1,
