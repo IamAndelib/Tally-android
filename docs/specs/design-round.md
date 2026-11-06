@@ -104,3 +104,5 @@ building"). "NEW DEMO" marks items whose final form was drawn in that last set.
   space, nothing moves; the selection's filters stay in view).
 - **A15 instead:** the filter chips continue on the same line right after the Filters button, wrapping only when the
   line is full, with Clear all as the last item (no line of its own).
+- **Recent searches get a "Clear all"** at the end of their heading (a text button on the heading's line); it empties the
+  list and shows an Undo snackbar ("Recent searches cleared · Undo"). Mock-up sent; build with Task 2's follow-up.
