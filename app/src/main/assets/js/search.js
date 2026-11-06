@@ -3,7 +3,9 @@
  * each word must start a word of the entry, anywhere in it for scripts written without spaces; a number matches
  * amounts), a payee and an amount as History filters, and the mode itself: `V.find`, the field in History's top bar and
  * the list under it redrawn after typing pauses (`findInput()`, `findDraw()`), Back to where it was opened from
- * (`findBack()`).
+ * (`findBack()`), and the suggestions above the list (`findSugs()`: a payee, category, account, person, kind, month or
+ * year, an amount that the typed words could mean, each with the entries it would leave; a tap sets it as a filter and
+ * takes its words out of the field, `findPick()`).
  */
 "use strict";
 
@@ -40,13 +42,16 @@ function oneTypo(a, b) {
     );
   return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
 }
-/* a typed number, the phone's way ("45", "1,250.50", "1.250,50"): "45" is anything from 45 to 45.99, "45.50" just that */
+/* a typed number, the phone's way ("45", "1,250.50", "1.250,50"): "45" is anything from 45 to 45.99, "45.50" just that
+   (up to three decimals, for the currencies that have them) */
 function srNum(w) {
   if (!/^\d[\d.,'’\s]*$/.test(w)) return null;
   const v = evalAmt(w);
   if (v == null) return null;
-  const whole = !/[.,]\d{1,2}$/.test(w) || (NUMSEP.grp && new RegExp("\\" + NUMSEP.grp + "\\d{3}$").test(w));
-  return { lo: v, hi: whole ? v + 1 : v + 0.005 };
+  const m = /[.,](\d{1,3})$/.exec(w),
+    grp = m && m[1].length === 3 && !!NUMSEP.grp && w.charAt(w.length - 4) === NUMSEP.grp, // "1,250": thousands
+    d = m && !grp ? m[1].length : 0;
+  return { lo: v, hi: d === 0 ? v + 1 : d === 3 ? +(v + 0.0005).toFixed(4) : v + 0.005 };
 }
 /* what an entry can be found by: its payee, note, category, accounts and the loan's person */
 function srTexts(t) {
@@ -133,7 +138,7 @@ function srAmtLabel(amt) {
   if (p[0] === "lt") return T("history.amtLess", { amount: show(+p[1]) });
   const lo = +p[1],
     hi = rnd(+p[2] - 10 ** -digits);
-  return hi <= lo + 1e-9 || +p[2] - lo < 10 ** -digits * 2
+  return hi <= lo + 1e-9 || +p[2] - lo < 1 - 1e-9 // a single amount (its range is narrower than a whole unit)
     ? show(lo)
     : T("history.amtRange", { from: show(lo), to: show(hi) });
 }
@@ -243,4 +248,306 @@ function findRestore(k) {
   try {
     i.setSelectionRange(k.a, k.b);
   } catch (e) {}
+}
+
+/* ---- suggestions: what the typed words could mean as a filter. Each one is {g (group), title, emb, idx (the typed words
+   that found it), apply() → {f, p} (the filters, and the period if it changes, that tapping sets)}. */
+let SUGS = [];
+const SUG_MAX = 3, // shown per group
+  SUG_LOOK = 8; // counted per group before the three with entries are picked
+/* the typed words with their folded spelling; ">50" and "<50" are amounts only, never part of a name */
+function sugTokens(q) {
+  return q
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(raw => {
+      const cmp = /^[<>]/.test(raw);
+      return { raw, cmp, f: cmp ? "" : srFold(raw).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "") };
+    });
+}
+/* which typed words find a name: each starts one of its words (anywhere in it for scripts without spaces). `whole`: from
+   3 letters on, or the whole name, for the short fixed names (a month, a kind). */
+function sugHits(name, toks, whole) {
+  const fold = srFold(name),
+    ws = srWords(name),
+    flat = fold.replace(/\s+/g, "");
+  const out = [];
+  toks.forEach((t, i) => {
+    if (!t.f) return;
+    const starts = NO_SPACES.test(t.f) ? flat.includes(t.f) : ws.some(w => w.startsWith(t.f));
+    if (whole ? t.f === fold || (t.f.length >= 3 && starts) : starts) out.push(i);
+  });
+  return out;
+}
+/* the entries a choice would leave, as History counts them: rows, in that period */
+function sugCount(f, p) {
+  const [s, e] = range(p);
+  return histRows(S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f))).length;
+}
+const MONTH_DTF = {};
+/* the 12 months' names in the phone's own language, full and short ("Jun." loses its dot) */
+function sugMonths() {
+  const key = String(LOC.fmt);
+  if (!MONTH_DTF[key]) {
+    const make = month => {
+      let f;
+      try {
+        f = new Intl.DateTimeFormat(LOC.fmt, { month });
+      } catch (e) {
+        f = new Intl.DateTimeFormat("en", { month });
+      }
+      return Array.from({ length: 12 }, (_, m) => f.format(new Date(2021, m, 15)).replace(/\.$/, ""));
+    };
+    const long = make("long"),
+      short = make("short");
+    MONTH_DTF[key] = long.map((n, m) => [n, short[m]]);
+  }
+  return MONTH_DTF[key];
+}
+const SUG_KIND_EMB = {
+  out: { i: "payments", c: "#5f7389" },
+  in: { i: "savings", c: "#15a06f" },
+  xfer: XFER_EMB,
+  lend: LOAN_EMB.lend,
+  borrow: LOAN_EMB.borrow,
+  fix: { i: "build", c: "#7a8190" },
+};
+const SUG_AMT_EMB = { i: "paid", c: "#7a8190" };
+const SUG_PERIOD_EMB = { i: "event", c: "#4b5fd6" };
+/* every suggestion the typed words give, in the order of the groups (not yet counted) */
+function sugFind(toks) {
+  const out = [],
+    add = (g, title, emb, idx, use, apply, set) => out.push({ g, title, emb, idx, use, apply, set });
+  const pays = new Map(),
+    cats = new Map(),
+    accs = new Map(),
+    whos = new Map();
+  S.txns.forEach(t => {
+    if (t.feeOf && entry(t.feeOf)) return;
+    if (t.cat) cats.set(t.cat, (cats.get(t.cat) || 0) + 1);
+    accs.set(t.account, (accs.get(t.account) || 0) + 1);
+    if (t.to) accs.set(t.to, (accs.get(t.to) || 0) + 1);
+    const lo = t.loan && loan(t.loan);
+    if (lo && lo.person) whos.set(lo.person, (whos.get(lo.person) || 0) + 1);
+    if (!t.payee || !srCached(t).pay) return;
+    const way = isSpend(t) ? "out:" : t.type === "income" ? "in:" : "";
+    if (!way) return;
+    const key = way + srCached(t).pay;
+    const p = pays.get(key);
+    if (!p) pays.set(key, { name: t.payee.trim(), best: t, n: 1 });
+    else {
+      p.n++;
+      if (cmpDay(t.date, p.best.date) > 0 || (t.date === p.best.date && (t.ts || 0) >= (p.best.ts || 0))) {
+        p.best = t;
+        p.name = t.payee.trim();
+      }
+    }
+  });
+  const hit = (name, whole) => sugHits(name, toks, whole);
+  ["out", "in"].forEach(kind =>
+    pays.forEach((p, key) => {
+      if (!key.startsWith(kind + ":")) return;
+      const idx = hit(p.name);
+      if (idx.length)
+        add(
+          kind === "out" ? "pay" : "payIn",
+          p.name,
+          cat(p.best.cat) || XFER_EMB,
+          idx,
+          p.n,
+          f => ({ f: { ...f, pay: key } }),
+          () => HF.pay === key
+        );
+    })
+  );
+  S.cats.forEach(c => {
+    const idx = hit(catName(c));
+    if (idx.length)
+      add(
+        "cat",
+        catName(c),
+        c,
+        idx,
+        cats.get(c.id) || 0,
+        f => ({ f: { ...f, cat: c.id } }),
+        () => HF.cat === c.id
+      );
+  });
+  histAccs().forEach(a => {
+    const idx = hit(a.name);
+    if (idx.length)
+      add(
+        "acc",
+        a.name,
+        accEmb(a),
+        idx,
+        accs.get(a.id) || 0,
+        f => ({ f: { ...f, acc: a.id, from: "", to: "" } }),
+        () => HF.acc === a.id
+      );
+  });
+  const seen = new Set();
+  S.loans.forEach(l => {
+    if (!l.person || seen.has(l.person)) return;
+    seen.add(l.person);
+    const idx = hit(l.person);
+    if (idx.length)
+      add(
+        "who",
+        l.person,
+        LOAN_EMB[l.kind],
+        idx,
+        whos.get(l.person) || 0,
+        f => ({ f: { ...f, who: l.person } }),
+        () => HF.who === l.person
+      );
+  });
+  HIST_KINDS.forEach(([k]) => {
+    const name = T("history.kind." + k),
+      idx = hit(name, true);
+    if (idx.length)
+      add(
+        "kind",
+        name,
+        SUG_KIND_EMB[k],
+        idx,
+        0,
+        f => ({ f: { ...f, kind: k, cat: "", who: "", from: "", to: "" } }),
+        () => HF.kind === k
+      );
+  });
+  /* a month: for each year that has entries in it, newest first; a year that has entries */
+  const have = new Set(S.txns.map(t => t.date.slice(0, 7))),
+    months = [];
+  sugMonths().forEach((names, m) => {
+    const idx = [...new Set(names.flatMap(n => hit(n, true)))];
+    if (!idx.length) return;
+    [...have].filter(ym => +ym.slice(5) === m + 1).forEach(ym => months.push({ ym, idx }));
+  });
+  months
+    .sort((a, b) => (a.ym < b.ym ? 1 : -1))
+    .forEach(({ ym, idx }) =>
+      add(
+        "period",
+        capFirst(monthLabel(ym, true)),
+        SUG_PERIOD_EMB,
+        idx,
+        0,
+        f => ({ f, p: { period: "month", anchor: ym + "-01", rs: null, re: null } }),
+        () => HP.period === "month" && HP.anchor.slice(0, 7) === ym
+      )
+    );
+  toks.forEach((t, i) => {
+    if (!/^\d{4}$/.test(t.f) || !S.txns.some(x => x.date.slice(0, 4) === t.f)) return;
+    add(
+      "period",
+      t.f,
+      SUG_PERIOD_EMB,
+      [i],
+      0,
+      f => ({ f, p: { period: "year", anchor: t.f + "-01-01", rs: null, re: null } }),
+      () => HP.period === "year" && HP.anchor.slice(0, 4) === t.f
+    );
+  });
+  /* an amount: a bare number gives the amount itself, more than and less than; ">50" and "<50" just that one */
+  toks.forEach((t, i) => {
+    const m = /^([<>])(.*)$/.exec(t.raw),
+      n = srNum(m ? srFold(m[2]) : t.f);
+    if (!n) return;
+    const list = m
+      ? [(m[1] === ">" ? "gt:" : "lt:") + rnd(n.lo)]
+      : ["eq:" + n.lo + ":" + n.hi, "gt:" + rnd(n.lo), "lt:" + rnd(n.lo)];
+    list.forEach(amt =>
+      add(
+        "amount",
+        srAmtLabel(amt),
+        SUG_AMT_EMB,
+        [i],
+        0,
+        f => ({ f: { ...f, amt } }),
+        () => HF.amt === amt
+      )
+    );
+  });
+  return out;
+}
+const SUG_GROUPS = ["pay", "payIn", "cat", "acc", "who", "kind", "period", "amount"];
+/* the suggestions for the words in the field, counted, as markup (at most three a group; one already set, or leaving no
+   entry, is left out); "" when there are none */
+function findSugs() {
+  const q = HF.q,
+    toks = sugTokens(q);
+  SUGS = [];
+  if (!toks.length) return "";
+  const all = sugFind(toks);
+  let rows = "";
+  SUG_GROUPS.forEach(g => {
+    const mine = all.filter(s => s.g === g && !s.set());
+    /* the most used first (the months already newest first), then counted: the first few that leave something */
+    if (g !== "period" && g !== "amount") mine.sort((a, b) => b.idx.length - a.idx.length || b.use - a.use);
+    let kept = 0;
+    mine.slice(0, SUG_LOOK).forEach(s => {
+      if (kept >= SUG_MAX) return;
+      const left = toks
+          .filter((_, i) => !s.idx.includes(i))
+          .map(t => t.raw)
+          .join(" "),
+        r = s.apply({ ...HF, q: left }),
+        n = sugCount(histNorm(r.f), r.p ? { ...HP, ...r.p } : HP);
+      if (!n) return;
+      kept++;
+      s.q = q;
+      s.left = left;
+      s.r = r;
+      const group = T("search.group." + g),
+        line = T("search.sugLine", { group, count: n });
+      rows +=
+        '<button class="sug" data-act="fs-pick" data-v="' +
+        SUGS.length +
+        '" aria-label="' +
+        esc(T("search.sugLabel", { group, title: s.title, count: n })) +
+        '">' +
+        emblem(s.emb, "em") +
+        '<span class="mid"><span class="st" dir="auto">' +
+        esc(s.title) +
+        '</span><span class="s">' +
+        esc(line) +
+        "</span></span></button>";
+      SUGS.push(s);
+    });
+  });
+  return rows
+    ? '<div class="sec" role="heading" aria-level="2">' +
+        TH("search.suggestions") +
+        '</div><div class="list">' +
+        rows +
+        "</div>"
+    : "";
+}
+/* a suggestion tapped: its filter is set, the words that found it leave the field (the rest stay) and the field keeps
+   the focus, the caret at its end */
+function findPick(i) {
+  const s = SUGS[i];
+  if (!s || s.q !== HF.q) return findDraw(); // the field moved on: the list is about to follow
+  HF = histNorm(s.r.f);
+  if (s.r.p) Object.assign(HP, s.r.p);
+  HSHOW.sig = "";
+  const inp = $("#find-q");
+  if (inp) inp.value = HF.q;
+  const c = $('#app [data-act="find-clear"]');
+  if (c) c.hidden = !HF.q;
+  findDraw();
+  if (inp) {
+    inp.focus({ preventScroll: true });
+    try {
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+    } catch (e) {}
+  }
+}
+/* Enter: the list follows at once and the keyboard closes */
+function findSubmit() {
+  findDraw();
+  const inp = $("#find-q");
+  if (inp) inp.blur();
 }

@@ -484,6 +484,316 @@ const ok = (c, m) => {
       await c3.close();
     }
   }
+
+  // ---- part 3: suggestions, on the notebook of the store pictures (media.js demo())
+  {
+    const fs = require("fs"),
+      path = require("path");
+    const src = fs.readFileSync(path.join(__dirname, "..", "media.js"), "utf8"),
+      demo = new Function(src.slice(src.indexOf("const pad"), src.indexOf("/* each picture")) + "; return demo();")();
+    const open = async (locale = "en-US", extra) => {
+      const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale });
+      await c.addInitScript(s => {
+        window.Android = { getColors: () => null, setBars() {} };
+        if (!localStorage.getItem("tally:v1")) localStorage.setItem("tally:v1", s);
+      }, JSON.stringify(demo));
+      const p = await c.newPage();
+      p.on("pageerror", e => errors.push(e.message));
+      await p.goto(appUrl);
+      if (extra) await p.evaluate(extra);
+      await p.click('#app [data-act="search-open"]');
+      return { c, p };
+    };
+    const typeIn = async (p, q) => {
+      await p.fill("#find-q", "");
+      await p.keyboard.type(q);
+      await p.waitForTimeout(250);
+    };
+    const sugs = p =>
+      p.evaluate(() =>
+        [...document.querySelectorAll("#hbody .sug")].map(b => ({
+          t: b.querySelector(".st").textContent,
+          s: b.querySelector(".s").textContent,
+          a: b.getAttribute("aria-label"),
+          act: b.dataset.act,
+          h: b.getBoundingClientRect().height,
+        }))
+      );
+    const line = (l, t) => l.find(x => x.t === t);
+    const { c: c4, p: pg } = await open();
+
+    await typeIn(pg, "corner");
+    let l = await sugs(pg);
+    ok(
+      line(l, "Corner Café") && line(l, "Corner Café").s === "Paid to · 19 entries",
+      "corner: Paid to Corner Café, 19: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+    ok(
+      line(l, "Fresh Corner") && line(l, "Fresh Corner").s === "Paid to · 14 entries",
+      "corner: Paid to Fresh Corner, 14"
+    );
+    ok(line(l, "Corner Café").a === "Paid to Corner Café, 19 entries", "one-line label: " + line(l, "Corner Café").a);
+    ok(
+      l.every(x => x.act === "fs-pick" && x.h >= 48),
+      "rows are fs-pick buttons of 48 px or more"
+    );
+    const heads = await pg.evaluate(() => {
+      const b = document.querySelector("#hbody");
+      return {
+        first: b.firstElementChild.textContent,
+        secs: [...b.querySelectorAll(".sec")].map(x => x.textContent),
+        order: b.querySelector(".sec").compareDocumentPosition(b.querySelector(".sug")) & 4,
+      };
+    });
+    ok(
+      heads.first === "Suggestions" && heads.secs.join("|") === "Suggestions|Entries",
+      "one Suggestions heading on top, then Entries: " + heads.secs
+    );
+
+    await typeIn(pg, "eat");
+    l = await sugs(pg);
+    const eat = await pg.evaluate(() => histRows(histList({ ...histBlank(), cat: "food" })).length);
+    ok(
+      l.length === 1 && l[0].t === "Eating out" && l[0].s === "Category · " + eat + " entries",
+      "eat: the category Eating out: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+
+    await typeIn(pg, "cash");
+    l = await sugs(pg);
+    const cash = await pg.evaluate(() => histRows(histList({ ...histBlank(), acc: "c" })).length);
+    ok(
+      l.length === 1 && l[0].t === "Cash" && l[0].s === "Account · " + cash + " entries",
+      "cash: the account: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+
+    await typeIn(pg, "maya");
+    l = await sugs(pg);
+    ok(
+      l.length === 1 && l[0].t === "Maya" && l[0].s === "Person · 3 entries",
+      "maya: the person: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+
+    await typeIn(pg, "transf");
+    l = await sugs(pg);
+    ok(
+      l.length === 1 && l[0].t === "Transfers" && l[0].s === "Kind · 4 entries",
+      "transf: Transfers: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+    await typeIn(pg, "tr");
+    ok(
+      (await sugs(pg)).every(x => x.t !== "Transfers"),
+      "kind names match from 3 letters"
+    );
+
+    await typeIn(pg, "june");
+    l = await sugs(pg);
+    const june = await pg.evaluate(() => {
+      const [s, e] = [today().slice(0, 4) + "-06-01", today().slice(0, 4) + "-06-30"];
+      return histRows(S.txns.filter(t => t.date >= s && t.date <= e)).length;
+    });
+    ok(
+      line(l, "June 2026") && line(l, "June 2026").s === "Period · " + june + " entries",
+      "june: June 2026 with its count: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+    let rowsTxt = await pg.evaluate(() => document.querySelector("#hbody").textContent);
+    ok(/June rent/.test(rowsTxt), "june: the June rent entry is still listed");
+    await typeIn(pg, "jun");
+    ok(!!line(await sugs(pg), "June 2026"), "a month from 3 letters");
+    await typeIn(pg, "ju");
+    ok(!(await sugs(pg)).some(x => x.s.startsWith("Period")), "not from 2 letters");
+
+    await typeIn(pg, "2026");
+    l = await sugs(pg);
+    const yr = await pg.evaluate(() => histRows(S.txns).length);
+    ok(
+      line(l, "2026") && line(l, "2026").s === "Period · " + yr + " entries",
+      "2026: the year: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+    await typeIn(pg, "2024");
+    ok(!(await sugs(pg)).some(x => x.s.startsWith("Period")), "a year without entries is not offered");
+
+    // amounts: an entry for each row to have something to leave
+    await pg.evaluate(() => {
+      const e = (id, amount) => ({
+        id,
+        ts: 9e3 + +id.slice(1),
+        date: today(),
+        type: "expense",
+        amount,
+        account: "b",
+        cat: "shopping",
+        payee: "Kiosk",
+        note: "",
+      });
+      S.txns.push(e("x1", 50.25), e("x2", 2026.5), e("x3", 1250.5));
+      save();
+    });
+    await typeIn(pg, "50");
+    l = await sugs(pg);
+    ok(
+      l.map(x => x.t).join("|") === "50.00 to 50.99|More than 50.00|Less than 50.00" &&
+        l.every(x => x.s.startsWith("Amount · ")),
+      "50: three amount rows: " + JSON.stringify(l.map(x => [x.t, x.s]))
+    );
+    await typeIn(pg, ">50");
+    l = await sugs(pg);
+    ok(l.length === 1 && l[0].t === "More than 50.00", ">50: one row: " + JSON.stringify(l.map(x => x.t)));
+    await typeIn(pg, "<50");
+    l = await sugs(pg);
+    ok(l.length === 1 && l[0].t === "Less than 50.00", "<50: one row");
+    await typeIn(pg, "50.25");
+    l = await sugs(pg);
+    ok(l[0].t === "50.25" && l.length === 3, "50.25: exactly that amount: " + JSON.stringify(l.map(x => x.t)));
+    await typeIn(pg, "2026");
+    l = await sugs(pg);
+    ok(
+      l.some(x => x.s.startsWith("Period")) && l.some(x => x.t === "2,026.00 to 2,026.99"),
+      "2026: the year and the amount rows: " + JSON.stringify(l.map(x => x.t))
+    );
+
+    // tapping
+    const tap = async (p, t) => {
+      await p.click('#hbody .sug:has(.st:text-is("' + t + '"))');
+      await p.waitForTimeout(60);
+      return p.evaluate(() => ({
+        hf: { ...HF },
+        hp: { ...HP },
+        val: $("#find-q").value,
+        focus: document.activeElement && document.activeElement.id,
+        caret: $("#find-q").selectionStart === $("#find-q").value.length,
+        chips: [...document.querySelectorAll("#app .hchip")].map(b => b.textContent.trim()),
+        sugs: [...document.querySelectorAll("#hbody .sug .st")].map(x => x.textContent),
+      }));
+    };
+    await typeIn(pg, "corner cafe");
+    let r = await tap(pg, "Corner Café");
+    ok(
+      r.hf.pay === "out:corner cafe" && r.hf.q === "" && r.val === "",
+      "tap Paid to: payee set, both words removed: " + JSON.stringify([r.hf.pay, r.hf.q, r.val])
+    );
+    ok(r.focus === "find-q" && r.caret, "the field keeps the focus, caret at the end");
+    ok(r.chips.includes("Paid to Corner Café"), "its chip: " + r.chips);
+    await typeIn(pg, "corner");
+    l = await sugs(pg);
+    ok(!l.some(x => x.t === "Corner Café"), "one already set is not shown");
+    ok(!!line(l, "Fresh Corner"), "another payee replaces the one set (14 entries)");
+    await pg.evaluate(() => (findClear(), histClear(), findDraw()));
+    await typeIn(pg, "corner coffee");
+    ok(!line(await sugs(pg), "Fresh Corner"), "Fresh Corner with the other word would leave none: not shown");
+    r = await tap(pg, "Corner Café");
+    ok(
+      r.hf.pay === "out:corner cafe" && r.hf.q === "coffee" && r.val === "coffee" && r.caret,
+      "only the words that found it go: " + r.hf.q
+    );
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "eat");
+    r = await tap(pg, "Eating out");
+    ok(r.hf.cat === "food" && r.hf.q === "", "tap category: " + r.hf.cat);
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "cash");
+    r = await tap(pg, "Cash");
+    ok(r.hf.acc === "c" && r.hf.q === "" && r.chips.includes("Cash"), "tap account");
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "maya");
+    r = await tap(pg, "Maya");
+    ok(r.hf.who === "Maya" && r.hf.q === "", "tap person");
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "transf");
+    r = await tap(pg, "Transfers");
+    ok(r.hf.kind === "xfer" && r.hf.q === "", "tap kind");
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "june");
+    r = await tap(pg, "June 2026");
+    ok(
+      r.hp.period === "month" && r.hp.anchor.slice(0, 7) === "2026-06" && r.hf.q === "" && r.val === "",
+      "tap Period sets the month: " + JSON.stringify(r.hp)
+    );
+    ok(r.chips.length === 0 && !r.sugs.length, "the period chip is the bar's own; no suggestion left");
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "2026");
+    r = await tap(pg, "2026");
+    ok(r.hp.period === "year" && r.hp.anchor.slice(0, 4) === "2026", "tap the year");
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "50");
+    r = await tap(pg, "More than 50.00");
+    ok(r.hf.amt === "gt:50" && r.hf.q === "" && r.chips.includes("More than 50.00"), "tap amount: " + r.hf.amt);
+    await pg.evaluate(() => (histClear(), findDraw()));
+    await typeIn(pg, "50");
+    r = await tap(pg, "50.00 to 50.99");
+    ok(r.hf.amt === "eq:50:51", "tap the amount itself: " + r.hf.amt);
+
+    // one that would leave none is not shown
+    await pg.evaluate(() => {
+      histClear();
+      HF.kind = "in";
+      findDraw();
+    });
+    await typeIn(pg, "corner");
+    ok(!(await sugs(pg)).some(x => x.t === "Corner Café"), "a suggestion leaving no entries is not shown");
+
+    // Enter: the pending redraw at once, and the keyboard closes
+    await pg.evaluate(() => (histClear(), findClear(), findDraw()));
+    await pg.fill("#find-q", "");
+    await pg.keyboard.type("corner");
+    await pg.keyboard.press("Enter");
+    r = await pg.evaluate(() => ({
+      n: document.querySelectorAll("#hbody .sug").length,
+      focus: document.activeElement && document.activeElement.id,
+      q: HF.q,
+    }));
+    ok(
+      r.n > 0 && r.focus !== "find-q" && r.q === "corner",
+      "Enter draws now and blurs the field: " + JSON.stringify(r)
+    );
+
+    // with every account in one currency the labels carry it
+    await pg.evaluate(() => (histClear(), S.accounts.forEach(a => (a.currency = "USD")), findDraw()));
+    await typeIn(pg, "50");
+    ok(
+      (await sugs(pg)).map(x => x.t).join("|") === "$50.00 to $50.99|More than $50.00|Less than $50.00",
+      "one currency: amounts in it"
+    );
+
+    // the exact amount in a currency of three decimals
+    const k = await pg.evaluate(() => {
+      const was = S.accounts.map(a => a.currency);
+      S.accounts.forEach(a => (a.currency = "KWD"));
+      const out = [srAmtLabel("eq:4.75:4.755"), money(4.75, "KWD"), srNum("4.755").hi];
+      S.accounts.forEach((a, i) => (a.currency = was[i]));
+      return out;
+    });
+    ok(k[0] === k[1], "a typed exact amount reads as itself in a 3-decimal currency: " + k[0]);
+    ok(Math.abs(k[2] - 4.7555) < 1e-9, "4.755 is an exact amount, not 4.755 to 5.755: " + k[2]);
+    await c4.close();
+
+    // a German phone
+    {
+      const { c: c5, p: pd } = await open("de-DE");
+      await pd.evaluate(() => {
+        S.txns.push({
+          id: "x3",
+          ts: 9e3,
+          date: today(),
+          type: "expense",
+          amount: 1250.5,
+          account: "b",
+          cat: "shopping",
+          payee: "Kiosk",
+          note: "",
+        });
+        save();
+      });
+      await typeIn(pd, "1.250,50");
+      l = await sugs(pd);
+      ok(
+        l.length === 3 && /^1\.250,50/.test(l[0].t) && l.every(x => x.s.startsWith("Amount")),
+        "German: 1.250,50 is 1250.50: " + JSON.stringify(l.map(x => x.t))
+      );
+      r = await tap(pd, l[0].t);
+      ok(r.hf.amt === "eq:1250.5:1250.505", "German: the amount filter: " + r.hf.amt);
+      await c5.close();
+    }
+  }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();
   process.exit(fails ? 1 : 0);

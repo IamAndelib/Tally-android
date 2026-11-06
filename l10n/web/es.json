@@ -629,7 +629,25 @@
     "clear": "Borrar",
     "spent": "{{amount}} gastados",
     "received": "{{amount}} recibidos",
-    "field": "Search History"
+    "field": "Search History",
+    "suggestions": "Suggestions",
+    "entries": "Entries",
+    "group": {
+      "pay": "Paid to",
+      "payIn": "Received from",
+      "cat": "Category",
+      "acc": "Account",
+      "who": "Person",
+      "kind": "Kind",
+      "period": "Period",
+      "amount": "Amount"
+    },
+    "sugLine_one": "{{group}} · {{count}} entry",
+    "sugLabel_one": "{{group}} {{title}}, {{count}} entry",
+    "sugLine_many": "{{group}} · {{count}} entries",
+    "sugLabel_many": "{{group}} {{title}}, {{count}} entries",
+    "sugLine_other": "{{group}} · {{count}} entries",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} entries"
   },
   "nav": {
     "home": "Inicio",

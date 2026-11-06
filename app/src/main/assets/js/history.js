@@ -551,16 +551,25 @@ function histParts() {
       "</div>";
   }
   if (idle) return { head, body: "" };
+  const sug = V.find && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
   if (!list.length)
     return {
       head,
       body:
+        sug +
         '<div class="empty">' +
         (anySet ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn() : TH("history.none.all")) +
         "</div>",
     };
   const r = histMonths(list, 0, Math.max(HSHOW.n, HIST_CHUNK));
-  return { head, body: r.html + (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : "") };
+  return {
+    head,
+    body:
+      sug +
+      (sug ? '<div class="sec" role="heading" aria-level="2">' + TH("search.entries") + "</div>" : "") +
+      r.html +
+      (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : ""),
+  };
 }
 function historyView() {
   histDrop();

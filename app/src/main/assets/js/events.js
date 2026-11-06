@@ -300,6 +300,9 @@ document.addEventListener("click", ev => {
     case "find-clear":
       findClear();
       break;
+    case "fs-pick":
+      findPick(+v);
+      break;
     case "f-showcats": {
       const g = $("#f-catgrid");
       g.hidden = !g.hidden;
@@ -748,6 +751,9 @@ document.addEventListener("keydown", e => {
   } else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
     e.preventDefault();
     (e.target.id === "nt-name" ? addType : useHex)();
+  } else if (e.key === "Enter" && e.target.id === "find-q") {
+    e.preventDefault();
+    findSubmit();
   } else if (e.key === "Enter" && e.target.id === "cur-q") {
     const b = $('#curlist [data-act="cur-pick"]');
     if (b) {

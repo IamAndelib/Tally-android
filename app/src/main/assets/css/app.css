@@ -1445,7 +1445,8 @@ input {
 .tx + .tx {
   border-top: 1px solid var(--outline-variant);
 }
-.tx .em {
+.tx .em,
+.sug .em {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1455,9 +1456,34 @@ input {
   flex: none;
   background: var(--surface-high);
 }
-.tx .mid {
+.tx .mid,
+.sug .mid {
   flex: 1;
   min-width: 0;
+}
+/* a suggestion in search mode (search.js findSugs): emblem, what it is, then its group and how many entries it leaves */
+.sug {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 0;
+}
+.sug + .sug {
+  border-top: 1px solid var(--outline-variant);
+}
+.sug .st,
+.sug .s {
+  display: block;
+  overflow-wrap: break-word;
+}
+.sug .s {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  line-height: 1.35;
 }
 /* a row's texts wrap rather than lose letters; the icon stays in the middle of the row however tall it gets */
 .tx .d {

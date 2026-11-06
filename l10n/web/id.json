@@ -619,7 +619,21 @@
     "clear": "Hapus",
     "spent": "{{amount}} keluar",
     "received": "{{amount}} masuk",
-    "field": "Search History"
+    "field": "Search History",
+    "suggestions": "Suggestions",
+    "entries": "Entries",
+    "group": {
+      "pay": "Paid to",
+      "payIn": "Received from",
+      "cat": "Category",
+      "acc": "Account",
+      "who": "Person",
+      "kind": "Kind",
+      "period": "Period",
+      "amount": "Amount"
+    },
+    "sugLine_other": "{{group}} · {{count}} entries",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} entries"
   },
   "nav": {
     "home": "Beranda",
