@@ -362,8 +362,10 @@ document.addEventListener("click", ev => {
         break;
       }
       const id = F.id;
-      closeSheet();
-      withUndo(T("common.deleted"), () => deleteEntries([id]));
+      deleteAsk([id], keep => {
+        closeSheet();
+        withUndo(T("common.deleted"), () => deleteEntries([id], keep));
+      });
       break;
     }
     case "tr-new":
@@ -397,8 +399,10 @@ document.addEventListener("click", ev => {
       break;
     case "adj-del": {
       const id = F.id;
-      closeSheet();
-      withUndo(T("fix.deleted"), () => deleteEntries([id]));
+      deleteAsk([id], keep => {
+        closeSheet();
+        withUndo(T("fix.deleted"), () => deleteEntries([id], keep));
+      });
       break;
     }
     case "acc-open":
@@ -635,16 +639,18 @@ document.addEventListener("click", ev => {
         snack(no);
         return;
       }
-      let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
-      withUndo(
-        () => T("history.deleted", { count: n }),
-        () => {
-          n = S.txns.length;
-          deleteEntries(ids);
-          n -= S.txns.length;
-          V.sel = null;
-        }
-      );
+      deleteAsk(ids, keep => {
+        let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
+        withUndo(
+          () => T("history.deleted", { count: n }),
+          () => {
+            n = S.txns.length;
+            deleteEntries(ids, keep);
+            n -= S.txns.length;
+            V.sel = null;
+          }
+        );
+      });
       break;
     }
     case "theme":

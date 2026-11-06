@@ -473,7 +473,16 @@
     "pickCat": "Elige una categoría"
   },
   "entries": {
-    "fullHistory": "Abrir historial completo"
+    "fullHistory": "Abrir historial completo",
+    "delUpdate": "Eliminar y actualizar el saldo",
+    "delKeep": "Eliminar y mantener el saldo",
+    "delTitle_one": "¿Eliminar este movimiento?",
+    "delTitle_many": "¿Eliminar estos {{count}} movimientos?",
+    "delTitle_other": "¿Eliminar estos {{count}} movimientos?",
+    "delBody": "¿Debe su importe volver a la cuenta o el saldo quedarse como está?",
+    "delBodyMany": "¿Deben sus importes volver a las cuentas o los saldos quedarse como están?",
+    "delBodyLoan": "Un movimiento de préstamo o deuda no puede mantener el saldo: su importe vuelve a la cuenta.",
+    "delBodyLoanMany": "Los movimientos de préstamos y deudas no pueden mantener el saldo: los importes vuelven a las cuentas."
   },
   "home": {
     "nothingYet": "Aún no has anotado nada.",

@@ -127,6 +127,7 @@ function askDialog(title, text, okText, onOk, o) {
    data): choiceDialog(title, text, buttons, o). Each button is {role, label, run, confirm}; its role sets how it looks:
      keep    green: the safe answer that keeps data (Restore, Save backup)
      destroy red: the answer that loses data (Overwrite, Delete)
+     destroy-outline  outlined red: the milder of two ways to delete (Delete, keep the balance)
      main    filled in the accent colour: the plain next step (Choose another folder)
      alt     tonal: a side road (Choose another file)
      out     outlined: the way out (Cancel, Go back); with no `run` it only closes
@@ -138,7 +139,14 @@ function askDialog(title, text, okText, onOk, o) {
    Focus goes into each step through layerFocus() (the redraw drops the pressed button, so it moves to the dialog) and
    back to where it was when the dialog closes. */
 let CHOICE = null;
-const CHOICE_CLS = { keep: "cd-keep", destroy: "cd-destroy", main: "cd-main", alt: "cd-alt", out: "cd-out" };
+const CHOICE_CLS = {
+  keep: "cd-keep",
+  destroy: "cd-destroy",
+  "destroy-outline": "cd-destroy-out",
+  main: "cd-main",
+  alt: "cd-alt",
+  out: "cd-out",
+};
 function choiceDialog(title, text, buttons, o) {
   CHOICE = buttons;
   $("#pop").innerHTML =

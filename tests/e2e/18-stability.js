@@ -159,6 +159,8 @@ const ago = n => {
   await act("sel-start");
   await act("sel-toggle", "d2");
   await act("sel-del");
+  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.waitForTimeout(350);
   await settle();
   S = await state();
   ok(
@@ -174,6 +176,8 @@ const ago = n => {
   await act("sel-toggle", "d1");
   await act("sel-toggle", "d2");
   await act("sel-del");
+  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.waitForTimeout(350);
   await settle();
   S = await state();
   ok(S.loans.length === 0 && S.txns.length === 0, "deleting every draw removes the loan and its payment");

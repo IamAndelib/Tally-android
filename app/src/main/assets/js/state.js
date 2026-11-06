@@ -645,9 +645,12 @@ function guardOverdraw(mutate, date, proceed) {
   );
 }
 /* delete entries by id, keeping transfers + fees and loans + their payments consistent: a loan goes (with its
-   payments) only when every one of its draws is deleted; otherwise it follows its remaining draws */
-function deleteEntries(ids) {
+   payments) only when every one of its draws is deleted; otherwise it follows its remaining draws.
+   With `keep`, each account's opening balance takes over what the deleted entries did to it (the same per-account
+   effect balances() adds up), so no balance changes and no entry is added. Never for loan entries (see canKeepBalance). */
+function deleteEntries(ids, keep) {
   ids = new Set(ids);
+  const was = keep && S.txns;
   const isDraw = t => t.type === "loan" && t.principal,
     hit = new Set(S.txns.filter(t => ids.has(t.id) && isDraw(t)).map(t => t.loan)),
     gone = new Set([...hit].filter(lid => S.txns.every(t => !(isDraw(t) && t.loan === lid) || ids.has(t.id))));
@@ -667,4 +670,17 @@ function deleteEntries(ids) {
   hit.forEach(lid => {
     if (!gone.has(lid)) relinkLoan(lid);
   });
+  if (was) {
+    const fx = {};
+    S.accounts.forEach(a => (fx[a.id] = 0));
+    was.forEach(t => {
+      if (ids.has(t.id)) applyEntry(fx, t);
+    });
+    S.accounts.forEach(a => {
+      if (fx[a.id]) a.opening = rnd((+a.opening || 0) + fx[a.id]);
+    });
+  }
 }
+/* "Delete, keep the balance" is offered only when every entry is plain money: a loan's amounts come from its entries,
+   so a loan entry keeps today's delete (the balance follows) */
+const canKeepBalance = ids => ids.every(id => entry(id) && entry(id).type !== "loan");

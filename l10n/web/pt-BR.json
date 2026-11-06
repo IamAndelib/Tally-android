@@ -473,7 +473,16 @@
     "pickCat": "Escolha uma categoria"
   },
   "entries": {
-    "fullHistory": "Abrir histórico completo"
+    "fullHistory": "Abrir histórico completo",
+    "delUpdate": "Excluir e atualizar o saldo",
+    "delKeep": "Excluir e manter o saldo",
+    "delTitle_one": "Excluir este lançamento?",
+    "delTitle_many": "Excluir estes {{count}} lançamentos?",
+    "delTitle_other": "Excluir estes {{count}} lançamentos?",
+    "delBody": "O valor deve voltar para a conta ou o saldo deve ficar como está?",
+    "delBodyMany": "Os valores devem voltar para as contas ou os saldos devem ficar como estão?",
+    "delBodyLoan": "Um lançamento de empréstimo não pode manter o saldo: o valor volta para a conta.",
+    "delBodyLoanMany": "Lançamentos de empréstimo não podem manter o saldo: os valores voltam para as contas."
   },
   "home": {
     "nothingYet": "Nada anotado ainda.",

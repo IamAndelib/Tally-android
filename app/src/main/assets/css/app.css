@@ -3076,6 +3076,11 @@ body.lock {
   background: var(--spent);
   color: var(--surface);
 }
+.btn.cd-destroy-out {
+  background: none;
+  border: 1px solid var(--spent);
+  color: var(--spent);
+}
 .btn.cd-main {
   background: var(--primary);
   color: var(--on-primary);

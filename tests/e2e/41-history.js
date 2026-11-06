@@ -1194,6 +1194,8 @@ const ok = (c, m) => {
     ok((await state()).open === "coffee", "the row stays open behind the form");
     await page.click('#app .txo [data-act="tx-del"]');
     await page.waitForTimeout(100);
+    await page.click("#pop .cd-destroy"); // Delete and update the balance
+    await page.waitForTimeout(350);
     const del = await page.evaluate(() => ({
       txo: document.querySelectorAll("#app .txo").length,
       gone: !S.txns.some(t => t.id === "coffee"),
@@ -1438,6 +1440,8 @@ const ok = (c, m) => {
     await page.click('#sheet .tx[data-v="e2"]');
     await page.click('#sheet .txo [data-act="tx-del"]');
     await page.waitForTimeout(100);
+    await page.click("#pop .cd-destroy");
+    await page.waitForTimeout(350);
     ok(!(await page.$('#sheet .tx[data-v="e2"]')), "deleted: the row leaves the sheet");
     await page.click('#snack [data-act="undo"]');
     await page.waitForTimeout(100);
@@ -1450,6 +1454,8 @@ const ok = (c, m) => {
     await page.click('#sheet .tx[data-v="e2"]');
     await page.click('#sheet .txo [data-act="tx-del"]');
     await page.waitForTimeout(100);
+    await page.click("#pop .cd-destroy");
+    await page.waitForTimeout(350);
     await page.evaluate(() => closeSheet());
     await page.click('#snack [data-act="undo"]');
     await page.waitForTimeout(150);
@@ -1754,6 +1760,258 @@ const ok = (c, m) => {
       "scrolling to the end shows every row: " + JSON.stringify(end) + " / " + r.total
     );
     await ctx.close();
+  }
+
+  // ---- Delete asks whether the balance changes or stays
+  {
+    const { ctx, page } = await open();
+    const seedAll = () =>
+      page.evaluate(() => {
+        const d = today(),
+          e = (id, type, amount, account, extra) =>
+            Object.assign({ id, ts: 1, date: d, type, amount, account, cat: "food", note: "" }, extra);
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = d;
+        S.accounts.push(
+          { id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1000, archived: false },
+          { id: "b", name: "Cash", type: "cash", currency: "USD", opening: 500, archived: false },
+          { id: "c", name: "Euro", type: "bank", currency: "EUR", opening: 200, archived: false }
+        );
+        S.loans.push({ id: "L", kind: "lend", person: "Sam", account: "a", date: d, status: "open" });
+        S.txns.push(
+          e("sp", "expense", 30.5, "a"),
+          e("in", "income", 100, "a"),
+          e("tr", "transfer", 50, "a", { to: "b", feeId: "trf" }),
+          e("trf", "expense", 2, "a", { cat: "fees", feeOf: "tr" }),
+          e("fx", "transfer", 40, "a", { to: "c", toAmount: 36.123 }),
+          e("ad", "adjust", -20, "b"),
+          e("d1", "loan", 100, "a", { dir: "out", loan: "L", principal: true }),
+          e("p1", "loan", 40, "a", { dir: "in", loan: "L" })
+        );
+        save();
+        V.screen = "history";
+        V.sel = null;
+        V.open = "";
+        render();
+      });
+    const snap = () => page.evaluate(() => JSON.stringify(S));
+    const bals = () => page.evaluate(() => balances());
+    const opens = () => page.evaluate(() => Object.fromEntries(S.accounts.map(a => [a.id, a.opening])));
+    const ids = () => page.evaluate(() => S.txns.map(t => t.id).sort());
+    const pause = () => page.waitForTimeout(350);
+    const shape = () =>
+      page.evaluate(() => ({
+        title: (document.querySelector("#pop .dlg-t") || {}).textContent,
+        text: (document.querySelector("#pop .dlg-x") || {}).textContent,
+        btns: [...document.querySelectorAll("#pop .btn")].map(
+          b => b.className.replace("btn ", "") + ":" + b.textContent
+        ),
+      }));
+    const askRow = async id => {
+      await page.evaluate(id => rowToggle(document.querySelector('.tx[data-v="' + id + '"]'), id), id);
+      await page.click('#app .txo [data-act="tx-del"]');
+      await pause();
+    };
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const near = (a, b) => Math.abs(a - b) < 0.0005;
+
+    await seedAll();
+    const before0 = await snap();
+    await askRow("sp");
+    const sh = await shape();
+    ok(
+      sh.title === "Delete this entry?" &&
+        sh.text === "Should its amount go back to the account, or the balance stay as it is?" &&
+        same(sh.btns, [
+          "cd-destroy:Delete and update the balance",
+          "cd-destroy-out:Delete, keep the balance",
+          "cd-out:Cancel",
+        ]),
+      "an opened row's Delete asks: " + JSON.stringify(sh)
+    );
+    ok((await snap()) === before0, "asking changes nothing");
+    await page.click("#pop .cd-out");
+    await pause();
+    ok(
+      (await snap()) === before0 &&
+        !(await page.$("#pop .dialog")) &&
+        (await page.evaluate(() => document.activeElement.matches('[data-act="tx-del"]'))),
+      "Cancel changes nothing and the focus returns to Delete"
+    );
+    await askRow("sp").catch(() => {});
+    ok(
+      (await page.evaluate(() => goBack())) === true && (await snap()) === before0 && !(await page.$("#pop .dialog")),
+      "Back closes the question and changes nothing"
+    );
+
+    /* every kind: Update, Keep, Undo */
+    const kinds = [
+      ["sp", "spent", ["sp"], { a: -30.5 }, false],
+      ["in", "received", ["in"], { a: 100 }, false],
+      ["tr", "transfer with a fee", ["tr", "trf"], { a: -52, b: 50 }, false],
+      ["fx", "transfer between two currencies", ["fx"], { a: -40, c: 36.123 }, false],
+      ["ad", "balance fix", ["ad"], { b: -20 }, false],
+    ];
+    for (const [id, name, gone, fx] of kinds) {
+      await seedAll();
+      const s0 = await snap(),
+        b0 = await bals(),
+        o0 = await opens(),
+        n0 = (await ids()).length;
+      /* Update: today's delete, balances move */
+      await askRow(id);
+      await page.click("#pop .cd-destroy");
+      await pause();
+      const b1 = await bals();
+      ok(
+        (await ids()).length === n0 - gone.length &&
+          Object.keys(fx).every(k => near(b1[k], b0[k] - fx[k])) &&
+          same(await opens(), o0),
+        name + ", update: the entry goes and the balance follows"
+      );
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      ok((await snap()) === s0, name + ", update, Undo: the state is restored exactly");
+      /* Keep: balances identical, only the openings changed, no new entry */
+      await askRow(id);
+      await page.click("#pop .cd-destroy-out");
+      await pause();
+      const b2 = await bals(),
+        o2 = await opens();
+      ok(
+        Object.keys(b0).every(k => near(b2[k], b0[k])) &&
+          (await ids()).length === n0 - gone.length &&
+          Object.keys(o0).every(k => (fx[k] === undefined ? o2[k] === o0[k] : near(o2[k], o0[k] + fx[k]))) &&
+          (await page.evaluate(g => g.every(x => !S.txns.some(t => t.id === x)), gone)),
+        name + ", keep: every balance is the same, only the openings changed " + JSON.stringify(o2)
+      );
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      ok((await snap()) === s0, name + ", keep, Undo: entries, fee link and every opening restored exactly");
+    }
+
+    /* a loan payment: only "update" */
+    await seedAll();
+    {
+      const s0 = await snap();
+      await askRow("p1");
+      const lp = await shape();
+      ok(
+        lp.title === "Delete this entry?" &&
+          lp.btns.length === 2 &&
+          lp.btns[0] === "cd-destroy:Delete and update the balance" &&
+          lp.btns[1] === "cd-out:Cancel",
+        "a loan payment is not offered to keep the balance: " + JSON.stringify(lp)
+      );
+      await page.click("#pop .cd-destroy");
+      await pause();
+      ok(!(await ids()).includes("p1"), "…and its delete works");
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      ok((await snap()) === s0, "…and Undo restores exactly");
+    }
+
+    /* the entry sheet's Delete and the transfer and fix sheets' Delete ask the same */
+    await seedAll();
+    for (const [id, open] of [
+      ["sp", () => txSheet("sp")],
+      ["fx", () => trSheet("fx")],
+      ["ad", () => adjSheet("ad")],
+    ]) {
+      const s0 = await snap(),
+        b0 = await bals();
+      await page.evaluate(open);
+      await page.waitForTimeout(150);
+      const act = await page.evaluate(() => (document.querySelector('#sheet [data-act$="-del"]') || {}).dataset.act);
+      await page.click('#sheet [data-act="' + act + '"]');
+      await pause();
+      ok(
+        (await page.isVisible("#pop .cd-destroy-out")) && !!(await page.$("#sheet .p")) && (await snap()) === s0,
+        id + ": the sheet's Delete asks first, the sheet stays"
+      );
+      await page.click("#pop .cd-out");
+      await pause();
+      ok(
+        !!(await page.$("#sheet .p")) &&
+          (await page.evaluate(a => document.activeElement.matches('[data-act="' + a + '"]'), act)),
+        id + ": Cancel leaves the sheet, the focus back on Delete"
+      );
+      await page.click('#sheet [data-act="' + act + '"]');
+      await pause();
+      await page.click("#pop .cd-destroy-out");
+      await pause();
+      const b1 = await bals();
+      ok(
+        !(await page.$("#sheet .p")) && Object.keys(b0).every(k => near(b1[k], b0[k])) && !(await ids()).includes(id),
+        id + ": keep from the sheet closes it and every balance is the same"
+      );
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      ok((await snap()) === s0, id + ": Undo restores exactly");
+    }
+
+    /* selections: asked once, the answer applies to each entry */
+    const selDel = async set => {
+      await page.evaluate(set => {
+        V.screen = "history";
+        V.sel = new Set(set);
+        render();
+      }, set);
+      await page.click('[data-act="sel-del"]');
+      await pause();
+    };
+    await seedAll();
+    {
+      const s0 = await snap(),
+        b0 = await bals();
+      await selDel(["sp", "in", "tr", "fx", "ad"]);
+      const sh2 = await shape();
+      ok(
+        sh2.title === "Delete these 5 entries?" &&
+          sh2.text === "Should their amounts go back to the accounts, or the balances stay as they are?" &&
+          sh2.btns.length === 3,
+        "a selection is asked once, in the plural: " + JSON.stringify(sh2)
+      );
+      await page.click("#pop .cd-destroy-out");
+      await pause();
+      const b1 = await bals(),
+        o1 = await opens();
+      ok(
+        Object.keys(b0).every(k => near(b1[k], b0[k])) &&
+          (await ids()).join() === "d1,p1" &&
+          near(o1.a, 1000 + 30.5 * -1 + 100 - 52 - 40) &&
+          near(o1.b, 500 + 50 - 20) &&
+          near(o1.c, 200 + 36.123),
+        "keep for several: all balances identical, each opening takes its entries: " + JSON.stringify(o1)
+      );
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      ok((await snap()) === s0, "Undo restores a selection exactly");
+      await selDel(["sp", "in", "tr", "fx", "ad"]);
+      await page.click("#pop .cd-destroy");
+      await pause();
+      const b2 = await bals();
+      ok(
+        near(b2.a, b0.a - (-30.5 + 100 - 52 - 40)) && near(b2.b, b0.b - 30) && near(b2.c, b0.c - 36.123),
+        "update for several: the balances follow"
+      );
+      await page.click('#snack [data-act="undo"]');
+      await pause();
+      /* with a loan entry in it, keep is not offered */
+      await selDel(["sp", "p1"]);
+      const sh3 = await shape();
+      ok(
+        sh3.btns.length === 2 && sh3.btns[0].startsWith("cd-destroy:") && sh3.btns[1] === "cd-out:Cancel",
+        "a selection holding a loan entry has no keep: " + JSON.stringify(sh3)
+      );
+      await page.click("#pop .cd-out");
+      await pause();
+      ok((await snap()) === s0, "Cancel on a selection changes nothing");
+      ok((await page.evaluate(() => V.sel && V.sel.size)) === 2, "…and the selection is still there for another try");
+      await page.evaluate(() => goBack());
+    }
+    ctx.close();
   }
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));

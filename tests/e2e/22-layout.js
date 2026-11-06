@@ -704,6 +704,27 @@ function inspect() {
       await page.evaluate(() => wipeAll());
       await page.click("#pop .cd-destroy");
     });
+    /* Delete asks whether the balance changes or stays: one entry, a selection, and a loan entry (no keep) */
+    await shot(
+      "choice-delete",
+      ev(() => deleteAsk([S.txns.find(t => t.type === "expense" && !t.feeOf).id], () => {}))
+    );
+    await shot(
+      "choice-delete-several",
+      ev(() =>
+        deleteAsk(
+          S.txns
+            .filter(t => t.type === "expense" && !t.feeOf)
+            .map(t => t.id)
+            .slice(0, 3),
+          () => {}
+        )
+      )
+    );
+    await shot(
+      "choice-delete-loan",
+      ev(() => deleteAsk([S.txns.find(t => t.type === "loan").id], () => {}))
+    );
     await shot("transfer-fee", async () => {
       await page.evaluate(() => trSheet());
       await page.click('#sheet [data-act="add-fee"]');

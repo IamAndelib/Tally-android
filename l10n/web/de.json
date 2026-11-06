@@ -470,7 +470,15 @@
     "pickCat": "Wähle eine Kategorie"
   },
   "entries": {
-    "fullHistory": "Ganzen Verlauf öffnen"
+    "fullHistory": "Ganzen Verlauf öffnen",
+    "delUpdate": "Löschen und Kontostand anpassen",
+    "delKeep": "Löschen, Kontostand behalten",
+    "delTitle_one": "Diesen Eintrag löschen?",
+    "delTitle_other": "Diese {{count}} Einträge löschen?",
+    "delBody": "Soll der Betrag zum Konto zurückgehen oder der Kontostand bleiben, wie er ist?",
+    "delBodyMany": "Sollen die Beträge zu den Konten zurückgehen oder die Kontostände bleiben, wie sie sind?",
+    "delBodyLoan": "Bei einem Kredit- oder Verleih-Eintrag bleibt der Kontostand nicht erhalten: der Betrag geht zum Konto zurück.",
+    "delBodyLoanMany": "Bei Kredit- und Verleih-Einträgen bleibt der Kontostand nicht erhalten: die Beträge gehen zu den Konten zurück."
   },
   "home": {
     "nothingYet": "Noch nichts notiert.",

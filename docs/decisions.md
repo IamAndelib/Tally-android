@@ -21,6 +21,7 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-03 · P2 · "Home opens on" (Today / This month / This year) sits in Settings → Region, above the first day of the week · maintainer took the recommendation
 - 2026-11-03 · P2 · Every list in Assets and Liabilities, and Home's balance chips, reorder by hold-and-drag; Home and Assets share one account order · maintainer's request
 - 2026-11-03 · P2 · Deleting entries asks whether the balance changes or stays (kept: the account's opening balance absorbs the amount, no extra entry); wording without amounts · maintainer's request, wording to confirm
+- 2026-11-06 · P2 · Loan and lending entries are only offered "Delete and update the balance" (a loan's amounts come from its entries, so keeping the account's money would leave the two disagreeing); a selection is asked once and offers "Delete, keep the balance" only when every entry may take it · design round ruling
 - 2026-11-03 · P2 · Search shows matches grouped by kind as you type (Paid to, Received from, Categories, Entries; each with a count and total), and a group opens all its entries with their total · maintainer's request, to confirm from the demo
 - 2026-11-03 · P2 · Year picker: a grid of 12 years like the month grid, years without entries faded · maintainer's pick from the demo (grid or wheel)
 - 2026-11-03 · P2 · Default colour for credit card accounts becomes purple, so cards no longer look like banks; an account's own chosen colour is untouched · maintainer's choice

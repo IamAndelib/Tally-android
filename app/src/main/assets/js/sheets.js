@@ -1082,6 +1082,22 @@ function saveTr() {
     { row: id || nid }
   );
 }
+/* Deleting asks first whether the balance changes (go(false): today's delete) or stays (go(true): the opening balances
+   take the amounts over, deleteEntries()). Loan entries are only offered the first, one answer for a whole selection.
+   Cancel and Back change nothing; the focus goes back to the Delete that asked. */
+function deleteAsk(ids, go) {
+  const count = ids.length,
+    kept = canKeepBalance(ids);
+  choiceDialog(
+    T("entries.delTitle", { count }),
+    T("entries.del" + (kept ? "Body" : "BodyLoan") + (count > 1 ? "Many" : "")),
+    [
+      { role: "destroy", label: T("entries.delUpdate"), run: () => go(false) },
+      kept && { role: "destroy-outline", label: T("entries.delKeep"), run: () => go(true) },
+      { role: "out", label: T("common.cancel") },
+    ].filter(Boolean)
+  );
+}
 /* Delete in an opened row: the entry goes with its fee (and a loan's only draw takes its loan), with an Undo, as in
    History's selection; the entries sheet is drawn again where it was */
 function rowDelete(id) {
@@ -1105,17 +1121,19 @@ function rowDelete(id) {
       if (q) q.scrollTop = scroll;
     };
   const own = 1 + (t.feeId ? 1 : 0);
-  let n = 0;
-  withUndo(
-    () => (n > own ? T("history.deleted", { count: n }) : T("common.deleted")),
-    () => {
-      n = S.txns.length;
-      deleteEntries([id]);
-      n -= S.txns.length;
-      V.open = "";
-    },
-    null,
-    listed => redraw(true, listed)
-  );
-  redraw();
+  deleteAsk([id], keep => {
+    let n = 0;
+    withUndo(
+      () => (n > own ? T("history.deleted", { count: n }) : T("common.deleted")),
+      () => {
+        n = S.txns.length;
+        deleteEntries([id], keep);
+        n -= S.txns.length;
+        V.open = "";
+      },
+      null,
+      listed => redraw(true, listed)
+    );
+    redraw();
+  });
 }

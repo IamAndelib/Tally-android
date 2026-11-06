@@ -467,7 +467,14 @@
     "pickCat": "Pilih kategori"
   },
   "entries": {
-    "fullHistory": "Buka semua riwayat"
+    "fullHistory": "Buka semua riwayat",
+    "delUpdate": "Hapus dan perbarui saldo",
+    "delKeep": "Hapus, pertahankan saldo",
+    "delTitle_other": "Hapus transaksi ini?",
+    "delBody": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?",
+    "delBodyMany": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?",
+    "delBodyLoan": "Transaksi pinjaman atau piutang tidak bisa mempertahankan saldo: jumlahnya dikembalikan ke akun.",
+    "delBodyLoanMany": "Transaksi pinjaman atau piutang tidak bisa mempertahankan saldo: jumlahnya dikembalikan ke akun."
   },
   "home": {
     "nothingYet": "Belum ada yang dicatat.",

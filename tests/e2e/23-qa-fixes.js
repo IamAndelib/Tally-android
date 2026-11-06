@@ -140,6 +140,8 @@ const ok = (c, m) => {
   });
   await page.click('[data-act="sel-del"]');
   await settle();
+  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.waitForTimeout(350);
   ok((await snackText()).includes("Deleted 2 entries"), "delete message counts the fee: " + (await snackText()));
 
   // ---- 4. Undo never restores over a newer change

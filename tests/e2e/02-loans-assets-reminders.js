@@ -299,6 +299,8 @@ const ok = (c, m) => {
   await act("sel-start");
   await act("sel-toggle", pr.id);
   await act("sel-del");
+  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.waitForTimeout(350);
   S = await state();
   ok(
     !S.loans.some(l => l.id === L1.id) && !S.txns.some(t => t.loan === L1.id),
