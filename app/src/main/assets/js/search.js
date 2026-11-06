@@ -288,12 +288,12 @@ function sugCount(f, p) {
 const MONTH_DTF = {};
 /* the 12 months' names in the phone's own language, full and short ("Jun." loses its dot) */
 function sugMonths() {
-  const key = String(LOC.fmt);
+  const key = String(DATE_LOC);
   if (!MONTH_DTF[key]) {
     const make = month => {
       let f;
       try {
-        f = new Intl.DateTimeFormat(LOC.fmt, { month });
+        f = new Intl.DateTimeFormat(DATE_LOC, { month }); // the Gregorian calendar, as every month label is
       } catch (e) {
         f = new Intl.DateTimeFormat("en", { month });
       }
@@ -480,7 +480,12 @@ function findSugs() {
     toks = sugTokens(q);
   SUGS = [];
   if (!toks.length) return "";
-  const all = sugFind(toks);
+  const seen = new Set(),
+    all = sugFind(toks).filter(s => {
+      if (s.g !== "period" && s.g !== "amount") return true;
+      const k = s.g + "|" + s.title; // "2026 2026" is one suggestion
+      return !seen.has(k) && !!seen.add(k);
+    });
   let rows = "";
   SUG_GROUPS.forEach(g => {
     const mine = all.filter(s => s.g === g && !s.set());

@@ -764,6 +764,52 @@ const ok = (c, m) => {
     });
     ok(k[0] === k[1], "a typed exact amount reads as itself in a 3-decimal currency: " + k[0]);
     ok(Math.abs(k[2] - 4.7555) < 1e-9, "4.755 is an exact amount, not 4.755 to 5.755: " + k[2]);
+    // a transfer with a fee is one entry in its suggestion; a repeated year is one row
+    await typeIn(pg, "cash");
+    const before = (await sugs(pg)).find(x => x.t === "Cash").s;
+    await pg.evaluate(() => {
+      const d = today();
+      S.txns.push({
+        id: "f1",
+        ts: 9100,
+        date: d,
+        type: "transfer",
+        amount: 10,
+        account: "b",
+        to: "c",
+        note: "",
+        feeId: "f2",
+      });
+      S.txns.push({ id: "f2", ts: 9101, date: d, type: "expense", amount: 1, account: "b", feeOf: "f1", note: "" });
+      save();
+    });
+    await typeIn(pg, "cash");
+    const after = (await sugs(pg)).find(x => x.t === "Cash").s,
+      nb = +before.match(/\d+/)[0],
+      na = +after.match(/\d+/)[0];
+    ok(na === nb + 1, "a transfer and its fee count as one entry: " + before + " -> " + after);
+    await typeIn(pg, "2026 2026");
+    l = await sugs(pg);
+    ok(l.filter(x => x.t === "2026").length === 1, "a repeated year is one row: " + JSON.stringify(l.map(x => x.t)));
+    // Enter while an IME composes is left alone
+    await pg.fill("#find-q", "corner");
+    const comp = await pg.evaluate(() => {
+      const i = $("#find-q");
+      i.focus();
+      i.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true, cancelable: true })
+      );
+      return document.activeElement === i;
+    });
+    ok(comp, "Enter during a composition keeps the field");
+    // "Nothing matches" under suggestions is not pushed over them
+    await typeIn(pg, "corner zzzz");
+    const em = await pg.evaluate(() => {
+      const e = document.querySelector("#hbody .empty"),
+        sg = document.querySelector("#hbody .list");
+      return !e || !sg || e.getBoundingClientRect().top >= sg.getBoundingClientRect().bottom - 1;
+    });
+    ok(em, "the empty message sits below the suggestions");
     await c4.close();
 
     // a German phone
@@ -791,7 +837,86 @@ const ok = (c, m) => {
       );
       r = await tap(pd, l[0].t);
       ok(r.hf.amt === "eq:1250.5:1250.505", "German: the amount filter: " + r.hf.amt);
+      await typeIn(pd, "juni");
+      l = await sugs(pd);
+      ok(line(l, "Juni 2026"), "German: juni finds Juni 2026: " + JSON.stringify(l.map(x => x.t)));
       await c5.close();
+    }
+
+    // a phone set to the Persian calendar: January's name (in Gregorian) still finds January
+    {
+      const { c: c6, p: pf } = await open("fa-IR");
+      await pf.evaluate(() => {
+        S.txns.push({
+          id: "j1",
+          ts: 9200,
+          date: "2026-01-10",
+          type: "expense",
+          amount: 5,
+          account: "b",
+          cat: "food",
+          note: "",
+        });
+        save();
+      });
+      const name = await pf.evaluate(() => sugMonths()[0][0]);
+      await typeIn(pf, name);
+      l = await sugs(pf);
+      const jan = await pf.evaluate(
+        n => new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { month: "long" }).format(new Date(2021, 0, 15)) === n,
+        name
+      );
+      ok(
+        jan && l.length > 0 && l.some(x => x.s.startsWith("Period")),
+        "fa-IR: January's Gregorian name is January: " + name + " " + JSON.stringify(l.map(x => x.t))
+      );
+      const pick = l.find(x => x.s.startsWith("Period"));
+      r = await tap(pf, pick.t);
+      ok(r.hp.anchor.slice(0, 7) === "2026-01", "fa-IR: it sets January: " + JSON.stringify(r.hp));
+      await c6.close();
+    }
+
+    // a Turkish phone: İ and ı fold with i
+    {
+      const { c: c7, p: pt } = await open("tr-TR");
+      await pt.evaluate(() => {
+        S.txns.push({
+          id: "k1",
+          ts: 9300,
+          date: today(),
+          type: "expense",
+          amount: 5,
+          account: "b",
+          cat: "food",
+          payee: "İstanbul Kahve",
+          note: "",
+        });
+        S.txns.push({
+          id: "k2",
+          ts: 9301,
+          date: today(),
+          type: "expense",
+          amount: 6,
+          account: "b",
+          cat: "food",
+          payee: "Kırmızı Çay",
+          note: "",
+        });
+        save();
+      });
+      for (const [q, want] of [
+        ["İSTANBUL", "İstanbul Kahve"],
+        ["istanbul", "İstanbul Kahve"],
+        ["KIRMIZI", "Kırmızı Çay"],
+        ["kirmizi cay", "Kırmızı Çay"],
+      ]) {
+        await typeIn(pt, q);
+        l = await sugs(pt);
+        ok(!!line(l, want), "Turkish: " + q + " finds " + want + ": " + JSON.stringify(l.map(x => x.t)));
+      }
+      r = await tap(pt, "Kırmızı Çay");
+      ok(r.hf.q === "" && r.val === "", "Turkish: both words of the name leave the field");
+      await c7.close();
     }
   }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));

@@ -752,6 +752,7 @@ document.addEventListener("keydown", e => {
     e.preventDefault();
     (e.target.id === "nt-name" ? addType : useHex)();
   } else if (e.key === "Enter" && e.target.id === "find-q") {
+    if (e.isComposing || e.keyCode === 229) return; // an IME is still composing: Enter is its own
     e.preventDefault();
     findSubmit();
   } else if (e.key === "Enter" && e.target.id === "cur-q") {

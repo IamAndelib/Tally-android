@@ -520,6 +520,7 @@ function histCenter(app) {
   const e = V.screen === "history" && app.querySelector(".empty");
   if (!e) return;
   e.style.marginTop = "";
+  if (e.previousElementSibling && e.previousElementSibling.classList.contains("list")) return; // search suggestions above it: it follows them, never overlapping
   const b = e.getBoundingClientRect();
   e.style.marginTop = Math.max(0, Math.round(innerHeight / 2 - (b.top + scrollY) - b.height / 2)) + "px";
 }
