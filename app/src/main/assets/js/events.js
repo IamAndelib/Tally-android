@@ -576,7 +576,7 @@ document.addEventListener("click", ev => {
       const chipAt = [...document.querySelectorAll("#app .hchips .hchip")].indexOf(el);
       if (v === "acc")
         Object.assign(HF, { acc: "", from: "", to: "" }); // a side may be the account: both go with it
-      else if (v === "from" || v === "to") HF[v] = "";
+      else if (v === "from" || v === "to" || v === "pay" || v === "amt") HF[v] = "";
       else if (v === "kind") Object.assign(HF, { kind: "", cat: "", who: "", from: "", to: "" });
       else Object.assign(HF, { cat: "", who: "", from: "", to: "" });
       HF = histNorm(HF);

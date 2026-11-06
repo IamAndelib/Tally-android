@@ -6,7 +6,7 @@
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches.
  */
-const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "" });
+const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "", q: "", pay: "", amt: "" });
 let HF = histBlank();
 /* the kinds of money movement, in the order they are offered; a fee (feeOf) takes its entry's kind (histKind) */
 const HIST_KINDS = [
@@ -25,11 +25,17 @@ function histKind(t) {
   return found ? found[0] : "out"; // a fee whose entry is gone is still an expense
 }
 /* skip: "acc", "kind" or "sub" (category, person, sides) is left out, to count what an option would leave */
+/* the words typed, split once per text (every entry is compared against the same ones) */
+let HQ = ["", []];
+const srTermsOf = q => (HQ[0] === q ? HQ[1] : ((HQ = [q, srTerms(q)]), HQ[1]));
 function histMatch(t, f = HF, skip = "") {
   const host = histHost(t);
   if (host) return histMatch(host, f, skip);
   if (skip !== "acc" && f.acc && t.account !== f.acc && t.to !== f.acc) return false;
   if (skip !== "kind" && f.kind && histKind(t) !== f.kind) return false;
+  if (f.q && !srEntryHit(t, srTermsOf(f.q), false)) return false;
+  if (f.pay && !srPayHit(t, f.pay)) return false;
+  if (f.amt && !srAmtHit(t, f.amt)) return false;
   if (skip === "sub") return true;
   if (f.cat && t.cat !== f.cat) return false;
   if (f.who && !(t.loan && loan(t.loan) && loanWho(loan(t.loan)) === f.who)) return false;
@@ -90,6 +96,7 @@ function histDrop() {
   ["acc", "from", "to"].forEach(k => HF[k] && !acc(HF[k]) && (HF[k] = ""));
   if (HF.cat && !S.cats.some(c => c.id === HF.cat)) HF.cat = "";
   if (HF.who && !S.loans.some(l => loanWho(l) === HF.who)) HF.who = "";
+  if (HF.pay && !S.txns.some(t => srPayHit(t, HF.pay))) HF.pay = "";
   HF = histNorm(HF);
 }
 /* the sides of a transfer filter, made to agree with the rest: only for Transfers; with an account picked, one side set
@@ -122,7 +129,7 @@ function openHistory(f = {}) {
 /* the filters that are set and shown as chips and counted: with an account picked, a transfer side that is that account
    is implied by the other side (the sheet shows it locked), so it is neither */
 const histSet = () =>
-  ["acc", "kind", "cat", "who", "from", "to"].filter(
+  ["acc", "kind", "cat", "who", "from", "to", "pay", "amt"].filter(
     k => HF[k] && !((k === "from" || k === "to") && HF.acc && HF[k] === HF.acc && HF.from && HF.to)
   );
 const histCount = () => histSet().length;
@@ -401,6 +408,15 @@ function histChips() {
     const n = T(key, { account: acc(HF[k]).name });
     h.push(histChip(k, plain(n), n));
   });
+  if (HF.pay) {
+    const name = srPayName(HF.pay),
+      n = T(HF.pay.startsWith("in:") ? "history.payIn" : "history.payOut", { name });
+    h.push(histChip("pay", plain(n), n));
+  }
+  if (HF.amt) {
+    const n = srAmtLabel(HF.amt);
+    h.push(histChip("amt", plain(n), n));
+  }
   return h.join("");
 }
 /* the period chip (its label opens the period dialog; once set, its ✕ goes back to all time), Filters, Clear all */

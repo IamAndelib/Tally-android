@@ -218,7 +218,10 @@ const ok = (c, m) => {
       "gone account, category and person are dropped: " + r.drop
     );
     ok(r.orphan, "a fee whose entry is gone stays a row");
-    ok(r.cleared === '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}all', "histClear: " + r.cleared);
+    ok(
+      r.cleared === '{"acc":"","kind":"","cat":"","who":"","from":"","to":"","q":"","pay":"","amt":""}all',
+      "histClear: " + r.cleared
+    );
     ok(r.opened === "bhistoryall", "openHistory sets the filter and all time: " + r.opened);
     await ctx.close();
   }
@@ -378,7 +381,7 @@ const ok = (c, m) => {
     r = await sub();
     ok(
       (await page.evaluate(() => JSON.stringify(HF) + HP.period)) ===
-        '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}all' && r.clear === 0,
+        '{"acc":"","kind":"","cat":"","who":"","from":"","to":"","q":"","pay":"","amt":""}all' && r.clear === 0,
       "Clear all goes back to the default view"
     );
     // Filters is wired to filtersSheet() (Task 4 fills it)
@@ -421,7 +424,8 @@ const ok = (c, m) => {
     await page.click('#app [data-act="home"]');
     await page.click('[data-act="go"][data-v="history"]');
     ok(
-      (await page.evaluate(() => JSON.stringify(HF))) === '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}',
+      (await page.evaluate(() => JSON.stringify(HF))) ===
+        '{"acc":"","kind":"","cat":"","who":"","from":"","to":"","q":"","pay":"","amt":""}',
       "leaving History and coming back resets the filters"
     );
     await ctx.close();
@@ -654,7 +658,7 @@ const ok = (c, m) => {
     await tap("hfs-clear");
     r = await sheet();
     ok(
-      r.hfd === '{"acc":"","kind":"","cat":"","who":"","from":"","to":""}' &&
+      r.hfd === '{"acc":"","kind":"","cat":"","who":"","from":"","to":"","q":"","pay":"","amt":""}' &&
         r.hf.includes('"acc":"b"') &&
         (await page.evaluate(() => HP.period)) === "year",
       "the sheet's Clear all clears only the draft: " + r.hfd

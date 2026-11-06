@@ -24,16 +24,18 @@ const srTerms = s =>
     .split(/\s+/)
     .map(w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
     .filter(Boolean);
-/* a typed word against one text: it starts one of its words, or is one typo (a letter changed, missing, extra or two
-   swapped) from one, for a word of five letters or more, when fuzzy */
-function srHit(text, w, fuzzy) {
-  const t = srFold(text);
+/* a typed word against one folded text: it starts one of its words, or is one typo (a letter changed, missing, extra or
+   two swapped) from one, for a word of five letters or more, when fuzzy */
+function srHitFolded(t, ws, w, fuzzy) {
   if (!t) return false;
   if (NO_SPACES.test(w)) return t.replace(/\s+/g, "").includes(w);
-  const ws = srWords(t);
   if (ws.some(x => x.startsWith(w))) return true;
   return fuzzy && w.length >= 5 && ws.some(x => oneTypo(w, x.slice(0, w.length)) || oneTypo(w, x));
 }
+const srHit = (text, w, fuzzy) => {
+  const t = srFold(text);
+  return srHitFolded(t, srWords(t), w, fuzzy);
+};
 /* Damerau–Levenshtein distance of at most 1 */
 function oneTypo(a, b) {
   if (a === b) return true;
@@ -61,17 +63,87 @@ function srTexts(t) {
   if (t.type === "loan" && loan(t.loan)) out.push(loanWho(loan(t.loan)));
   return out.filter(Boolean);
 }
+/* each entry's texts folded (and split into words) once, kept until the next save(): a keystroke then only compares */
+let SR_CACHE = new Map(),
+  SR_SEQ = -1;
+function srCached(t) {
+  if (SR_SEQ !== saveSeq) {
+    SR_CACHE = new Map();
+    SR_SEQ = saveSeq;
+  }
+  let c = SR_CACHE.get(t.id);
+  if (!c) {
+    const texts = srTexts(t).map(srFold).filter(Boolean);
+    texts.words = texts.map(srWords); // each text's words, for srHitFolded
+    c = { texts, pay: t.payee ? srFold(t.payee) : "" };
+    SR_CACHE.set(t.id, c);
+  }
+  return c;
+}
+const srFolded = t => srCached(t).texts;
 /* an entry is found by its own words and amounts, or by its fee's (a fee has no row of its own: it is shown inside its
    transfer or payment, so that is the hit, listed once) */
 function srEntryHit(t, q, fuzzy) {
   const fee = t.feeId && entry(t.feeId),
-    one = (x, w, n) =>
-      (n && [x.amount, x.toAmount].some(a => a != null && a >= n.lo - 1e-9 && a < n.hi)) ||
-      srTexts(x).some(s => srHit(s, w, fuzzy));
+    one = (x, w, n) => {
+      if (n && [x.amount, x.toAmount].some(a => a != null && a >= n.lo - 1e-9 && a < n.hi)) return true;
+      const tx = srFolded(x);
+      return tx.some((s, i) => srHitFolded(s, tx.words[i], w, fuzzy));
+    };
   return q.every(w => {
     const n = srNum(w);
     return one(t, w, n) || (fee && one(fee, w, n));
   });
+}
+/* ---- the payee and amount filters of History (`HF.pay`, `HF.amt`) */
+/* "out:<folded payee>" is money spent there, "in:…" money received from them */
+function srPayHit(t, pay) {
+  const i = pay.indexOf(":"),
+    out = pay.slice(0, i) === "out";
+  return (out ? isSpend(t) : t.type === "income") && !!t.payee && srCached(t).pay === pay.slice(i + 1);
+}
+/* the payee as last written (a name is one whatever its capitals or accents), "" when no entry has it */
+function srPayName(pay) {
+  const i = pay.indexOf(":");
+  let best = null;
+  S.txns.forEach(t => {
+    if (!srPayHit(t, pay)) return;
+    if (!best || cmpDay(t.date, best.date) > 0 || (t.date === best.date && (t.ts || 0) >= (best.ts || 0))) best = t;
+  });
+  return i < 0 || !best ? "" : best.payee.trim();
+}
+/* "eq:lo:hi" is lo up to but not including hi, "gt:n" more than n, "lt:n" less than n; an entry counts by its own
+   amount (a transfer: the amount sent or received) */
+function srAmtHit(t, amt) {
+  const p = amt.split(":"),
+    v = [t.amount, t.toAmount].filter(a => a != null);
+  if (p[0] === "eq") return v.some(a => a >= +p[1] - 1e-9 && a < +p[2]);
+  if (p[0] === "gt") return v.some(a => a > +p[1]);
+  if (p[0] === "lt") return v.some(a => a < +p[1]);
+  return true;
+}
+/* the chip's words: "$50.00 to $50.99", "More than $50.00", "Less than $50.00". In the notebook's currency when every
+   account has it, else the plain number in the phone's format. */
+function srAmtLabel(amt) {
+  const p = amt.split(":"),
+    cur = S.accounts.length && S.accounts.every(a => a.currency === S.accounts[0].currency) && S.accounts[0].currency;
+  let digits = 2;
+  if (cur)
+    try {
+      digits = new Intl.NumberFormat("en", { style: "currency", currency: cur }).resolvedOptions()
+        .maximumFractionDigits;
+    } catch (e) {}
+  const show = n =>
+    cur
+      ? money(n, cur)
+      : new Intl.NumberFormat(LOC.fmt, { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(n);
+  if (p[0] === "gt") return T("history.amtMore", { amount: show(+p[1]) });
+  if (p[0] === "lt") return T("history.amtLess", { amount: show(+p[1]) });
+  const lo = +p[1],
+    hi = rnd(+p[2] - 10 ** -digits);
+  return hi <= lo + 1e-9 || +p[2] - lo < 10 ** -digits * 2
+    ? show(lo)
+    : T("history.amtRange", { from: show(lo), to: show(hi) });
 }
 const srNameHit = (name, q, fuzzy) => q.every(w => srHit(name, w, fuzzy));
 
