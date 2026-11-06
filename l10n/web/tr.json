@@ -635,6 +635,8 @@
       "cat": "Kategori",
       "acc": "Hesap",
       "who": "Kişi",
+      "whoLend": "Borç verdin",
+      "whoBorrow": "Borç aldın",
       "kind": "Tür",
       "period": "Dönem",
       "amount": "Tutar"

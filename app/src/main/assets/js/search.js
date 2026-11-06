@@ -15,11 +15,16 @@ const NO_SPACES = /[぀-ヿ㐀-䶿一-鿿가-힯฀-๿]/;
 const SR_SEP_CH = /[\s.,;:!?()[\]{}"«»“”/\\|·•–—_-]/,
   SR_SEP = new RegExp(SR_SEP_CH.source + "+");
 const srWords = s => srFold(s).split(SR_SEP).filter(Boolean);
-/* the words typed: split at spaces only, so "4.75" or "1,250" stays one number; punctuation around a word goes */
+/* the words typed: split at spaces only, so "4.75" or "1,250" stays one number; punctuation around a word goes, except
+   the ">" or "<" in front of a number ("<50": less than 50) */
 const srTerms = s =>
   srFold(s)
     .split(/\s+/)
-    .map(w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .map(w => {
+      const cmp = /^[<>]/.test(w) ? w.charAt(0) : "",
+        rest = w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+      return cmp && srNum(rest) != null ? cmp + rest : rest;
+    })
     .filter(Boolean);
 /* a typed word against one folded text: it starts one of its words, or is one typo (a letter changed, missing, extra or
    two swapped) from one, for a word of five letters or more, when fuzzy */
@@ -61,7 +66,7 @@ let HLW = null;
 const hlTerms = q => {
   const w = srTerms(q)
     .map(x => x.replace(/ς/g, "σ")) // a final sigma is the same letter
-    .filter(x => srNum(x) == null);
+    .filter(x => srNum(x) == null && !/^[<>]/.test(x));
   return w.length ? w : null;
 };
 function hl(raw) {
@@ -148,14 +153,16 @@ const srFolded = t => srCached(t).texts;
    transfer or payment, so that is the hit, listed once) */
 function srEntryHit(t, q, fuzzy) {
   const fee = t.feeId && entry(t.feeId),
-    one = (x, w, n) => {
+    one = (x, w, n, c) => {
+      if (c) return [x.amount, x.toAmount].some(a => a != null && (c[0] === ">" ? a > rnd(n.lo) : a < rnd(n.lo)));
       if (n && [x.amount, x.toAmount].some(a => a != null && a >= n.lo - 1e-9 && a < n.hi)) return true;
       const tx = srFolded(x);
       return tx.some((s, i) => srHitFolded(s, tx.words[i], w, fuzzy));
     };
   return q.every(w => {
-    const n = srNum(w);
-    return one(t, w, n) || (fee && one(fee, w, n));
+    const c = /^[<>]/.test(w) ? w : "", // ">50" / "<50": more / less than, as the suggestion
+      n = srNum(c ? w.slice(1) : w);
+    return one(t, w, n, c) || (fee && one(fee, w, n, c));
   });
 }
 /* ---- the payee and amount filters of History (`HF.pay`, `HF.amt`) */
@@ -210,12 +217,22 @@ function srAmtLabel(amt) {
 }
 /* ---- the mode: History with a field in its top bar (V.find). It always opens clean (all time, no filters, no words); from
    History its own filters and period wait in `keep` and come back with Back. */
-let FIND = { from: "home", keep: null },
+let FIND = { from: "home", keep: null, y: 0, steps: [] }, // steps: the state before each suggestion tapped, for Back
+  FIND_BACK = false, // findBack is drawing: render() keeps no row of the search list in view
   FIND_T = 0,
   FIND_SAID = ""; // what the status for TalkBack (#find-live) says now
 function openFind() {
   if (V.find) return;
-  FIND = { from: V.screen, keep: V.screen === "history" ? { hf: { ...HF }, hp: { ...HP } } : null };
+  /* where it was left: History's filters, period, scroll, opened row and drawn rows; a tab's scroll */
+  FIND = {
+    from: V.screen,
+    steps: [],
+    y: scrollY,
+    keep:
+      V.screen === "history"
+        ? { hf: { ...HF }, hp: { ...HP }, y: scrollY, open: V.open, n: HSHOW.n, a: rowAnchor($("#app")) }
+        : null,
+  };
   HF = histBlank();
   histAllTime();
   HSHOW.sig = "";
@@ -226,16 +243,38 @@ function openFind() {
   const inp = $("#find-q");
   if (inp) inp.focus();
 }
-/* search mode over, its words and payee / amount forgotten (the caller sets the screen) */
-/* search mode ends (Back, or History left another way): the words typed are kept as a recent search first */
+/* search mode ends (Back, or History left another way): the words typed are kept as a recent search first, unless a
+   suggestion just kept them (they are among the newest search's words), and the mode's words, payee and amount are
+   forgotten (the caller sets the screen) */
 function findEnd() {
-  recentKeep(HF.q);
+  const last = srTerms(recentLoad()[0] || ""),
+    mine = srTerms(HF.q);
+  if (!(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
   clearTimeout(FIND_T);
   V.find = false;
   FIND.keep = null;
 }
 function findBack() {
-  const { from, keep } = FIND;
+  /* a suggestion tapped is undone first: the words, the filters and the period as they were */
+  const st = FIND.steps.pop();
+  if (st) {
+    HF = st.hf;
+    Object.assign(HP, st.hp);
+    HSHOW.sig = "";
+    const inp = $("#find-q"),
+      c = $('#app [data-act="find-clear"]');
+    if (inp) inp.value = HF.q;
+    if (c) c.hidden = !HF.q;
+    findDraw();
+    if (inp) {
+      inp.focus({ preventScroll: true });
+      try {
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+      } catch (e) {}
+    }
+    return;
+  }
+  const { from, keep, y } = FIND;
   findEnd();
   V.sel = null;
   V.open = "";
@@ -244,11 +283,20 @@ function findBack() {
     HF = keep.hf;
     Object.assign(HP, keep.hp);
     V.screen = "history";
+    HSHOW = { sig: histSig(), n: keep.n }; // the rows drawn so far, so the place can be reached
+    if (keep.open && entry(keep.open)) V.open = keep.open;
   } else {
     histAllTime();
     V.screen = from; // drawScreen forgets History's filters
   }
-  render();
+  FIND_BACK = true;
+  try {
+    render();
+  } finally {
+    FIND_BACK = false;
+  }
+  scrollTo(0, keep ? keep.y : y);
+  if (keep && keep.a) toAnchor(keep.a, $("#app")); // the rows far down only have an estimated height until they are seen
 }
 /* a word typed: the list under the bar follows after a short pause; the field itself is never redrawn (its caret, focus
    and an IME's composition stay) */
@@ -276,6 +324,7 @@ function findDraw() {
   if (live && said !== FIND_SAID) live.textContent = FIND_SAID = said;
 }
 function findClear() {
+  FIND.steps = []; // a reset: Back does not undo the suggestions tapped before it
   HF.q = "";
   const inp = $("#find-q");
   if (inp) {
@@ -361,7 +410,9 @@ function findBar() {
     TH("common.back") +
     '">' +
     ic("back") +
-    '</button><div class="srbox">' +
+    '</button><h1 class="vh">' +
+    TH("search.field") +
+    '</h1><div class="srbox">' +
     ic("search") +
     '<input id="find-q" type="search" enterkeyhint="search" autocomplete="off" placeholder="' +
     TH("search.field") +
@@ -460,7 +511,7 @@ const SUG_PERIOD_EMB = { i: "event", c: "#4b5fd6" };
 /* every suggestion the typed words give, in the order of the groups (not yet counted) */
 function sugFind(toks) {
   const out = [],
-    add = (g, title, emb, idx, use, apply, set) => out.push({ g, title, emb, idx, use, apply, set });
+    add = (g, title, emb, idx, use, apply, set, label) => out.push({ g, title, emb, idx, use, apply, set, label });
   const pays = new Map(),
     cats = new Map(),
     accs = new Map(),
@@ -529,20 +580,24 @@ function sugFind(toks) {
         () => HF.acc === a.id
       );
   });
-  const seen = new Set();
+  /* a person of lendings, of loans, or both: "Lent to", "Borrowed from" or just "Person" on the row */
+  const kinds = new Map();
   S.loans.forEach(l => {
-    if (!l.person || seen.has(l.person)) return;
-    seen.add(l.person);
-    const idx = hit(l.person);
+    if (l.person) kinds.set(l.person, new Set([...(kinds.get(l.person) || []), l.kind]));
+  });
+  kinds.forEach((ks, person) => {
+    const idx = hit(person),
+      emb = LOAN_EMB[ks.size === 1 ? [...ks][0] : "lend"];
     if (idx.length)
       add(
         "who",
-        l.person,
-        LOAN_EMB[l.kind],
+        person,
+        emb,
         idx,
-        whos.get(l.person) || 0,
-        f => ({ f: { ...f, who: l.person } }),
-        () => HF.who === l.person
+        whos.get(person) || 0,
+        f => ({ f: { ...f, who: person } }),
+        () => HF.who === person,
+        ks.size === 1 ? (ks.has("lend") ? "whoLend" : "whoBorrow") : "who"
       );
   });
   HIST_KINDS.forEach(([k]) => {
@@ -632,7 +687,11 @@ function findSugs() {
   SUG_GROUPS.forEach(g => {
     const mine = all.filter(s => s.g === g && !s.set());
     /* the most used first (the months already newest first), then counted: the first few that leave something */
-    if (g !== "period" && g !== "amount") mine.sort((a, b) => b.idx.length - a.idx.length || b.use - a.use);
+    /* a name that is the typed words themselves comes first, whatever its use, so the cut to three never drops it */
+    const typed = toks.map(t => t.f).join(" "),
+      exact = s => +(!!typed && srFold(s.title) === typed);
+    if (g !== "period" && g !== "amount")
+      mine.sort((a, b) => exact(b) - exact(a) || b.idx.length - a.idx.length || b.use - a.use);
     let kept = 0;
     mine.slice(0, SUG_LOOK).forEach(s => {
       if (kept >= SUG_MAX) return;
@@ -647,7 +706,7 @@ function findSugs() {
       s.q = q;
       s.left = left;
       s.r = r;
-      const group = T("search.group." + g),
+      const group = T("search.group." + (s.label || g)),
         line = T("search.sugLine", { group, count: n });
       rows +=
         '<button class="sug" data-act="fs-pick" data-v="' +
@@ -678,6 +737,7 @@ function findPick(i) {
   const s = SUGS[i];
   if (!s || s.q !== HF.q) return findDraw(); // the field moved on: the list is about to follow
   recentKeep(s.q);
+  FIND.steps.push({ hf: { ...HF }, hp: { ...HP } });
   HF = histNorm(s.r.f);
   if (s.r.p) Object.assign(HP, s.r.p);
   HSHOW.sig = "";
@@ -766,9 +826,13 @@ function recentDel(i) {
   const to = list.length ? next : inp;
   if (to) to.focus({ preventScroll: true });
 }
-/* Enter: the list follows at once and the keyboard closes */
+/* Enter: the list follows at once and the keyboard closes. A page cannot close the keyboard and keep the focus on the
+   field, and a blurred field would leave TalkBack's focus on nothing, so it moves to the first suggestion or entry
+   (or the first button of what is shown). */
 function findSubmit() {
   findDraw();
   const inp = $("#find-q");
   if (inp) inp.blur();
+  const first = $("#hbody .sug, #hbody [data-act='row-open'], #hbody button");
+  if (first) first.focus({ preventScroll: true });
 }

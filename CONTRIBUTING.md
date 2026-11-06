@@ -61,11 +61,11 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
   (`Lang.java`: the texts' language and the number format), `is24h`, `fontScale`, `reminderHealth` /
   `openSetting` / `permsIntro` (permissions), `keepState` / `keptStatus` / `keptState` (the shell's own copy
   of every save, `SavedCopy.java`), the auto backup's `setBackup` / `setBackupData` / `pickBackupFolder` / `backupStatus` /
-  `backupNow`, Restore's `readAutoBackup` / `pickRestoreFile`, and History search's `recentGet` / `recentSet` (the last five
-  searches, in the `tally_recent` preferences file, excluded from Android's backup and device transfer in
-  `backup_rules.xml` and `data_extraction_rules.xml`, and never part of Tally's own backups). In the other direction it calls the page's hooks
-  `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`, `tallyFolder`,
-  `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that
+  `backupNow`, Restore's `readAutoBackup` / `pickRestoreFile`, and History search's `recentGet` / `recentSet` (the last
+  five searches, in the `tally_recent` preferences file, excluded from Android's backup and device transfer in
+  `backup_rules.xml` and `data_extraction_rules.xml`, and never part of Tally's own backups). In the other direction it
+  calls the page's hooks `window.tallyBack`, `tallyOpen`, `tallyResume`, `tallyPause`, `tallyTheme`, `tallySaved`,
+  `tallyFolder`, `tallyRestore`, `tallyBackedUp`, `tallyAutoBackup` and `tallyPerms`, which `js/main.js` installs last; answers that
   arrive before the page is up wait in a queue (`callPage`), and background threads answer through the activity on
   screen (`deliver`).
 - **`ReminderReceiver` / `BootReceiver`** schedule and show notifications from the reminder settings the page sends;

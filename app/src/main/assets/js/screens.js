@@ -35,7 +35,7 @@ let RINGW = 0;
    that was in view where it was (rowAnchor) */
 let drawnScreen = "";
 function render() {
-  const a = V.screen === drawnScreen ? rowAnchor($("#app")) : null,
+  const a = V.screen === drawnScreen && !FIND_BACK ? rowAnchor($("#app")) : null, // not around search's list (findBack)
     f = V.find ? findKeep() : null; // search mode: the caret in the field comes back too
   keepFocus($("#app"), drawScreen);
   drawnScreen = V.screen;

@@ -2,8 +2,8 @@
 <!-- Android 9–11: Android's own backup may include Tally's data only when it is end-to-end encrypted, so an
      unencrypted copy (for example "adb backup") never carries the notebook. The auto backup's folder grant, what was
      asked about permissions and the recent searches only mean something on this phone (and are private to it), so they
-     are left out, as are the auto backup's copy of
-     the data (made again at the next start) and half-written temporary files. -->
+     are left out, as are the auto backup's copy of the data (made again at the next start) and half-written temporary
+     files. -->
 <full-backup-content>
     <include domain="root" path="." requireFlags="clientSideEncryption" />
     <include domain="file" path="." requireFlags="clientSideEncryption" />

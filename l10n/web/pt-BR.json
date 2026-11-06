@@ -640,6 +640,8 @@
       "cat": "Categoria",
       "acc": "Conta",
       "who": "Pessoa",
+      "whoLend": "Emprestado a",
+      "whoBorrow": "Dívida com",
       "kind": "Tipo",
       "period": "Período",
       "amount": "Valor"

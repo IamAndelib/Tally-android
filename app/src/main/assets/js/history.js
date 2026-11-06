@@ -24,10 +24,10 @@ function histKind(t) {
   const found = HIST_KINDS.find(k => k[1](t));
   return found ? found[0] : "out"; // a fee whose entry is gone is still an expense
 }
-/* skip: "acc", "kind" or "sub" (category, person, sides) is left out, to count what an option would leave */
 /* the words typed, split once per text (every entry is compared against the same ones) */
 let HQ = ["", []];
 const srTermsOf = q => (HQ[0] === q ? HQ[1] : ((HQ = [q, srTerms(q)]), HQ[1]));
+/* skip: "acc", "kind" or "sub" (category, person, sides) is left out, to count what an option would leave */
 function histMatch(t, f = HF, skip = "") {
   const host = histHost(t);
   if (host) return histMatch(host, f, skip);
@@ -398,7 +398,11 @@ function histChips() {
     h.push(histChip("sub", plain(n), n));
   }
   if (HF.who) {
-    const n = T(HF.kind === "borrow" ? "history.borrowedFrom" : "history.lentTo", { who: HF.who });
+    /* the name alone when no kind says which way (a person picked from a search suggestion) */
+    const n =
+      HF.kind === "lend" || HF.kind === "borrow"
+        ? T(HF.kind === "borrow" ? "history.borrowedFrom" : "history.lentTo", { who: HF.who })
+        : HF.who;
     h.push(histChip("sub", plain(n), n));
   }
   [
@@ -471,26 +475,29 @@ function histMonths(list, i, budget) {
   let h = "";
   const stop = i + budget;
   HLW = V.find && HF.q.trim() ? hlTerms(HF.q) : null; // search mode marks the words in the rows
-  while (i < list.length && i < stop) {
-    const m = histMonth(list[i]);
-    let j = i;
-    while (j < list.length && histMonth(list[j]) === m) j++;
-    if (i === 0 || histMonth(list[i - 1]) !== m)
-      h +=
-        '<div class="hmon"><span>' +
-        esc(capFirst(monthLabel(m, true))) +
-        "</span><span>" +
-        esc(histWords(list.slice(i, j), HF.kind).join(" · ")) +
-        "</span></div>";
-    let e = j;
-    if (e > stop) {
-      e = stop;
-      while (e < j && list[e].date === list[e - 1].date) e++; // the day is whole
+  try {
+    while (i < list.length && i < stop) {
+      const m = histMonth(list[i]);
+      let j = i;
+      while (j < list.length && histMonth(list[j]) === m) j++;
+      if (i === 0 || histMonth(list[i - 1]) !== m)
+        h +=
+          '<div class="hmon"><span>' +
+          esc(capFirst(monthLabel(m, true))) +
+          "</span><span>" +
+          esc(histWords(list.slice(i, j), HF.kind).join(" · ")) +
+          "</span></div>";
+      let e = j;
+      if (e > stop) {
+        e = stop;
+        while (e < j && list[e].date === list[e - 1].date) e++; // the day is whole
+      }
+      h += dayGroups(list.slice(i, e));
+      i = e;
     }
-    h += dayGroups(list.slice(i, e));
-    i = e;
+  } finally {
+    HLW = null; // never left on for the rows drawn elsewhere
   }
-  HLW = null;
   return { html: h, next: i };
 }
 /* the rest of the list is drawn when the marker after the last row comes within a few screens */
@@ -552,7 +559,7 @@ function histParts() {
       head +=
         '<div class="vh" role="status">' +
         (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
-        "</div>"; // search mode has one that stays (#find-live, findAnnounce)
+        "</div>"; // search mode has one that stays (#find-live)
   }
   if (idle) return { head, body: recentView(), idle: true }; // search mode, nothing asked yet: the recent searches
   const sug = V.find && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
@@ -624,7 +631,9 @@ function historyView() {
           "</button>"
         : "") +
       "</header>";
-  /* search mode keeps the bar and the list in two boxes of their own, so typing redraws them without the field */
+  /* search mode keeps the bar and the list in two boxes of their own, so typing redraws them without the field; its
+     status says the count of this draw (findDraw says it again after each pause) */
+  if (V.find) FIND_SAID = p.body && !p.idle ? T("history.count", { count: histRows(HLIST).length }) : "";
   return V.find
     ? h +
         '<div id="find-live" class="vh" role="status">' +

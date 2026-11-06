@@ -640,6 +640,8 @@
       "cat": "Categoría",
       "acc": "Cuenta",
       "who": "Persona",
+      "whoLend": "Prestado a",
+      "whoBorrow": "Prestado por",
       "kind": "Tipo",
       "period": "Periodo",
       "amount": "Cantidad"

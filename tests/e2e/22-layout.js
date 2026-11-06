@@ -798,7 +798,20 @@ function inspect() {
       out[3].amount = 50.75;
       save();
     });
-    const findOpen = (typed, then) => async () => {
+    /* each state asserts what it shows, so a broken one fails instead of shooting another state under its name */
+    const FIND_SHOWS = {
+      recent: () => document.querySelectorAll("#hbody .rec").length > 0,
+      empty: () => !document.querySelector("#hbody .rec") && !document.querySelector("#hbody .sug"),
+      typing: () => document.querySelectorAll("#hbody .sug").length > 0,
+      picked: () => /^out:/.test(HF.pay) && !!document.querySelector("#app .hchips .hchip") && HF.q === "",
+      amount: () =>
+        [...document.querySelectorAll("#hbody .sug .s")].some(x => x.textContent.startsWith(T("search.group.amount"))),
+      near: () => !!document.querySelector('#hbody [data-act="find-fix"]'),
+      nothing: () =>
+        !!document.querySelector("#hbody .empty") && !document.querySelector('#hbody [data-act="find-fix"]'),
+      note: () => !!document.querySelector("#hbody .hnote mark.hl"),
+    };
+    const findOpen = (typed, then, shows) => async () => {
       await page.evaluate(
         ([typed, then]) => {
           histClear();
@@ -813,19 +826,21 @@ function inspect() {
         },
         [typed, then]
       );
+      if (!(await page.evaluate("(" + FIND_SHOWS[shows].toString() + ")()")))
+        throw new Error("search state '" + shows + "' does not show what it should");
     };
     await page.evaluate(() =>
       recentSave(["corner café", "coins", "50", "a rather long search of several words", "gift"])
     );
-    await shot("search-empty-recent", findOpen(""));
-    await shot("search-typing", findOpen("corner"));
-    await shot("search-picked", findOpen("corner", "pay"));
-    await shot("search-amount", findOpen("50"));
-    await shot("search-nothing-near", findOpen("cofee"));
-    await shot("search-nothing", findOpen("qzxv"));
-    await shot("search-note", findOpen("coins"));
+    await shot("search-empty-recent", findOpen("", "", "recent"));
+    await shot("search-typing", findOpen("corner", "", "typing"));
+    await shot("search-picked", findOpen("corner", "pay", "picked"));
+    await shot("search-amount", findOpen("50", "", "amount"));
+    await shot("search-nothing-near", findOpen("cofee", "", "near"));
+    await shot("search-nothing", findOpen("qzxv", "", "nothing"));
+    await shot("search-note", findOpen("coins", "", "note"));
     await page.evaluate(() => recentSave([]));
-    await shot("search-empty", findOpen(""));
+    await shot("search-empty", findOpen("", "", "empty"));
     await seed(24);
     await shot("home-24", null);
     await shot(

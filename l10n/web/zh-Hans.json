@@ -630,6 +630,8 @@
       "cat": "分类",
       "acc": "账户",
       "who": "人员",
+      "whoLend": "借出",
+      "whoBorrow": "借入",
       "kind": "类型",
       "period": "时间段",
       "amount": "金额"

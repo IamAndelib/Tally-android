@@ -12,7 +12,8 @@ Status: built (concepts reviewed and decided by the maintainer, 2026-11-06). Bui
   what search finds.
 - **It always starts clean**: all time, no filters, an empty field, wherever it was opened from. Opened from History,
   History's own filters and period are put back as they were when search mode closes.
-- **Back** closes search mode and returns to the screen it was opened from (a tab, or History as it was). The field's ✕
+- **Back** closes search mode and returns to the screen it was opened from (a tab, or History as it was: its filters,
+  period, place in the list, opened row and drawn rows). The field's ✕
   empties the field and keeps search mode open.
 - **Nothing typed yet**: the recent searches (below). No hint line.
 
@@ -31,7 +32,7 @@ Every typed word must be found in the entry (the same rule as today's search):
 
 While the field has text, a short list sits above the entries under one **Suggestions** heading (the entries follow
 under an **Entries** heading), at most three per group, in the order below. Each row has its name as a title and a
-second line with its group and how many entries it would leave: "Paid to · 19 entries" (rows, by History's fee rule,
+second line with its group (named in the singular: Category, Account, Person, Kind) and how many entries it would leave: "Paid to · 19 entries" (rows, by History's fee rule,
 with the period, the filters and the other words as they are). One that would leave none, or is already set, isn't
 shown. A month's or a kind's name matches from three letters (the whole name when it is shorter).
 
@@ -39,10 +40,10 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
 |---|---|---|---|
 | Paid to | a payee of money spent | the payee, spending only | Paid to X ✕ |
 | Received from | a payee of money received | the payee, income only | Received from X ✕ |
-| Categories | the category's name on screen | the category | X ✕ |
-| Accounts | the account's name | the account | ● X ✕ |
-| People | a loan's or lending's person | the person | X ✕ |
-| Kinds | the kind's name (Spent, Transfers, …) | the kind | X ✕ |
+| Category | the category's name on screen | the category | X ✕ |
+| Account | the account's name | the account | ● X ✕ |
+| Person | a loan's or lending's person | the person | X ✕ |
+| Kind | the kind's name (Spent, Transfers, …) | the kind | X ✕ |
 | Period | a month's name in the phone's language (full or short), or a four-digit year | that month (each year that has entries, newest first) or year | the period chip |
 | Amount | a number; `>50`, `<50` give only that one | the amount itself, more than, or less than | `$50.00 to $50.99` ✕, `More than $50.00` ✕, `Less than $50.00` ✕ |
 
@@ -68,7 +69,11 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
 - The payee and amount filters are History filters: they show as chips, count in "Filters · N", are counted in the
   Filters sheet's numbers, and are cleared by Clear all. The sheet has no sections for them; they are set only from
   search.
-- Clear all also empties the field.
+- Clear all, beside Filters in the bar, also empties the field. The Filters sheet's own Clear all clears only the sheet's
+  choices (account, kind, category, person, transfer sides): the words, the payee and the amount stay, and Show keeps
+  them.
+- A person set from a suggestion has no kind, so its chip reads just the name; with a kind (from History) it reads
+  "Lent to X" / "Borrowed from X".
 - A payee or amount filter is dropped when search mode closes, with the words.
 
 ## Recent searches
@@ -78,8 +83,8 @@ shown. A month's or a kind's name matches from three letters (the whole name whe
 - A search is kept when it is used: a suggestion or an entry tapped, or search mode closed with at least two characters
   typed. The same words again move to the top (capitals and accents ignored).
 - **On this phone only**: kept by the native shell (`Android.recentGet` / `recentSet`, at most five texts of at most 100
-  characters, checked in Java; the page keeps them in memory where the shell lacks the methods) in its own preferences file, left out of Android's backup and device
-  transfer (`backup_rules.xml`, `data_extraction_rules.xml`), never in saved data, Tally's backups, the shell's saved
+  characters, checked in Java; the page keeps them in memory where the shell lacks the methods) in its own preferences
+  file, left out of Android's backup and device transfer (`backup_rules.xml`, `data_extraction_rules.xml`), never in saved data, Tally's backups, the shell's saved
   copy, CSV, the widget, notifications or logs. "Erase everything" forgets them too.
 
 ## Retired

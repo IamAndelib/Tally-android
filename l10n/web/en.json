@@ -635,6 +635,8 @@
       "cat": "Category",
       "acc": "Account",
       "who": "Person",
+      "whoLend": "Lent to",
+      "whoBorrow": "Borrowed from",
       "kind": "Kind",
       "period": "Period",
       "amount": "Amount"

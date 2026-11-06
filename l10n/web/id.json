@@ -630,6 +630,8 @@
       "cat": "Kategori",
       "acc": "Akun",
       "who": "Orang",
+      "whoLend": "Dipinjamkan ke",
+      "whoBorrow": "Dipinjam dari",
       "kind": "Jenis",
       "period": "Periode",
       "amount": "Jumlah"

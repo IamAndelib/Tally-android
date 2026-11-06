@@ -635,6 +635,8 @@
       "cat": "Kategorie",
       "acc": "Konto",
       "who": "Person",
+      "whoLend": "Verliehen an",
+      "whoBorrow": "Geliehen von",
       "kind": "Art",
       "period": "Zeitraum",
       "amount": "Betrag"

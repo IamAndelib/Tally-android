@@ -562,7 +562,7 @@ document.addEventListener("click", ev => {
       hfsDraw();
       break;
     case "hfs-clear":
-      HFD = histBlank();
+      HFD = { ...histBlank(), q: HFD.q, pay: HFD.pay, amt: HFD.amt }; // only the sheet's own choices; words, payee, amount stay
       hfsDraw();
       break;
     case "hfs-show":
@@ -584,6 +584,7 @@ document.addEventListener("click", ev => {
       break;
     }
     case "hf-clear":
+      FIND.steps = []; // a reset: Back does not undo the suggestions tapped before it
       histClear();
       render();
       histFocus(".hfbtn");

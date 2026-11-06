@@ -287,7 +287,7 @@ const ok = (c, m) => {
       back: !!$('#app .appbar [data-act="find-back"]'),
       sbtn: !!$('#app .appbar [data-act="search-open"]'),
       sel: !!$('#app .appbar [data-act="sel-start"]'),
-      h1: !!$("#app .appbar h1"),
+      h1: !!$("#app .appbar h1:not(.vh)"),
       hbar: !!$("#app .hbar .hpl") && !!$("#app .hbar .hfbtn"),
       body: $("#hbody").innerHTML,
     }));
@@ -578,7 +578,7 @@ const ok = (c, m) => {
     await typeIn(pg, "maya");
     l = await sugs(pg);
     ok(
-      l.length === 1 && l[0].t === "Maya" && l[0].s === "Person · 3 entries",
+      l.length === 1 && l[0].t === "Maya" && l[0].s === "Borrowed from · 3 entries",
       "maya: the person: " + JSON.stringify(l.map(x => [x.t, x.s]))
     );
 
@@ -1509,6 +1509,430 @@ const ok = (c, m) => {
     );
     ok(!r, "and not in localStorage");
     await c5.close();
+  }
+  // ---- part 6: final review fixes: typed > and <, a person chip, Back restores History, the Filters sheet, the status
+  {
+    const open6 = async (many = false) => {
+      const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+      await c.addInitScript(() => {
+        window.Android = { getColors: () => null, setBars() {} };
+      });
+      const p = await c.newPage();
+      p.on("pageerror", e => errors.push(e.message));
+      await p.goto(appUrl);
+      await p.evaluate(many => {
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push(
+          { id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 500000, archived: false },
+          { id: "c", name: "Cash", type: "cash", currency: "USD", opening: 3000, archived: false }
+        );
+        let n = 0;
+        const t = (days, type, amount, extra) =>
+          S.txns.push({
+            id: "t" + ++n,
+            ts: n,
+            date: addDays(today(), -days),
+            type,
+            amount,
+            account: "b",
+            note: "",
+            ...extra,
+          });
+        if (many)
+          for (let i = 0; i < 420; i++)
+            t(i, "expense", 5 + (i % 7), { cat: "food", payee: "Shop", note: "store " + i });
+        else {
+          t(0, "expense", 49.99, { cat: "food", payee: "Kiosk", note: "coffee" });
+          t(1, "expense", 50, { cat: "food", payee: "Bakery", note: "coffee" });
+          t(2, "expense", 1250.5, { cat: "food", payee: "Outdoor Store", note: "rain jacket" });
+          t(3, "expense", 50.5, { cat: "food", payee: "Bakery", note: "coffee" });
+          S.loans.push(
+            { id: "L1", kind: "lend", person: "Maya", account: "b", date: today(), note: "", status: "open" },
+            { id: "L2", kind: "borrow", person: "Omar", account: "b", date: today(), note: "", status: "open" }
+          );
+          t(2, "loan", 300, { dir: "out", loan: "L1", principal: true });
+          t(2, "loan", 80, { dir: "in", loan: "L2", principal: true });
+        }
+        save();
+        render();
+      }, many);
+      return { c, p };
+    };
+    const type6 = async (p, q) => {
+      await p.fill("#find-q", "");
+      await p.keyboard.type(q);
+      await p.waitForTimeout(250);
+    };
+    let { c: c6, p: p6 } = await open6();
+    await p6.click('#app [data-act="search-open"]');
+
+    // I1: a typed > or < filters as more / less than, as its suggestion does
+    for (const [q, kind] of [
+      [">50", "More than"],
+      ["<50", "Less than"],
+    ]) {
+      await type6(p6, q);
+      const r = await p6.evaluate(kind => {
+        const amts = HLIST.map(t => t.amount).sort((a, b) => a - b);
+        const sug = [...document.querySelectorAll("#hbody .sug")].find(x => x.textContent.includes(kind));
+        return { amts, said: sug && /(\d+) entr/.exec(sug.textContent)[1], rows: histRows(HLIST).length };
+      }, kind);
+      const want = q[0] === ">" ? [50.5, 80, 300, 1250.5] : [49.99];
+      ok(
+        JSON.stringify(r.amts) === JSON.stringify(want),
+        q + " lists " + (q[0] === ">" ? "only more" : "only less") + " than 50: " + r.amts
+      );
+      ok(
+        r.said === String(r.rows),
+        q + ": the list (" + r.rows + ") agrees with the suggestion's count (" + r.said + ")"
+      );
+    }
+
+    // I2: a person from a suggestion reads as the name alone; with a kind, as History does
+    for (const [who, other] of [
+      ["maya", "Maya"],
+      ["omar", "Omar"],
+    ]) {
+      await type6(p6, who);
+      await p6.click('#hbody .sug:has-text("' + other + '")');
+      const chip = await p6.evaluate(() =>
+        [...document.querySelectorAll("#app .hchips .hchip")].map(x => x.textContent.trim())
+      );
+      ok(chip.length === 1 && chip[0] === other, "a person chip from a suggestion is just the name: " + chip);
+      await p6.evaluate(() => (histClear(), render()));
+    }
+    for (const [kind, who, text] of [
+      ["lend", "Maya", "Lent to Maya"],
+      ["borrow", "Omar", "Borrowed from Omar"],
+    ]) {
+      const chip = await p6.evaluate(
+        ([kind, who]) => {
+          HF = { ...histBlank(), kind, who };
+          render();
+          return [...document.querySelectorAll("#app .hchips .hchip")].map(x => x.textContent.trim());
+        },
+        [kind, who]
+      );
+      ok(chip.includes(text), "with the kind set the person chip says '" + text + "': " + chip);
+    }
+    await p6.evaluate(() => (histClear(), render()));
+
+    // I4: the Filters sheet's Clear all clears only the sheet's choices; the bar's Clear all clears everything
+    await type6(p6, "coffee");
+    await p6.evaluate(() => {
+      HF.pay = "out:bakery";
+      HF.amt = "gt:10";
+      render();
+    });
+    await p6.click("#app .hfbtn");
+    let r6 = await p6.evaluate(() => ({ q: HFD.q, count: $("#hfs-foot").textContent }));
+    ok(r6.q === "coffee", "the sheet is opened with the words in it: " + JSON.stringify(r6));
+    await p6.evaluate(() => HFD && ($('#sheet [data-act="hfs-acc"][data-v="b"]') || { click() {} }).click());
+    await p6.click('#sheet [data-act="hfs-clear"]');
+    r6 = await p6.evaluate(() => ({ q: HFD.q, pay: HFD.pay, amt: HFD.amt, acc: HFD.acc }));
+    ok(
+      r6.q === "coffee" && r6.pay === "out:bakery" && r6.amt === "gt:10" && !r6.acc,
+      "the sheet's Clear all keeps words, payee and amount: " + JSON.stringify(r6)
+    );
+    await p6.evaluate(() => $('#sheet [data-act="hfs-acc"][data-v="b"]').click());
+    await p6.click('#sheet [data-act="hfs-show"]');
+    r6 = await p6.evaluate(() => ({ q: HF.q, field: $("#find-q").value, pay: HF.pay, amt: HF.amt, acc: HF.acc }));
+    ok(
+      r6.q === "coffee" && r6.field === "coffee" && r6.pay === "out:bakery" && r6.amt === "gt:10" && r6.acc === "b",
+      "Show keeps the field and the payee and amount, and sets the account: " + JSON.stringify(r6)
+    );
+
+    // M1: the status says the new count after a chip is removed
+    await p6.click('#app .hchips .hchip[aria-label*="Paid to"]');
+    r6 = await p6.evaluate(() => ({
+      live: $("#find-live").textContent,
+      want: T("history.count", { count: histRows(HLIST).length }),
+    }));
+    ok(r6.live === r6.want && r6.want !== "", "the status follows a chip removed: " + JSON.stringify(r6));
+
+    // the bar's Clear all clears everything, the field too
+    await p6.click('#app [data-act="hf-clear"]');
+    r6 = await p6.evaluate(() => ({ q: HF.q, field: $("#find-q").value, pay: HF.pay, amt: HF.amt, acc: HF.acc }));
+    ok(
+      !r6.q && !r6.field && !r6.pay && !r6.amt && !r6.acc,
+      "the bar's Clear all clears everything: " + JSON.stringify(r6)
+    );
+
+    // M7: search mode has a heading of its own
+    r6 = await p6.evaluate(() => [...document.querySelectorAll("#app h1")].map(h => h.textContent.trim()));
+    ok(r6.length === 1 && r6[0] === "Search History", "search mode has one h1, 'Search History': " + r6);
+
+    // M6: Enter closes the keyboard and the focus moves on to the list, not to nowhere
+    await p6.fill("#find-q", "");
+    await p6.keyboard.type("coffee");
+    await p6.keyboard.press("Enter");
+    r6 = await p6.evaluate(() => ({
+      body: document.activeElement === document.body,
+      inList: !!document.activeElement.closest("#hbody"),
+    }));
+    ok(!r6.body && r6.inList, "after Enter the focus is on the first result: " + JSON.stringify(r6));
+
+    // M4: a suggestion that leaves other words keeps one search, not two
+    await p6.evaluate(() => recentSave([]));
+    await p6.evaluate(() => (histClear(), findClear()));
+    await type6(p6, "rain outdoor");
+    await p6.click('#hbody .sug:has-text("Outdoor Store")');
+    r6 = await p6.evaluate(() => HF.q);
+    ok(r6 === "rain", "the suggestion leaves the rest in the field: " + r6);
+    await p6.click('#app [data-act="find-back"]');
+    r6 = await p6.evaluate(() => recentLoad());
+    ok(r6.length === 1 && r6[0] === "rain outdoor", "Back keeps one search: " + JSON.stringify(r6));
+
+    // T4: marks on hostile and folded text (hl)
+    r6 = await p6.evaluate(() => {
+      const m = (q, text) => {
+        HLW = hlTerms(q);
+        const h = hl(text);
+        HLW = null;
+        return h;
+      };
+      return [
+        m("jerry", "Tom & Jerry <b>"),
+        m("strasse", "Straße"),
+        m("ist", "İstanbul"),
+        m("cafe", "Café"),
+        m("咖啡", "咖啡店"),
+        m("b", "<b>bold</b>"),
+        m("amp", "AT&amp;T amp"),
+      ];
+    });
+    const wantMarks = [
+      'Tom &amp; <mark class="hl">Jerry</mark> &lt;b&gt;',
+      '<mark class="hl">Straße</mark>',
+      '<mark class="hl">İst</mark>anbul',
+      '<mark class="hl">Café</mark>',
+      '<mark class="hl">咖啡</mark>店',
+      '&lt;b&gt;bold&lt;/<mark class="hl">b</mark>&gt;',
+      'AT&amp;<mark class="hl">amp</mark>;T <mark class="hl">amp</mark>',
+    ];
+    wantMarks.forEach((w, i) => ok(r6[i] === w, "marks keep escaping and folding right (" + i + "): " + r6[i]));
+    // HLW is reset even when drawing the rows throws
+    r6 = await p6.evaluate(() => {
+      const keep = dayGroups;
+      try {
+        dayGroups = () => {
+          throw new Error("x");
+        };
+        HF.q = "coffee";
+        histMonths(S.txns.slice(), 0, 5);
+      } catch (e) {}
+      dayGroups = keep;
+      return HLW;
+    });
+    ok(r6 === null, "marks are switched off again when drawing throws");
+    await c6.close();
+
+    // I3: Back to History as it was left: place, opened row and drawn rows
+    ({ c: c6, p: p6 } = await open6(true));
+    const left = await p6.evaluate(() => {
+      HF = { ...histBlank(), kind: "out" };
+      V.screen = "history";
+      render();
+      histMore();
+      scrollTo(0, 9000);
+      const row = [...document.querySelectorAll('#app [data-act="row-open"]')].find(x => {
+        const b = x.getBoundingClientRect();
+        return b.top > 100 && b.bottom < innerHeight - 100;
+      });
+      row.click();
+      return { y: scrollY, open: V.open, n: HSHOW.n, kind: HF.kind, a: rowAnchor($("#app")) };
+    });
+    ok(
+      left.y > 3000 && left.open && left.n > 300,
+      "History is scrolled, a row open and a second chunk drawn: " + JSON.stringify(left)
+    );
+    await p6.evaluate(() => openFind()); // the bar is not in reach while scrolled: opened from elsewhere
+    await p6.keyboard.type("store 3");
+    await p6.waitForTimeout(250);
+    await p6.evaluate(() => scrollTo(0, 400));
+    await p6.click('#app [data-act="find-back"]');
+    await p6.waitForTimeout(100);
+    r6 = await p6.evaluate(() => ({
+      y: scrollY,
+      open: V.open,
+      n: HSHOW.n,
+      kind: HF.kind,
+      rowOpen: !!document.querySelector('#app .tx.en[aria-expanded="true"]'),
+      a: rowAnchor($("#app")),
+    }));
+    ok(
+      r6.y > 3000 && r6.a.v === left.a.v && Math.abs(r6.a.top - left.a.top) <= 3,
+      "Back: History is where it was left (the same row in the same place, not the search list's): " +
+        JSON.stringify([r6.y, r6.a, left.a])
+    );
+    ok(r6.open === left.open && r6.rowOpen, "Back: the opened row is open again: " + JSON.stringify(r6));
+    ok(r6.n >= left.n && r6.kind === "out", "Back: the drawn rows and filter are back: " + JSON.stringify(r6));
+    // a row that no longer exists is not reopened
+    await p6.click('#app [data-act="search-open"]');
+    await p6.evaluate(() => {
+      FIND.keep.open = "gone";
+    });
+    await p6.click('#app [data-act="find-back"]');
+    r6 = await p6.evaluate(() => V.open);
+    ok(r6 === "", "Back: an opened entry that is gone stays closed: " + r6);
+    // opened from the top (the bar is there), results scrolled, Back: History is at the top again
+    await p6.evaluate(() => scrollTo(0, 0));
+    await p6.click('#app [data-act="search-open"]');
+    await p6.keyboard.type("store 3");
+    await p6.waitForTimeout(250);
+    await p6.evaluate(() => scrollTo(0, 1500));
+    await p6.click('#app [data-act="find-back"]');
+    await p6.waitForTimeout(100);
+    r6 = await p6.evaluate(() => scrollY);
+    ok(r6 <= 3, "Back: History from the top comes back at the top, not where the results were scrolled: " + r6);
+    await c6.close();
+  }
+  // ---- part 7: Back steps back through suggestion taps; people from lendings and loans, an exact name first
+  {
+    const c7 = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+    await c7.addInitScript(() => {
+      window.Android = { getColors: () => null, setBars() {} };
+    });
+    const p7 = await c7.newPage();
+    p7.on("pageerror", e => errors.push(e.message));
+    await p7.goto(appUrl);
+    await p7.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 500000, archived: false });
+      let n = 0;
+      const t = (type, amount, extra) =>
+        S.txns.push({
+          id: "t" + ++n,
+          ts: n,
+          date: addDays(today(), -n),
+          type,
+          amount,
+          account: "b",
+          note: "",
+          ...extra,
+        });
+      t("expense", 4.75, { cat: "food", payee: "Corner Café" });
+      t("expense", 6, { cat: "food", payee: "Corner Café" });
+      [
+        ["L1", "lend", "Mahin bhai", 7],
+        ["L2", "lend", "Mahin", 6],
+        ["L3", "lend", "Mahadi", 2],
+        ["L4", "borrow", "Ma", 3],
+      ].forEach(([id, kind, person, count]) => {
+        S.loans.push({ id, kind, person, account: "b", date: today(), note: "", status: "open" });
+        for (let i = 0; i < count; i++)
+          t("loan", 10 + i, { dir: kind === "lend" ? "out" : "in", loan: id, principal: true });
+      });
+      save();
+      V.screen = "assets";
+      render();
+    });
+    const sugs7 = () =>
+      p7.evaluate(() =>
+        [...document.querySelectorAll("#hbody .sug")].map(x => ({
+          t: x.querySelector(".sgt").textContent,
+          s: x.querySelector(".s").textContent,
+          a: x.getAttribute("aria-label"),
+        }))
+      );
+    const type7 = async q => {
+      await p7.fill("#find-q", "");
+      await p7.keyboard.type(q);
+      await p7.waitForTimeout(250);
+    };
+    // B: the people
+    await p7.click('#app [data-act="search-open"]');
+    await type7("ma");
+    let r7 = (await sugs7()).filter(x => /^(Lent to|Borrowed from|Person)/.test(x.s));
+    ok(r7.length === 3 && r7[0].t === "Ma", "an exact name is offered first among the people: " + JSON.stringify(r7));
+    ok(r7[0].s === "Borrowed from · 3 entries", "a borrowed person says Borrowed from: " + r7[0].s);
+    ok(
+      r7[1].t === "Mahin bhai" && r7[1].s === "Lent to · 7 entries",
+      "then the most used, Lent to: " + JSON.stringify(r7[1])
+    );
+    ok(/Borrowed from Ma, 3 entries/.test(r7[0].a), "the spoken label says it too: " + r7[0].a);
+    // A: Back steps back through suggestion taps
+    await type7("corner");
+    await p7.click('#hbody .sug:has-text("Corner Café")');
+    r7 = await p7.evaluate(() => ({
+      q: HF.q,
+      pay: HF.pay,
+      chips: document.querySelectorAll("#app .hchips .hchip").length,
+    }));
+    ok(r7.pay && r7.q === "" && r7.chips === 1, "the tap set the payee and left the field: " + JSON.stringify(r7));
+    await p7.evaluate(() => goBack());
+    r7 = await p7.evaluate(() => ({
+      find: V.find,
+      field: $("#find-q").value,
+      q: HF.q,
+      pay: HF.pay,
+      chips: document.querySelectorAll("#app .hchips .hchip").length,
+      sugs: document.querySelectorAll("#hbody .sug").length,
+      focus: document.activeElement === $("#find-q"),
+    }));
+    ok(
+      r7.find && r7.field === "corner" && r7.q === "corner" && !r7.pay && r7.chips === 0 && r7.sugs > 0 && r7.focus,
+      "Back undoes the tap: the words, the suggestions, no chip, still searching: " + JSON.stringify(r7)
+    );
+    // a chip's x is not a step; two taps take two Backs
+    await p7.click('#hbody .sug:has-text("Corner Café")');
+    await p7.click('#app .hchips .hchip[aria-label*="Paid to"]');
+    await type7("everyday");
+    await p7.click('#hbody .sug:has-text("Everyday")');
+    await p7.evaluate(() => goBack());
+    r7 = await p7.evaluate(() => ({ find: V.find, field: $("#find-q").value, acc: HF.acc }));
+    ok(
+      r7.find && r7.field === "everyday" && !r7.acc,
+      "Back undoes the last tap only (the chip's x added no step): " + JSON.stringify(r7)
+    );
+    await p7.evaluate(() => goBack());
+    r7 = await p7.evaluate(() => ({ find: V.find, field: $("#find-q").value, pay: HF.pay }));
+    ok(
+      r7.find && r7.field === "corner" && !r7.pay,
+      "the earlier tap is undone by the next Back: " + JSON.stringify(r7)
+    );
+    await p7.evaluate(() => goBack());
+    r7 = await p7.evaluate(() => ({ find: V.find, screen: V.screen }));
+    ok(
+      !r7.find && r7.screen === "assets",
+      "Back with no tap left leaves search mode for Assets: " + JSON.stringify(r7)
+    );
+    // a sheet closes first
+    await p7.click('#app [data-act="search-open"]');
+    await type7("corner");
+    await p7.click('#hbody .sug:has-text("Corner Café")');
+    await p7.click("#app .hfbtn");
+    await p7.evaluate(() => goBack());
+    r7 = await p7.evaluate(() => ({ sheet: !!$("#sheet").innerHTML, pay: HF.pay }));
+    ok(!r7.sheet && r7.pay, "Back closes the sheet before undoing a tap: " + JSON.stringify(r7));
+    // Clear all and the field's x are resets: Back does not undo a tap before them
+    await p7.evaluate(() => closeSheet());
+    for (const how of ["hf-clear", "find-clear"]) {
+      await p7.evaluate(() => {
+        histClear();
+        findClear();
+        FIND.steps.splice(0);
+        render();
+      });
+      await type7("corner");
+      await p7.click('#hbody .sug:has-text("Corner Café")');
+      const picked = await p7.evaluate(() => FIND.steps.length);
+      if (how === "find-clear") await type7("zz");
+      await p7.click('#app [data-act="' + how + '"]');
+      await p7.evaluate(() => goBack());
+      r7 = await p7.evaluate(() => ({ find: V.find, screen: V.screen }));
+      ok(picked === 1 && !r7.find, "Back after " + how + " leaves search mode: " + JSON.stringify([picked, r7]));
+      await p7.evaluate(() => {
+        V.screen = "assets";
+        render();
+      });
+      await p7.click('#app [data-act="search-open"]');
+    }
+    await c7.close();
   }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();
