@@ -241,6 +241,35 @@ const ok = (c, m) => {
       });
       ok(n === 1, "a chip held over its neighbour ticks once, not on every move: " + n);
     }
+    /* the held chip takes a neighbour's place once its own leading edge passes the neighbour's middle, wherever the
+       finger holds it (held near its left edge, a wide chip used to need dragging its whole length) */
+    {
+      await page.evaluate(() => document.querySelector('.strip .acc[data-v="b"]').scrollIntoView({ inline: "center" }));
+      const box = sel =>
+        page.evaluate(q => {
+          const r = document.querySelector(q).getBoundingClientRect();
+          return { l: r.left, r: r.right, m: r.left + r.width / 2, y: r.top + r.height / 2 };
+        }, sel);
+      const b = await box('.strip .acc[data-v="b"]'),
+        c = await box('.strip .acc[data-v="c"]'),
+        x0 = b.l + 10,
+        x1 = x0 + (c.m - b.r) + 8; // the chip's right edge 8px past c's middle; the finger still short of it
+      await T("touchStart", x0, b.y);
+      await page.waitForTimeout(450);
+      for (let k = 1; k <= 8; k++) await T("touchMove", x0 + ((x1 - x0) * k) / 8, b.y);
+      await T("touchEnd");
+      await page.waitForTimeout(250);
+      ok(
+        (await chips()) === "s,k2,c,b,k",
+        "past the neighbour's middle by the chip's own edge, it swaps: " + (await chips())
+      );
+      await page.evaluate(() => {
+        delete S.settings.chipOrder;
+        save();
+        render();
+        document.querySelector(".strip").scrollLeft = 0;
+      });
+    }
     await drag('.strip .acc[data-v="b"]', '.strip .acc[data-v="s"]', true);
     ok(
       (await chips()) === "b,s,k2,c,k" && (await ids("accounts")).join() === "s,k2,b,c,k",

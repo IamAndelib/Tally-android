@@ -304,19 +304,25 @@ function dragMove(x, y) {
       sr = strip.getBoundingClientRect();
     if (x < sr.left + 32) strip.scrollLeft -= 8;
     else if (x > sr.right - 32) strip.scrollLeft += 8;
-    const hit = document.elementFromPoint(x, sr.top + sr.height / 2),
-      t = hit && hit.closest(".acc[data-v]");
-    /* past the middle of a neighbour the held chip takes its place, with one tick per switch: a chip already on that
-       side stays put, so hovering never repeats the tick */
-    if (t && t !== L.el && t.parentNode === strip) {
-      const r = t.getBoundingClientRect(),
-        after = !!(L.el.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING);
-      if (after ? x > r.left + r.width / 2 : x < r.left + r.width / 2) {
-        if (after) t.after(L.el);
-        else t.before(L.el);
-        L.moved = true;
-        buzz("tick");
-      }
+    /* once the held chip's leading edge (not the finger) passes the middle of the chip beside it, it takes that
+       chip's place, with one tick per switch; wherever the finger holds it, a wide chip needs no longer drag */
+    const gl = x - L.dx,
+      gr = gl + L.w,
+      side = el => (el && el.matches(".acc[data-v]") ? el : null),
+      mid = el => {
+        const r = el.getBoundingClientRect();
+        return r.left + r.width / 2;
+      },
+      next = side(L.el.nextElementSibling),
+      prev = side(L.el.previousElementSibling);
+    if (next && gr > mid(next)) {
+      next.after(L.el);
+      L.moved = true;
+      buzz("tick");
+    } else if (prev && gl < mid(prev)) {
+      prev.before(L.el);
+      L.moved = true;
+      buzz("tick");
     }
     return;
   }
