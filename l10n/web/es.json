@@ -734,15 +734,16 @@
     "deleted_many": "Se eliminaron {{count}} movimientos",
     "deleted_other": "Se eliminaron {{count}} movimientos",
     "words": {
-      "moved": "{{amount}} transferidos",
+      "moved": "Transferido {{amount}}",
       "lent": "{{amount}} prestados",
       "gotBack": "{{amount}} recuperados",
       "borrowed": "{{amount}} recibidos",
       "paidBack": "{{amount}} devueltos",
       "added": "{{amount}} sumados",
       "takenOff": "{{amount}} restados",
-      "fees": "{{amount}} en comisiones"
+      "fees": "Comisiones {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filtros",
     "filtersN": "Filtros · {{count}}",
     "choosePeriod": "Elegir periodo: {{period}}",

@@ -551,6 +551,15 @@ function inspect() {
         openHistory({ kind: "out", acc: "b", cat: "groceries" });
       })
     );
+    /* the heading columns in words (Transfers) and with the rows' signs (Lent) */
+    await shot(
+      "history-transfers",
+      ev(() => openHistory({ kind: "xfer" }))
+    );
+    await shot(
+      "history-lent",
+      ev(() => openHistory({ kind: "lend" }))
+    );
     const sheetFor = f => () =>
       page.evaluate(f => {
         V.screen = "history";

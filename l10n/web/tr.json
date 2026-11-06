@@ -724,15 +724,16 @@
     "deleted_one": "{{count}} kayıt silindi",
     "deleted_other": "{{count}} kayıt silindi",
     "words": {
-      "moved": "{{amount}} taşındı",
+      "moved": "Taşınan {{amount}}",
       "lent": "{{amount}} borç verildi",
       "gotBack": "{{amount}} geri alındı",
       "borrowed": "{{amount}} borç alındı",
       "paidBack": "{{amount}} geri ödendi",
       "added": "{{amount}} eklendi",
       "takenOff": "{{amount}} düşüldü",
-      "fees": "{{amount}} masraf"
+      "fees": "Masraf {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filtreler",
     "filtersN": "Filtreler · {{count}}",
     "choosePeriod": "Dönem seç: {{period}}",

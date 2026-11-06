@@ -3368,12 +3368,47 @@ body.land.calcopen #snack .snack {
   margin: 16px 4px 0;
   font-weight: 600;
 }
-.hmon > span:last-child {
+/* the stacked column at the right of a month or day heading (histColumn): + green over − red, one line per currency, or
+   words (Transfers). Figures stay on one line and shrink in fitFigures(); words wrap. */
+.hcol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-inline-start: auto;
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: end;
+}
+.hcl {
+  display: block;
+  max-width: 100%;
+}
+.hcf {
+  white-space: nowrap;
+}
+.hc-in {
+  color: var(--got);
+}
+.hc-out {
+  color: var(--spent);
+}
+.hc-mv {
+  color: var(--xfer);
+}
+.hc-fee {
   font-weight: 400;
   color: var(--on-surface-variant);
-  margin-inline-start: auto;
-  text-align: end;
+}
+.dayh {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2px 12px;
+}
+.dayh .hcol {
+  font-size: 0.8rem;
 }
 
 /* History's Filters sheet: compact chips (34px to see; the row gap makes up 48px to tap, each chip's ::after reaches

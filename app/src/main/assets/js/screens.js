@@ -424,7 +424,7 @@ function perCur(add) {
    word doesn't fit beside it; a name that wrapped gets a box as wide as its longest line (fitWrapped). */
 function fitFigures(root) {
   root
-    .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style]")
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style], .hcol[style]")
     .forEach(el => el.removeAttribute("style"));
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   root
@@ -455,6 +455,8 @@ function fitFigures(root) {
     shrink(el, over);
     if (over()) el.style.overflowWrap = "anywhere";
   });
+  /* a month's or day's figures (History's heading column): the whole column is set smaller, never cut */
+  root.querySelectorAll(".hcol").forEach(el => shrink(el, () => el.scrollWidth > el.clientWidth + 1));
   /* a day's list far off screen isn't laid out (content-visibility, .dl): its rows are fitted as they come near */
   const fitRow = el => {
     const row = el.closest(".tx");
@@ -921,7 +923,9 @@ function loanPill(t) {
   if (!r || !r.ls) return "";
   return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
-function dayGroups(list) {
+function dayGroups(list, hist) {
+  const whole = new Map(); // History's day words count the fees too (histLines)
+  if (hist) list.forEach(x => whole.set(x.date, (whole.get(x.date) || []).concat(x)));
   list = histRows(list); // a fee is shown inside what it was charged on
   let h = "",
     cur = "";
@@ -943,12 +947,18 @@ function dayGroups(list) {
       const tot = Object.entries(days.get(cur) || {})
         .map(([c, v]) => signed(-v, c))
         .join(" · ");
+      const title = capFirst(dayLabel(t.date)),
+        lines = hist ? histLines(whole.get(cur) || [], HF.kind) : [];
       h +=
-        '<div class="day"><span>' +
-        esc(capFirst(dayLabel(t.date))) +
-        "</span><span>" +
-        esc(tot) +
-        '</span></div><div class="list dl" style="contain-intrinsic-size:0 ' +
+        (hist
+          ? '<div class="day dayh" role="heading" aria-level="3" aria-label="' +
+            esc(histHeadSay(title, lines)) +
+            '"><span aria-hidden="true">' +
+            esc(title) +
+            "</span>" +
+            histColumn(lines)
+          : '<div class="day"><span>' + esc(title) + "</span><span>" + esc(tot) + "</span>") +
+        '</div><div class="list dl" style="contain-intrinsic-size:0 ' +
         rows.get(cur) * 5 + // an estimate (a row of two or three lines), in rem: it grows with the text size
         'rem">';
     }

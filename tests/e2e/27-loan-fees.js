@@ -164,7 +164,7 @@ const ok = (c, m) => {
       !(await page.$(`[data-v="${f1.id}"]`)),
     "History shows the payment with its fee under the amount, the fee no row: " + row
   );
-  ok(/50\.00/.test(await page.textContent("#app .day")), "the day's total is the 50 spent");
+  ok(/70\.00/.test(await page.textContent("#app .day")), "the day's spent is the 50 and the 20 fee");
   await click(`[data-v="${p1.id}"]`);
   await click('#app .txo [data-act="tx-open"]');
   ok((await page.textContent("#sheet h2")) === "Sam", "Edit on the payment opens its loan");

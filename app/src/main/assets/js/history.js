@@ -51,9 +51,24 @@ const histList = (f = HF, skip) => histPick(f, skip).sort(byNewest);
 function histRows(list) {
   return list.filter(t => !(t.feeOf && entry(t.feeOf)));
 }
-/* the totals of a list, per currency (by code, joined with " + ") in the words of the kind shown: ["$X spent", "€Y + $Z
-   received", "$W fees"]; a phrase whose amount is 0 is left out */
-function histWords(list, kind) {
+/* the totals of a list as lines, one per currency (by code) for each phrase of the kind shown, in the order they stack in a
+   heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only, Transfers).
+   A fee is spending (inside "spent") on the default and Spent views, its own "fees" line only on Transfers, and nowhere
+   else (its row says it). A phrase whose amount is 0 is left out. */
+const HIST_TONE = {
+  received: "in",
+  gotBack: "in",
+  borrowed: "in",
+  added: "in",
+  spent: "out",
+  lent: "out",
+  paidBack: "out",
+  takenOff: "out",
+  moved: "mv",
+  fees: "fee",
+};
+const HIST_CLS = { in: "hc-in", out: "hc-out", mv: "hc-mv", fee: "hc-fee" };
+function histLines(list, kind) {
   const sums = {};
   const add = (key, cur, v) => {
     const m = sums[key] || (sums[key] = {});
@@ -61,7 +76,8 @@ function histWords(list, kind) {
   };
   list.forEach(t => {
     const cur = (acc(t.account) || {}).currency || S.settings.cur;
-    if (t.feeOf) return add("fees", cur, t.amount);
+    if (t.feeOf)
+      return kind === "xfer" ? add("fees", cur, t.amount) : !kind || kind === "out" ? add("spent", cur, t.amount) : 0;
     if (isSpend(t)) add("spent", cur, t.amount);
     else if (t.type === "income") add("received", cur, t.amount);
     else if (t.type === "transfer") add("moved", cur, t.amount);
@@ -72,24 +88,43 @@ function histWords(list, kind) {
     }
   });
   const order = {
-    "": ["spent", "received"],
+    "": ["received", "spent"],
     out: ["spent"],
     in: ["received"],
-    xfer: ["moved"],
-    lend: ["lent", "gotBack"],
+    xfer: ["moved", "fees"],
+    lend: ["gotBack", "lent"],
     borrow: ["borrowed", "paidBack"],
     fix: ["added", "takenOff"],
   }[kind || ""];
-  const say = key => {
-    const amount = Object.entries(sums[key] || {})
+  const lines = [];
+  order.forEach(key =>
+    Object.entries(sums[key] || {})
       .filter(e => e[1])
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(e => money(e[1], e[0]))
-      .join(" + ");
-    if (!amount) return "";
-    return T(key === "spent" || key === "received" ? "search." + key : "history.words." + key, { amount });
-  };
-  return order.concat("fees").map(say).filter(Boolean);
+      .forEach(([cur, amount]) => lines.push({ key, tone: HIST_TONE[key], cur, amount }))
+  );
+  return lines;
+}
+/* a line in words ("$X spent", "Transferred $X"): what a screen reader says */
+const histSay = l =>
+  T(l.key === "spent" || l.key === "received" ? "search." + l.key : "history.words." + l.key, {
+    amount: money(l.amount, l.cur),
+  });
+/* what a heading says to a screen reader: its title and the lines in words, as one sentence */
+const histHeadSay = (title, lines) =>
+  lines.length ? T("history.headSay", { title, parts: lines.map(histSay).join(", ") }) : title;
+/* the stacked column at the right of a month or day heading: signed figures (+ green over − red), or words
+   (Transfers). Hidden from screen readers: the heading's own name says it all (histHeadSay). */
+function histColumn(lines) {
+  if (!lines.length) return "";
+  const one = l =>
+    '<span class="' +
+    (l.tone === "in" || l.tone === "out" ? "hcl hcf " : "hcl ") +
+    HIST_CLS[l.tone] +
+    '">' +
+    esc(l.tone === "in" || l.tone === "out" ? signed(l.tone === "in" ? l.amount : -l.amount, l.cur) : histSay(l)) +
+    "</span>";
+  return '<span class="hcol" aria-hidden="true">' + lines.map(one).join("") + "</span>";
 }
 /* a filter whose account, category or person is gone (an account can't be deleted, but a backup can be restored) */
 function histDrop() {
@@ -495,19 +530,24 @@ function histMonths(list, i, budget) {
       const m = histMonth(list[i]);
       let j = i;
       while (j < list.length && histMonth(list[j]) === m) j++;
-      if (i === 0 || histMonth(list[i - 1]) !== m)
+      if (i === 0 || histMonth(list[i - 1]) !== m) {
+        const title = capFirst(monthLabel(m, true)),
+          lines = histLines(list.slice(i, j), HF.kind);
         h +=
-          '<div class="hmon"><span>' +
-          esc(capFirst(monthLabel(m, true))) +
-          "</span><span>" +
-          esc(histWords(list.slice(i, j), HF.kind).join(" · ")) +
-          "</span></div>";
+          '<div class="hmon" role="heading" aria-level="2" aria-label="' +
+          esc(histHeadSay(title, lines)) +
+          '"><span aria-hidden="true">' +
+          esc(title) +
+          "</span>" +
+          histColumn(lines) +
+          "</div>";
+      }
       let e = j;
       if (e > stop) {
         e = stop;
         while (e < j && list[e].date === list[e - 1].date) e++; // the day is whole
       }
-      h += dayGroups(list.slice(i, e));
+      h += dayGroups(list.slice(i, e), true);
       i = e;
     }
   } finally {

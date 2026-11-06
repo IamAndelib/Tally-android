@@ -734,15 +734,16 @@
     "deleted_many": "{{count}} lançamentos excluídos",
     "deleted_other": "{{count}} lançamentos excluídos",
     "words": {
-      "moved": "{{amount}} transferidos",
+      "moved": "Transferido {{amount}}",
       "lent": "{{amount}} emprestados",
       "gotBack": "{{amount}} devolvidos a você",
       "borrowed": "{{amount}} recebidos",
       "paidBack": "{{amount}} devolvidos",
       "added": "{{amount}} somados",
       "takenOff": "{{amount}} subtraídos",
-      "fees": "{{amount}} em taxas"
+      "fees": "Taxas {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filtros",
     "filtersN": "Filtros · {{count}}",
     "choosePeriod": "Escolher período: {{period}}",

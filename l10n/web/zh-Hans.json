@@ -723,6 +723,7 @@
       "takenOff": "减少{{amount}}",
       "fees": "手续费{{amount}}"
     },
+    "headSay": "{{title}}，{{parts}}",
     "filters": "筛选",
     "filtersN": "筛选 · {{count}}",
     "choosePeriod": "选择时间段：{{period}}",

@@ -724,15 +724,16 @@
     "deleted_one": "{{count}} Eintrag gelöscht",
     "deleted_other": "{{count}} Einträge gelöscht",
     "words": {
-      "moved": "{{amount}} umgebucht",
+      "moved": "Umgebucht {{amount}}",
       "lent": "{{amount}} verliehen",
       "gotBack": "{{amount}} zurückbekommen",
       "borrowed": "{{amount}} geliehen",
       "paidBack": "{{amount}} zurückgezahlt",
       "added": "{{amount}} dazugebucht",
       "takenOff": "{{amount}} abgebucht",
-      "fees": "{{amount}} Gebühren"
+      "fees": "Gebühren {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filter",
     "filtersN": "Filter · {{count}}",
     "choosePeriod": "Zeitraum wählen: {{period}}",

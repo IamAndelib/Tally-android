@@ -115,20 +115,21 @@ const ok = (c, m) => {
       t("expense", 1, "b", { id: "fy", cat: "fees", feeOf: "t11" });
     });
     const r = await page.evaluate(() => {
-      const ids = l => l.map(t => t.id).join();
+      const W = (l, k) => histLines(l, k).map(histSay),
+        ids = l => l.map(t => t.id).join();
       const x = histList({ ...HF, kind: "xfer" });
       const got = histList({ ...HF, kind: "in" });
       const lend = histList({ ...HF, kind: "lend" });
       const out = {
         xids: ids(x),
         xrows: ids(histRows(x)),
-        xwords: histWords(x, "xfer"),
-        in: histWords(got, "in"),
-        lend: histWords(lend, "lend"),
-        borrow: histWords(histList({ ...HF, kind: "borrow" }), "borrow"),
-        fix: histWords(histList({ ...HF, kind: "fix" }), "fix"),
-        all: histWords(histList(), ""),
-        spent: histWords(histList({ ...HF, kind: "out" }), "out"),
+        xwords: W(x, "xfer"),
+        in: W(got, "in"),
+        lend: W(lend, "lend"),
+        borrow: W(histList({ ...HF, kind: "borrow" }), "borrow"),
+        fix: W(histList({ ...HF, kind: "fix" }), "fix"),
+        all: W(histList(), ""),
+        spent: W(histList({ ...HF, kind: "out" }), "out"),
         feeKind: histKind(S.txns.find(t => t.id === "fx")) + "," + histKind(S.txns.find(t => t.id === "fy")),
         kinds: HIST_KINDS.map(k => k[0]).join(),
         toK: histList({ ...HF, acc: "k" })
@@ -172,16 +173,23 @@ const ok = (c, m) => {
       "Transfers hold the transfers and the fee: " + r.xids
     );
     ok(!r.xrows.split(",").includes("fx") && r.xrows.split(",").includes("t2"), "histRows drops the fee: " + r.xrows);
-    ok(JSON.stringify(r.xwords) === '["$240.00 moved","$2.00 fees"]', "transfer words: " + JSON.stringify(r.xwords));
-    ok(JSON.stringify(r.in) === '["€80.00 + $150.00 received"]', "received words: " + JSON.stringify(r.in));
+    ok(
+      JSON.stringify(r.xwords) === '["Transferred $240.00","Fees $2.00"]',
+      "transfer words: " + JSON.stringify(r.xwords)
+    );
+    ok(
+      JSON.stringify(r.in) === '["€80.00 received","$150.00 received"]',
+      "received words, a line per currency: " + JSON.stringify(r.in)
+    );
     ok(JSON.stringify(r.lend) === '["$50.00 lent"]', "lent words, no zero got back: " + JSON.stringify(r.lend));
     const back = await page.evaluate(() => {
+      const W = (l, k) => histLines(l, k).map(histSay);
       const e = (kind, dir) => ({ type: "loan", loan: kind === "lend" ? "L1" : "L2", dir, amount: 20, account: "c" });
       return {
-        lendIn: histWords([e("lend", "in")], "lend"),
-        lendOut: histWords([e("lend", "out")], "lend"),
-        borIn: histWords([e("borrow", "in")], "borrow"),
-        borOut: histWords([e("borrow", "out")], "borrow"),
+        lendIn: W([e("lend", "in")], "lend"),
+        lendOut: W([e("lend", "out")], "lend"),
+        borIn: W([e("borrow", "in")], "borrow"),
+        borOut: W([e("borrow", "out")], "borrow"),
       };
     });
     ok(
@@ -195,13 +203,13 @@ const ok = (c, m) => {
       "lend and borrow, in and out: " + JSON.stringify(back)
     );
     ok(
-      JSON.stringify(r.borrow) === '["$600.00 borrowed","$100.00 paid back","$1.00 fees"]',
-      "borrowed words: " + JSON.stringify(r.borrow)
+      JSON.stringify(r.borrow) === '["$600.00 borrowed","$100.00 paid back"]',
+      "borrowed words, no fees line: " + JSON.stringify(r.borrow)
     );
     ok(JSON.stringify(r.fix) === '["$10.00 added","$4.00 taken off"]', "fix words: " + JSON.stringify(r.fix));
     ok(
-      JSON.stringify(r.all) === '["$30.00 spent","€80.00 + $150.00 received","$3.00 fees"]',
-      "all words (loans and transfers are neither): " + JSON.stringify(r.all)
+      JSON.stringify(r.all) === '["€80.00 received","$150.00 received","$33.00 spent"]',
+      "all words (fees inside spent; loans and transfers are neither): " + JSON.stringify(r.all)
     );
     ok(JSON.stringify(r.spent) === '["$30.00 spent"]', "spent words: " + JSON.stringify(r.spent));
     ok(r.toK === "fx,t2", "an account matches a transfer into it, and the fee follows: " + r.toK);
@@ -223,6 +231,152 @@ const ok = (c, m) => {
       "histClear: " + r.cleared
     );
     ok(r.opened === "bhistoryall", "openHistory sets the filter and all time: " + r.opened);
+    await ctx.close();
+  }
+
+  // ---- heading columns: + received over − spent, a line per currency, fees inside spent, Transfers in words, signs of loans
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      const a = (id, name, currency) =>
+        S.accounts.push({ id, name, type: "bank", currency, opening: 0, archived: false });
+      a("b", "Everyday", "USD");
+      a("c", "Cash", "USD");
+      a("e", "Euro", "EUR");
+      const t = (id, date, type, amount, account, extra) =>
+        S.txns.push({ id, ts: 1, date, type, amount, account, note: "", ...extra });
+      t("e1", "2026-06-17", "expense", 3.25, "b", { cat: "food" });
+      t("e2", "2026-06-17", "expense", 40, "b", { cat: "food", feeId: "e2f" });
+      t("e2f", "2026-06-17", "expense", 2, "b", { cat: "fees", feeOf: "e2" }); // a charge on a purchase: inside spent
+      t("e3", "2026-06-17", "expense", 10, "e", { cat: "food" });
+      t("i1", "2026-06-17", "income", 150, "b", { cat: "gift" });
+      t("x1", "2026-06-10", "transfer", 200, "b", { to: "c", feeId: "x1f" });
+      t("x1f", "2026-06-10", "expense", 2.5, "b", { cat: "fees", feeOf: "x1" });
+      t("x2", "2026-05-04", "transfer", 50, "b", { to: "c" });
+      S.loans.push({
+        id: "L1",
+        kind: "lend",
+        person: "Sam",
+        account: "c",
+        date: "2026-06-12",
+        note: "",
+        status: "open",
+      });
+      S.loans.push({
+        id: "L2",
+        kind: "borrow",
+        person: "Maya",
+        account: "b",
+        date: "2026-06-05",
+        note: "",
+        status: "open",
+      });
+      t("l1", "2026-06-12", "loan", 50, "c", { loan: "L1", dir: "out", principal: true });
+      t("l2", "2026-06-17", "loan", 20, "c", { loan: "L1", dir: "in" });
+      t("l3", "2026-06-05", "loan", 100, "b", { loan: "L2", dir: "in", principal: true });
+      t("l4", "2026-06-06", "loan", 30, "b", { loan: "L2", dir: "out" });
+      save();
+      location.reload();
+    });
+    await page.waitForLoadState();
+    await page.waitForTimeout(200);
+    const heads = async kind => {
+      await page.evaluate(k => openHistory(k ? { kind: k } : {}), kind);
+      return page.evaluate(() => {
+        const col = e => [...e.querySelectorAll(".hcl")].map(l => l.textContent.replace(/\u2060/g, ""));
+        const one = e => ({
+          title: e.firstElementChild.textContent,
+          lines: col(e),
+          label: e.getAttribute("aria-label"),
+          role: e.getAttribute("role"),
+          hidden: [...e.children].every(c => c.getAttribute("aria-hidden") === "true"),
+        });
+        return {
+          mon: [...document.querySelectorAll("#app .hmon")].map(one),
+          day: [...document.querySelectorAll("#app .dayh")].map(one),
+          fee: document.querySelectorAll("#app .hc-fee").length,
+        };
+      });
+    };
+    const J = JSON.stringify;
+    // the default view: two currencies, each with its own line; the fees are inside spent
+    let h = await heads("");
+    ok(
+      h.mon.length === 2 && h.mon[0].title === "June 2026" && h.mon[1].title === "May 2026",
+      "default: month headings " + h.mon.map(m => m.title)
+    );
+    ok(
+      J(h.mon[0].lines) === J(["+$150.00", "−€10.00", "−$47.75"]),
+      "default month: + received over − spent, a line per currency (by code), the fees inside spent: " +
+        J(h.mon[0].lines)
+    );
+    ok(J(h.mon[1].lines) === "[]", "default month with only a transfer: no column: " + J(h.mon[1].lines));
+    const day = d => h.day.find(x => x.title.includes(d));
+    ok(
+      J(day("Jun 17").lines) === J(["+$150.00", "−€10.00", "−$45.25"]),
+      "a day with income and spending, the purchase's charge inside: " + J(day("Jun 17").lines)
+    );
+    ok(J(day("Jun 10").lines) === J(["−$2.50"]), "a day with only a fee: spent " + J(day("Jun 10").lines));
+    ok(h.fee === 0, "no separate fees line anywhere on the default view");
+    ok(
+      h.mon[0].role === "heading" && h.mon[0].hidden && day("Jun 17").role === "heading" && day("Jun 17").hidden,
+      "headings are headings; the column is hidden from screen readers"
+    );
+    // TalkBack: one sentence, with the words
+    ok(
+      h.mon[0].label === "June 2026, $150.00 received, €10.00 spent, $47.75 spent",
+      "the month reads as one sentence: " + h.mon[0].label
+    );
+    ok(
+      day("Jun 17").label.endsWith(", $150.00 received, €10.00 spent, $45.25 spent") &&
+        day("Jun 17").label.startsWith("Wed, Jun 17"),
+      "the day reads as one sentence: " + day("Jun 17").label
+    );
+    ok(h.mon[1].label === "May 2026", "a heading with nothing to add says only its name: " + h.mon[1].label);
+    // the Spent view: fees add to spent too
+    h = await heads("out");
+    ok(J(h.mon[0].lines) === J(["−€10.00", "−$45.25"]), "Spent: " + J(h.mon[0].lines));
+    // Transfers: words, Fees only when there are fees
+    h = await heads("xfer");
+    ok(
+      J(h.mon[0].lines) === J(["Transferred $200.00", "Fees $2.50"]) && h.mon[0].title === "June 2026",
+      "Transfers month, with fees: " + J(h.mon[0].lines)
+    );
+    ok(J(h.mon[1].lines) === J(["Transferred $50.00"]), "Transfers month without fees: " + J(h.mon[1].lines));
+    ok(
+      J(h.day[0].lines) === J(["Transferred $200.00", "Fees $2.50"]) && h.day.length === 2,
+      "Transfers day, with fees: " + J(h.day[0].lines)
+    );
+    ok(J(h.day[1].lines) === J(["Transferred $50.00"]), "Transfers day without fees: " + J(h.day[1].lines));
+    ok(
+      h.mon[0].label === "June 2026, Transferred $200.00, Fees $2.50",
+      "the Transfers month reads in words: " + h.mon[0].label
+    );
+    ok(h.fee === 2, "the Fees lines exist only on Transfers: " + h.fee);
+    // lent and borrowed: the rows' signs
+    h = await heads("lend");
+    ok(J(h.mon[0].lines) === J(["+$20.00", "−$50.00"]), "Lent month: got back +, lent −: " + J(h.mon[0].lines));
+    ok(J(h.day.map(d => d.lines)) === J([["+$20.00"], ["−$50.00"]]), "Lent days: " + J(h.day.map(d => d.lines)));
+    ok(
+      h.mon[0].label === "June 2026, $20.00 got back, $50.00 lent",
+      "the Lent month reads as one sentence: " + h.mon[0].label
+    );
+    h = await heads("borrow");
+    ok(
+      J(h.mon[0].lines) === J(["+$100.00", "−$30.00"]),
+      "Borrowed month: borrowed +, paid back −: " + J(h.mon[0].lines)
+    );
+    ok(J(h.day.map(d => d.lines)) === J([["−$30.00"], ["+$100.00"]]), "Borrowed days: " + J(h.day.map(d => d.lines)));
+    // colours: + green, − red
+    h = await heads("");
+    const col = await page.evaluate(() => {
+      const c = s => getComputedStyle(document.querySelector(s)).color;
+      return [c(".hcol .hc-in"), c(".hcol .hc-out")];
+    });
+    ok(col[0] !== col[1], "received and spent have their own colours: " + col);
     await ctx.close();
   }
 
@@ -284,10 +438,15 @@ const ok = (c, m) => {
     const mons = await page.evaluate(() => [...document.querySelectorAll("#app .hmon")].map(e => e.textContent));
     const yr = new Date().getFullYear() - 1;
     ok(
-      mons.length === 2 && mons[0].startsWith("June " + yr) && mons[0].includes("$30.00 spent · $100.00 received"),
+      mons.length === 2 &&
+        mons[0].startsWith("June " + yr) &&
+        mons[0].replace(/\u2060/g, "").endsWith("+$100.00−$30.00"),
       "month headings carry the month's words: " + JSON.stringify(mons)
     );
-    ok(mons[1].startsWith("May " + yr) && mons[1].includes("$5.00 spent"), "second month: " + mons[1]);
+    ok(
+      mons[1].startsWith("May " + yr) && mons[1].replace(/\u2060/g, "").endsWith("−$5.00"),
+      "second month: " + mons[1]
+    );
 
     // an account's "Open in History"
     await page.evaluate(() => {

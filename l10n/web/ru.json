@@ -744,15 +744,16 @@
     "deleted_many": "Удалено {{count}} записей",
     "deleted_other": "Удалено {{count}} записи",
     "words": {
-      "moved": "{{amount}} переведено",
+      "moved": "Переведено {{amount}}",
       "lent": "{{amount}} дали в долг",
       "gotBack": "{{amount}} вам вернули",
       "borrowed": "{{amount}} взяли в долг",
       "paidBack": "{{amount}} возвращено",
       "added": "{{amount}} добавлено",
       "takenOff": "{{amount}} списано",
-      "fees": "комиссии {{amount}}"
+      "fees": "Комиссии {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Фильтры",
     "filtersN": "Фильтры · {{count}}",
     "choosePeriod": "Выбрать период: {{period}}",

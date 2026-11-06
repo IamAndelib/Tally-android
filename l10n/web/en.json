@@ -724,15 +724,16 @@
     "deleted_one": "Deleted {{count}} entry",
     "deleted_other": "Deleted {{count}} entries",
     "words": {
-      "moved": "{{amount}} moved",
+      "moved": "Transferred {{amount}}",
       "lent": "{{amount}} lent",
       "gotBack": "{{amount}} got back",
       "borrowed": "{{amount}} borrowed",
       "paidBack": "{{amount}} paid back",
       "added": "{{amount}} added",
       "takenOff": "{{amount}} taken off",
-      "fees": "{{amount}} fees"
+      "fees": "Fees {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filters",
     "filtersN": "Filters · {{count}}",
     "choosePeriod": "Choose a period: {{period}}",

@@ -118,7 +118,7 @@ const ok = (c, m) => {
   );
   ok(!(await page.$(`[data-v="${fee.id}"]`)), "the fee has no row of its own");
   const day = (await page.textContent("#app .day")).replace(/\s+/g, " ");
-  ok(day.includes("50.00") && !day.includes("60.00"), "the day's total leaves out the fee: " + day);
+  ok(day.includes("60.00") && !day.includes("50.00"), "the day's spent counts the fee, inside it: " + day);
   await page.screenshot({ path: OUT + "/history.png" });
   await page.click(`[data-v="${tr.id}"]`);
   await page.click('#app .txo [data-act="tx-open"]');
@@ -281,7 +281,7 @@ const ok = (c, m) => {
     /City Bank.*→.*Brac Joint/.test(upRow) && /\+ .*fee/.test(upRow) && !upRow.includes("Food"),
     "after the update, History: " + upRow
   );
-  ok((await page.textContent("#app .day")).includes("50.00"), "the day's total is 50");
+  ok((await page.textContent("#app .day")).includes("60.00"), "the day's spent is 50 and the 10 fee");
   const kept = await page.evaluate(id => S.txns.find(x => x.id === id), oldFee.id);
   const changed = Object.keys(oldFee).filter(k => k !== "date" && kept[k] !== oldFee[k]);
   ok(

@@ -714,15 +714,16 @@
     },
     "deleted_other": "{{count}} transaksi dihapus",
     "words": {
-      "moved": "{{amount}} dipindahkan",
+      "moved": "Dipindahkan {{amount}}",
       "lent": "{{amount}} dipinjamkan",
       "gotBack": "{{amount}} kembali",
       "borrowed": "{{amount}} dipinjam",
       "paidBack": "{{amount}} dibayar kembali",
       "added": "{{amount}} ditambah",
       "takenOff": "{{amount}} dikurangi",
-      "fees": "biaya {{amount}}"
+      "fees": "Biaya {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filter",
     "filtersN": "Filter · {{count}}",
     "choosePeriod": "Pilih periode: {{period}}",

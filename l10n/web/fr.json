@@ -734,15 +734,16 @@
     "deleted_many": "{{count}} d’opérations supprimées",
     "deleted_other": "{{count}} opérations supprimées",
     "words": {
-      "moved": "{{amount}} virés",
+      "moved": "Viré {{amount}}",
       "lent": "{{amount}} prêtés",
       "gotBack": "{{amount}} récupérés",
       "borrowed": "{{amount}} empruntés",
       "paidBack": "{{amount}} remboursés",
       "added": "{{amount}} ajoutés",
       "takenOff": "{{amount}} retirés",
-      "fees": "{{amount}} de frais"
+      "fees": "Frais {{amount}}"
     },
+    "headSay": "{{title}}, {{parts}}",
     "filters": "Filtres",
     "filtersN": "Filtres · {{count}}",
     "choosePeriod": "Choisir une période : {{period}}",
