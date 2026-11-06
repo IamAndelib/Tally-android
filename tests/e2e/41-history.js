@@ -1177,10 +1177,13 @@ const ok = (c, m) => {
     }));
     ok(lo.text.includes("You owe Maya $350.00") && lo.text.includes("$250.00 of $600.00 paid"), "the loan: " + lo.text);
     ok(lo.bar, "the loan has its bar box");
-    ok(lo.acts === "tx-open:Edit,tx-del:Delete,tx-lend:Open loan", "buttons: Edit, Delete, Open loan: " + lo.acts);
-    await page.click('#app .txo [data-act="tx-lend"]');
+    ok(
+      lo.acts === "tx-open:Edit,tx-del:Delete",
+      "buttons: Edit, Delete (no Open loan: Edit opens the loan): " + lo.acts
+    );
+    await page.click('#app .txo [data-act="tx-open"]');
     const lt = await page.evaluate(() => ($("#sheet .p h2") || {}).textContent || "");
-    ok(lt === "Maya", "Open loan opens the loan: its title is the person's name: " + lt);
+    ok(lt === "Maya", "Edit on a loan payment opens the loan: its title is the person's name: " + lt);
     await page.evaluate(() => goBack());
 
     /* Edit opens the entry form; Delete removes the entry (and its fee) */

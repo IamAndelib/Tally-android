@@ -111,3 +111,5 @@ building"). "NEW DEMO" marks items whose final form was drawn in that last set.
   right; under a thin line inside the same card, the preview ("● Bkash −৳1,010.00 · ● Bank +৳1,000.00"). With the
   keypad open on the charge, the card's line and label take the accent colour and the keypad's bar names the field
   ("Charge"); the field the keypad isn't filling looks idle. Built with the charges.
+- **No "Open lending" / "Open loan" in an opened row:** Edit already opens the loan's sheet, so the row ends with Edit
+  and Delete only.

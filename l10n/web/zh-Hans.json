@@ -697,9 +697,7 @@
     "owesYou": "{{who}}欠你",
     "cleared": "已结清",
     "paidOf": "已还{{paid}}，共{{total}}",
-    "backOf": "已收回{{paid}}，共{{total}}",
-    "openLend": "打开借出",
-    "openLoan": "打开借入"
+    "backOf": "已收回{{paid}}，共{{total}}"
   },
   "history": {
     "stopSel": "退出选择",

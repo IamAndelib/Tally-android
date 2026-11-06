@@ -705,9 +705,7 @@
     "owesYou": "{{who}} schuldet dir",
     "cleared": "Beglichen",
     "paidOf": "{{paid}} von {{total}} bezahlt",
-    "backOf": "{{paid}} von {{total}} zurück",
-    "openLend": "Verleih öffnen",
-    "openLoan": "Leihe öffnen"
+    "backOf": "{{paid}} von {{total}} zurück"
   },
   "history": {
     "stopSel": "Auswahl beenden",

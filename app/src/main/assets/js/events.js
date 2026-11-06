@@ -295,9 +295,6 @@ document.addEventListener("click", ev => {
       if (V.find && V.open !== v) recentKeep(HF.q); // an entry opened from a search
       rowToggle(el, v);
       break;
-    case "tx-lend":
-      loanOpen(v);
-      break;
     case "search-open":
       openFind();
       break;

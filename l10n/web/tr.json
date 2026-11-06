@@ -705,9 +705,7 @@
     "owesYou": "{{who}} sana borçlu",
     "cleared": "Kapandı",
     "paidOf": "{{paid}} / {{total}} ödendi",
-    "backOf": "{{paid}} / {{total}} geri geldi",
-    "openLend": "Alacağı aç",
-    "openLoan": "Borcu aç"
+    "backOf": "{{paid}} / {{total}} geri geldi"
   },
   "history": {
     "stopSel": "Seçimi bitir",

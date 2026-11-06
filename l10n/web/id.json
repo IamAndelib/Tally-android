@@ -697,9 +697,7 @@
     "owesYou": "{{who}} berutang padamu",
     "cleared": "Lunas",
     "paidOf": "{{paid}} dari {{total}} dibayar",
-    "backOf": "{{paid}} dari {{total}} kembali",
-    "openLend": "Buka piutang",
-    "openLoan": "Buka utang"
+    "backOf": "{{paid}} dari {{total}} kembali"
   },
   "history": {
     "stopSel": "Berhenti memilih",

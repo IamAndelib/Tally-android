@@ -713,9 +713,7 @@
     "owesYou": "{{who}} te debe",
     "cleared": "Saldado",
     "paidOf": "{{paid}} de {{total}} pagados",
-    "backOf": "{{paid}} de {{total}} devueltos",
-    "openLend": "Abrir préstamo",
-    "openLoan": "Abrir deuda"
+    "backOf": "{{paid}} de {{total}} devueltos"
   },
   "history": {
     "stopSel": "Dejar de seleccionar",

@@ -705,9 +705,7 @@
     "owesYou": "{{who}} owes you",
     "cleared": "Cleared",
     "paidOf": "{{paid}} of {{total}} paid",
-    "backOf": "{{paid}} of {{total}} back",
-    "openLend": "Open lending",
-    "openLoan": "Open loan"
+    "backOf": "{{paid}} of {{total}} back"
   },
   "history": {
     "stopSel": "Stop selecting",

@@ -57,7 +57,8 @@ balances apart):
    as a quiet line under "Added at", wrapping. Expenses and income keep payee · note as their title, transfers their
    note.
    No exchange rate (the row already shows both amounts).
-3. **Actions, centred**: Edit (tonal), Delete (danger), then **Open lending** / **Open loan** for loan entries.
+3. **Actions, centred**: Edit (tonal) and Delete (danger). On a loan or lending entry, Edit opens the loan's own sheet,
+   so there is no separate Open lending / Open loan button (removed 2026-11-06).
 
 **The default view**: all time, no filters. History opens on it from Home (the History button, "Open full history").
 Opened from an account ("Open in History" on its sheet) it starts on all time with that account set.

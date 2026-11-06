@@ -839,7 +839,6 @@ function txOpenView(t) {
   /* a loan's or fix's note lives here only; an expense's, income's and transfer's is their title */
   if (t.note && !autoNote(t.note) && (t.type === "loan" || t.type === "adjust"))
     h += '<div class="onote" dir="auto">' + bdi(t.note) + "</div>";
-  let loanBtn = "";
   if (t.type === "transfer") {
     const to = acc(t.to);
     h += row(f ? box(TH("tx.paidInAll"), M(t.amount + f.amount, cur)) : "");
@@ -869,12 +868,6 @@ function txOpenView(t) {
       );
     if (t.principal && t.due && i.rem[t.id] > 0) boxes += box(TH("tx.due"), esc(shortDay(t.due)));
     h += row(boxes + bal(a, after.a));
-    loanBtn =
-      '<button class="btn text" data-act="tx-lend" data-v="' +
-      esc(l.id) +
-      '">' +
-      TH(lend ? "tx.openLend" : "tx.openLoan") +
-      "</button>";
   } else if (t.type === "adjust") {
     if (after.a != null) h += row(box(TH("tx.was"), M(after.a - t.amount, cur)) + box(TH("tx.now"), M(after.a, cur)));
   } else h += row(bal(a, after.a));
@@ -893,9 +886,7 @@ function txOpenView(t) {
     '">' +
     ic("delete") +
     TH("common.delete") +
-    "</button>" +
-    loanBtn +
-    "</div></div>"
+    "</button></div></div>"
   );
 }
 /* the rows opened in a list, closed (not V.open: the caller says which one stays) */

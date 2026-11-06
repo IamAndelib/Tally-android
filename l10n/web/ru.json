@@ -721,9 +721,7 @@
     "owesYou": "Вам должны: {{who}}",
     "cleared": "Погашено",
     "paidOf": "{{paid}} из {{total}} выплачено",
-    "backOf": "{{paid}} из {{total}} возвращено",
-    "openLend": "Открыть: дали в долг",
-    "openLoan": "Открыть: взяли в долг"
+    "backOf": "{{paid}} из {{total}} возвращено"
   },
   "history": {
     "stopSel": "Отменить выбор",
