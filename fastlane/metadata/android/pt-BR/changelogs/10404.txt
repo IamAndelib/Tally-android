@@ -1,0 +1,1 @@
+- Com a calculadora aberta, tocar em "Adicionar taxa" ou em outro campo não abre mais o teclado do celular sob a calculadora: a calculadora fecha primeiro, e a conta digitada é mantida.

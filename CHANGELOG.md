@@ -39,6 +39,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Home's account chips show a larger icon, with the name (on two lines if need be) and balance beside it; where the
   date doesn't fit beside the ‹ › arrows, they make room for it.
 
+## [1.4.4] — 2026-11-06
+
+### Fixed
+
+- With the calculator open, tapping "Add a fee" on a transfer or a loan payment, or any other field, opened the phone's
+  keyboard under the calculator's keypad, both on screen at once. The calculator now closes first (the sum typed so far
+  is worked out and kept), so only one of them shows.
+
 ## [1.4.3] — 2026-10-29
 
 ### Added
@@ -521,6 +529,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.4.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.4
 [1.4.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.3
 [1.4.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.2
 [1.4.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.1

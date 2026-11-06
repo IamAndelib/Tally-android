@@ -1,0 +1,1 @@
+- Calculatrice ouverte, toucher « Ajouter des frais » ou un autre champ n’ouvre plus le clavier du téléphone sous la calculatrice : désormais, la calculatrice se ferme d’abord et le calcul saisi est conservé.
