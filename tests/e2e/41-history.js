@@ -366,6 +366,14 @@ const ok = (c, m) => {
         (await page.$$('#app .empty [data-act="hf-clear"]')).length === 1,
       "nothing matches: one Clear all, under the words"
     );
+    const mid = await page.evaluate(() => {
+      const b = document.querySelector("#app .empty").getBoundingClientRect();
+      return Math.round(b.top + b.height / 2 - innerHeight / 2);
+    });
+    ok(
+      Math.abs(mid) <= 2,
+      "nothing matches sits in the middle of the window, within the thumb's reach: " + mid + "px off"
+    );
     await act("hf-clear");
     r = await sub();
     ok(

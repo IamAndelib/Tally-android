@@ -497,6 +497,15 @@ function histMore() {
   else end.dataset.next = r.next;
   histWatch(); // still near the end? this says so again
 }
+/* History with nothing to list: its words and Clear all sit in the middle of the window, where a thumb reaches them
+   (never above where the list would start) */
+function histCenter(app) {
+  const e = V.screen === "history" && app.querySelector(".empty");
+  if (!e) return;
+  e.style.marginTop = "";
+  const b = e.getBoundingClientRect();
+  e.style.marginTop = Math.max(0, Math.round(innerHeight / 2 - (b.top + scrollY) - b.height / 2)) + "px";
+}
 function historyView() {
   histDrop();
   const list = histList(HF, ""); // nothing skipped

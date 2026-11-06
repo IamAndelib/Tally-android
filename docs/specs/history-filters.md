@@ -122,7 +122,8 @@ Transfers, loans, fixes and fees never count as spent or received (as everywhere
   counted in neither spent nor the totals above but as its own `· $Z fees` when any.
 - **Gone targets**: a filter whose account, category or person no longer exists (a backup restored) is dropped.
 - **Nothing matches** (a period changed, the last matching entry deleted): "Nothing matches these filters" with
-  **Clear all** under it; the Clear all beside the Filters button is left out then (one is enough).
+  **Clear all** under it, both in the middle of the window, within the thumb's reach; the Clear all beside the
+  Filters button is left out then (one is enough). "Nothing written down yet" sits there too.
 - **Selection** (hold an entry, or Select): works on the filtered list; Select all selects what's listed. While
   selecting, the period and filter rows are hidden; the list stays filtered.
 - **Leaving History** forgets its filters; entries opened from it and closed again keep them. Back from History goes

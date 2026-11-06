@@ -119,7 +119,12 @@ function drawScreen() {
     fitWeekSeg();
   } else app.innerHTML = homeView();
   fitFigures(app);
-  if (document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
+  histCenter(app);
+  if (document.fonts.status === "loading")
+    document.fonts.ready.then(() => {
+      fitFigures(app);
+      histCenter(app);
+    });
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
       [
