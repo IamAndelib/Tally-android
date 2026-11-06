@@ -147,7 +147,7 @@ function searchInput(v) {
 function searchBody() {
   if (SR.scope) return srScoped();
   const q = srTerms(SR.q);
-  if (!q.length) return '<p class="hint srhint">' + TH("search.hint") + "</p>";
+  if (!q.length) return ""; // nothing typed yet: the box's placeholder says what it is for
   let h = srGroups(q, false);
   if (!h) {
     h = srGroups(q, true);

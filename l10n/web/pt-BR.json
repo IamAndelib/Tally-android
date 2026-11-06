@@ -627,7 +627,6 @@
   "search": {
     "title": "Buscar",
     "placeholder": "Buscar lançamentos",
-    "hint": "Encontre lançamentos por nota, favorecido, categoria, conta ou valor.",
     "clear": "Limpar",
     "unscope": "Voltar a todos os resultados, não só {{name}}",
     "none": "Nada corresponde a “{{q}}”.",

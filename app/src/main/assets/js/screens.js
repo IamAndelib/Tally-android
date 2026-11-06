@@ -385,7 +385,7 @@ function checkCard(b, cur) {
     "</button></section>"
   );
 }
-/* Search (Home only), History + Settings, always one tap away in the top bar */
+/* Search (on every tab: Home, Assets, Liabilities), History + Settings, always one tap away in the top bar */
 const searchBtn = () =>
   '<button class="icon" data-act="search-open" aria-label="' + TH("search.title") + '">' + ic("search") + "</button>";
 const topIcons = search =>
@@ -399,8 +399,8 @@ const topIcons = search =>
   '">' +
   ic("settings") +
   "</button>";
-function tabBar(title) {
-  return '<header class="appbar"><h1>' + esc(title) + "</h1>" + topIcons() + "</header>";
+function tabBar(title, search) {
+  return '<header class="appbar"><h1>' + esc(title) + "</h1>" + topIcons(search) + "</header>";
 }
 function perCur(add) {
   const m = {};
@@ -612,7 +612,7 @@ function assetsView() {
     ic("add") +
     TH("asset.add") +
     "</button>";
-  return tabBar(T("nav.assets")) + panes(left, h);
+  return tabBar(T("nav.assets"), true) + panes(left, h);
 }
 /* one kind of loan on Assets (lend) or Liabilities (borrow): the open ones (or a hint) and a button for a new one, then
    the cleared ones behind "Show cleared"; open and cleared are drop zones, to drag a loan between them */
@@ -664,7 +664,7 @@ function liabsView() {
   const right = cards.length
     ? '<div class="sec">' + TH("liabs.cards") + "</div>" + zoneList("cards", cards.map(a => accRow(a, b)).join(""))
     : "";
-  return tabBar(T("nav.liabs")) + panes(h, right);
+  return tabBar(T("nav.liabs"), true) + panes(h, right);
 }
 /* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
    helps to spot it */

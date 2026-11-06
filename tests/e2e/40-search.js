@@ -105,8 +105,8 @@ const ok = (c, m) => {
   await page.click('[data-act="search-open"]');
   ok(
     (await page.evaluate(() => V.screen === "search" && document.activeElement === $("#sr-q"))) &&
-      (await page.textContent("#sr")).includes("Find entries by note"),
-    "Search opens with the box ready and a hint"
+      (await page.textContent("#sr")).trim() === "",
+    "Search opens with the box ready and nothing under it (no hint line)"
   );
 
   await typeIn("gr");
@@ -266,6 +266,21 @@ const ok = (c, m) => {
   await page.click('#app [data-act="search-open"]');
   await page.click('#app [data-act="sr-back"]');
   ok((await page.evaluate(() => V.screen)) === "history", "and Back returns to History");
+  /* every tab but Settings has Search, left of History; Back returns to the tab it was opened from */
+  for (const tab of ["assets", "liabs"]) {
+    await page.evaluate(t => {
+      V.screen = t;
+      render();
+    }, tab);
+    ok(
+      !!(await page.$('#app .appbar [data-act="search-open"] + [data-act="go"][data-v="history"]')),
+      tab + ": Search left of History"
+    );
+    await page.click('#app [data-act="search-open"]');
+    ok((await page.evaluate(() => V.screen === "search" && SR.q === "")) === true, tab + ": Search opens clean");
+    await page.click('#app [data-act="sr-back"]');
+    ok((await page.evaluate(() => V.screen)) === tab, tab + ": Back returns to it");
+  }
   await ctx.close();
 
   /* a German phone: amounts typed the German way */

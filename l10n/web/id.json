@@ -617,7 +617,6 @@
   "search": {
     "title": "Cari",
     "placeholder": "Cari transaksi",
-    "hint": "Temukan transaksi lewat catatan, penerima, kategori, akun, atau jumlah.",
     "clear": "Hapus",
     "unscope": "Kembali ke semua hasil, bukan hanya {{name}}",
     "none": "Tidak ada yang cocok dengan “{{q}}”.",

@@ -622,7 +622,6 @@
   "search": {
     "title": "Ara",
     "placeholder": "Kayıtlarda ara",
-    "hint": "Kayıtları nota, alıcıya, kategoriye, hesaba ya da tutara göre bul.",
     "clear": "Temizle",
     "unscope": "Yalnızca {{name}} değil, tüm sonuçlara dön",
     "none": "“{{q}}” ile eşleşen bir şey yok.",

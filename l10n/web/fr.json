@@ -627,7 +627,6 @@
   "search": {
     "title": "Rechercher",
     "placeholder": "Rechercher des opérations",
-    "hint": "Trouvez des opérations par note, bénéficiaire, catégorie, compte ou montant.",
     "clear": "Effacer",
     "unscope": "Revenir à tous les résultats, pas seulement {{name}}",
     "none": "Rien ne correspond à « {{q}} ».",

@@ -622,7 +622,6 @@
   "search": {
     "title": "Suchen",
     "placeholder": "Einträge suchen",
-    "hint": "Finde Einträge nach Notiz, Empfänger, Kategorie, Konto oder Betrag.",
     "clear": "Löschen",
     "unscope": "Zurück zu allen Ergebnissen, nicht nur {{name}}",
     "none": "Nichts passt zu „{{q}}“.",

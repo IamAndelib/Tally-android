@@ -627,7 +627,6 @@
   "search": {
     "title": "Buscar",
     "placeholder": "Buscar movimientos",
-    "hint": "Busca movimientos por nota, beneficiario, categoría, cuenta o importe.",
     "clear": "Borrar",
     "unscope": "Volver a todos los resultados, no solo {{name}}",
     "none": "Nada coincide con «{{q}}».",

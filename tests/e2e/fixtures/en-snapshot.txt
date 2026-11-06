@@ -812,6 +812,7 @@ title "Tally"
 === assets
 #app
 "Assets"
+@aria-label="Search"
 @aria-label="History"
 @aria-label="Settings"
 "Net worth"
@@ -853,6 +854,7 @@ title "Tally"
 === liabs
 #app
 "Liabilities"
+@aria-label="Search"
 @aria-label="History"
 @aria-label="Settings"
 "You owe"
@@ -1645,6 +1647,7 @@ title "Tally"
 === assets-all
 #app
 "Assets"
+@aria-label="Search"
 @aria-label="History"
 @aria-label="Settings"
 "Net worth"
