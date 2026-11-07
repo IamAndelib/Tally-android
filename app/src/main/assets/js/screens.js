@@ -530,6 +530,7 @@ function fitWrapped(root, sel) {
 const curLines = m =>
   Object.keys(m).length
     ? Object.entries(m)
+        .sort((a, b) => mainFirst(a[0], b[0]))
         .map(([c, v]) => '<div class="big">' + esc(money(v, c)) + "</div>")
         .join("")
     : '<div class="big">' + esc(money(0, S.settings.cur)) + "</div>";

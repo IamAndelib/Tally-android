@@ -367,6 +367,13 @@ const ok = (c, m) => {
   }));
   ok(r.mahin === 1 && r.drawn === 2, "A16: saving added to the open tab, no second one: " + JSON.stringify(r));
   await p.evaluate(() => (closeSheet(), loanForm("lend")));
+  // currencies in Assets' net worth and Liabilities' "You owe": the notebook's own first, the others by code
+  r = await p.evaluate(() => {
+    const h = document.createElement("div");
+    h.innerHTML = curLines({ EUR: 5, GBP: 3, USD: 2, AUD: 1 });
+    return [...h.querySelectorAll(".big")].map(x => x.textContent.replace(/[\d.,\s\u00a0\u2060\u2212-]/g, ""));
+  });
+  ok(r.join() === "$,A$,€,£", "curLines: the main currency first, the rest by code: " + r);
   // payees, after a letter
   await p.evaluate(() => (closeSheet(), txSheet(null, "expense", "food")));
   await p.fill("#f-payee", "co");
