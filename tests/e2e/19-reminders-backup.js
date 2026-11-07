@@ -977,7 +977,7 @@ const stub = () => {
   await cd("keep");
   await shape(
     "Restore this backup?",
-    "This phone's data will be replaced by the backup's.",
+    "This phone's data will be replaced by the backup's: 1 account and 0 entries.",
     [
       ["cd-out", "Cancel"],
       ["cd-keep", "Restore"],

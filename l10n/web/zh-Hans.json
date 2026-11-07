@@ -130,7 +130,6 @@
     "found": {
       "title": "这个文件夹里已有 Tally 备份",
       "body": "要在这部手机上恢复它，还是用这部手机的数据覆盖它？",
-      "restoreBody": "这部手机的数据将被备份中的数据替换。",
       "overwriteQ": "覆盖这个备份？",
       "overwriteBody": "这个备份中的数据将丢失，被这部手机的数据替换。"
     },
@@ -452,11 +451,9 @@
   },
   "entries": {
     "fullHistory": "查看全部明细",
-    "delUpdate": "删除并更新余额",
-    "delKeep": "删除，保留余额",
-    "delTitle_other": "删除{{count}}条记录？",
-    "delBody": "金额要退回账户，还是让余额保持不变？",
-    "delBodyMany": "金额要退回账户，还是让余额保持不变？"
+    "delUpdate": "更改账户余额",
+    "delKeep": "保留当前余额",
+    "delTitle_other": "删除{{count}}条记录？"
   },
   "home": {
     "nothingYet": "还没有任何记录。",

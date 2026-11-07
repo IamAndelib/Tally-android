@@ -118,6 +118,16 @@ function restorePlan(t) {
     },
   };
 }
+/* What a Restore confirmation says: the data is replaced, what the backup holds (accounts, entries, and when it was
+   saved if known), then the plan's notes (items left out, a newer version) */
+function restoreBody(plan, when) {
+  const what = {
+    accounts: T("restore.accounts", { count: plan.n.accounts.length }),
+    entries: T("restore.entries", { count: plan.n.txns.length }),
+    when: when ? backupWhen(when, true) : "",
+  };
+  return sentences(T(what.when ? "restore.bodySaved" : "restore.body", what), ...plan.notes);
+}
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.
    auto: {when} for the auto backup file, whose dialog also offers "Choose another file". False when the text isn't a
    backup that can be read. */
@@ -127,17 +137,12 @@ function restoreText(t, auto) {
     snack(T(plan.err));
     return false;
   }
-  const what = {
-    accounts: T("restore.accounts", { count: plan.n.accounts.length }),
-    entries: T("restore.entries", { count: plan.n.txns.length }),
-    when: auto && auto.when ? backupWhen(auto.when, true) : "",
-  };
   /* with the auto backup's file: Restore / Choose another file / Cancel; a file just picked: Cancel | Restore */
   const yes = { role: "keep", label: T("restore.ok"), run: () => plan.run() },
     no = { role: "out", label: T("common.cancel") };
   choiceDialog(
     auto ? T("restore.autoQ", { file: BACKUP_FILE }) : T("restore.q"),
-    sentences(T(what.when ? "restore.bodySaved" : "restore.body", what), ...plan.notes),
+    restoreBody(plan, auto && auto.when),
     auto ? [yes, { role: "alt", label: T("restore.other"), run: pickRestoreFile }, no] : [no, yes],
     { row: !auto }
   );

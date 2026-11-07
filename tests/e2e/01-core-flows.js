@@ -344,7 +344,7 @@ const ok = (c, m) => {
   ok((await page.textContent(".appbar h1")).startsWith("3 selected"), "3 selected");
   await page.screenshot({ path: OUT + "/history-select.png" });
   await act("sel-del");
-  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.click("#pop .cd-destroy"); // Change the account balance
   await page.waitForTimeout(350);
   S = await state();
   ok(S.txns.length === before - 4 && !S.txns.some(t => t.id === tr.feeId), "deleted 3 + linked fee");

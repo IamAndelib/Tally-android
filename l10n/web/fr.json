@@ -130,7 +130,6 @@
     "found": {
       "title": "Ce dossier contient déjà une sauvegarde Tally",
       "body": "La restaurer sur ce téléphone, ou l'écraser avec les données de ce téléphone ?",
-      "restoreBody": "Les données de ce téléphone seront remplacées par celles de la sauvegarde.",
       "overwriteQ": "Écraser cette sauvegarde ?",
       "overwriteBody": "Les données de cette sauvegarde seront perdues, remplacées par celles de ce téléphone."
     },
@@ -458,13 +457,11 @@
   },
   "entries": {
     "fullHistory": "Voir tout l’historique",
-    "delUpdate": "Supprimer et mettre à jour le solde",
-    "delKeep": "Supprimer, garder le solde",
+    "delUpdate": "Modifier le solde du compte",
+    "delKeep": "Garder le solde actuel",
     "delTitle_one": "Supprimer cette opération ?",
     "delTitle_many": "Supprimer ces {{count}} d’opérations ?",
-    "delTitle_other": "Supprimer ces {{count}} opérations ?",
-    "delBody": "Son montant doit-il retourner sur le compte, ou le solde rester tel quel ?",
-    "delBodyMany": "Leurs montants doivent-ils retourner sur les comptes, ou les soldes rester tels quels ?"
+    "delTitle_other": "Supprimer ces {{count}} opérations ?"
   },
   "home": {
     "nothingYet": "Rien de noté pour l’instant.",

@@ -396,7 +396,7 @@ const ok = (c, m) => {
   );
   await tap('#sheet [data-v="e1"]');
   await tap('#sheet [data-act="tx-del"]');
-  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.click("#pop .cd-destroy"); // Change the account balance
   await page.waitForTimeout(350);
   await page.waitForTimeout(80);
   ok(

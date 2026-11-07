@@ -354,7 +354,7 @@ function folderCheck() {
           role: "keep",
           label: T("restore.ok"),
           run: () => plan.run(backupOn),
-          confirm: { title: T("restore.q"), text: sentences(T("backup.found.restoreBody"), ...plan.notes) },
+          confirm: { title: T("restore.q"), text: restoreBody(plan, r.when) },
         },
         {
           ...over,

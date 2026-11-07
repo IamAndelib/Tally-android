@@ -1194,7 +1194,7 @@ const ok = (c, m) => {
     ok((await state()).open === "coffee", "the row stays open behind the form");
     await page.click('#app .txo [data-act="tx-del"]');
     await page.waitForTimeout(100);
-    await page.click("#pop .cd-destroy"); // Delete and update the balance
+    await page.click("#pop .cd-destroy"); // Change the account balance
     await page.waitForTimeout(350);
     const del = await page.evaluate(() => ({
       txo: document.querySelectorAll("#app .txo").length,
@@ -1822,10 +1822,10 @@ const ok = (c, m) => {
     const sh = await shape();
     ok(
       sh.title === "Delete this entry?" &&
-        sh.text === "Should its amount go back to the account, or the balance stay as it is?" &&
+        !sh.text &&
         same(sh.btns, [
-          "cd-destroy:Delete and update the balance",
-          "cd-destroy-out:Delete, keep the balance",
+          "cd-destroy:Change the account balance",
+          "cd-destroy-out:Keep the current balance",
           "cd-out:Cancel",
         ]),
       "an opened row's Delete asks: " + JSON.stringify(sh)
@@ -1902,7 +1902,7 @@ const ok = (c, m) => {
       ok(
         lp.title === "Delete this entry?" &&
           lp.btns.length === 2 &&
-          lp.btns[0] === "cd-destroy:Delete and update the balance" &&
+          lp.btns[0] === "cd-destroy:Change the account balance" &&
           lp.btns[1] === "cd-out:Cancel",
         "a loan payment is not offered to keep the balance: " + JSON.stringify(lp)
       );
@@ -1974,9 +1974,7 @@ const ok = (c, m) => {
       await selDel(["sp", "in", "tr", "fx", "ad"]);
       const sh2 = await shape();
       ok(
-        sh2.title === "Delete these 5 entries?" &&
-          sh2.text === "Should their amounts go back to the accounts, or the balances stay as they are?" &&
-          sh2.btns.length === 3,
+        sh2.title === "Delete these 5 entries?" && !sh2.text && sh2.btns.length === 3,
         "a selection is asked once, in the plural: " + JSON.stringify(sh2)
       );
       await page.click("#pop .cd-destroy-out");

@@ -130,7 +130,6 @@
     "found": {
       "title": "Folder ini sudah berisi cadangan Tally",
       "body": "Pulihkan di ponsel ini, atau timpa dengan data ponsel ini?",
-      "restoreBody": "Data ponsel ini akan diganti dengan data cadangan.",
       "overwriteQ": "Timpa cadangan ini?",
       "overwriteBody": "Data cadangan ini akan hilang, diganti dengan data ponsel ini."
     },
@@ -452,11 +451,9 @@
   },
   "entries": {
     "fullHistory": "Buka semua riwayat",
-    "delUpdate": "Hapus dan perbarui saldo",
-    "delKeep": "Hapus, pertahankan saldo",
-    "delTitle_other": "Hapus {{count}} transaksi ini?",
-    "delBody": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?",
-    "delBodyMany": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?"
+    "delUpdate": "Ubah saldo akun",
+    "delKeep": "Pertahankan saldo saat ini",
+    "delTitle_other": "Hapus {{count}} transaksi ini?"
   },
   "home": {
     "nothingYet": "Belum ada yang dicatat.",

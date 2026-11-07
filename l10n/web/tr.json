@@ -130,7 +130,6 @@
     "found": {
       "title": "Bu klasörde zaten bir Tally yedeği var",
       "body": "Bu telefona geri yüklensin mi, yoksa bu telefonun verileriyle üzerine mi yazılsın?",
-      "restoreBody": "Bu telefonun verileri yedekteki verilerle değiştirilecek.",
       "overwriteQ": "Bu yedeğin üzerine yazılsın mı?",
       "overwriteBody": "Bu yedekteki veriler kaybolacak, yerine bu telefonun verileri gelecek."
     },
@@ -455,12 +454,10 @@
   },
   "entries": {
     "fullHistory": "Tüm geçmişi aç",
-    "delUpdate": "Sil ve bakiyeyi güncelle",
-    "delKeep": "Sil, bakiyeyi koru",
+    "delUpdate": "Hesap bakiyesini değiştir",
+    "delKeep": "Mevcut bakiyeyi koru",
     "delTitle_one": "Bu kayıt silinsin mi?",
-    "delTitle_other": "Bu {{count}} kayıt silinsin mi?",
-    "delBody": "Tutarı hesaba geri dönsün mü, yoksa bakiye olduğu gibi mi kalsın?",
-    "delBodyMany": "Tutarlar hesaplara geri dönsün mü, yoksa bakiyeler olduğu gibi mi kalsın?"
+    "delTitle_other": "Bu {{count}} kayıt silinsin mi?"
   },
   "home": {
     "nothingYet": "Henüz hiçbir şey yazılmadı.",

@@ -140,7 +140,7 @@ const ok = (c, m) => {
   });
   await page.click('[data-act="sel-del"]');
   await settle();
-  await page.click("#pop .cd-destroy"); // Delete and update the balance
+  await page.click("#pop .cd-destroy"); // Change the account balance
   await page.waitForTimeout(350);
   ok((await snackText()).includes("Deleted 2 entries"), "delete message counts the fee: " + (await snackText()));
 

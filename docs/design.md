@@ -57,7 +57,7 @@ Tally never files an entry under a category by itself, never changes a balance s
 without saying so. Where a choice changes money, the person is asked, in words that say what each answer does.
 *Example:* when someone pays back more than they owed, Tally asks what the extra is; "income" opens the income form
 so the person picks the category (`overpay()` in `loans.js`). Deleting an entry asks whether the account's balance
-changes ("Delete and update the balance") or stays ("Delete, keep the balance").
+changes ("Change the account balance") or stays ("Keep the current balance").
 
 **9. Every change can be undone, and nothing is lost.**
 Every change to entries goes through Undo. Accounts with entries are archived, never deleted. Unreadable saved data is

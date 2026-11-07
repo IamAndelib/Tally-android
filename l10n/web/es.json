@@ -130,7 +130,6 @@
     "found": {
       "title": "Esta carpeta ya tiene una copia de Tally",
       "body": "¿Restaurarla en este teléfono, o sobrescribirla con los datos de este teléfono?",
-      "restoreBody": "Los datos de este teléfono se reemplazarán por los de la copia.",
       "overwriteQ": "¿Sobrescribir esta copia?",
       "overwriteBody": "Los datos de esta copia se perderán, reemplazados por los de este teléfono."
     },
@@ -458,13 +457,11 @@
   },
   "entries": {
     "fullHistory": "Abrir historial completo",
-    "delUpdate": "Eliminar y actualizar el saldo",
-    "delKeep": "Eliminar y mantener el saldo",
+    "delUpdate": "Cambiar el saldo de la cuenta",
+    "delKeep": "Mantener el saldo actual",
     "delTitle_one": "¿Eliminar este movimiento?",
     "delTitle_many": "¿Eliminar estos {{count}} movimientos?",
-    "delTitle_other": "¿Eliminar estos {{count}} movimientos?",
-    "delBody": "¿Debe su importe volver a la cuenta o el saldo quedarse como está?",
-    "delBodyMany": "¿Deben sus importes volver a las cuentas o los saldos quedarse como están?"
+    "delTitle_other": "¿Eliminar estos {{count}} movimientos?"
   },
   "home": {
     "nothingYet": "Aún no has anotado nada.",

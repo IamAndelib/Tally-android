@@ -130,7 +130,6 @@
     "found": {
       "title": "This folder already has a Tally backup",
       "body": "Restore it on this phone, or overwrite it with this phone's data?",
-      "restoreBody": "This phone's data will be replaced by the backup's.",
       "overwriteQ": "Overwrite this backup?",
       "overwriteBody": "This backup's data will be lost, replaced by this phone's."
     },
@@ -455,12 +454,10 @@
   },
   "entries": {
     "fullHistory": "Open full history",
-    "delUpdate": "Delete and update the balance",
-    "delKeep": "Delete, keep the balance",
+    "delUpdate": "Change the account balance",
+    "delKeep": "Keep the current balance",
     "delTitle_one": "Delete this entry?",
-    "delTitle_other": "Delete these {{count}} entries?",
-    "delBody": "Should its amount go back to the account, or the balance stay as it is?",
-    "delBodyMany": "Should their amounts go back to the accounts, or the balances stay as they are?"
+    "delTitle_other": "Delete these {{count}} entries?"
   },
   "home": {
     "nothingYet": "Nothing written down yet.",

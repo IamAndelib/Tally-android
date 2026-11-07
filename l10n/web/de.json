@@ -130,7 +130,6 @@
     "found": {
       "title": "In diesem Ordner liegt schon ein Tally-Backup",
       "body": "Auf diesem Handy wiederherstellen oder mit den Daten dieses Handys überschreiben?",
-      "restoreBody": "Die Daten dieses Handys werden durch die des Backups ersetzt.",
       "overwriteQ": "Dieses Backup überschreiben?",
       "overwriteBody": "Die Daten dieses Backups gehen verloren und werden durch die dieses Handys ersetzt."
     },
@@ -455,12 +454,10 @@
   },
   "entries": {
     "fullHistory": "Ganzen Verlauf öffnen",
-    "delUpdate": "Löschen und Kontostand anpassen",
-    "delKeep": "Löschen, Kontostand behalten",
+    "delUpdate": "Kontostand ändern",
+    "delKeep": "Aktuellen Kontostand behalten",
     "delTitle_one": "Diesen Eintrag löschen?",
-    "delTitle_other": "Diese {{count}} Einträge löschen?",
-    "delBody": "Soll der Betrag zum Konto zurückgehen oder der Kontostand bleiben, wie er ist?",
-    "delBodyMany": "Sollen die Beträge zu den Konten zurückgehen oder die Kontostände bleiben, wie sie sind?"
+    "delTitle_other": "Diese {{count}} Einträge löschen?"
   },
   "home": {
     "nothingYet": "Noch nichts notiert.",
