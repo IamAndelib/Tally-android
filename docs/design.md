@@ -136,8 +136,8 @@ links that would need the internet.
   for colour-blind safety as ring neighbours on light and dark surfaces; re-check if reordered.
 - **Account colour is a recognition aid, not a label.** It shows as a dot before the account's name in every row and
   sheet line that names an account, and as a tint on a picked account chip in Filters and in forms (0.24 light / 0.38
-  dark, text in the normal colour; very light colours get a stronger tint so the text passes WCAG AA). The name is
-  always there.
+  dark, text in the normal colour; very light colours get a weaker tint, half as strong, so the text passes WCAG AA).
+  The name is always there.
 - **Soft containers.** Summary cards (the net worth card, the Summary's figures) use one soft surface-container, the
   same in light and dark, with no line explaining what the figure is.
 - **Defaults that tell types apart:** a credit card is purple by default so it doesn't look like a bank (2026-11-03).
@@ -192,8 +192,8 @@ links that would need the internet.
   received (green) over "−" spent (red), one line per currency, the notebook's own first. The Transfers filter says
   "Transferred" and "Fees" in words instead.
 - **Hold to select** several rows; while selecting, the period and Filters row stays where it is, dimmed and not
-  tappable, so nothing moves; the app bar becomes "N selected", and with every row selected the main button reads
-  "Clear selection".
+  tappable, so nothing moves; the app bar becomes "N selected", and with every row selected the app bar's select-all
+  icon button becomes a deselect icon labelled "Clear selection".
 - **Hold and drag to reorder** Assets, Liabilities and Home's chips; drag onto another section to archive, clear or
   reopen. A dragged item ticks once per switch of place.
 - **Long lists draw in chunks** and nothing in how they look changes.
@@ -214,8 +214,11 @@ links that would need the internet.
 - **More than two answers** is a sign the question needs rethinking; where it is truly needed (`choiceDialog`: the
   backup folder that already holds a backup, a backup that can't be read, restoring a file, Delete all data, Delete
   an entry), the answers are stacked full width and each says its consequence by its colour: green keeps data, red
-  loses it, tonal is a side road, outlined is the way out. An answer that destroys something asks again in a second
-  step, where Cancel and Android's Back both close the whole dialog.
+  loses it, tonal is a side road, outlined is the way out. The same stack is used for a two-answer question that sits
+  beside those (deleting a loan's entry offers only Delete and Cancel). Where an answer is the last step before data
+  is lost (restoring over the current data, Delete all data), it asks again in a second step, where Cancel and
+  Android's Back both close the whole dialog. Deleting an entry does not: its red answers act at once and the
+  snackbar's Undo is the way back.
 - **Pickers** (date, time, period, currency, emblem) share one look: a tabbed or gridded body and "Today" / "Cancel" at
   the foot; picking a value is the confirmation where that's unambiguous (date, month, year), "OK" only on a wheel.
 
