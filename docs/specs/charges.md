@@ -209,8 +209,11 @@ first so nothing is left out." Then, in 1.4.2–1.4.4 (data v7):
   is labelled "fee" on the row.
 
 Versions before 1.4.2 also read each add-on that moves money as an entry of their own, so balances stay right there
-too. A file saved again by an older version comes back to version 8 without the `onTop` amounts it dropped; everything
-else comes back as it was.
+too. A file saved again by an older version comes back to version 8 as that version left it: without the `onTop`
+amounts it dropped; a purchase's charge as a plain expense in the purchase's category; a lend's transfer charge as a
+second draw of its lending; and with the built-in Fees category back (that version adds it, and so does `migrate()`
+for a save older than 8). Every balance, and what is owed apart from the dropped amounts on top, is still right; a
+charge on a transfer or a loan payment and a tip keep their links.
 
 ### The other branch
 

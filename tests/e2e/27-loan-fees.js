@@ -276,12 +276,13 @@ const ok = (c, m) => {
             dir: "in",
             loan: "X",
             principal: true,
+            feeId: "f",
           },
           { id: "f", ts: 2, date: today(), type: "expense", amount: 1, account: "a", cat: "fees", feeOf: "d" },
         ],
         loans: [{ id: "X", kind: "borrow", person: "Z", account: "a", date: today(), status: "open" }],
       });
-      return !m.txns.find(x => x.id === "f").feeOf;
+      return !m.txns.find(x => x.id === "f").feeOf && !m.txns.find(x => x.id === "d").feeId;
     }),
     "an expense charge never hangs on a draw (a lend's transfer charge is a loan entry)"
   );

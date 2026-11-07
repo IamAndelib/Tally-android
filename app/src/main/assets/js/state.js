@@ -12,7 +12,9 @@ function blank() {
        entry linked both ways to its entry (feeOf on it, feeId on the entry: a charge on a transfer, a loan payment or a
        purchase, a tip on a lending's payment, a lend's transfer charge), what only changes what is owed is a draw's
        onTop; a new notebook has no Fees category. An older Tally restoring a backup warns it's newer (restoreText) and
-       drops what it doesn't know, so it may lose onTop, never a balance. */
+       drops what it doesn't know: saved again there, the file comes back without onTop, a purchase's charge as a plain
+       expense in its category, a lend's transfer charge as a second draw, and with Fees; every balance (and what is
+       owed, apart from onTop) stays right. */
     v: 8,
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
@@ -353,7 +355,7 @@ function migrate(o) {
   if (!(ver >= 6) && Array.isArray(o.loans))
     o.loans.forEach(ol => {
       if (!ol || !isDay(ol.due)) return;
-      const draw = s.txns.find(t => t.type === "loan" && t.principal && t.loan === sid(ol.id));
+      const draw = s.txns.find(t => t.type === "loan" && t.principal && !t.feeOf && t.loan === sid(ol.id));
       if (draw && !draw.due) draw.due = day(ol.due);
     });
   s.assets = (Array.isArray(o.assets) ? o.assets : [])
@@ -550,10 +552,12 @@ const addOnOf = t => {
    amount on top, onTop: a lend's extra or a borrow's charges). An amount above 0 makes the add-on or updates it with
    the entry's account, day and category, just after the entry (ts + 1); anything else removes it. An entry has one
    add-on: another kind already there is never replaced. A lending payment's new add-on is an extra, so "charge" there
-   only changes or removes the paid fee an older version recorded. False (and nothing changed) when t can't take it. */
+   only changes or removes the paid fee an older version recorded. False (and nothing changed) when t can't take it or
+   amount isn't a number a field takes (only a real 0 or less removes). */
 function setAddOn(t, kind, amount) {
-  if (!t || isAddOn(t)) return false;
-  const n = rnd(+amount || 0);
+  if (!t || isAddOn(t) || typeof amount !== "number" || !Number.isFinite(amount)) return false;
+  const n = rnd(amount);
+  if (n > 0 && amtOk(n) == null) return false; // past what a field takes (migrate() would drop an onTop like it)
   if (kind === "top") {
     if (!(t.type === "loan" && t.principal)) return false;
     if (n > 0) t.onTop = n;

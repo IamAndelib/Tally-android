@@ -544,6 +544,16 @@ const bad = {
           // a borrow's draw: charges on top, never a linked charge
           const bD = t("bD");
           out.borrow = [setAddOn(bD, "charge", 5), !!addOnOf(bD), setAddOn(bD, "top", 90), bD.onTop];
+          // an amount that isn't a number, or past what a field takes, changes nothing; only 0 or less removes
+          out.badAmt = ["abc", NaN, null, undefined, Infinity, "5"].map(v => setAddOn(tA, "charge", v));
+          out.badKept = snap(addOnOf(tA)).amount;
+          out.bigTop = [
+            setAddOn(bD, "top", 1e13),
+            bD.onTop,
+            setAddOn(t("lD"), "charge", 1e13),
+            addOnOf(t("lD")).amount,
+          ];
+          out.negative = [setAddOn(pE, "charge", -1), !!addOnOf(pE)];
           // none on money received, a balance fix, or an add-on
           S.txns.push({
             id: "in1",
@@ -663,6 +673,12 @@ const bad = {
       r.none.every(k => k.every(v => v === false)) && r.noneAdded === 0,
       "none on money received, a balance fix, or an add-on " + J(r.none)
     );
+    ok(
+      r.badAmt.every(v => v === false) && r.badKept === 12.346,
+      "an amount that isn't a number changes nothing, never removes " + J(r.badAmt)
+    );
+    ok(same(r.bigTop, [false, 90, false, 120]), "an amount past what a field takes is refused " + J(r.bigTop));
+    ok(same(r.negative, [true, false]), "an amount below 0 removes the add-on");
     ok(same(r.kept[0], r.kept[1]), "what setAddOn() leaves, migrate() keeps exactly");
   } catch (e) {
     ok(false, "setAddOn(): " + e.message.split("\n")[0]);
@@ -710,6 +726,26 @@ const bad = {
       r.two.loan && !r.two.left.includes("lDc") && r.two.left.includes("lD2"),
       "one of two draws deleted: the lending stays, without that draw's transfer charge " + J(r.two)
     );
+  }
+
+  // ---- 9. a loan's due day from before version 6 goes on its draw, never on the draw's transfer charge
+  {
+    const v5 = {
+      v: 5,
+      settings: { cur: "BDT" },
+      accounts: [acct("k", "Bkash", "wallet", "BDT", 20000)],
+      txns: [
+        x("c", 2, D.d1, "loan", 100, "k", { dir: "out", loan: "L", principal: true, feeOf: "d" }),
+        x("d", 1, D.d1, "loan", 1000, "k", { dir: "out", loan: "L", principal: true, feeId: "c" }),
+      ],
+      loans: [{ ...loanOf("L", "lend", "Rafi", "k", D.d1), amount: 1000, due: D.due1 }],
+    };
+    const r = await read(v5, []);
+    ok(
+      byId(r.m, "d").due === D.due1 && !("due" in byId(r.m, "c")) && byId(r.m, "c").feeOf === "d",
+      "v<6: the loan's due day goes on its draw, not on its transfer charge " + J(r.m.txns)
+    );
+    ok(same(r.m, r.m2), "… and migrating it twice changes nothing more");
   }
 
   ok(errors.length === 0, "no page errors " + J(errors));

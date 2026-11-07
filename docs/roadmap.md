@@ -13,7 +13,7 @@
   - Security: password-protected backups (#42, notes: docs/specs/42-protected-backups.md) and
     app lock (fingerprint / screen lock).
   - **Format clash (P1 when merging):** plan-wip uses saved-data format v7 for `repeats`, but main already shipped
-    v7 for payees (1.4.2+). Rebasing must renumber the Plan format (v8 or later, after any 1.4.4 bump) and migrate
+    v7 for payees (1.4.2+). Rebasing must renumber the Plan format (v9 or later (main's v8 = charges, 1.4.5)) and migrate
     from main's v7, with a test restoring a real 1.4.3 backup.
   - Needs: CONTRIBUTING.md:164 and CLAUDE.md:50 ("no budgets") updated in that release.
 - **Undecided:** #36 CSV import · #33 chart per account, hold-a-category total · #31 split payments (likely not planned)
