@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Guidance for Claude Code working in this repository. Read [README.md](README.md) (features, install, privacy) and
-[CONTRIBUTING.md](CONTRIBUTING.md) (architecture, data model, conventions, design principles, tests, releasing) first;
+[CONTRIBUTING.md](CONTRIBUTING.md) (architecture, data model, conventions, tests, releasing) and
+[docs/design.md](docs/design.md) (the design principles and how the interface follows them) first;
 this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
 what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 

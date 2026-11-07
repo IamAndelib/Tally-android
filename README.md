@@ -28,9 +28,9 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 | | | |
 |:-:|:-:|:-:|
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee and the balance after it |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee, category and account |
 | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week or month, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Money in"><br>**Money in**: with who it came from |  |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Received"><br>**Received**: with who it came from |  |
 
 ## Features
 
@@ -66,14 +66,15 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 - **Home and History** for any day, date range, month or year. History starts on all time; narrow it with the period
   chip and the Filters sheet: account, kind of money movement, category, person, or the accounts a transfer went
   between, each option showing how many entries it leaves. Entries are two lines with the account marked by a dot of
-  its colour; a transfer's fee sits inside it. Tap an entry to open it in place; hold one to select several and delete
-  them together.
+  its colour; a transfer's fee sits inside it. Months and days carry what was received over what was spent. Tap an
+  entry to open it in place; hold one to select several and delete them together. Deleting asks whether the account's
+  balance changes or stays as it is.
 - **Search** inside History, from any tab: type a word, a number or a month and pick a suggestion (who was paid, who
   paid you, a category, an account, a person, a kind, a period or an amount) to narrow the list, each showing how many
   entries it leaves. Matches are marked, a typo offers the word it was close to, and your last searches wait under the
   empty field. They stay on this phone only, never in backups.
-- **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month, or a year's 12 months by category,
-  compared with the period before.
+- **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month as a pie of its categories, or a year's 12
+  months, compared with the period before; the bars show whole amounts.
 
 **Around the phone**
 

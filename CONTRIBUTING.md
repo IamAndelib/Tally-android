@@ -1,7 +1,7 @@
 # Contributing to Tally
 
 Thanks for helping! Bug reports, ideas and pull requests are all welcome. Tally is deliberately small and calm, so
-please read *Design principles* before proposing a new feature.
+please read *Design principles* (and [docs/design.md](docs/design.md)) before proposing a new feature.
 
 ## Getting set up
 
@@ -165,15 +165,10 @@ exists. Translations marked as drafts in `l10n/glossary/<code>.md` await a nativ
 
 ## Design principles
 
-Tally is for people who want to write things down quickly and move on:
-
-- **One tap per expense.** Don't add steps to the common path.
-- **Small and quiet.** Short labels, no clutter, no walls of text. No budgets or statement import (both left out on
-  purpose).
-- **Feedback is instant and calm:** a light pressed layer, a soft flash on the changed row, the snackbar with Undo, a
-  short vibration. No ripples, scaling or page animations.
-- **Nothing leaves the phone.** No network requests, analytics or accounts.
-- **Material 3**, following the phone's own colours, in light and dark.
+Tally is for people who want to write things down quickly and move on: one tap per expense, small and quiet, nothing
+leaves the phone, Material 3 in the phone's own colours. [docs/design.md](docs/design.md) is the reference for
+the principles and for how they show in the layout, figures, colour, rows, dialogs and wording; read it before
+proposing a new feature or changing the interface. Budgets and statement import are left out on purpose.
 
 ## Tests
 

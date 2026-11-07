@@ -13,7 +13,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The spending summary's **Year** tab: a year's 12 months as bars you swipe through, the year against the same months
   of the year before, and its categories (#41).
 - **Settings → Region → Home opens on:** today, this month or this year (#41).
-- History shows each entry's account after a dot of the account's colour, so accounts are easy to tell apart (#37).
+- An account's colour shows as a dot before its name everywhere an account is named: entries, loan rows, sheets and
+  Filters (#37). A picked account in a form is tinted in its own colour, as in Filters.
 - Hold and drag to reorder accounts, credit cards, loans, lendings and other assets, and Home's balance chips (#33).
   Home's chips keep an order of their own.
 - **Search inside History** (#37), from Home, Assets, Liabilities and History: type words, a payee, a number or a
@@ -23,7 +24,22 @@ and versions follow [Semantic Versioning](https://semver.org/).
   transfer, exports or logs.
 - **History from all time**, with a period chip and a **Filters** sheet: by account, by kind (spent, received,
   transfers, lent, borrowed, balance fixes), category, person, or the accounts a transfer went between. Each choice
-  shows how many entries it leaves; months carry their totals.
+  shows how many entries it leaves; months and days carry their totals as a column: what was received over what was
+  spent, one line per currency.
+- Search and History small touches:
+  - a month or a day typed in the search ("may 2025", "jun 14") is offered as a period, with its entry count;
+  - suggestions start from two typed letters (one character in Chinese, Japanese and other scripts without spaces)
+    and wait while entries are selected;
+  - a recent search keeps the suggestion that was tapped, with its emblem; searches that found nothing are not kept;
+    each can be removed with its ✕, and **Clear all** empties the list, both with an Undo;
+  - the people under Lent to / Borrowed from, and the payees under Paid to / Received from, are compact chips, each
+    with a ✕ that takes the name out of the suggestions (its entries keep it), with an Undo;
+  - with every entry selected, the button reads **Clear selection**;
+  - an entry edited so that it no longer fits the filters says "Saved · no longer in this list" and offers Undo.
+- **Delete asks whether the balance changes or stays:** "Delete and update the balance" or "Delete, keep the balance"
+  (the account's opening balance absorbs the amount, no extra entry), asked once for a whole selection. Loan and
+  lending entries are only offered the first answer, because a loan's amounts come from its entries.
+- The fee on a transfer or a loan payment has its own calculator.
 
 ### Changed
 
@@ -32,12 +48,42 @@ and versions follow [Semantic Versioning](https://semver.org/).
   loan or balance fix) with Edit and Delete inside.
 - A transfer's or loan payment's fee sits inside its entry (`+ $2.00 fee`) instead of a row of its own, and
   searching counts entries the same way.
+- The questions that decide what happens to a notebook are stacked, full-width answers that say what each does: a backup
+  folder that already holds a backup (Restore / Overwrite / Cancel), a backup that can't be read (Choose another folder
+  / Overwrite / Cancel), restoring a file (Restore / Choose another file / Cancel) and **Delete all data** (Save backup
+  / Delete without a backup / Cancel). Overwrite and Delete ask once more before they act, where Cancel and Android's
+  Back close everything.
+- One name per thing: **Account** on every form (not "Paid from" or "Into"), **Received** for money in (the entry,
+  History's filter, "Received categories" in Settings), **Due** for a payback day, **Borrow money** beside Lend money,
+  and "At the start of today: $4,182.50" on an account. The account helper texts and Settings' reminder line are
+  shorter, and every note field reads the same. The Received form uses Spent's category chip.
+- Home's balance bar is stacked: "4 entries ›" on the left, on the right "Total in USD" over the figure, or, with
+  several currencies, one line each (the code in one column, the figures in the other). Home's chip row fades at an
+  edge where more chips wait.
+- Loans and lendings say each thing once: a row reads person and what's left, then the account and due date beside its
+  status (Active, Partly paid); the loan's sheet leaves out what the row already says.
+- The Summary shows whole amounts on every tab (a compact form such as 12.4K only from five digits), and its Months tab
+  shows the month's categories as a pie, with the total under it.
+- Small marks: History's Select icon is a checklist; the net worth card has no explaining line and the same soft
+  container in light and dark; a category's emblem is the button that changes it (a pen over a dark tint, replacing the
+  "Change emblem" text); amount fields start with the currency's own decimals ("4,167.50"); negative balances use a
+  true minus; an empty notebook's History keeps only Search until the first entry, and the welcome screen only Settings.
+- While entries are selected, the period and Filters row stays in place, dimmed and not tappable, so nothing jumps; the
+  filter chips continue on the Filters line, with Clear all last.
+- History's month and day headings count a transfer's or payment's fee inside what was spent, and an opened entry ends
+  with Edit and Delete only (Edit opens a loan's own sheet).
+- A dragged Home chip swaps places as soon as its own edge passes the middle of the next one.
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
 - Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
 - Nothing is cut short or shrunk any more: names, notes, categories, chips, fields, tabs and buttons wrap onto another
   line. On small phones and with large text, entries, accounts and lendings stack from the left.
 - Home's account chips show a larger icon, with the name (on two lines if need be) and balance beside it; where the
   date doesn't fit beside the ‹ › arrows, they make room for it.
+
+### Fixed
+
+- A double tap on an answer in a dialog no longer also answers the question that answer opens next.
+- Android's screen reader reads a locked currency as one sentence ("Currency: USD. Locked: this account has entries").
 
 ## [1.4.4] — 2026-11-06
 
