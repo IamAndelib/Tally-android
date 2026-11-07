@@ -1004,7 +1004,7 @@ function selSync(b) {
   $("#app .appbar h1").textContent = T("history.selected", { count: n });
   $('#app [data-act="sel-del"]').disabled = !n;
   const all = $('#app [data-act="sel-all"]'),
-    every = histRows(HLIST).every(t => V.sel.has(t.id)); // the button clears once everything listed is selected
+    every = histAllSelected();
   all.setAttribute("aria-label", T(every ? "history.clearSel" : "history.selAll"));
   all.innerHTML = every ? icDeselect() : ic("selectall");
 }

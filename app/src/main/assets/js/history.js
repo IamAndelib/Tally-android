@@ -2,7 +2,7 @@
  * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`: account, kind, then a
  * category, a person or a transfer's two sides), which entries they leave (`histList()`, `histMatch()`), which of those
  * are rows (`histRows()`: a fee is shown inside what it was charged on, never as a row), the totals in words
- * (`histWords()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
+ * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches.
  */
@@ -647,13 +647,15 @@ function histParts() {
       (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : ""),
   };
 }
+/* is every row listed in History selected (the select-all button then clears) */
+const histAllSelected = () => histRows(HLIST).every(t => V.sel.has(t.id));
 function historyView() {
   histDrop();
   const p = histParts();
   let h;
   if (V.sel) {
     const n = V.sel.size,
-      all = n > 0 && histRows(HLIST).every(t => V.sel.has(t.id)); // everything listed is selected
+      all = n > 0 && histAllSelected();
     h =
       '<header class="appbar"><button class="icon" data-act="sel-cancel" aria-label="' +
       TH("history.stopSel") +

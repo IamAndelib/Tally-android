@@ -975,12 +975,11 @@ const recentList = () =>
     const r = recentSug(x);
     return !r || (!r.bad && !!recentFind(r));
   });
+/* is suggestion x the one a kept suggestion r stands for (same group, name and label) */
+const sameSug = (x, r) => x.g === r.g && srFold(x.title) === srFold(r.title) && (x.label || "") === (r.label || "");
 /* the suggestion a kept one stands for now (None when the notebook has changed): found again from its words */
 function recentFind(r) {
-  const toks = sugTokens(r.words);
-  return (
-    sugFind(toks).find(x => x.g === r.g && srFold(x.title) === srFold(r.title) && (x.label || "") === r.label) || null
-  );
+  return sugFind(sugTokens(r.words)).find(x => sameSug(x, r)) || null;
 }
 /* what a kept suggestion says: its filter's own chip */
 function recentText(r) {
@@ -1043,9 +1042,7 @@ function recentUse(i) {
     const f = recentFind(r);
     if (f) {
       findDraw();
-      const at = SUGS.findIndex(
-        x => x.g === f.g && srFold(x.title) === srFold(f.title) && (x.label || "") === (f.label || "")
-      );
+      const at = SUGS.findIndex(x => sameSug(x, f));
       if (at >= 0) return findPick(at);
     }
   }
