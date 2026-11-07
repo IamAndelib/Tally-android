@@ -1403,6 +1403,436 @@ function variedV7() {
     ok(false, "old data: " + e.message.split("\n")[0]);
   }
 
+  /* ---- the counting rule (docs/specs/charges.md, "Counting"): one notebook with every add-on, in two currencies.
+     What each day spent and received is worked out here by hand from the entries (SPENT, GOT, BY); every total in the
+     page must give exactly that: spentOn(), the widget, the morning check, Home's figures and the ring's sums, the
+     entries sheet's day totals, History's month and day headings (default, Spent and Received), the Spent and
+     Received filters' rows, and Summary's every tab. */
+  const T0 = await page.evaluate(() => today()),
+    dd = n => {
+      const [y, m, d] = T0.split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+    };
+  const countBook = () => ({
+    v: 8,
+    settings: { ...settings, lastCheck: dd(0) },
+    accounts: [
+      acct("a", "Bank", "bank", "BDT", 50000),
+      acct("k", "Bkash", "wallet", "BDT", 20000),
+      acct("c", "Card", "card", "BDT", 0),
+      acct("u", "Dollars", "savings", "USD", 1000),
+      acct("w", "Wallet", "wallet", "USD", 0),
+    ],
+    types: [],
+    cats: cats7, // Fees renamed "Food": no charge may ever count under it
+    txns: [
+      // Sam: borrowed ৳1,000.00 with ৳100.00 of charges; Rafi: lent ৳1,000.00 + ৳100.00 transfer charge + ৳150.00
+      // extra; Lee: borrowed $500.00 with $25.00 of charges
+      x("sD", 100, dd(-6), "loan", 1000, "a", { dir: "in", loan: "S", principal: true, onTop: 100 }),
+      x("rD", 110, dd(-6), "loan", 1000, "k", { dir: "out", loan: "R", principal: true, onTop: 150, feeId: "rDc" }),
+      x("rDc", 111, dd(-6), "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+      x("eD", 120, dd(-6), "loan", 500, "u", { dir: "in", loan: "E", principal: true, onTop: 25 }),
+      // Mia: lent ৳2,000.00; Joy: lent ৳500.00 + ৳20.00 transfer charge, then written off
+      x("mD", 200, dd(-5), "loan", 2000, "a", { dir: "out", loan: "M", principal: true }),
+      x("jD", 210, dd(-5), "loan", 500, "k", { dir: "out", loan: "J", principal: true, feeId: "jDc" }),
+      x("jDc", 211, dd(-5), "loan", 20, "k", { dir: "out", loan: "J", principal: true, feeOf: "jD" }),
+      // a day with only a payback: no total
+      x("rP1", 300, dd(-4), "loan", 500, "k", { dir: "in", loan: "R" }),
+      // Rafi's ৳750.00 covers the last ৳600.00 of money and the ৳150.00 extra; Joy's ৳200.00 with an older paid fee
+      x("rP2", 400, dd(-3), "loan", 750, "k", { dir: "in", loan: "R" }),
+      x("jP", 410, dd(-3), "loan", 200, "k", { dir: "in", loan: "J", feeId: "jPf" }),
+      x("jPf", 411, dd(-3), "expense", 3, "k", { cat: "fees", feeOf: "jP" }),
+      // Sam paid back ৳1,100.00 (his ৳100.00 charges) with a ৳5.00 transfer charge; $20.00 of fun with a $2.00 charge
+      x("sP", 500, dd(-2), "loan", 1100, "a", { dir: "out", loan: "S", feeId: "sPc" }),
+      x("sPc", 501, dd(-2), "expense", 5, "a", { cat: "fees", feeOf: "sP" }),
+      x("uE", 510, dd(-2), "expense", 20, "u", { cat: "fun", feeId: "uEc" }),
+      x("uEc", 511, dd(-2), "expense", 2, "u", { cat: "fun", feeOf: "uE" }),
+      // dinner ৳1,000.00 + ৳150.00 charge; Mia paid back with a ৳200.00 tip; a plain expense in Fees ("Food")
+      x("pE", 600, dd(-1), "expense", 1000, "c", { cat: "food", feeId: "pEc" }),
+      x("pEc", 601, dd(-1), "expense", 150, "c", { cat: "food", feeOf: "pE" }),
+      x("mP", 610, dd(-1), "loan", 2000, "a", { dir: "in", loan: "M", feeId: "mPt" }),
+      x("mPt", 611, dd(-1), "income", 200, "a", { cat: "otherin", feeOf: "mP" }),
+      x("e1", 620, dd(-1), "expense", 300, "c", { cat: "fees" }),
+      // a transfer with a ৳10.00 charge, pay, groceries; $50.00 moved with a $1.00 charge; Lee paid back $525.00
+      x("tA", 700, dd(0), "transfer", 1000, "a", { to: "k", feeId: "tAc" }),
+      x("tAc", 701, dd(0), "expense", 10, "a", { cat: "fees", feeOf: "tA" }),
+      x("i1", 710, dd(0), "income", 40000, "a", { cat: "income" }),
+      x("g1", 720, dd(0), "expense", 50, "a", { cat: "groceries" }),
+      x("uT", 730, dd(0), "transfer", 50, "u", { to: "w", feeId: "uTc" }),
+      x("uTc", 731, dd(0), "expense", 1, "u", { cat: "fees", feeOf: "uT" }),
+      x("eP", 740, dd(0), "loan", 525, "u", { dir: "out", loan: "E" }),
+    ],
+    loans: [
+      loanOf("S", "borrow", "Sam", "a", dd(-6)),
+      loanOf("R", "lend", "Rafi", "k", dd(-6)),
+      loanOf("E", "borrow", "Lee", "u", dd(-6)),
+      loanOf("M", "lend", "Mia", "a", dd(-5)),
+      loanOf("J", "lend", "Joy", "k", dd(-5), "writeoff"),
+    ],
+    assets: [],
+  });
+  /* by hand: what each day spent and received, per currency, and the period's spending by part */
+  const SPENT = {
+    BDT: { [dd(-5)]: 20, [dd(-3)]: 3, [dd(-2)]: 105, [dd(-1)]: 1450, [dd(0)]: 60 },
+    USD: { [dd(-2)]: 22, [dd(0)]: 26 },
+  };
+  const GOT = { BDT: { [dd(-3)]: 150, [dd(-1)]: 200, [dd(0)]: 40000 }, USD: {} };
+  const BY = { BDT: { food: 1150, fees: 300, groceries: 50, _charges: 138 }, USD: { fun: 22, _charges: 26 } };
+  const DAYS = [-6, -5, -4, -3, -2, -1, 0].map(dd),
+    CURS = ["BDT", "USD"];
+  const sumIn = (m, s, e) =>
+    Math.round(
+      Object.entries(m)
+        .filter(([d]) => d >= s && d <= e)
+        .reduce((q, [, v]) => q + v, 0) * 1000
+    ) / 1000;
+  const monthsOf = days => [...new Set(days.map(d => d.slice(0, 7)))];
+  /* in the page: the notebook o made the state, and every total it shows */
+  const totals = o =>
+    page.evaluate(
+      ([o, days, curs]) => {
+        const keep = S,
+          keepV = { ...V },
+          keepHF = HF,
+          keepHP = { ...HP },
+          keepRing = window.ringHTML,
+          keepW = Android.setWidget;
+        const out = { spentOn: {}, home: {}, homeDay: {}, entries: [], hist: {}, rows: {}, sm: {}, check: {} };
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          let ring = null;
+          window.ringHTML = (c, r) => ((ring = r.mode === "home" ? r : ring), keepRing(c, r));
+          curs.forEach(c => (out.spentOn[c] = Object.fromEntries(days.map(d => [d, spentOn(d, c)]))));
+          /* the widget and the morning check */
+          let w = null;
+          Android.setWidget = j => (w = JSON.parse(j));
+          lastWidget = "";
+          syncWidget();
+          out.widget = w && w.spent;
+          curs.forEach(c => {
+            const box = document.createElement("div");
+            box.innerHTML = checkCard(balances(), c);
+            out.check[c] = box.textContent;
+          });
+          /* Home: the whole week, then each day, in each currency */
+          V.screen = "home";
+          const home = () => {
+            ring = null;
+            render();
+            const by = {};
+            Object.entries(ring.by).forEach(([k, v]) => v && (by[k] = rnd(v)));
+            return { spent: ring.spent, got: ring.got, by, hole: $(".dcenter").textContent };
+          };
+          curs.forEach(c => {
+            V.cur = c;
+            Object.assign(V, { period: "range", rs: days[0], re: days[days.length - 1] });
+            out.home[c] = home();
+            out.homeDay[c] = {};
+            days.forEach(d => {
+              Object.assign(V, { period: "day", anchor: d });
+              out.homeDay[c][d] = home();
+            });
+          });
+          /* the entries sheet's day totals, for the whole week */
+          V.cur = null;
+          Object.assign(V, { period: "range", rs: days[0], re: days[days.length - 1] });
+          render();
+          entriesSheet();
+          out.entries = [...document.querySelectorAll("#sheet .day")].map(e => [
+            e.firstElementChild.textContent,
+            e.lastElementChild.textContent.replace(/\u2060/g, ""),
+          ]);
+          closeSheet();
+          /* History's headings and rows, in each view */
+          const col = e => [...e.querySelectorAll(".hcl")].map(l => l.textContent.replace(/⁠/g, ""));
+          ["", "out", "in"].forEach(k => {
+            openHistory(k ? { kind: k } : {});
+            out.hist[k] = {
+              mon: [...document.querySelectorAll("#app .hmon")].map(e => [e.firstElementChild.textContent, col(e)]),
+              day: [...document.querySelectorAll("#app .dayh")].map(e => [e.firstElementChild.textContent, col(e)]),
+            };
+            out.rows[k] = [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v).sort();
+          });
+          /* how History names its headings, and the figures they should show (from the hand-made tables) */
+          out.dayTitle = Object.fromEntries(days.map(d => [d, capFirst(dayLabel(d))]));
+          out.monTitle = Object.fromEntries(days.map(d => [d.slice(0, 7), capFirst(monthLabel(d.slice(0, 7), true))]));
+          out.fmt = curs.map(c => [
+            c,
+            ...[signed(1234.5, c), signed(-1234.5, c), money(1234.5, c)].map(t => t.replace(/\u2060/g, "")),
+          ]);
+          /* Summary: each tab in each currency */
+          V.screen = "home";
+          render();
+          curs.forEach(c => {
+            summarySheet();
+            SM.cur = c;
+            SM.end = days[days.length - 1];
+            const tab = m => {
+              SM.mode = m;
+              SM.sel = null;
+              return smBuckets().map(b => [b.s, b.e, b.v, catSplit(b.list)]);
+            };
+            SM.mode = "y";
+            smRender();
+            out.sm[c] = { d: tab("d"), w: tab("w"), m: tab("m"), y: $("#sm .big.spent").textContent };
+            closeSheet();
+          });
+          out.charges = CHARGES;
+          return out;
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          HF = keepHF;
+          Object.assign(HP, keepHP);
+          window.ringHTML = keepRing;
+          Android.setWidget = keepW;
+          lastWidget = "";
+          RBC = LPC = null;
+          closeSheet();
+          render();
+        }
+      },
+      [o, DAYS, CURS]
+    );
+  /* the column a heading should show, from the hand-made tables: + received over − spent, each currency (the main one
+     first) on its own line, nothing that is 0 */
+  const fmtOf = r => Object.fromEntries(r.fmt.map(([c, p, m, b]) => [c, { p, m, b }]));
+  const fig = (r, c, n, sign) => {
+    const f = fmtOf(r)[c],
+      t = sign > 0 ? f.p : f.m;
+    return t.replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }));
+  };
+  const plain = (r, c, n) =>
+    fmtOf(r)[c].b.replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }));
+  const column = (r, s, e, kinds) => {
+    const out = [];
+    if (kinds.includes("in")) CURS.forEach(c => sumIn(GOT[c], s, e) && out.push(fig(r, c, sumIn(GOT[c], s, e), 1)));
+    if (kinds.includes("out"))
+      CURS.forEach(c => sumIn(SPENT[c], s, e) && out.push(fig(r, c, sumIn(SPENT[c], s, e), -1)));
+    return out;
+  };
+  const monEnd = m => {
+    const [y, mo] = m.split("-").map(Number);
+    return new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+  };
+  const checkHeads = (r, view, kinds, tag) => {
+    const h = r.hist[view];
+    const mons = monthsOf(DAYS)
+      .slice()
+      .reverse()
+      .map(m => [r.monTitle[m], column(r, m + "-01", monEnd(m), kinds)]);
+    ok(same(h.mon, mons), tag + ": month headings " + J(h.mon) + " want " + J(mons));
+    const days = DAYS.slice()
+      .reverse()
+      .filter(d => h.day.some(x => x[0] === r.dayTitle[d]))
+      .map(d => [r.dayTitle[d], column(r, d, d, kinds)]);
+    ok(same(h.day, days) && days.length === h.day.length, tag + ": day headings " + J(h.day) + " want " + J(days));
+  };
+
+  // ---- 15. every total follows the counting rule
+  try {
+    const r = await totals(countBook());
+    ok(r.charges === "_charges", "CHARGES is a key no category id can be (" + r.charges + ")");
+    ok(
+      same(r.spentOn, Object.fromEntries(CURS.map(c => [c, Object.fromEntries(DAYS.map(d => [d, SPENT[c][d] || 0]))]))),
+      "spentOn(): each day's spending, charges and worked-out spending included " + J(r.spentOn)
+    );
+    ok(
+      r.widget === plain(r, "BDT", SPENT.BDT[dd(0)]),
+      "the widget: spent today ৳60.00, the transfer's charge in it " + r.widget
+    );
+    ok(
+      r.check.BDT.includes(plain(r, "BDT", 1450)) && !r.check.USD.includes(plain(r, "USD", 22)),
+      "the morning check: yesterday ৳1,450.00 (the dinner's charge and the plain Fees expense in it) " + r.check.BDT
+    );
+    CURS.forEach(c => {
+      const h = r.home[c],
+        s = sumIn(SPENT[c], DAYS[0], dd(0)),
+        g = sumIn(GOT[c], DAYS[0], dd(0));
+      ok(h.spent === s && h.got === g, "Home, " + c + ": spent " + s + ", received " + g + " " + J([h.spent, h.got]));
+      ok(
+        same(h.by, BY[c]),
+        "Home, " +
+          c +
+          ": the ring's sums, a purchase's charge in its category, the rest in CHARGES, nothing under Food " +
+          J(h.by)
+      );
+      const n = v => Number(v).toLocaleString("en-US");
+      ok(h.hole.includes(n(s)) && (!g || h.hole.includes(n(g))), "Home, " + c + ": the hole shows them " + h.hole);
+      const off = DAYS.filter(
+        d => r.homeDay[c][d].spent !== (SPENT[c][d] || 0) || r.homeDay[c][d].got !== (GOT[c][d] || 0)
+      );
+      ok(
+        !off.length,
+        "Home, " + c + ", day by day: spent and received as by hand " + J(off.map(d => [d, r.homeDay[c][d]]))
+      );
+    });
+    ok(
+      !Object.keys(r.home.BDT.by).some(k => k === "otherin" || k === "income"),
+      "extras count as received only, never on the ring " + J(r.home.BDT.by)
+    );
+    const ent = DAYS.slice()
+      .reverse()
+      .filter(d => r.entries.some(e => e[0] === r.dayTitle[d]))
+      .map(d => [
+        r.dayTitle[d],
+        CURS.filter(c => SPENT[c][d])
+          .map(c => fig(r, c, SPENT[c][d], -1))
+          .join(" · "),
+      ]);
+    ok(
+      same(r.entries, ent) && ent.length === 7,
+      "the entries sheet's day totals count what is inside their rows " + J(r.entries)
+    );
+    checkHeads(r, "", ["in", "out"], "History");
+    ok(
+      same(
+        r.hist[""].day.find(x => x[0] === r.dayTitle[dd(-4)]),
+        [r.dayTitle[dd(-4)], []]
+      ),
+      "a day with only a payback has no total"
+    );
+    checkHeads(r, "out", ["out"], "Spent");
+    checkHeads(r, "in", ["in"], "Received");
+    ok(
+      same(r.rows.out, ["e1", "eP", "g1", "jD", "jP", "pE", "sP", "tA", "uE", "uT"]),
+      "Spent lists the spending and the entries carrying spending inside them (charges, charges paid back, a written-off lend) " +
+        J(r.rows.out)
+    );
+    ok(
+      same(r.rows.in, ["i1", "mP", "rP2"]),
+      "Received lists money received and the paybacks carrying an extra " + J(r.rows.in)
+    );
+    CURS.forEach(c => {
+      const sm = r.sm[c];
+      const off = ["d", "w", "m"].flatMap(k =>
+        sm[k].filter(([s, e, v]) => v !== sumIn(SPENT[c], s, e)).map(b => [k, b[0], b[1], b[2]])
+      );
+      ok(!off.length, "Summary, " + c + ": every bar of Days, Weeks and Months as by hand " + J(off));
+      const yr = sumIn(SPENT[c], dd(0).slice(0, 4) + "-01-01", dd(0).slice(0, 4) + "-12-31");
+      ok(sm.y === plain(r, c, yr), "Summary, " + c + ": the Year tab's total " + sm.y);
+    });
+    const month = r.sm.BDT.m.find(([s, e]) => s <= dd(-1) && dd(-1) <= e)[3];
+    ok(
+      (month.find(([k]) => k === "food") || [])[1] === 1150 && (month.find(([k]) => k === "fees") || [])[1] === 300,
+      "Summary's categories: the dinner's charge in Eating out, nothing more under Food " + J(month)
+    );
+  } catch (e) {
+    ok(false, "the counting rule: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 16. a lend's transfer charge is lent money: never spending while the lending is open
+  try {
+    const o = countBook();
+    o.loans.find(l => l.id === "J").status = "open";
+    const r = await totals(o);
+    ok(
+      r.spentOn.BDT[dd(-5)] === 0,
+      "Joy's lending open: its ৳20.00 transfer charge isn't spending " + r.spentOn.BDT[dd(-5)]
+    );
+    ok(r.home.BDT.spent === 1618 && r.home.BDT.by._charges === 118, "… nor on Home " + J(r.home.BDT));
+    ok(
+      same(
+        r.hist[""].day.find(x => x[0] === r.dayTitle[dd(-5)]),
+        [r.dayTitle[dd(-5)], []]
+      ) && !r.rows.out.includes("jD"),
+      "… nor in History, nor among Spent's rows " + J(r.rows.out)
+    );
+  } catch (e) {
+    ok(false, "an open lending's transfer charge: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 17. old data: every total goes up by exactly the fees already recorded, and no balance moves
+  try {
+    const cur7 = t => (t.account === "u" ? "USD" : "BDT"),
+      days7 = daysOf(v7).slice(0, -1),
+      ref = { old: { BDT: {}, USD: {} }, fee: { BDT: {}, USD: {} } },
+      by7 = {};
+    v7.txns.forEach(t => {
+      if (t.type !== "expense") return;
+      const m = ref[t.feeOf ? "fee" : "old"][cur7(t)];
+      m[t.date] = (m[t.date] || 0) + t.amount;
+      if (cur7(t) === "BDT") by7[t.feeOf ? "_charges" : t.cat] = (by7[t.feeOf ? "_charges" : t.cat] || 0) + t.amount;
+    });
+    const want = c => Object.fromEntries(days7.map(d => [d, (ref.old[c][d] || 0) + (ref.fee[c][d] || 0)]));
+    const r = await page.evaluate(
+      ([o, days, D]) => {
+        const keep = S,
+          keepV = { ...V },
+          keepRing = window.ringHTML;
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          const out = { spentOn: {}, bal: balances(), parts: loanParts() };
+          ["BDT", "USD"].forEach(c => (out.spentOn[c] = Object.fromEntries(days.map(d => [d, spentOn(d, c)]))));
+          let ring = null;
+          window.ringHTML = (c, r) => ((ring = r.mode === "home" ? r : ring), keepRing(c, r));
+          Object.assign(V, { screen: "home", cur: "BDT", period: "range", rs: D.d1, re: D.d6 });
+          render();
+          out.home = {
+            spent: ring.spent,
+            got: ring.got,
+            by: Object.fromEntries(Object.entries(ring.by).filter(e => e[1])),
+          };
+          summarySheet();
+          Object.assign(SM, { cur: "BDT", end: D.d6, mode: "m", sel: null });
+          out.months = smBuckets().map(b => [b.s.slice(0, 7), b.v]);
+          closeSheet();
+          openHistory();
+          out.hist = [...document.querySelectorAll("#app .hmon")].map(e => [
+            e.firstElementChild.textContent,
+            [...e.querySelectorAll(".hcl")].map(l => l.textContent.replace(/\u2060/g, "")),
+          ]);
+          const sg = n => signed(n, "BDT").replace(/\u2060/g, "");
+          /* by hand: March ৳10.00 of fees, April ৳20.00 + ৳15.00, May ৳300.00 + ৳50.00 and ৳40,000.00 received */
+          out.histWant = [
+            [capFirst(monthLabel("2026-05", true)), [sg(40000), sg(-350)]],
+            [capFirst(monthLabel("2026-04", true)), [sg(-35)]],
+            [capFirst(monthLabel("2026-03", true)), [sg(-10)]],
+          ];
+          return out;
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          window.ringHTML = keepRing;
+          RBC = LPC = null;
+          closeSheet();
+          render();
+        }
+      },
+      [v7, days7, D]
+    );
+    ok(same(r.bal, refBalances(v7)), "v7: every balance identical " + J(r.bal));
+    ok(same(r.parts, []), "v7: nothing worked out as income or spending");
+    ok(
+      same(r.spentOn.BDT, want("BDT")) && same(r.spentOn.USD, want("USD")),
+      "v7: each day's spending is what it was plus that day's fees (৳10.00, ৳20.00 + ৳15.00) " + J(r.spentOn)
+    );
+    const old = Object.values(ref.old.BDT).reduce((q, v) => q + v, 0);
+    ok(
+      r.home.spent === old + 45 && r.home.got === 40000,
+      "v7: Home's spent goes up by the ৳45.00 of fees, received doesn't move " + J(r.home)
+    );
+    ok(
+      same(r.home.by, by7) && r.home.by.fees === 300,
+      'v7: the fees in CHARGES, the plain Fees ("Food") expense where it was ' + J(r.home.by)
+    );
+    const mWant = { "2026-03": 10, "2026-04": 35, "2026-05": 0 };
+    const offM = r.months.filter(
+      ([m, v]) =>
+        v !==
+        Object.entries(ref.old.BDT)
+          .filter(([d]) => d.startsWith(m))
+          .reduce((q, e) => q + e[1], 0) +
+          (mWant[m] || 0)
+    );
+    ok(!offM.length && r.months.length > 2, "v7: Summary's months go up by their fees " + J(r.months));
+    ok(same(r.hist, r.histWant), "v7: History's month headings, the fees inside spent as before " + J(r.hist));
+  } catch (e) {
+    ok(false, "old data's totals: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

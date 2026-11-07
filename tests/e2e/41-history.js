@@ -211,7 +211,11 @@ const ok = (c, m) => {
       JSON.stringify(r.all) === '["$150.00 received","€80.00 received","$33.00 spent"]',
       "all words (fees inside spent; loans and transfers are neither): " + JSON.stringify(r.all)
     );
-    ok(JSON.stringify(r.spent) === '["$30.00 spent"]', "spent words: " + JSON.stringify(r.spent));
+    ok(
+      JSON.stringify(r.spent) === '["$33.00 spent"]',
+      "spent words: the transfer's and the loan payment's fees too (Spent lists what carries them): " +
+        JSON.stringify(r.spent)
+    );
     ok(r.toK === "fx,t2", "an account matches a transfer into it, and the fee follows: " + r.toK);
     ok(r.bk === "fx,t2" && r.ck === 0, "From narrows to the sending account: " + r.bk + " / " + r.ck);
     ok(r.toB === "t6", "To matches the destination: " + r.toB);
@@ -336,9 +340,9 @@ const ok = (c, m) => {
       "the day reads as one sentence: " + day("Jun 17").label
     );
     ok(h.mon[1].label === "May 2026", "a heading with nothing to add says only its name: " + h.mon[1].label);
-    // the Spent view: fees add to spent too
+    // the Spent view: every charge adds to spent too, as on the default view
     h = await heads("out");
-    ok(J(h.mon[0].lines) === J(["−$45.25", "−€10.00"]), "Spent: " + J(h.mon[0].lines));
+    ok(J(h.mon[0].lines) === J(["−$47.75", "−€10.00"]), "Spent: the transfer's fee too " + J(h.mon[0].lines));
     // Transfers: words, Fees only when there are fees
     h = await heads("xfer");
     ok(
@@ -674,7 +678,7 @@ const ok = (c, m) => {
     ok(r.acc.find(x => x.v === "o").t.includes("archived"), "the archived one is marked");
     ok(r.acc[0].on, "All accounts is picked");
     ok(
-      r.kind.map(x => x.t).join("|") === "All|Spent 7|Received 1|Transfers 4|Lent 3",
+      r.kind.map(x => x.t).join("|") === "All|Spent 8|Received 1|Transfers 4|Lent 3", // Spent: and the transfer with a fee
       "Transactions with counts, no Borrowed, no Balance fixes (never had): " + r.kind.map(x => x.t).join("|")
     );
     ok(r.show === "Show 15 entries", "the foot counts: " + r.show);

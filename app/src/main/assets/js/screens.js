@@ -277,18 +277,17 @@ function homeView() {
   const top = h;
   h = "";
 
-  const pt = periodTxns().filter(t => inCur(t, cur));
-  let spent = 0,
-    got = 0;
+  /* the period's spending by part (a category, or CHARGES) and what was received, by the counting rule */
+  const [ps, pe] = range();
+  let spent = 0;
   const by = {};
-  pt.forEach(t => {
-    if (isSpend(t)) {
-      spent += t.amount;
-      by[t.cat] = (by[t.cat] || 0) + t.amount;
-    } else if (t.type === "income") got += t.amount;
+  spendItems(cur).forEach(x => {
+    if (x.date < ps || x.date > pe) return;
+    spent += x.amount;
+    by[x.cat] = (by[x.cat] || 0) + x.amount;
   });
   spent = rnd(spent);
-  got = rnd(got);
+  const got = gotIn(cur, ps, pe);
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
   const n = histRows(periodTxns()).length; // a fee is part of its entry
@@ -951,29 +950,34 @@ function loanPill(t) {
 function dayGroups(list, hist) {
   const whole = new Map(); // History's day words count the fees too (histLines)
   if (hist) list.forEach(x => whole.set(x.date, (whole.get(x.date) || []).concat(x)));
+  /* elsewhere (Home, the entries sheet: the whole period), each day's spending per currency by the counting rule, the
+     charges inside the rows and the worked-out parts included, in one pass (a year is thousands of rows) */
+  const days = new Map(),
+    rows = new Map(),
+    spend = (d, c, v) => {
+      const sp = days.get(d) || {};
+      sp[c] = (sp[c] || 0) + v;
+      days.set(d, sp);
+    };
+  if (!hist) {
+    list.forEach(x => isSpend(x) && spend(x.date, (acc(x.account) || {}).currency, x.amount));
+    loanParts().forEach(p => p.as === "spend" && spend(p.date, p.cur, p.amount));
+  }
   list = histRows(list); // a fee is shown inside what it was charged on
   let h = "",
     cur = "";
-  /* each day's spending per currency, in one pass (a year of History is thousands of rows) */
-  const days = new Map(),
-    rows = new Map();
-  list.forEach(x => {
-    rows.set(x.date, (rows.get(x.date) || 0) + 1);
-    if (!isSpend(x)) return;
-    const c = (acc(x.account) || {}).currency,
-      sp = days.get(x.date) || {};
-    sp[c] = (sp[c] || 0) + x.amount;
-    days.set(x.date, sp);
-  });
+  list.forEach(x => rows.set(x.date, (rows.get(x.date) || 0) + 1));
   list.forEach(t => {
     if (t.date !== cur) {
       if (cur) h += "</div>";
       cur = t.date;
       const tot = Object.entries(days.get(cur) || {})
-        .map(([c, v]) => signed(-v, c))
+        .filter(e => rnd(e[1]))
+        .sort((a, b) => mainFirst(a[0], b[0]))
+        .map(([c, v]) => signed(-rnd(v), c))
         .join(" · ");
       const title = capFirst(dayLabel(t.date)),
-        lines = hist ? histLines(whole.get(cur) || [], HF.kind) : [];
+        lines = hist ? histLines(whole.get(cur) || [], HF.kind, [cur, cur]) : [];
       h +=
         (hist
           ? '<div class="day dayh" role="heading" aria-level="3" aria-label="' +

@@ -85,7 +85,7 @@ function smBuckets() {
       });
     }
   }
-  const sp = S.txns.filter(x => isSpend(x) && inCur(x, SM.cur));
+  const sp = spendItems(SM.cur);
   out.forEach(b => {
     b.list = sp.filter(x => x.date >= b.s && x.date <= b.e);
     b.v = rnd(b.list.reduce((q, x) => q + x.amount, 0));
@@ -94,11 +94,12 @@ function smBuckets() {
   });
   return out;
 }
-/* categories of a set of expenses, biggest first */
+/* the categories of a set of spending (spendItems()), biggest first; CHARGES is in the totals, its own line comes with
+   the charges plan's Task 5 */
 function catSplit(list) {
   const m = {};
   list.forEach(x => {
-    m[x.cat] = (m[x.cat] || 0) + x.amount;
+    if (x.cat !== CHARGES) m[x.cat] = (m[x.cat] || 0) + x.amount;
   });
   return Object.entries(m)
     .map(([k, v]) => [k, rnd(v)])
@@ -349,7 +350,7 @@ function drawSmYear(el) {
     y = +SM.end.slice(0, 4),
     cur = SM.cur,
     part = y === +t.slice(0, 4),
-    sp = S.txns.filter(x => isSpend(x) && inCur(x, cur)),
+    sp = spendItems(cur),
     sum = list => rnd(list.reduce((q, x) => q + x.amount, 0)),
     months = Array.from({ length: 12 }, (_, i) => y + "-" + pad(i + 1)),
     vals = months.map(m => sum(sp.filter(x => x.date.startsWith(m)))),

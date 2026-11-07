@@ -515,12 +515,20 @@ function homeAccounts() {
     at = a => (order.includes(a.id) ? order.indexOf(a.id) : order.length + S.accounts.indexOf(a));
   return activeAccounts().sort((x, y) => at(x) - at(y));
 }
-/* A transfer's or loan payment's fee is its own entry, an expense linked to it (feeOf ↔ feeId), so it comes off the
-   paying account in every version of Tally; but like the transfer or payment it is never spending: the ring, day
-   totals, summaries and the widget count only isSpend() entries, and History shows the fee with what it was charged on.
-   Its stored category ("fees") is only for older versions: Tally never files an entry under a category by itself,
-   since a built-in one keeps its id when renamed into anything. */
-const isSpend = t => t.type === "expense" && !t.feeOf;
+/* The counting rule (docs/specs/charges.md, "Counting"), which every total follows: every expense is spending, a
+   charge (an expense linked to its entry, feeOf ↔ feeId) included, plus the parts of loans worked out by loanParts().
+   A charge counts in its purchase's category, any other one in CHARGES, which is no category: ids are [A-Za-z0-9-]
+   only (sid()), so it can never be one. A charge's stored category ("fees" but on a purchase) is only for older
+   versions and the CSV: Tally never files an entry under a category by itself, since a built-in one keeps its id when
+   renamed into anything. The movement itself (a transfer, a loan's draws and payments, a balance fix) never counts. */
+const CHARGES = "_charges";
+const isSpend = t => t.type === "expense";
+/* the part expense t counts in: a category, or CHARGES */
+function spendCat(t) {
+  if (!t.feeOf) return t.cat;
+  const h = entry(t.feeOf);
+  return h && h.type === "expense" && h.feeId === t.id ? h.cat : CHARGES;
+}
 /* Whether entry a may be entry h's add-on (docs/specs/charges.md, "Allowed links"): an expense charge on a transfer, a
    loan payment (a lending payment's only as the paid fee an older version recorded) or an expense; an income tip on a
    lending's payment; a loan entry, a lend's transfer charge, on a draw of the same lending (lend(id): whether loan id
@@ -591,9 +599,36 @@ function setAddOn(t, kind, amount) {
 }
 /* whether entry t is in currency cur (its account's) */
 const inCur = (t, cur) => (acc(t.account) || {}).currency === cur;
-/* what was spent on day d in currency cur, and the active accounts' total in it (b: balances()) */
+/* What counts as spending in currency cur, by the counting rule: every expense, in its part (spendCat()), and every part
+   of a loan worked out as spending (loanParts(), in CHARGES), each as {date, amount, cat}. */
+function spendItems(cur) {
+  const out = S.txns
+    .filter(t => isSpend(t) && inCur(t, cur))
+    .map(t => ({ date: t.date, amount: t.amount, cat: spendCat(t) }));
+  loanParts().forEach(
+    p => p.as === "spend" && p.cur === cur && out.push({ date: p.date, amount: p.amount, cat: CHARGES })
+  );
+  return out;
+}
+/* what was received in currency cur from day s to day e: money received (a tip on a payback included) and the extras
+   paid back (loanParts()); never a loan's own movement */
+const gotIn = (cur, s, e) =>
+  rnd(
+    S.txns
+      .filter(t => t.type === "income" && t.date >= s && t.date <= e && inCur(t, cur))
+      .reduce((q, t) => q + t.amount, 0) +
+      loanParts()
+        .filter(p => p.as === "income" && p.cur === cur && p.date >= s && p.date <= e)
+        .reduce((q, p) => q + p.amount, 0)
+  );
+/* what was spent on day d in currency cur (the widget, the morning check), and the active accounts' total in it
+   (b: balances()) */
 const spentOn = (d, cur) =>
-  rnd(S.txns.filter(t => t.date === d && isSpend(t) && inCur(t, cur)).reduce((q, t) => q + t.amount, 0));
+  rnd(
+    spendItems(cur)
+      .filter(x => x.date === d)
+      .reduce((q, x) => q + x.amount, 0)
+  );
 const balanceIn = (cur, b) =>
   rnd(
     activeAccounts()
@@ -655,7 +690,6 @@ function runBal() {
    draw's day: topOn), and a written-off lending's transfer charge
    still unpaid (spending, in Charges) on its draw's day. Each is {of: the entry whose row it is in, date, cur (that
    entry's account's), amount, as: "income" | "spend"}. Cached until the next render, as runBal(). */
-/* exported loanParts -- until the counting rule (charges plan, Task 3) adds it to every total */
 let LPC = null;
 function loanParts() {
   if (LPC) return LPC;

@@ -1,7 +1,7 @@
 // A loan payment's fee (a sending or cash-out charge) works like a transfer's: off the paying account, shown with the
-// payment, never spending. It goes with its payment (delete, reopen, deleting the loan) and survives a reload. Tally
-// never files it, or anything else, under a category by itself: here the built-in "fees" slot is renamed "Food" and the
-// income "Other" one "Salary", and neither ever shows a fee.
+// payment, spending in Charges, never under a category. It goes with its payment (delete, reopen, deleting the loan)
+// and survives a reload. Tally never files it, or anything else, under a category by itself: here the built-in "fees"
+// slot is renamed "Food" and the income "Other" one "Salary", and neither ever shows a fee.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("27-loan-fees");
 let fails = 0;
@@ -141,7 +141,7 @@ const ok = (c, m) => {
     "the loan counts the 1,000, not the fee"
   );
 
-  // ---- 2. not spending, under no category
+  // ---- 2. spending in Charges, under no category
   await page.evaluate(() => {
     V.screen = "home";
     render();
@@ -150,7 +150,8 @@ const ok = (c, m) => {
   const ring = await page.evaluate(() =>
     [...document.querySelectorAll("#ring .cp")].filter(e => e.textContent).map(e => e.closest("[data-v]").dataset.v)
   );
-  ok(JSON.stringify(ring) === '["groceries"]', "the ring shows only Groceries " + JSON.stringify(ring));
+  ok(JSON.stringify(ring) === '["groceries"]', "only Groceries has a tile on the ring " + JSON.stringify(ring));
+  ok(/70\.00/.test(await page.textContent(".dcenter")), "the ring's figure: the 50 and the 20 fee");
   await page.evaluate(() => {
     V.screen = "history";
     render();

@@ -283,7 +283,7 @@ const ok = (c, m) => {
   await tap('[data-act="undo"]');
   ok((await state()).txns.length === 6, "one Undo removes both");
 
-  // ---- 4c. you paid more: the extra as that payment's fee (never spending)
+  // ---- 4c. you paid more: the extra as that payment's fee (spending in Charges, under no category)
   await tap('[data-act="tab"][data-v="liabs"]');
   await tap('.list [data-v="B1"]');
   const wb = await bal("w");
@@ -303,7 +303,10 @@ const ok = (c, m) => {
     (await bal("w")) === wb - 1200 && !S.loans.some(l => l.kind === "lend" && l.person === "Mimi"),
     "Wallet paid 1200, no new lending"
   );
-  ok(await page.evaluate(id => !isSpend(S.txns.find(t => t.id === id)), ff.id), "the fee is not spending");
+  ok(
+    await page.evaluate(id => isSpend(entry(id)) && spendCat(entry(id)) === CHARGES, ff.id),
+    "the fee is spending, in Charges"
+  );
   await tap('[data-act="undo"]');
   ok(!(await state()).txns.some(t => t.feeOf), "Undo removes the payment and its fee");
 

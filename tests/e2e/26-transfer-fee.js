@@ -1,6 +1,7 @@
-// A transfer's fee comes off the paying account but, like the transfer, is never spending: not on the ring, in the
-// day's total, the summaries, the balance check or the widget. History shows it with its transfer, not under a
-// category, whatever the built-in "fees" category was renamed to (the reported case: "Food").
+// A transfer's fee (its transfer charge) comes off the paying account and is spending in Charges, never under a
+// category: in the ring's figure (not on a category's tile), the day's total, the summaries and the widget, while the
+// transfer itself never counts. History shows it with its transfer, not under a category, whatever the built-in "fees"
+// category was renamed to (the reported case: "Food").
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("26-transfer-fee");
 let fails = 0;
@@ -81,29 +82,29 @@ const ok = (c, m) => {
     tr = S.txns.find(x => x.type === "transfer");
   ok(fee && fee.amount === 10 && fee.account === "a" && tr.feeId === fee.id, "the fee is linked to its transfer");
 
-  // ---- 2. not spending: the ring, the day's total, the summary, the widget
+  // ---- 2. spending in Charges, under no category: the ring, the day's total, the summary, the widget
   const ring = await page.evaluate(() =>
     [...document.querySelectorAll(".rt .cp")].map(e => e.textContent).filter(Boolean)
   );
-  ok(ring.length === 1 && ring[0] === "100%", "the ring shows only the groceries " + JSON.stringify(ring));
   ok(
-    !(await page.textContent(".dcenter")).includes("60") && (await page.textContent(".dcenter")).includes("50"),
-    "spent today: 50, not 60"
+    ring.length === 1 && ring[0] === "83%",
+    "only the groceries have a tile: 50 of the 60 spent " + JSON.stringify(ring)
   );
+  ok((await page.textContent(".dcenter")).includes("60"), "spent today: 60, the fee in it");
   const foodTile = await page.evaluate(() => {
     const b = document.querySelector('.rt [data-v="fees"] .cp');
     return b ? b.textContent : "";
   });
   ok(foodTile === "", "nothing under Food");
   const w = await page.evaluate(() => window.__w[window.__w.length - 1]);
-  ok(w && /50\.00/.test(w.spent), "widget: spent today 50 " + (w && w.spent));
+  ok(w && /60\.00/.test(w.spent), "widget: spent today 60 " + (w && w.spent));
   const sm = await page.evaluate(() => {
     summarySheet();
     const v = smBuckets().map(b => b.v);
     closeSheet();
     return v;
   });
-  ok(sm[sm.length - 1] === 50, "summary: today 50 " + JSON.stringify(sm.slice(-3)));
+  ok(sm[sm.length - 1] === 60, "summary: today 60 " + JSON.stringify(sm.slice(-3)));
 
   // ---- 3. History: the fee with its transfer, not a category's spending
   await page.evaluate(() => {
@@ -145,8 +146,8 @@ const ok = (c, m) => {
   ok(m[0] && m[1] && m[2] === 2, "dangling links dropped, entries kept " + JSON.stringify(m));
 
   // ---- 5. updating from 1.3.1: a notebook exactly as 1.3.1 saved it (made by 1.3.1's own transfer sheet, its "Fees"
-  // slot renamed "Food"; 1.3.1 counted the fee as 10 of 60 spent). Its fee stops being spending on its own, nothing
-  // to sort out by hand, and the stored entries stay exactly as they were.
+  // slot renamed "Food"; 1.3.1 counted the fee as 10 of 60 spent, under Food). Its fee is spending in Charges, never
+  // under Food, with nothing to sort out by hand, and the stored entries stay exactly as they were.
   const saved131 = {
     v: 6,
     settings: {
@@ -269,8 +270,9 @@ const ok = (c, m) => {
     "after the update: version 8, the renamed Fees category kept as it was " + JSON.stringify(upCat)
   );
   ok(
-    /50\.00/.test(up.centre) && !/60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 100%"]',
-    "after the update: spent 50, only Groceries on the ring, nothing under Food " + JSON.stringify(up)
+    /60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 83%"]',
+    "after the update: spent 60, the fee in Charges, only Groceries has a tile, nothing under Food " +
+      JSON.stringify(up)
   );
   await page.evaluate(() => {
     V.screen = "history";

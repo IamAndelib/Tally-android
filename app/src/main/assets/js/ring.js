@@ -131,7 +131,7 @@ function ringHTML(cats, o) {
     /* slices follow the tiles clockwise (not size), so leader lines never cross */
     const posOf = id => pos.find(p => p.c.id === id);
     const ent = Object.entries(o.by)
-      .filter(([, v]) => v > 0)
+      .filter(([id, v]) => v > 0 && id !== CHARGES) // in the figures; its grey slice comes with the charges plan's Task 4
       .map(([id, v]) => ({ id, v, w: v / o.spent, p: posOf(id) }))
       .sort((a, b) => (a.p ? a.p.ang : 2) - (b.p ? b.p.ang : 2));
     let off = 0;

@@ -468,6 +468,51 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- net worth counts what is owed, the extra included, from the day of the lend (docs/specs/charges.md)
+  {
+    const { ctx, page } = await open();
+    const r = await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "BDT";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "k", name: "Bkash", type: "wallet", currency: "BDT", opening: 20000, archived: false });
+      const before = netWorth();
+      /* Rafi: lent ৳1,000.00 with a ৳100.00 transfer charge and a ৳150.00 extra */
+      S.loans.push({ id: "R", kind: "lend", person: "Rafi", account: "k", date: today(), note: "", status: "open" });
+      const t = (id, amount, extra) =>
+        S.txns.push({
+          id,
+          ts: 1,
+          date: today(),
+          type: "loan",
+          amount,
+          account: "k",
+          note: "",
+          dir: "out",
+          loan: "R",
+          principal: true,
+          ...extra,
+        });
+      t("rD", 1000, { onTop: 150, feeId: "rDc" });
+      t("rDc", 100, { feeOf: "rD" });
+      save();
+      V.screen = "assets";
+      render();
+      const row = document.querySelector('#app [data-act="loan-open"][data-v="R"] .a');
+      return {
+        before,
+        after: netWorth(),
+        bal: balances().k,
+        row: row ? row.firstChild.textContent : "",
+        want: money(1250, "BDT"),
+      };
+    });
+    ok(r.bal === 18900, "Bkash −৳1,100.00: the amount and its transfer charge " + r.bal);
+    ok(r.after.BDT - r.before.BDT === 150, "net worth on the lend's day: +৳150.00, the extra " + JSON.stringify(r));
+    ok(r.row === r.want, "Assets: Rafi's row says ৳1,250.00 " + r.row);
+    await ctx.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");
