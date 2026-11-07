@@ -101,17 +101,14 @@
     "to": "Hacia",
     "swap": "Intercambiar origen y destino",
     "sent": "Cantidad enviada",
-    "addFee": "Añadir comisión (cajero, retiro)",
     "ok": "Transferir",
     "title": "Transferencia",
     "edit": "Editar transferencia",
     "arrived": "Cantidad que llegó a {{account}} ({{cur}})",
-    "inclFee": "(incl. {{amount}} de comisión)",
     "pickBoth": "Elige las dos cuentas",
     "pickTwo": "Elige dos cuentas distintas",
     "enterSent": "Escribe la cantidad enviada",
     "enterArrived": "Escribe cuánto llegó en {{cur}}",
-    "feeNegative": "La comisión no puede ser negativa",
     "feeNote": "Comisión de transferencia",
     "done": "Transferiste {{amount}} a {{account}}"
   },
@@ -320,6 +317,34 @@
   "fee": {
     "label": "Comisión cobrada ({{cur}}) · no cuenta como gasto",
     "notNumber": "Esa comisión no es un número"
+  },
+  "xcharge": {
+    "label": "Cargo por transferencia",
+    "calc": "Calculadora del cargo por transferencia",
+    "remove": "Quitar el cargo por transferencia"
+  },
+  "charge": {
+    "add": "Añadir un cargo",
+    "label": "Cargo",
+    "calc": "Calculadora del cargo",
+    "remove": "Quitar el cargo",
+    "notNumber": "Ese cargo no es un número",
+    "negative": "Un cargo no puede ser negativo"
+  },
+  "charges": {
+    "add": "Añadir cargos",
+    "label": "Cargos",
+    "calc": "Calculadora de los cargos",
+    "remove": "Quitar los cargos"
+  },
+  "extra": {
+    "add": "Añadir un extra",
+    "label": "Extra",
+    "calc": "Calculadora del extra",
+    "remove": "Quitar el extra"
+  },
+  "addOn": {
+    "both": "Cargo por transferencia y extra"
   },
   "loan": {
     "noDueYet": "Aún sin fecha de pago",

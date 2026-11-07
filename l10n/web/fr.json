@@ -101,17 +101,14 @@
     "to": "Vers",
     "swap": "Inverser De et Vers",
     "sent": "Montant envoyé",
-    "addFee": "Ajouter des frais (DAB, retrait)",
     "ok": "Faire le virement",
     "title": "Virement",
     "edit": "Modifier le virement",
     "arrived": "Montant arrivé sur {{account}} ({{cur}})",
-    "inclFee": "(dont {{amount}} de frais)",
     "pickBoth": "Choisissez les deux comptes",
     "pickTwo": "Choisissez deux comptes différents",
     "enterSent": "Saisissez le montant envoyé",
     "enterArrived": "Saisissez le montant arrivé en {{cur}}",
-    "feeNegative": "Les frais ne peuvent pas être négatifs",
     "feeNote": "Frais de virement",
     "done": "Virement de {{amount}} vers {{account}}"
   },
@@ -320,6 +317,34 @@
   "fee": {
     "label": "Frais ({{cur}}) · hors dépenses",
     "notNumber": "Ces frais ne sont pas un nombre"
+  },
+  "xcharge": {
+    "label": "Frais de virement",
+    "calc": "Calculatrice des frais de virement",
+    "remove": "Retirer les frais de virement"
+  },
+  "charge": {
+    "add": "Ajouter des frais",
+    "label": "Frais",
+    "calc": "Calculatrice des frais",
+    "remove": "Retirer les frais",
+    "notNumber": "Ces frais ne sont pas un nombre",
+    "negative": "Les frais ne peuvent pas être négatifs"
+  },
+  "charges": {
+    "add": "Ajouter des frais",
+    "label": "Frais",
+    "calc": "Calculatrice des frais",
+    "remove": "Retirer les frais"
+  },
+  "extra": {
+    "add": "Ajouter un supplément",
+    "label": "Supplément",
+    "calc": "Calculatrice du supplément",
+    "remove": "Retirer le supplément"
+  },
+  "addOn": {
+    "both": "Frais de virement et supplément"
   },
   "loan": {
     "noDueYet": "Pas encore d’échéance",

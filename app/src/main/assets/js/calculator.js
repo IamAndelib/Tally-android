@@ -8,16 +8,21 @@ const CALC_ICON =
   '<svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path fill="currentColor" d="' +
   (ICONS.calculate ? ICONS.calculate[0] : "") +
   '"/></svg>';
-const calcBtn = id =>
-  '<button type="button" class="icon calcbtn" data-act="calc-toggle" data-v="' +
+/* a field's calculator button; label: its TalkBack name when the form has more than one (a card's "Calculator for the
+   charge"), cls: its look */
+const calcBtn = (id, label, cls = "calcbtn") =>
+  '<button type="button" class="icon ' +
+  cls +
+  '" data-act="calc-toggle" data-v="' +
   id +
   '" aria-label="' +
-  TH("calc.open") +
+  (label ? esc(label) : TH("calc.open")) +
   '" aria-expanded="false">' +
   CALC_ICON +
   "</button>";
 const CALC_KEYS = ["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "⌫", "0", ".", "+"];
-/* the keypad; its top bar shows the live result and the button back to the system keyboard */
+/* the keypad; its top bar shows the live result (after the field's name while a card is open: calcMirrorSync) and the
+   button back to the system keyboard */
 const calcPanelHtml = id =>
   '<div class="calc" id="calc-' +
   id +
@@ -135,7 +140,10 @@ function calcMirrorSync(id) {
   if (!CALC) {
     mirror.innerHTML = "";
     const res = $("#cr-" + id);
-    if (res) res.textContent = "";
+    if (res) {
+      res.textContent = "";
+      res.classList.remove("named");
+    }
     return;
   }
   const disp = calcShown(CALC.expr),
@@ -144,9 +152,36 @@ function calcMirrorSync(id) {
   calcCaretIntoView(mirror);
   const res = $("#cr-" + id);
   if (res) {
-    const v = /[+−×÷]/.test(CALC.expr.slice(1)) ? calcEval(CALC.expr) : null;
-    res.textContent = v == null ? "" : "= " + v.toLocaleString(LOC.fmt, { maximumFractionDigits: 3 });
+    const v = /[+−×÷]/.test(CALC.expr.slice(1)) ? calcEval(CALC.expr) : null,
+      eq = v == null ? "" : "= " + v.toLocaleString(LOC.fmt, { maximumFractionDigits: 3 }),
+      name = calcName(CALC.inp);
+    /* while a card is open the bar names its field, the result right after the name (under it when they don't fit) */
+    res.classList.toggle("named", !!name);
+    res.innerHTML = name
+      ? '<span class="calcname">' + esc(name) + "</span>" + (eq ? '<span class="calceq">' + esc(eq) + "</span>" : "")
+      : esc(eq);
   }
+}
+/* a form with a charge or extra card open (docs/specs/charges.md → The card): the scroller holding inp, or null */
+function calcCardForm(inp) {
+  const form = inp && inp.isConnected ? inp.closest(".p") : null;
+  return form && form.querySelector(".aocard:not([hidden])") ? form : null;
+}
+/* the name of the field the keypad fills, only while its form has a card open: the field's own label for TalkBack
+   ("Transfer charge", "Amount sent", "Amount") */
+function calcName(inp) {
+  if (!calcCardForm(inp)) return "";
+  const by = inp.getAttribute("aria-labelledby"),
+    l = by && $("#" + by);
+  return l ? l.textContent : inp.getAttribute("aria-label") || "";
+}
+/* while the keypad fills one amount of a form with a card open, its other amounts look idle (a thin grey line, grey
+   figures); the field being filled is marked by .calcing */
+function calcLooks() {
+  document.querySelectorAll(".aoidle").forEach(e => e.classList.remove("aoidle"));
+  const inp = CALC && CALC.inp,
+    form = calcCardForm(inp);
+  if (form) form.querySelectorAll(".amtwrap, .aorow").forEach(w => w.contains(inp) || w.classList.add("aoidle"));
 }
 /* keeps the caret in view: as the expression grows the display slides left, like a calculator's */
 function calcCaretIntoView(mirror) {
@@ -203,13 +238,14 @@ function calcOpen(id, btn) {
     inp.setAttribute("inputmode", "none");
     inp.focus({ preventScroll: true });
     const box = inp.closest(".amtbox"),
-      wrap = inp.closest(".amtwrap");
+      wrap = inp.closest(".amtwrap, .aorow");
     if (box) box.classList.add("calcing");
     if (wrap) wrap.classList.add("calcing");
     const sh = inp.closest(".sheet");
     if (sh) sh.classList.add("calcing"); // a centred sheet (tablet) settles on the keypad
     document.body.classList.add("calcopen");
   }
+  calcLooks();
   const mirror = $("#cm-" + id);
   if (mirror) mirror.hidden = false;
   calcMirrorSync(id);
@@ -219,10 +255,10 @@ function calcOpen(id, btn) {
   if (inp) setTimeout(() => calcKeepFieldVisible(inp, panel), 0);
 }
 /* the keypad docks over the bottom of the screen: give the sheet room below its content and scroll the amount
-   line up so it sits just above the keypad */
+   line (a card's field: the whole card, its preview at the bottom) up so it sits just above the keypad */
 function calcKeepFieldVisible(inp, panel) {
   const sheet = inp.closest(".p"),
-    line = inp.closest(".amtwrap") || inp;
+    line = inp.closest(".aocard") || inp.closest(".amtwrap") || inp;
   if (document.body.classList.contains("land")) panel = null; // sideways phone: the keypad sits beside the form
   if (sheet) sheet.style.paddingBottom = panel ? panel.offsetHeight + 16 + "px" : "";
   /* the snackbar rises above the keypad (css: body.calcopen .snack) */
@@ -247,7 +283,7 @@ function calcClose(id, btn) {
     inp.setAttribute("inputmode", "decimal");
     inp.dispatchEvent(new Event("input", { bubbles: true }));
     const box = inp.closest(".amtbox"),
-      wrap = inp.closest(".amtwrap");
+      wrap = inp.closest(".amtwrap, .aorow");
     if (box) box.classList.remove("calcing");
     if (wrap) wrap.classList.remove("calcing");
     const sh = inp.closest(".sheet");
@@ -265,6 +301,7 @@ function calcClose(id, btn) {
   if (btn) btn.setAttribute("aria-expanded", "false");
   if (CALC && CALC.id === id) CALC = null;
   if (!CALC) document.body.classList.remove("calcopen");
+  calcLooks();
 }
 /* the field's calculator icon: opens the calculator, or evaluates, uses the result and closes it */
 function calcToggle(id, btn) {

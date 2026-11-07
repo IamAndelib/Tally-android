@@ -101,17 +101,14 @@
     "to": "Nereye",
     "swap": "Yönü değiştir",
     "sent": "Gönderilen tutar",
-    "addFee": "Masraf ekle (ATM, para çekme)",
     "ok": "Transfer et",
     "title": "Transfer",
     "edit": "Transferi düzenle",
     "arrived": "{{account}} hesabına geçen tutar ({{cur}})",
-    "inclFee": "({{amount}} masraf dahil)",
     "pickBoth": "İki hesabı da seç",
     "pickTwo": "İki farklı hesap seç",
     "enterSent": "Gönderilen tutarı gir",
     "enterArrived": "{{cur}} olarak ne kadar geçtiğini gir",
-    "feeNegative": "Masraf eksi olamaz",
     "feeNote": "Transfer masrafı",
     "done": "{{account}} hesabına {{amount}} aktarıldı"
   },
@@ -319,6 +316,34 @@
   "fee": {
     "label": "Alınan masraf ({{cur}}) · harcamaya sayılmaz",
     "notNumber": "Bu masraf bir sayı değil"
+  },
+  "xcharge": {
+    "label": "Transfer masrafı",
+    "calc": "Transfer masrafı için hesap makinesi",
+    "remove": "Transfer masrafını kaldır"
+  },
+  "charge": {
+    "add": "Masraf ekle",
+    "label": "Masraf",
+    "calc": "Masraf için hesap makinesi",
+    "remove": "Masrafı kaldır",
+    "notNumber": "Bu masraf bir sayı değil",
+    "negative": "Masraf eksi olamaz"
+  },
+  "charges": {
+    "add": "Masrafları ekle",
+    "label": "Masraflar",
+    "calc": "Masraflar için hesap makinesi",
+    "remove": "Masrafları kaldır"
+  },
+  "extra": {
+    "add": "Ekstra ekle",
+    "label": "Ekstra",
+    "calc": "Ekstra için hesap makinesi",
+    "remove": "Ekstrayı kaldır"
+  },
+  "addOn": {
+    "both": "Transfer masrafı ve ekstra"
   },
   "loan": {
     "noDueYet": "Henüz vade yok",

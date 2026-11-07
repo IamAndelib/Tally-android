@@ -371,6 +371,11 @@ const ok = (c, m) => {
     ["Settings", () => ((V.screen = "settings"), render())],
     ["an expense", () => ((V.screen = "home"), render(), txSheet(null, "expense", "food"))],
     ["a transfer", () => trSheet()],
+    ["a transfer, its charge card", () => (trSheet(), $('#sheet [data-act="addon-add"]').click())],
+    [
+      "a transfer, the keypad on its charge",
+      () => (trSheet(), $('#sheet [data-act="addon-add"]').click(), calcToggle("f-charge", calcToggleBtn("f-charge"))),
+    ],
     ["a balance fix", () => adjSheet()],
     ["an account", () => accOpen("a")],
     ["a loan", () => loanOpen("L")],
@@ -453,6 +458,42 @@ const ok = (c, m) => {
     ok(m.weeks === 6 && m.tall >= 44 && m.fits, "sideways, " + name + ": six weeks fit, days " + m.tall + "px tall");
   }
   await side.close();
+
+  // ---- 7b. the transfer charge's card for TalkBack: a group named after its field, the field named by its label, its
+  // own calculator and remove buttons; the button that opens it says what it adds
+  await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+  await settle();
+  await page.evaluate(() => trSheet());
+  await settle();
+  await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await settle();
+  const ao = await page.evaluate(() => {
+    const card = $("#sheet .aocard"),
+      inp = $("#f-charge"),
+      by = inp.getAttribute("aria-labelledby");
+    return {
+      role: card.getAttribute("role"),
+      group: card.getAttribute("aria-label"),
+      field: by ? ($("#" + by) || {}).textContent : inp.getAttribute("aria-label"),
+      calc: card.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+      expanded: card.querySelector('[data-act="calc-toggle"]').getAttribute("aria-expanded"),
+      remove: card.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+      amtCalc: $('#sheet [data-act="calc-toggle"][data-v="f-amt"]').getAttribute("aria-label"),
+    };
+  });
+  ok(
+    ao.role === "group" && ao.group === "Transfer charge" && ao.field === "Transfer charge",
+    "the card is a group named Transfer charge, its field too " + JSON.stringify(ao)
+  );
+  ok(
+    ao.calc === "Calculator for the transfer charge" &&
+      ao.expanded === "false" &&
+      ao.remove === "Remove the transfer charge",
+    "its own calculator and remove buttons " + JSON.stringify(ao)
+  );
+  ok(ao.amtCalc === "Calculator", "the amount's calculator keeps its name");
+  await page.evaluate(() => closeSheet());
+  await settle();
 
   // ---- 8. the stacked-button dialogs: named and described for TalkBack, focus inside, back where it was
   await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));

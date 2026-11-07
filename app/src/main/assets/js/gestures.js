@@ -545,5 +545,5 @@ document.addEventListener("mouseup", () => {
   }
 });
 document.addEventListener("contextmenu", e => {
-  if (e.target.closest(".tile,.tx,.dd,.chip,.dot,.calc,.amtwrap.calcing")) e.preventDefault();
+  if (e.target.closest(".tile,.tx,.dd,.chip,.dot,.calc,.amtwrap.calcing,.aorow.calcing")) e.preventDefault();
 });

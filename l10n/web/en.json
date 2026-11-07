@@ -101,17 +101,14 @@
     "to": "To",
     "swap": "Swap from and to",
     "sent": "Amount sent",
-    "addFee": "Add a fee (ATM, cash‑out)",
     "ok": "Transfer",
     "title": "Transfer",
     "edit": "Edit transfer",
     "arrived": "Amount that arrived in {{account}} ({{cur}})",
-    "inclFee": "(incl. {{amount}} fee)",
     "pickBoth": "Pick both accounts",
     "pickTwo": "Pick two different accounts",
     "enterSent": "Enter the amount sent",
     "enterArrived": "Enter how much arrived in {{cur}}",
-    "feeNegative": "Fee can't be negative",
     "feeNote": "Transfer fee",
     "done": "Transferred {{amount}} to {{account}}"
   },
@@ -319,6 +316,34 @@
   "fee": {
     "label": "Fee charged ({{cur}}) · not counted as spending",
     "notNumber": "That fee isn't a number"
+  },
+  "xcharge": {
+    "label": "Transfer charge",
+    "calc": "Calculator for the transfer charge",
+    "remove": "Remove the transfer charge"
+  },
+  "charge": {
+    "add": "Add a charge",
+    "label": "Charge",
+    "calc": "Calculator for the charge",
+    "remove": "Remove the charge",
+    "notNumber": "That charge isn't a number",
+    "negative": "A charge can't be negative"
+  },
+  "charges": {
+    "add": "Add charges",
+    "label": "Charges",
+    "calc": "Calculator for the charges",
+    "remove": "Remove the charges"
+  },
+  "extra": {
+    "add": "Add an extra",
+    "label": "Extra",
+    "calc": "Calculator for the extra",
+    "remove": "Remove the extra"
+  },
+  "addOn": {
+    "both": "Transfer charge and extra"
   },
   "loan": {
     "noDueYet": "No due date yet",

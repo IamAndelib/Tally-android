@@ -145,11 +145,11 @@ const ok = (c, m) => {
   await sact("tr-swap");
   await sact("tr-to", S.accounts[1].id);
   ok(!(await page.isVisible("#f-toamt")), "received field hidden for CAD→CAD");
-  await sact("add-fee");
-  ok(await page.isVisible("#f-fee"), "fee field shown");
+  await sact("addon-add", "xcharge");
+  ok(await page.isVisible("#f-charge"), "transfer charge field shown");
   ok(await sameSheet(), "transfer sheet not rebuilt");
-  await page.fill("#f-fee", "2");
-  ok((await page.textContent("#tr-prev")).includes("62.00"), "preview includes fee");
+  await page.fill("#f-charge", "2");
+  ok((await page.textContent("#sheet .aocard .aoprev")).includes("62.00"), "preview includes the transfer charge");
   await sact("tr-save");
   let b = await bal();
   ok(b.Bank === 525.5 && b.Wallet === 100, "after transfer+fee " + JSON.stringify(b));

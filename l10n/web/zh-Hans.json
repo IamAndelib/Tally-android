@@ -101,17 +101,14 @@
     "to": "转入",
     "swap": "交换转出和转入",
     "sent": "转出金额",
-    "addFee": "添加手续费（ATM、提现）",
     "ok": "转账",
     "title": "转账",
     "edit": "编辑转账",
     "arrived": "{{account}}到账金额（{{cur}}）",
-    "inclFee": "（含手续费{{amount}}）",
     "pickBoth": "请选择两个账户",
     "pickTwo": "请选择两个不同的账户",
     "enterSent": "请输入转出金额",
     "enterArrived": "请输入到账金额（{{cur}}）",
-    "feeNegative": "手续费不能为负",
     "feeNote": "转账手续费",
     "done": "已转{{amount}}到{{account}}"
   },
@@ -318,6 +315,34 @@
   "fee": {
     "label": "手续费（{{cur}}）· 不计入支出",
     "notNumber": "手续费不是有效的数字"
+  },
+  "xcharge": {
+    "label": "转账费用",
+    "calc": "转账费用计算器",
+    "remove": "移除转账费用"
+  },
+  "charge": {
+    "add": "添加费用",
+    "label": "费用",
+    "calc": "费用计算器",
+    "remove": "移除费用",
+    "notNumber": "费用不是有效的数字",
+    "negative": "费用不能为负"
+  },
+  "charges": {
+    "add": "添加费用",
+    "label": "费用",
+    "calc": "费用计算器",
+    "remove": "移除费用"
+  },
+  "extra": {
+    "add": "添加额外款",
+    "label": "额外款",
+    "calc": "额外款计算器",
+    "remove": "移除额外款"
+  },
+  "addOn": {
+    "both": "转账费用和额外款"
   },
   "loan": {
     "noDueYet": "还没有到期日",

@@ -101,17 +101,14 @@
     "to": "Para",
     "swap": "Inverter origem e destino",
     "sent": "Valor enviado",
-    "addFee": "Adicionar taxa (caixa eletrônico, saque)",
     "ok": "Transferir",
     "title": "Transferência",
     "edit": "Editar transferência",
     "arrived": "Valor que chegou em {{account}} ({{cur}})",
-    "inclFee": "(com taxa de {{amount}})",
     "pickBoth": "Escolha as duas contas",
     "pickTwo": "Escolha duas contas diferentes",
     "enterSent": "Digite o valor enviado",
     "enterArrived": "Digite quanto chegou em {{cur}}",
-    "feeNegative": "A taxa não pode ser negativa",
     "feeNote": "Taxa de transferência",
     "done": "{{amount}} transferido para {{account}}"
   },
@@ -320,6 +317,34 @@
   "fee": {
     "label": "Taxa cobrada ({{cur}}) · não conta como gasto",
     "notNumber": "Essa taxa não é um número"
+  },
+  "xcharge": {
+    "label": "Taxa de transferência",
+    "calc": "Calculadora da taxa de transferência",
+    "remove": "Remover a taxa de transferência"
+  },
+  "charge": {
+    "add": "Adicionar uma taxa",
+    "label": "Taxa",
+    "calc": "Calculadora da taxa",
+    "remove": "Remover a taxa",
+    "notNumber": "Essa taxa não é um número",
+    "negative": "Uma taxa não pode ser negativa"
+  },
+  "charges": {
+    "add": "Adicionar taxas",
+    "label": "Taxas",
+    "calc": "Calculadora das taxas",
+    "remove": "Remover as taxas"
+  },
+  "extra": {
+    "add": "Adicionar um extra",
+    "label": "Extra",
+    "calc": "Calculadora do extra",
+    "remove": "Remover o extra"
+  },
+  "addOn": {
+    "both": "Taxa de transferência e extra"
   },
   "loan": {
     "noDueYet": "Ainda sem vencimento",

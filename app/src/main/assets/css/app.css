@@ -1439,7 +1439,7 @@ input {
     font-size: 1.35rem;
   }
   body:not(.land) .calcbar {
-    height: 32px;
+    min-height: 32px;
   }
   /* and the amount's figures a size smaller (figures may shrink; words don't) */
   body:not(.land) .amtwrap input {
@@ -1465,7 +1465,7 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 44px;
+  min-height: 44px; /* grows when a named field's result wraps under its name */
   padding-left: 6px;
 }
 .calcres {
@@ -1477,7 +1477,26 @@ input {
   font-weight: 600;
   color: var(--on-surface-variant);
 }
+/* while a card is open the bar names its field, the result right after the name, or under it when they don't fit */
+.calcres.named {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  white-space: normal;
+  overflow: visible;
+  line-height: 1.25;
+}
+.calcname {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.calceq {
+  white-space: nowrap; /* "= 1,250" stays whole */
+}
 .calc .kbdbtn {
+  flex: none;
   width: 52px;
   height: 44px;
   border-radius: 14px;
@@ -1502,6 +1521,129 @@ input {
 }
 .preview:empty {
   display: none;
+}
+/* Charges and extras (docs/specs/charges.md → The card): a form's preview line, the "+" buttons, and the tonal card,
+   each row a small label over a medium figure (the currency code before it) with its calculator and ✕ at the end and a
+   thin line under it, then the preview */
+.aoline,
+.aoprev {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  line-height: 1.45;
+}
+.aoline b,
+.aoprev b {
+  color: var(--on-surface);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.aoline {
+  padding: 10px 2px 2px;
+}
+.aoprev {
+  padding: 10px 16px 12px;
+}
+.aoline:empty,
+.aoprev:empty {
+  display: none;
+}
+.aoadds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  margin-top: 6px;
+}
+.aoadds .aoadd {
+  width: auto;
+  padding: 0 12px;
+}
+.aocard {
+  margin-top: 12px;
+  background: var(--surface-high);
+  border-radius: 16px;
+}
+.aorow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 0 16px;
+  border-bottom: 1px solid var(--outline);
+}
+.aof {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0 4px;
+}
+.aol {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  line-height: 1.3;
+}
+.aov {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.aocur {
+  flex: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+.aov input,
+.aov input:focus {
+  height: 1.8em;
+  border: 0;
+  padding: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  caret-color: var(--primary);
+}
+.aov .caretmirror {
+  font-size: 1.35rem;
+  line-height: 1.8em;
+  letter-spacing: 0;
+  padding-right: 4px;
+}
+.aov .caretmirror .blink {
+  width: 2px;
+  height: 1.15em;
+}
+.aocalc {
+  padding: 4px;
+  background: var(--secondary-container);
+  background-clip: content-box;
+  color: var(--on-secondary-container);
+}
+.aocalc .ic,
+.aox .ic {
+  width: 22px;
+  height: 22px;
+}
+/* the field being typed or filled by the keypad: the line and the label take the accent; the keypad's own button is
+   its keyboard switch meanwhile */
+.aorow:focus-within,
+.aorow.calcing {
+  border-bottom: 2px solid var(--primary);
+  margin-bottom: -1px;
+}
+.aorow:focus-within .aol,
+.aorow.calcing .aol {
+  color: var(--primary);
+}
+.aorow.calcing .aocalc {
+  display: none;
+}
+/* while the keypad fills another amount of the form: a thin grey line and grey figures */
+.amtwrap.aoidle {
+  border-bottom: 1px solid var(--outline);
+  margin-bottom: 1px;
+}
+.amtwrap.aoidle input,
+.aorow.aoidle input {
+  color: var(--on-surface-variant);
 }
 .hint {
   font-size: 0.8rem;

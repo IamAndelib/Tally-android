@@ -301,18 +301,21 @@ const ago = n => {
   const bal = await page.evaluate(() => balances()[S.accounts[0].id]);
   ok(bal === 70, "balance still adds up: " + bal);
 
-  // ---- 8. transfer fee that isn't a number
+  // ---- 8. transfer charge that isn't a number
   await seed({ v: 6, settings: { cur: "CAD" }, accounts: [bank, cash], txns: [], loans: [], assets: [] });
   await act("tr-new");
   await settle();
   await page.fill("#f-amt", "20");
-  await act("add-fee");
-  await page.fill("#f-fee", "5+");
+  await act("addon-add", "xcharge");
+  await page.fill("#f-charge", "5+");
   await act("tr-save");
   await settle();
   S = await state();
-  ok(S.txns.length === 0 && (await snackText()).includes("fee"), "a fee that isn't a number is refused, nothing saved");
-  await page.fill("#f-fee", "2");
+  ok(
+    S.txns.length === 0 && (await snackText()).includes("charge"),
+    "a charge that isn't a number is refused, nothing saved"
+  );
+  await page.fill("#f-charge", "2");
   await act("tr-save");
   await settle();
   S = await state();

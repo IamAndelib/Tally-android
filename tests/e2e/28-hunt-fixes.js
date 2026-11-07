@@ -1495,18 +1495,13 @@ const ok = (c, m) => {
   );
   await narrow.evaluate(() => {
     closeSheet();
-    trSheet();
-  });
-  await narrow.waitForTimeout(150);
-  ok(
-    await narrow.evaluate(() => $("#fee-btn").textContent.includes("cash‑out")),
-    '"cash‑out" on the fee button never breaks at its hyphen'
-  );
-  await narrow.evaluate(() => {
-    closeSheet();
     loanOpen("L1");
   });
   await narrow.waitForTimeout(150);
+  ok(
+    await narrow.evaluate(() => !!$("#fee-btn") && $("#fee-btn").textContent.includes("cash‑out")),
+    '"cash‑out" on the loan payment\'s fee button never breaks at its hyphen'
+  );
   ok(
     await narrow.evaluate(() => {
       const st = $("#sheet .tx.exp .s .st");

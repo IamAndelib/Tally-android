@@ -363,8 +363,8 @@ function inspect() {
       }
       sc = sc.parentElement;
     }
-    const pad = document.querySelector(".calc");
-    if (pad && vis(pad) && cy > pad.getBoundingClientRect().top) clipped = true;
+    const pad = [...document.querySelectorAll(".calc")].find(vis); // the open one (a form with a card has several)
+    if (pad && cy > pad.getBoundingClientRect().top) clipped = true;
     const foot = document.querySelector(".hfs-foot");
     if (foot && vis(foot) && !e.closest(".hfs-foot") && cy > foot.getBoundingClientRect().top) clipped = true;
     if (clipped) continue;
@@ -451,9 +451,10 @@ function inspect() {
       out.push("Charges label not 6px under the chips " + (L.top - st.getBoundingClientRect().bottom));
   }
   if (chl && !vis(chl)) out.push("Charges label left out"); // the grey slice is never shown by its colour alone
-  // 8. the amount being typed is never under the calculator keypad
+  // 8. the amount being typed is never under the calculator keypad (a card's field: the whole card, its preview too)
   const pad = [...document.querySelectorAll(".calc")].find(vis),
-    amt = document.querySelector(".amtwrap.calcing");
+    aoRow = document.querySelector(".aorow.calcing"),
+    amt = document.querySelector(".amtwrap.calcing") || (aoRow && aoRow.closest(".aocard"));
   if (pad && amt) {
     const a = amt.getBoundingClientRect(),
       k = pad.getBoundingClientRect();
@@ -938,10 +939,46 @@ function inspect() {
       "choice-delete-loan",
       ev(() => deleteAsk([S.txns.find(t => t.type === "loan").id], () => {}))
     );
-    await shot("transfer-fee", async () => {
+    /* the transfer charge's card: open and filled, the keypad on it (its bar named, a result after the name), and the
+       keypad on the amount while it is open (the card idle) */
+    const card = async keys => {
       await page.evaluate(() => trSheet());
-      await page.click('#sheet [data-act="add-fee"]');
-    });
+      await page.waitForTimeout(100); // the form focuses its amount 60ms after it opens (focusAmt)
+      await page.evaluate(() => {
+        $("#f-amt").value = groupDigits("1000"); // the phone's separators
+        $('#sheet [data-act="addon-add"][data-v="xcharge"]').click();
+        $("#f-charge").value = "10";
+        trPreview();
+        document.activeElement.blur();
+      });
+      /* (the keys through the page: a keypad still sliding up can't be clicked in this run's frames) */
+      for (const [id, ks] of keys)
+        await page.evaluate(
+          ([id, ks]) => {
+            calcToggle(id, calcToggleBtn(id));
+            ks.forEach(calcKey);
+          },
+          [id, ks]
+        );
+      const bad = await page.evaluate(
+        want => {
+          const out = [],
+            c = $("#sheet .aocard"),
+            res = CALC && $("#cr-" + CALC.id);
+          if (want && (!CALC || CALC.id !== want)) out.push("the keypad isn't open on " + want);
+          if (!c || !c.offsetParent || !c.querySelector(".aoprev").textContent) out.push("no card with its preview");
+          if ($("#sheet .aoline").textContent) out.push("the preview shown twice");
+          if (res && (!res.querySelector(".calcname") || (CALC.expr.length > 2 && !res.querySelector(".calceq"))))
+            out.push("the keypad's bar doesn't name its field and result: " + res.textContent);
+          return out;
+        },
+        (keys[keys.length - 1] || [])[0]
+      );
+      if (bad.length) throw new Error("transfer charge card: " + bad.join("; "));
+    };
+    await shot("transfer-charge", () => card([]));
+    await shot("transfer-charge-keypad", () => card([["f-charge", ["+", "5"]]]));
+    await shot("transfer-charge-amount", () => card([["f-amt", ["+", "2", "5", "0"]]]));
     await shot(
       "account",
       ev(() => accOpen("b"))
@@ -1048,10 +1085,6 @@ function inspect() {
         })
       )
     );
-    await shot("transfer-fee", async () => {
-      await page.evaluate(() => trSheet());
-      await page.click('#sheet [data-act="add-fee"]');
-    });
     await shot("loan-fee", async () => {
       await page.evaluate(() => loanOpen("L1"));
       await page.click('#sheet [data-act="add-fee"]');

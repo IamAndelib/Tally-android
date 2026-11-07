@@ -140,13 +140,13 @@ const today = () => {
   await settle();
   await typeInto("#f-amt", "1000");
   await typeInto("#f-toamt", "86500");
-  await page.click('[data-act="add-fee"]');
-  await typeInto("#f-fee", "1500");
+  await page.click('[data-act="addon-add"][data-v="xcharge"]');
+  await typeInto("#f-charge", "1500");
   ok(
     (await page.inputValue("#f-amt")) === "1,000" &&
       (await page.inputValue("#f-toamt")) === "86,500" &&
-      (await page.inputValue("#f-fee")) === "1,500",
-    "transfer amount, received and fee group"
+      (await page.inputValue("#f-charge")) === "1,500",
+    "transfer amount, received and charge group"
   );
   ok(/86,500/.test(await page.textContent("#sheet")), "preview still reads the grouped amounts");
   await page.click('[data-act="tr-save"]');

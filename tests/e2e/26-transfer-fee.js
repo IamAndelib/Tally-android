@@ -69,10 +69,95 @@ const ok = (c, m) => {
   await settle();
   await page.click('#sheet [data-act="tr-to"][data-v="b"]');
   await page.fill("#f-amt", "20000");
-  await page.click('#sheet [data-act="add-fee"]');
-  await page.fill("#f-fee", "10");
-  ok((await page.textContent("#fee-lbl")).includes("not counted as spending"), "the fee field says it isn't spending");
-  ok((await page.textContent("#tr-prev")).includes("20,010.00"), "preview: City Bank −20,010");
+  /* the form's previews as a person sees them: [where, text], only the ones on screen */
+  const previews = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#sheet .aoline, #sheet .aoprev")]
+        .filter(e => e.offsetParent && e.textContent.trim())
+        .map(e => [
+          e.closest(".aocard") ? "card" : "line",
+          e.textContent
+            .replace(/\u2060/g, "")
+            .replace(/\s+/g, " ")
+            .trim(),
+        ])
+    );
+  let pv = await previews();
+  ok(
+    pv.length === 1 &&
+      pv[0][0] === "line" &&
+      /^City Bank −\S*20,000\.00 · Brac Joint \+\S*20,000\.00$/.test(pv[0][1].replace(/BDT /g, "BDT")),
+    "without a charge, the line under the amount (no arrow): " + JSON.stringify(pv)
+  );
+  ok(
+    await page.evaluate(() => {
+      const l = $("#sheet .aoline"),
+        a = $("#sheet .amtwrap");
+      return (
+        !!l &&
+        !!a &&
+        l.getBoundingClientRect().top >= a.getBoundingClientRect().bottom - 1 &&
+        !!l.querySelector(".adot")
+      );
+    }),
+    "the line sits under the amount, each account with its dot"
+  );
+  const add = '#sheet [data-act="addon-add"][data-v="xcharge"]';
+  ok((await page.textContent(add)).trim() === "Transfer charge", "the button: + Transfer charge");
+  ok(!(await page.$('#sheet [data-act="add-fee"]')), "no old Add a fee button on the transfer form");
+  await page.click(add);
+  await settle();
+  const st = await page.evaluate(() => ({
+    focus: document.activeElement && document.activeElement.id,
+    calc: document.body.classList.contains("calcopen"),
+    mode: $("#f-charge").getAttribute("inputmode"),
+    btn: !!$('#sheet [data-act="addon-add"][data-v="xcharge"]').offsetParent,
+    label: $("#sheet .aocard .aol").textContent,
+    cur: $("#sheet .aocard .aocur").textContent,
+  }));
+  ok(
+    st.focus === "f-charge" && !st.calc && st.mode === "decimal" && !st.btn,
+    "+ Transfer charge opens the card, its field focused with no keypad, the button gone " + JSON.stringify(st)
+  );
+  ok(st.label === "Transfer charge" && st.cur === "BDT", "the card: Transfer charge, BDT before the figure");
+  await page.fill("#f-charge", "10");
+  pv = await previews();
+  ok(
+    pv.length === 1 &&
+      pv[0][0] === "card" &&
+      /City Bank −\S*20,010\.00 · Brac Joint \+\S*20,000\.00/.test(pv[0][1].replace(/BDT /g, "BDT")),
+    "the line moves into the card, counting the charge, never twice: " + JSON.stringify(pv)
+  );
+  await page.click('#sheet [data-act="addon-remove"][data-v="xcharge"]');
+  await settle();
+  pv = await previews();
+  ok(
+    pv.length === 1 && pv[0][0] === "line" && pv[0][1].includes("20,000.00") && !pv[0][1].includes("20,010"),
+    "✕ closes the card and the line comes back: " + JSON.stringify(pv)
+  );
+  ok(
+    await page.evaluate(
+      () =>
+        !!$('#sheet [data-act="addon-add"][data-v="xcharge"]').offsetParent &&
+        document.activeElement === $('#sheet [data-act="addon-add"][data-v="xcharge"]') &&
+        !$("#sheet .aocard").offsetParent &&
+        $("#f-charge").value === ""
+    ),
+    "the button comes back with the focus, the card gone and emptied"
+  );
+  await page.click(add);
+  await page.fill("#f-charge", "10");
+  /* the code follows From */
+  await page.evaluate(() => {
+    S.accounts.push({ id: "u", name: "Dollar account", type: "bank", currency: "USD", opening: 0 });
+    trPickFrom("u");
+  });
+  ok((await page.textContent("#sheet .aocard .aocur")) === "USD", "the card's code follows From");
+  await page.evaluate(() => {
+    trPickFrom("a");
+    S.accounts.pop();
+  });
+  ok((await page.textContent("#sheet .aocard .aocur")) === "BDT", "and back");
   await page.click('#sheet [data-act="tr-save"]');
   await page.waitForTimeout(350);
   const bal = await page.evaluate(() => balances());
@@ -81,6 +166,23 @@ const ok = (c, m) => {
     fee = S.txns.find(x => x.feeOf),
     tr = S.txns.find(x => x.type === "transfer");
   ok(fee && fee.amount === 10 && fee.account === "a" && tr.feeId === fee.id, "the fee is linked to its transfer");
+  const ed = await page.evaluate(id => {
+    trSheet(id);
+    const r = {
+      card: !!$("#sheet .aocard").offsetParent,
+      v: $("#f-charge").value,
+      btn: !!$('#sheet [data-act="addon-add"]').offsetParent,
+      prev: $("#sheet .aocard .aoprev")
+        .textContent.replace(/\u2060/g, "")
+        .replace(/\s+/g, " "),
+    };
+    closeSheet();
+    return r;
+  }, tr.id);
+  ok(
+    ed.card && ed.v === "10.00" && !ed.btn && /20,010\.00/.test(ed.prev),
+    "editing the transfer: its card open from the start, with its preview " + JSON.stringify(ed)
+  );
 
   // ---- 2. spending in Charges, under no category: the ring, the day's total, the summary, the widget
   const ring = await page.evaluate(() =>
@@ -294,6 +396,29 @@ const ok = (c, m) => {
   ok(
     changed.length === 0 && Object.keys(kept).length === Object.keys(oldFee).length,
     "the saved fee entry itself is unchanged (an older version still reads it) " + JSON.stringify(kept)
+  );
+
+  // ---- 6. the card's checks: not a number, negative, and an empty or 0 card saves no charge
+  const chk = await page.evaluate(() => {
+    const out = [];
+    const tryIt = v => {
+      trSheet();
+      $("#f-amt").value = "100";
+      $('#sheet [data-act="addon-add"][data-v="xcharge"]').click();
+      $("#f-charge").value = v;
+      const n = S.txns.length;
+      saveTr();
+      out.push([v, ($("#snack") || {}).textContent || "", S.txns.length - n]);
+      closeSheet();
+    };
+    ["5×", "−5", "0", "", "0.001"].forEach(tryIt);
+    return out;
+  });
+  ok(chk[0][1].includes("That charge isn't a number") && chk[0][2] === 0, "not a number: " + JSON.stringify(chk[0]));
+  ok(chk[1][1].includes("A charge can't be negative") && chk[1][2] === 0, "negative: " + JSON.stringify(chk[1]));
+  ok(
+    chk[2][2] === 1 && chk[3][2] === 1 && chk[4][2] === 1,
+    "a 0, an empty card, or one that shows as 0 saves the transfer alone " + JSON.stringify(chk.slice(2))
   );
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));

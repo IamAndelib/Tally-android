@@ -101,17 +101,14 @@
     "to": "Nach",
     "swap": "Von und Nach tauschen",
     "sent": "Gesendeter Betrag",
-    "addFee": "Gebühr hinzufügen (Geldautomat, Auszahlung)",
     "ok": "Umbuchen",
     "title": "Umbuchung",
     "edit": "Umbuchung bearbeiten",
     "arrived": "Auf {{account}} angekommen ({{cur}})",
-    "inclFee": "(inkl. {{amount}} Gebühr)",
     "pickBoth": "Wähle beide Konten",
     "pickTwo": "Wähle zwei verschiedene Konten",
     "enterSent": "Gib den gesendeten Betrag ein",
     "enterArrived": "Gib ein, wie viel in {{cur}} ankam",
-    "feeNegative": "Die Gebühr kann nicht negativ sein",
     "feeNote": "Umbuchungsgebühr",
     "done": "{{amount}} auf {{account}} umgebucht"
   },
@@ -319,6 +316,34 @@
   "fee": {
     "label": "Gebühr ({{cur}}) · zählt nicht als Ausgabe",
     "notNumber": "Die Gebühr ist keine Zahl"
+  },
+  "xcharge": {
+    "label": "Überweisungsgebühr",
+    "calc": "Rechner für die Überweisungsgebühr",
+    "remove": "Überweisungsgebühr entfernen"
+  },
+  "charge": {
+    "add": "Gebühr hinzufügen",
+    "label": "Gebühr",
+    "calc": "Rechner für die Gebühr",
+    "remove": "Gebühr entfernen",
+    "notNumber": "Die Gebühr ist keine Zahl",
+    "negative": "Eine Gebühr kann nicht negativ sein"
+  },
+  "charges": {
+    "add": "Gebühren hinzufügen",
+    "label": "Gebühren",
+    "calc": "Rechner für die Gebühren",
+    "remove": "Gebühren entfernen"
+  },
+  "extra": {
+    "add": "Extra hinzufügen",
+    "label": "Extra",
+    "calc": "Rechner für das Extra",
+    "remove": "Extra entfernen"
+  },
+  "addOn": {
+    "both": "Überweisungsgebühr und Extra"
   },
   "loan": {
     "noDueYet": "Noch keine Frist",

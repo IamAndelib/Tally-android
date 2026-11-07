@@ -392,7 +392,12 @@ document.addEventListener("click", ev => {
       el.hidden = true;
       if (CALC) calcClose(CALC.id, calcToggleBtn(CALC.id)); // no keypad over the system keyboard
       $("#f-fee").focus();
-      if (F.kind === "tr") trPreview();
+      break;
+    case "addon-add":
+      addOnAdd(el.closest(".p") || document, v);
+      break;
+    case "addon-remove":
+      addOnRemove(el.closest(".p") || document, v);
       break;
     case "tr-save":
       saveTr();
@@ -760,7 +765,7 @@ document.addEventListener("focusin", ev => {
 document.addEventListener("input", ev => {
   const id = ev.target.id;
   if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
-  if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-fee"].includes(id)) trPreview();
+  if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-charge"].includes(id)) trPreview();
   else if (id === "f-actual") fixPreview();
   else if (id === "cur-q") curList(ev.target.value);
   else if (id === "ic-q") icList(ev.target.value);

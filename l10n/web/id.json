@@ -101,17 +101,14 @@
     "to": "Ke",
     "swap": "Tukar asal dan tujuan",
     "sent": "Jumlah dikirim",
-    "addFee": "Tambah biaya (ATM, tarik tunai)",
     "ok": "Transfer",
     "title": "Transfer",
     "edit": "Ubah transfer",
     "arrived": "Jumlah yang masuk ke {{account}} ({{cur}})",
-    "inclFee": "(termasuk biaya {{amount}})",
     "pickBoth": "Pilih kedua akun",
     "pickTwo": "Pilih dua akun yang berbeda",
     "enterSent": "Masukkan jumlah yang dikirim",
     "enterArrived": "Masukkan jumlah yang masuk dalam {{cur}}",
-    "feeNegative": "Biaya tidak boleh negatif",
     "feeNote": "Biaya transfer",
     "done": "{{amount}} ditransfer ke {{account}}"
   },
@@ -318,6 +315,34 @@
   "fee": {
     "label": "Biaya ({{cur}}) · tidak dihitung sebagai pengeluaran",
     "notNumber": "Biaya itu bukan angka"
+  },
+  "xcharge": {
+    "label": "Biaya transfer",
+    "calc": "Kalkulator untuk biaya transfer",
+    "remove": "Hapus biaya transfer"
+  },
+  "charge": {
+    "add": "Tambah biaya",
+    "label": "Biaya",
+    "calc": "Kalkulator untuk biaya",
+    "remove": "Hapus biaya",
+    "notNumber": "Biaya itu bukan angka",
+    "negative": "Biaya tidak boleh negatif"
+  },
+  "charges": {
+    "add": "Tambah biaya",
+    "label": "Biaya",
+    "calc": "Kalkulator untuk biaya",
+    "remove": "Hapus biaya"
+  },
+  "extra": {
+    "add": "Tambah jumlah tambahan",
+    "label": "Tambahan",
+    "calc": "Kalkulator untuk tambahan",
+    "remove": "Hapus tambahan"
+  },
+  "addOn": {
+    "both": "Biaya transfer dan tambahan"
   },
   "loan": {
     "noDueYet": "Belum ada jatuh tempo",
