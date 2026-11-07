@@ -177,8 +177,9 @@ function loanRow(l, i = loanInfo(l)) {
     "</span></small></span></button>"
   );
 }
-/* people you already have an open loan/lending of the same kind + currency with (most recently drawn on first) */
-function personCandidates(kind, cur, q) {
+/* people you already have an open loan/lending of the same kind + currency with (most recently drawn on first); with
+   `chips`, the ones the user took out of the suggestions are left out (typing a hidden name still merges) */
+function personCandidates(kind, cur, q, chips) {
   const qq = curFold(q.trim()),
     seen = new Set(),
     out = [];
@@ -188,7 +189,7 @@ function personCandidates(kind, cur, q) {
     if (!i.open || i.cur !== cur) return;
     if (qq && !curFold(l.person).startsWith(qq)) return;
     const key = curFold(l.person);
-    if (seen.has(key) || hiddenNames("people").includes(key)) return;
+    if (seen.has(key) || (chips && hiddenNames("people").includes(key))) return;
     seen.add(key);
     out.push({ l, ts: i.draws.length ? i.draws[i.draws.length - 1].ts || 0 : 0 });
   });
@@ -202,7 +203,7 @@ function personSuggest(q) {
   const el = $("#f-person-sug");
   if (!el) return;
   const cur = (acc(F.account) || {}).currency,
-    list = cur ? personCandidates(F.lk, cur, q || "") : [];
+    list = cur ? personCandidates(F.lk, cur, q || "", true) : [];
   el.hidden = !list.length;
   el.innerHTML = list.map(l => nameChip("people", "f-person-pick", l.id, l.person)).join("");
 }

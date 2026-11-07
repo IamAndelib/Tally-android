@@ -348,6 +348,25 @@ const ok = (c, m) => {
   await p.evaluate(() => closeSheet());
   await p.evaluate(() => loanForm("lend"));
   ok((await names()).join() === "Sam", "A16: still hidden in the next form: " + (await names()));
+  // hiding a name only takes it out of the chips: typing it in full still offers to add to that person's open tab
+  await p.fill("#f-person", "Mahin");
+  await p.fill("#f-amt", "5");
+  r = await p.evaluate(() => ({
+    merge: F.merge,
+    hint: !$("#f-mergehint").hidden && $("#f-mergehint").textContent,
+    chips: [...document.querySelectorAll("#f-person-sug .nchip .chn")].map(c => c.textContent),
+  }));
+  ok(
+    r.merge === "L2" && /Mahin/.test(r.hint) && !r.chips.includes("Mahin"),
+    "A16: hidden Mahin still merges: " + JSON.stringify(r)
+  );
+  await p.click('[data-act="loan-save"]');
+  r = await p.evaluate(() => ({
+    mahin: S.loans.filter(l => l.person === "Mahin").length,
+    drawn: S.txns.filter(t => t.loan === "L2" && t.principal).length,
+  }));
+  ok(r.mahin === 1 && r.drawn === 2, "A16: saving added to the open tab, no second one: " + JSON.stringify(r));
+  await p.evaluate(() => (closeSheet(), loanForm("lend")));
   // payees, after a letter
   await p.evaluate(() => (closeSheet(), txSheet(null, "expense", "food")));
   await p.fill("#f-payee", "co");
