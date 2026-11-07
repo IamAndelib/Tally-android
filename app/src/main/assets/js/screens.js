@@ -714,10 +714,7 @@ function balBar(b, n) {
 }
 /* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
    helps to spot it */
-const accTag = a =>
-  a
-    ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl(a.name) + "</bdi>"
-    : bdi("?");
+const accTag = a => (a ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl(a.name) + "</bdi>" : bdi("?"));
 /* An entry's row: two lines. What it was | how much (a fee under it: "+ $2.00 fee"; a transfer between currencies: what
    arrived), then its category when the title is a payee or a note (a note, for a loan) and its account with the dot of
    its colour; a transfer: From → To. No balance on the row: tapping it opens it in place (txOpenView), where the balances,

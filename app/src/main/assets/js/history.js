@@ -426,11 +426,7 @@ function histChips() {
     h.push(
       histChip(
         "acc",
-        '<span class="adot"' +
-          accVar(a) +
-          '></span><span class="chn" dir="auto">' +
-          esc(a.name) +
-          "</span>",
+        '<span class="adot"' + accVar(a) + '></span><span class="chn" dir="auto">' + esc(a.name) + "</span>",
         a.name,
         accVar(a)
       )
