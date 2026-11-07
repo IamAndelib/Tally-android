@@ -180,8 +180,11 @@ function drawSm() {
     ">" +
     ic("right") +
     "</button></div>";
-  const split = catSplit(b.list);
-  if (SM.mode === "d")
+  const split = catSplit(b.list),
+    /* nothing spent in all that the chart shows: no chart (the total, the message and the button say it) */
+    none = M ? !b.v : !max;
+  if (none) h += "";
+  else if (SM.mode === "d")
     h +=
       '<div class="smchart smc">' +
       bars
@@ -297,6 +300,7 @@ function drawSm() {
     TH("summary.open." + SM.mode) +
     "</button>";
   el.innerHTML = h;
+  fitSmRows();
   /* a label wider than its day's column (Today at a large text size): smaller, not below 10px (summary.todayCol is
      short where the word is long, like the weekdays beside it) */
   el.querySelectorAll(".smcol .x").forEach(x => {
@@ -307,6 +311,36 @@ function drawSm() {
     )
       x.style.fontSize = px + "px";
   });
+}
+/* The Weeks rows share one pair of columns, so every track starts and ends at the same place and equal amounts draw
+   equal bars (subgrid is not in WebView 87): the widest label and figure, measured, go to the rows as --smx / --smv.
+   A label wider than half the row wraps, in every row alike. Run again on resize and when the font has loaded. */
+function fitSmRows() {
+  const g = document.querySelector("#sm .smrows");
+  if (!g) return;
+  g.classList.add("meas");
+  g.style.removeProperty("--smx");
+  g.style.removeProperty("--smv");
+  const w = sel => Math.max(0, ...[...g.querySelectorAll(sel)].map(e => e.getBoundingClientRect().width)),
+    first = g.querySelector(".smrow"),
+    cs = first && getComputedStyle(first),
+    room = first
+      ? first.clientWidth -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight) -
+        2 * parseFloat(cs.columnGap || 10)
+      : 0,
+    v = Math.ceil(w(".v")),
+    x = Math.ceil(Math.min(w(".x") + 1, room * 0.5));
+  g.classList.remove("meas");
+  if (room > 0) {
+    g.style.setProperty("--smx", x + "px");
+    g.style.setProperty("--smv", v + "px");
+  }
+  if (document.fonts && document.fonts.status === "loading" && !g.dataset.fw) {
+    g.dataset.fw = "1";
+    document.fonts.ready.then(fitSmRows);
+  }
 }
 /* the Year tab: a year's 12 months as bars that swipe sideways (opening on this month), the year's spending against the
    year before (this year: against the same days of last year), and its categories. The bars are for looking only. */
@@ -345,27 +379,28 @@ function drawSmYear(el) {
     ">" +
     ic("right") +
     "</button></div>" +
-    '<div class="smchart smy" id="smy">' +
-    months
-      .map((m, k) => {
-        const v = vals[k],
-          label = capFirst(parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }));
-        return (
-          '<div class="smcol' +
-          (m === t.slice(0, 7) ? " on" : "") +
-          '" role="img" aria-label="' +
-          TH("common.labelValue", { label: capFirst(monthLabel(m)), value: money(v, cur) }) +
-          '"><span class="v">' +
-          (v ? esc(compact(v)) : "") +
-          '</span><span class="bw"><span class="b" style="height:' +
-          (v ? Math.max(2, (v / max) * 100) : 0).toFixed(1) +
-          '%"></span></span><span class="x">' +
-          esc(label) +
-          "</span></div>"
-        );
-      })
-      .join("") +
-    "</div>" +
+    (max ? '<div class="smchart smy" id="smy">' : "") +
+    (max
+      ? months
+          .map((m, k) => {
+            const v = vals[k],
+              label = capFirst(parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short" }));
+            return (
+              '<div class="smcol' +
+              (m === t.slice(0, 7) ? " on" : "") +
+              '" role="img" aria-label="' +
+              TH("common.labelValue", { label: capFirst(monthLabel(m)), value: money(v, cur) }) +
+              '"><span class="v">' +
+              (v ? esc(compact(v)) : "") +
+              '</span><span class="bw"><span class="b" style="height:' +
+              (v ? Math.max(2, (v / max) * 100) : 0).toFixed(1) +
+              '%"></span></span><span class="x">' +
+              esc(label) +
+              "</span></div>"
+            );
+          })
+          .join("") + "</div>"
+      : "") +
     '<div class="smd"><div class="muted small">' +
     esc(part ? T("summary.soFar", { year: y }) : String(y)) +
     '</div><div class="big spent">' +
@@ -403,8 +438,9 @@ function drawSmYear(el) {
   el.innerHTML = h;
   /* this month at the right edge (a past year: December); an edge fades while months that have been are past it, so
      this year's months still to come don't fade this one */
-  const ch = $("#smy"),
-    cols = [...ch.querySelectorAll(".smcol")],
+  const ch = $("#smy");
+  if (!ch) return;
+  const cols = [...ch.querySelectorAll(".smcol")],
     on = ch.querySelector(".on"),
     last = on ? cols.indexOf(on) : 11,
     fade = () => {

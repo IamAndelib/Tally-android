@@ -181,7 +181,8 @@ const ok = (c, m) => {
   ok((await txt("#sm .cal-h b")) !== lbl0, "‹ moves the window");
   await tap('#sheet [data-act="sm-mode"][data-v="d"]');
   await tap('#sheet [data-act="sm-nav"][data-v="1"]');
-  await tap('#sheet .smcol[data-v="4"]');
+  /* a week with nothing spent has no bars to pick: its last day is the one shown */
+  ok(!(await page.$("#sheet .smcol")), "a window with nothing spent draws no bars");
   await tap('#sheet [data-act="sm-open"]');
   ok(
     !(await page.isVisible("#sheet .p")) &&

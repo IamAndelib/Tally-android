@@ -901,6 +901,7 @@ addEventListener("resize", () => {
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
   fitCal($("#dp") || $("#pd"));
+  fitSmRows();
   /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */
   if (CALC && CALC.inp && CALC.inp.isConnected)
     setTimeout(() => {

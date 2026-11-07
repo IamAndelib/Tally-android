@@ -373,6 +373,117 @@ const ok = (c, m) => {
     });
     ok(ring.circles > 0 && ring.hole, "Home's ring is still a ring (stroked): " + JSON.stringify(ring));
   }
+  /* Weeks: every row shares the label and figure columns, so all tracks start and end at the same x and equal spending
+     draws equal bars (labels of different lengths, figures and dashes), also at 360 px and large text; and a tab with
+     nothing spent in view draws no chart, only the total, the message and the button. */
+  {
+    const open = async (txns, mode) => {
+      await page.evaluate(() => closeSheet());
+      await page.evaluate(
+        ([txns, mode]) => {
+          S.settings.cur = "BDT";
+          S.accounts = [{ id: "k", name: "Bkash", type: "wallet", currency: "BDT", opening: 90000 }];
+          S.txns = txns.map((x, i) => ({
+            id: "w" + i,
+            ts: i + 1,
+            date: addDays(today(), -x[0]),
+            type: "expense",
+            amount: x[1],
+            account: "k",
+            cat: "food",
+            note: "",
+          }));
+          summarySheet();
+          document.querySelector('#sheet [data-act="sm-mode"][data-v="' + mode + '"]').click();
+        },
+        [txns, mode]
+      );
+      await page.waitForTimeout(150);
+    };
+    for (const [w, scale] of [
+      [393, 16],
+      [360, 20.8],
+    ]) {
+      await page.setViewportSize({ width: w, height: 740 });
+      await page.evaluate(px => (document.documentElement.style.fontSize = px + "px"), scale);
+      await open(
+        [
+          [7, 500],
+          [14, 500],
+          [28, 12400],
+        ],
+        "w"
+      );
+      const r = await page.$$eval("#sm .smrow", rows =>
+        rows.map(x => {
+          const t = x.querySelector(".tr").getBoundingClientRect(),
+            b = x.querySelector(".b").getBoundingClientRect(),
+            l = x.querySelector(".x"),
+            v = x.querySelector(".v");
+          return {
+            l: l.textContent,
+            tl: Math.round(t.left * 10) / 10,
+            tr: Math.round(t.right * 10) / 10,
+            bw: Math.round(b.width * 10) / 10,
+            v: v.textContent,
+            cut:
+              l.scrollWidth > l.clientWidth + 1 ||
+              v.scrollWidth > v.clientWidth + 1 ||
+              x.scrollWidth > x.clientWidth + 1,
+            tw: t.width,
+          };
+        })
+      );
+      const tag = w + "px/" + scale;
+      ok(
+        new Set(r.map(x => x.l.length)).size > 1,
+        tag + " weeks: labels differ in length: " + r.map(x => x.l).join(" | ")
+      );
+      ok(r.some(x => x.v === "–") && r.some(x => x.v !== "–"), tag + " weeks: some with spending, some without");
+      ok(
+        new Set(r.map(x => x.tl)).size === 1 && new Set(r.map(x => x.tr)).size === 1,
+        tag + " weeks: every track starts and ends at the same x: " + JSON.stringify(r.map(x => [x.tl, x.tr]))
+      );
+      const eq = r.filter(x => x.v === "500");
+      ok(
+        eq.length === 2 && eq[0].bw === eq[1].bw && eq[0].bw > 0,
+        tag + " weeks: equal spending, bars of equal width: " + JSON.stringify(eq.map(x => x.bw))
+      );
+      ok(r.every(x => !x.cut) && r[0].tw >= 60, tag + " weeks: nothing cut, track still " + Math.round(r[0].tw) + "px");
+    }
+    await page.setViewportSize({ width: 393, height: 852 });
+    await page.evaluate(() => (document.documentElement.style.fontSize = ""));
+    for (const mode of ["d", "w", "m", "y"]) {
+      await open([], mode);
+      const e = await page.evaluate(() => ({
+        chart: document.querySelectorAll("#sm .smchart, #sm .smpie").length,
+        nav: !!document.querySelector("#sm .cal-h b"),
+        big: !!document.querySelector("#sm .smd .big"),
+        msg: !!document.querySelector("#sm .empty"),
+        btn: !!document.querySelector('#sm [data-act="sm-open"]'),
+        tabs: document.querySelectorAll('#sheet [data-act="sm-mode"]').length,
+      }));
+      ok(
+        e.chart === 0 && e.nav && e.big && e.msg && e.btn && e.tabs === 4,
+        mode + ": nothing spent shows no chart, keeps tabs, period, total, message and button " + JSON.stringify(e)
+      );
+      await open([[0, 250]], mode);
+      ok(
+        (await page.evaluate(() => document.querySelectorAll("#sm .smchart").length)) === 1,
+        mode + ": spending today shows its chart"
+      );
+    }
+    /* only when everything in view is zero: older spending outside the view doesn't count */
+    await open([[40, 250]], "d");
+    ok(
+      (await page.$$("#sm .smchart")).length === 0,
+      "days: nothing in the last 8 days, no chart though older entries exist"
+    );
+    await open([[40, 250]], "w");
+    ok((await page.$$("#sm .smchart")).length === 1, "weeks: spending in one of the weeks still shows the chart");
+    await open([[40, 250]], "m");
+    ok((await page.$$("#sm .smpie")).length === 0, "months: this month has nothing, no pie though last month has");
+  }
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

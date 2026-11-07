@@ -1069,19 +1069,22 @@ html[dir="rtl"] .strip.fade {
 }
 .smrow {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: var(--smx, auto) 1fr var(--smv, auto); /* the same label and figure widths in every row */
   align-items: center;
   gap: 10px;
-  height: 36px;
-  padding: 0 8px;
+  min-height: 36px;
+  padding: 2px 8px;
   border-radius: 10px;
   text-align: left;
 }
 .smrow .x {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
   min-width: 92px;
+}
+.smrows.meas .smrow .x,
+.smrows.meas .smrow .v {
+  white-space: nowrap; /* while the widest is measured */
 }
 .smrow .tr {
   height: 10px;
