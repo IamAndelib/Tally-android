@@ -883,14 +883,14 @@ html[dir="rtl"] .strip.fade {
   align-items: center;
 }
 .nchip-pick {
-  min-width: 0;
+  min-width: 48px; /* a one-character name (common in Chinese) still has a 48px target to tap */
   padding: 0 4px 0 12px;
   text-align: start;
 }
 .nchip-x {
   flex: none;
   justify-content: center;
-  width: 32px;
+  width: 40px;
 }
 .nchip-pick::after,
 .nchip-x::after {
@@ -900,6 +900,9 @@ html[dir="rtl"] .strip.fade {
 }
 .nchip-pick::after {
   inset: -8px 0 -8px -1px;
+}
+.nchip-x::after {
+  inset: -8px -8px -8px 0; /* from the ✕'s own edge outwards, so it never covers the name's target */
 }
 .nchip .chn {
   min-width: 0;

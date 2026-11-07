@@ -374,6 +374,25 @@ const ok = (c, m) => {
     return [...h.querySelectorAll(".big")].map(x => x.textContent.replace(/[\d.,\s\u00a0\u2060\u2212-]/g, ""));
   });
   ok(r.join() === "$,A$,€,£", "curLines: the main currency first, the rest by code: " + r);
+  // a one-character name (common in Chinese) still gives both buttons a 48px tap area
+  r = await p.evaluate(() => {
+    const box = $("#f-person-sug");
+    box.hidden = false;
+    box.insertAdjacentHTML("beforeend", nameChip("people", "f-person-pick", "x", "王"));
+    const c = box.lastElementChild,
+      area = el => {
+        const b = el.getBoundingClientRect(),
+          a = getComputedStyle(el, "::after");
+        return { w: Math.max(b.width, parseFloat(a.width)), h: Math.max(b.height, parseFloat(a.height)) };
+      };
+    const out = { pick: area(c.querySelector(".nchip-pick")), x: area(c.querySelector(".nchip-x")), h: c.offsetHeight };
+    c.remove();
+    return out;
+  });
+  ok(
+    r.pick.w >= 48 && r.pick.h >= 48 && r.x.w >= 48 && r.x.h >= 48 && r.h <= 35,
+    "A16: a one-character name has 48px targets and the same chip height: " + JSON.stringify(r)
+  );
   // payees, after a letter
   await p.evaluate(() => (closeSheet(), txSheet(null, "expense", "food")));
   await p.fill("#f-payee", "co");
