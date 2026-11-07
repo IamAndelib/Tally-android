@@ -147,6 +147,74 @@ const ok = (c, m) => {
   await page.click('button.vh[data-act="cur-next"]', { force: true });
   await settle();
   ok(/Showing EUR/.test(await page.textContent('button.vh[data-act="cur-next"]')), "and it switches");
+  /* the Charges label (docs/specs/charges.md, Home): hidden from TalkBack, which hears it in the donut's label; its
+     words in the muted text colour (4.5:1), the grey only for its dot (3:1), in both themes */
+  for (const th of ["light", "dark"]) {
+    const chg = await page.evaluate(th => {
+      document.documentElement.dataset.theme = th;
+      if (!S.accounts.some(a => a.id === "b"))
+        S.accounts.push({ id: "b", name: "Wallet", type: "wallet", currency: "USD", opening: 0 });
+      if (!S.txns.some(x => x.id === "tr")) {
+        S.txns.push({
+          id: "tr",
+          ts: 7,
+          date: today(),
+          type: "transfer",
+          amount: 10,
+          account: "a",
+          to: "b",
+          feeId: "tf",
+        });
+        S.txns.push({
+          id: "tf",
+          ts: 8,
+          date: today(),
+          type: "expense",
+          amount: 2.5,
+          account: "a",
+          cat: "other",
+          feeOf: "tr",
+        });
+      }
+      V.cur = "USD";
+      render();
+      const bg = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim();
+      const hex = c =>
+        "#" +
+        c
+          .match(/\d+/g)
+          .slice(0, 3)
+          .map(v => (+v).toString(16).padStart(2, "0"))
+          .join("");
+      const lab = document.querySelector("#ring .rchg");
+      return {
+        hidden: lab.getAttribute("aria-hidden"),
+        focusable: lab.querySelectorAll("button, [tabindex], a, input").length + (lab.tabIndex >= 0 ? 1 : 0),
+        aria: document.querySelector("#ring .dwrap").getAttribute("aria-label"),
+        text: [...lab.querySelectorAll("span, b")].map(e => +contrast(hex(getComputedStyle(e).color), bg).toFixed(2)),
+        dot: +contrast(hex(getComputedStyle(lab.querySelector("i")).backgroundColor), bg).toFixed(2),
+      };
+    }, th);
+    ok(
+      chg.hidden === "true" && chg.focusable === 0,
+      th + ": the Charges label is hidden from TalkBack and takes no focus " + JSON.stringify(chg)
+    );
+    ok(
+      chg.aria === "Spending summary: spent $52.50, of which charges $2.50",
+      th + ": the donut's button says the charges: " + chg.aria
+    );
+    ok(
+      chg.text.length === 2 && chg.text.every(r => r >= 4.5) && chg.dot >= 3,
+      th + ": its words read at 4.5:1, its grey dot at 3:1 " + JSON.stringify([chg.text, chg.dot])
+    );
+  }
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.theme;
+    S.txns = S.txns.filter(x => x.id !== "tr" && x.id !== "tf");
+    S.accounts = S.accounts.filter(a => a.id !== "b");
+    V.cur = "EUR";
+    render();
+  });
   for (const th of ["dark"]) {
     await page.evaluate(th => {
       S.settings.theme = th;

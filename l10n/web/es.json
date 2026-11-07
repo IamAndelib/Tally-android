@@ -299,11 +299,14 @@
     "yellow": "Amarillo"
   },
   "ring": {
+    "charges": "Cargos",
     "add": "Añadir gasto en {{cat}}",
     "addShare": "Añadir gasto en {{cat}}, {{share}} de lo gastado",
     "tapCat": "Toca una categoría",
     "summary": "Resumen de gastos: {{spent}} gastado",
     "summaryGot": "Resumen de gastos: {{spent}} gastado, {{got}} recibido",
+    "summaryCharges": "Resumen de gastos: {{spent}} gastado, de lo cual {{charges}} en cargos",
+    "summaryChargesGot": "Resumen de gastos: {{spent}} gastado, de lo cual {{charges}} en cargos, {{got}} recibido",
     "switchCur": "Mostrando {{cur}}. Cambiar a {{next}}"
   },
   "donut": {

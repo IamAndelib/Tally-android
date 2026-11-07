@@ -35,6 +35,8 @@ function nearestInSlice(a, start, w) {
   if (rel >= e && rel <= w - e) return a;
   return circDist(a, start + e) < circDist(a, start + w - e) ? start + e : start + w - e;
 }
+/* a slice's colour: its category's, or the Charges part's grey */
+const sliceCol = id => (id === CHARGES ? CHARGES_C : cat(id).c);
 let RE = null; /* the Settings preview's layout + order while it is on screen */
 /* what the middle of the Home donut shows (settings.donut, always one of these: migrate()); tapping the Settings
    donut steps through them in order */
@@ -121,6 +123,9 @@ function ringHTML(cats, o) {
       "</button>"
     );
   };
+  /* the period's charges outside purchases (docs/specs/charges.md, Home): a grey slice after the categories', true to
+     size, and a label in the ring's top right corner (or on a line of its own: fitChargeLabel) */
+  const chg = home && o.spent > 0 ? rnd(o.by[CHARGES] || 0) : 0;
   const R = 40,
     C = 2 * Math.PI * R,
     Rout = (D / 2) * 0.92; /* stroke outer edge: (40+6)/50 of the radius */
@@ -131,8 +136,8 @@ function ringHTML(cats, o) {
     /* slices follow the tiles clockwise (not size), so leader lines never cross */
     const posOf = id => pos.find(p => p.c.id === id);
     const ent = Object.entries(o.by)
-      .filter(([id, v]) => v > 0 && id !== CHARGES) // in the figures; its grey slice comes with the charges plan's Task 4
-      .map(([id, v]) => ({ id, v, w: v / o.spent, p: posOf(id) }))
+      .filter(([, v]) => v > 0)
+      .map(([id, v]) => ({ id, v, w: v / o.spent, p: posOf(id) })) // CHARGES has no tile: its slice comes last
       .sort((a, b) => (a.p ? a.p.ang : 2) - (b.p ? b.p.ang : 2));
     let off = 0;
     ent.forEach(s => {
@@ -176,7 +181,7 @@ function ringHTML(cats, o) {
         '<circle r="' +
         R +
         '" cx="50" cy="50" fill="none" stroke="' +
-        cat(s.id).c +
+        sliceCol(s.id) +
         '" stroke-width="12" stroke-dasharray="' +
         l.toFixed(2) +
         " " +
@@ -276,7 +281,20 @@ function ringHTML(cats, o) {
         (!o.spent && !o.got ? '<div class="hint">' + TH("ring.tapCat") + "</div>" : "");
     center =
       '<button class="dwrap" data-act="summary" aria-label="' +
-      TH(o.got ? "ring.summaryGot" : "ring.summary", { spent: money(o.spent, o.cur), got: money(o.got, o.cur) }) +
+      TH(
+        chg > 0
+          ? o.got
+            ? "ring.summaryChargesGot"
+            : "ring.summaryCharges"
+          : o.got
+            ? "ring.summaryGot"
+            : "ring.summary",
+        {
+          spent: money(o.spent, o.cur),
+          got: money(o.got, o.cur),
+          charges: money(chg, o.cur),
+        }
+      ) +
       '" style="' +
       box +
       '">' +
@@ -336,6 +354,65 @@ function ringHTML(cats, o) {
     "</svg>" +
     center +
     pos.map(tile).join("") +
+    /* not a button nor a tile: a grey dot, the word and the amount under it, the size of the tiles' names; TalkBack
+       hears it in the donut's label */
+    (chg > 0
+      ? '<div class="rchg" aria-hidden="true" style="--f:' +
+        f.toFixed(1) +
+        'px"><i style="background:' +
+        CHARGES_C +
+        '"></i><span dir="auto">' +
+        TH("ring.charges") +
+        "</span><b>" +
+        esc(money(chg, o.cur, true)) +
+        "</b></div>"
+      : "") +
     "</div>"
   );
+}
+/* Home's Charges label (measured: fitFigures). The tiles leave the ring's top right corner free in most rings, but not
+   all: with 4 to 7 tiles, or 14 to 16 on a phone held sideways, a large text size or a long word reaches the tile just
+   right of 12 o'clock. Then the label takes a line of its own above the ring, right-aligned: the ring moves down by
+   it (still 6px under the account chips), or, on a phone held sideways where the ring stays centred in the window's
+   height, it sits in the room above the ring; where that room is too small it is left out (TalkBack still hears the
+   charges in the donut's label, and Summary lists them). */
+function fitChargeLabel(root) {
+  const lab = root.querySelector("#ring .rchg");
+  if (!lab) return;
+  const ring = lab.parentNode;
+  lab.classList.remove("up", "gone");
+  lab.style.top = "";
+  if (ring.dataset.mt != null) ring.style.marginTop = ring.dataset.mt;
+  const L = lab.getBoundingClientRect(),
+    box = e => {
+      const b = e.getBoundingClientRect();
+      if (e.classList.contains("ci")) return b;
+      const r = document.createRange(); // a name's or a %'s text, not its box
+      r.selectNodeContents(e);
+      const t = r.getBoundingClientRect();
+      return { left: Math.max(b.left, t.left), right: Math.min(b.right, t.right), top: t.top, bottom: t.bottom };
+    };
+  const taken = [...ring.querySelectorAll(".rt .ci, .rt .cn, .rt .cp")].some(e => {
+    if (!e.getClientRects().length || (!e.classList.contains("ci") && !e.textContent.trim())) return false;
+    const b = box(e);
+    return (
+      Math.min(b.right, L.right + 2) > Math.max(b.left, L.left - 2) &&
+      Math.min(b.bottom, L.bottom + 2) > Math.max(b.top, L.top - 2)
+    );
+  });
+  if (!taken) return;
+  const h = Math.ceil(L.height),
+    land = document.body.classList.contains("land");
+  if (land) {
+    const room = ring.getBoundingClientRect().top - ring.parentNode.getBoundingClientRect().top;
+    if (room < h + 8) {
+      lab.classList.add("gone");
+      return;
+    }
+  } else {
+    if (ring.dataset.mt == null) ring.dataset.mt = ring.style.marginTop;
+    ring.style.marginTop = parseFloat(getComputedStyle(ring).marginTop) + h + 4 + "px";
+  }
+  lab.classList.add("up");
+  lab.style.top = -(h + 2) + "px";
 }

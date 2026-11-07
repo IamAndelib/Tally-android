@@ -522,6 +522,8 @@ function homeAccounts() {
    versions and the CSV: Tally never files an entry under a category by itself, since a built-in one keeps its id when
    renamed into anything. The movement itself (a transfer, a loan's draws and payments, a balance fix) never counts. */
 const CHARGES = "_charges";
+/* the grey of the Charges part (Home's slice and its label's dot, Summary's): never a text colour, it passes 3:1 only */
+const CHARGES_C = "#7a8190";
 const isSpend = t => t.type === "expense";
 /* the part expense t counts in: a category, or CHARGES */
 function spendCat(t) {

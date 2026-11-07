@@ -299,11 +299,14 @@
     "yellow": "Jaune"
   },
   "ring": {
+    "charges": "Frais",
     "add": "Ajouter dans {{cat}}",
     "addShare": "Ajouter dans {{cat}}, {{share}} des dépenses",
     "tapCat": "Touchez une catégorie",
     "summary": "Résumé des dépenses : {{spent}} dépensés",
     "summaryGot": "Résumé des dépenses : {{spent}} dépensés, {{got}} reçus",
+    "summaryCharges": "Résumé des dépenses : {{spent}} dépensés, dont {{charges}} de frais",
+    "summaryChargesGot": "Résumé des dépenses : {{spent}} dépensés, dont {{charges}} de frais, {{got}} reçus",
     "switchCur": "Affichage en {{cur}}. Passer en {{next}}"
   },
   "donut": {

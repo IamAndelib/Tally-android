@@ -1833,6 +1833,127 @@ function variedV7() {
     ok(false, "old data's totals: " + e.message.split("\n")[0]);
   }
 
+  /* ---- Home's grey Charges part (docs/specs/charges.md, Home; D9-home without its line): one slice in #7a8190 after
+     the categories', true to size, and a label in the ring's top right corner (a grey dot, "Charges", the amount under
+     it; no %, no icon, no line), only when the period has charges outside purchases in the viewed currency, in every
+     Settings donut mode; the donut's button says it, the label is hidden from TalkBack */
+  const homeRing = (o, view) =>
+    page.evaluate(
+      ([o, view]) => {
+        const keep = S,
+          keepV = { ...V };
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          const C = 2 * Math.PI * 40;
+          const out = {};
+          DONUT_MODES.forEach(mode => {
+            S.settings.donut = mode;
+            Object.assign(V, { screen: "home" }, view);
+            render();
+            const segs = [...document.querySelectorAll("#ring .donut g circle[stroke-dasharray]")].map(c => ({
+              col: c.getAttribute("stroke"),
+              start: -parseFloat(c.getAttribute("stroke-dashoffset")) / C,
+            }));
+            const lab = document.querySelector("#ring .rchg"),
+              dot = lab && lab.querySelector("i");
+            out[mode] = {
+              segs,
+              lab: lab && {
+                text: [...lab.children].map(e => e.textContent),
+                dot: dot && getComputedStyle(dot).backgroundColor,
+                ink: getComputedStyle(lab).color,
+                hidden: lab.getAttribute("aria-hidden"),
+                icons: lab.querySelectorAll("svg, .emb, img").length,
+                tile: !!lab.closest("button, [data-act]"),
+              },
+              lines: [...document.querySelectorAll("#ring .leaders [stroke], #ring .leaders [fill]")].filter(e =>
+                /7a8190/i.test(e.getAttribute("stroke") + e.getAttribute("fill"))
+              ).length,
+              aria: document.querySelector("#ring .dwrap").getAttribute("aria-label"),
+            };
+          });
+          const cur = V.cur || viewCur();
+          out.money = Object.fromEntries(
+            [26, 48, 138, 1638, 40350].map(n => [n, [money(n, cur, true), money(n, cur)]])
+          );
+          out.tiles = [...document.querySelectorAll("#ring .rt")].map(e => e.dataset.v);
+          return JSON.parse(JSON.stringify(out));
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          RBC = LPC = null;
+          render();
+        }
+      },
+      [o, view]
+    );
+  // ---- 18. Home's grey Charges part and its label
+  try {
+    const week = { period: "range", rs: dd(-6), re: dd(0) };
+    const bdt = await homeRing(countBook(), { ...week, cur: "BDT" });
+    const m = bdt.money;
+    for (const mode of ["out", "in", "both", "none"]) {
+      const r = bdt[mode],
+        last = r.segs[r.segs.length - 1];
+      ok(
+        last && last.col === "#7a8190" && r.segs.filter(x => x.col === "#7a8190").length === 1,
+        "BDT, donut " + mode + ": one grey slice, after every category's " + J(r.segs.map(x => x.col))
+      );
+      ok(
+        last && Math.abs(1 - last.start - 138 / 1638) < 1e-4,
+        "… true to size: ৳138.00 of ৳1,638.00 (" + (last && (1 - last.start).toFixed(5)) + ")"
+      );
+      ok(
+        r.lab && same(r.lab.text, ["", "Charges", m[138][0]]) && r.lab.dot === "rgb(122, 129, 144)",
+        "… the label: a grey dot, Charges, the amount under it " + J(r.lab)
+      );
+      ok(
+        r.lab && !/%/.test(r.lab.text.join("")) && r.lab.icons === 0 && !r.lab.tile && r.lines === 0,
+        "… no %, no icon, not a tile or button, no line to the slice"
+      );
+      ok(r.lab && r.lab.ink !== "rgb(122, 129, 144)", "… its text isn't the grey " + (r.lab && r.lab.ink));
+      ok(
+        r.lab &&
+          r.lab.hidden === "true" &&
+          r.aria ===
+            "Spending summary: spent " + m[1638][1] + ", of which charges " + m[138][1] + ", received " + m[40350][1],
+        "… hidden from TalkBack; the donut's button says it: " + r.aria
+      );
+    }
+    const usd = await homeRing(countBook(), { ...week, cur: "USD" });
+    ok(
+      usd.both.lab &&
+        same(usd.both.lab.text, ["", "Charges", usd.money[26][0]]) &&
+        usd.both.aria === "Spending summary: spent " + usd.money[48][1] + ", of which charges " + usd.money[26][1],
+      "USD: the label and the donut's button count the dollars' charges only " + J([usd.both.lab, usd.both.aria])
+    );
+    /* yesterday: the dinner's charge (in its category) and a plain expense in Fees ("Food"), no charge outside them */
+    const yd = await homeRing(countBook(), { period: "day", anchor: dd(-1), cur: "BDT" });
+    for (const mode of ["out", "in", "both", "none"])
+      ok(
+        !yd[mode].lab && !yd[mode].segs.some(x => x.col === "#7a8190") && !/charges/.test(yd[mode].aria),
+        "a day with charges only inside a purchase: no label, no grey slice (donut " + mode + ") " + yd[mode].aria
+      );
+    ok(!yd.tiles.includes("_charges"), "Charges is never a tile");
+    const blankBook = await page.evaluate(() => JSON.parse(JSON.stringify(blank())));
+    const fresh = await homeRing(
+      {
+        ...blankBook,
+        settings: { ...blankBook.settings, cur: "BDT" },
+        accounts: [acct("a", "Bank", "bank", "BDT", 100)],
+      },
+      { period: "day", anchor: dd(0), cur: "BDT" }
+    );
+    const old = await homeRing(copy(v7), { period: "day", anchor: D.d6, cur: "BDT" });
+    ok(
+      fresh.tiles.length > 0 && !fresh.tiles.includes("fees") && old.tiles.includes("fees"),
+      "a new notebook's ring has no Fees tile, an older one keeps its own " + J([fresh.tiles, old.tiles])
+    );
+  } catch (e) {
+    ok(false, "Home's Charges part: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

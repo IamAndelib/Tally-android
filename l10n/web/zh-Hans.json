@@ -297,11 +297,14 @@
     "yellow": "黄色"
   },
   "ring": {
+    "charges": "费用",
     "add": "记一笔{{cat}}",
     "addShare": "记一笔{{cat}}，占支出的{{share}}",
     "tapCat": "点一个分类",
     "summary": "支出概览：已花{{spent}}",
     "summaryGot": "支出概览：已花{{spent}}，收入{{got}}",
+    "summaryCharges": "支出概览：已花{{spent}}，其中费用{{charges}}",
+    "summaryChargesGot": "支出概览：已花{{spent}}，其中费用{{charges}}，收入{{got}}",
     "switchCur": "当前显示{{cur}}。切换到{{next}}"
   },
   "donut": {

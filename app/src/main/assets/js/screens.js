@@ -501,6 +501,7 @@ function fitFigures(root) {
     )
       el.style.fontSize = px + "px";
   });
+  fitChargeLabel(root); // after the names, which it must stay clear of
 }
 function fadeStrip(el) {
   el.classList.toggle(

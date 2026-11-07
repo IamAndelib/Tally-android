@@ -297,11 +297,14 @@
     "yellow": "Kuning"
   },
   "ring": {
+    "charges": "Biaya",
     "add": "Tambah {{cat}}",
     "addShare": "Tambah {{cat}}, {{share}} dari pengeluaran",
     "tapCat": "Ketuk kategori",
     "summary": "Ringkasan pengeluaran: keluar {{spent}}",
     "summaryGot": "Ringkasan pengeluaran: keluar {{spent}}, masuk {{got}}",
+    "summaryCharges": "Ringkasan pengeluaran: keluar {{spent}}, termasuk biaya {{charges}}",
+    "summaryChargesGot": "Ringkasan pengeluaran: keluar {{spent}}, termasuk biaya {{charges}}, masuk {{got}}",
     "switchCur": "Menampilkan {{cur}}. Ganti ke {{next}}"
   },
   "donut": {

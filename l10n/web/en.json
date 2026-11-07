@@ -298,11 +298,14 @@
     "yellow": "Yellow"
   },
   "ring": {
+    "charges": "Charges",
     "add": "Add {{cat}}",
     "addShare": "Add {{cat}}, {{share}} of spending",
     "tapCat": "Tap a category",
     "summary": "Spending summary: spent {{spent}}",
     "summaryGot": "Spending summary: spent {{spent}}, received {{got}}",
+    "summaryCharges": "Spending summary: spent {{spent}}, of which charges {{charges}}",
+    "summaryChargesGot": "Spending summary: spent {{spent}}, of which charges {{charges}}, received {{got}}",
     "switchCur": "Showing {{cur}}. Switch to {{next}}"
   },
   "donut": {

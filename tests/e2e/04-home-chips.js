@@ -368,6 +368,122 @@ const ok = (c, m) => {
     "with no entries the bar says so: " + (await page.textContent(".balbar .l"))
   );
 
+  /* ---- the Charges label (docs/specs/charges.md, Home): in the ring's top right corner, 6px under the account chips,
+     outside the donut, clear of every tile; where a tile reaches into the corner (a few big tiles, large text), on a
+     line of its own above the ring, still 6px under the chips, and the ring moves down by it */
+  const corner = (n, scale, w) =>
+    page.evaluate(
+      ([n, scale, w]) => {
+        const t = today();
+        window.Android = Object.assign(window.Android || {}, { fontScale: () => scale });
+        applyTextScale();
+        S = migrate({
+          v: 8,
+          settings: { cur: "BDT", lastCheck: t, week: 1, clock: "24" },
+          accounts: [
+            { id: "a", name: "Bank", type: "bank", currency: "BDT", opening: 283460 },
+            { id: "k", name: "Bkash", type: "wallet", currency: "BDT", opening: 27542.5 },
+          ],
+          txns: [],
+        });
+        S.cats.filter(c => c.kind === "out").forEach((c, i) => (c.hidden = i >= n));
+        S.cats
+          .filter(c => c.kind === "out" && !c.hidden)
+          .forEach((c, i) =>
+            S.txns.push({
+              id: "e" + i,
+              ts: 10 + i,
+              date: t,
+              type: "expense",
+              amount: 1000 + i * 937,
+              account: "a",
+              cat: c.id,
+            })
+          );
+        S.txns.push({ id: "tr", ts: 90, date: t, type: "transfer", amount: 500, account: "a", to: "k", feeId: "tf" });
+        S.txns.push({
+          id: "tf",
+          ts: 91,
+          date: t,
+          type: "expense",
+          amount: 657.5,
+          account: "a",
+          cat: "other",
+          feeOf: "tr",
+        });
+        RBC = LPC = null;
+        Object.assign(V, { screen: "home", period: "day", anchor: t, cur: "" });
+        render();
+        const lab = document.querySelector("#ring .rchg"),
+          ring = document.getElementById("ring").getBoundingClientRect(),
+          strip = document.querySelector("#app .strip").getBoundingClientRect(),
+          L = lab.getBoundingClientRect(),
+          d = document.querySelector("#ring .dwrap").getBoundingClientRect();
+        const over = [...document.querySelectorAll("#ring .rt .ci, #ring .rt .cn, #ring .rt .cp")]
+          .filter(e => e.classList.contains("ci") || e.textContent.trim())
+          .filter(e => {
+            let b = e.getBoundingClientRect();
+            if (!e.classList.contains("ci")) {
+              const r = document.createRange();
+              r.selectNodeContents(e);
+              const q = r.getBoundingClientRect();
+              b = { left: Math.max(b.left, q.left), right: Math.min(b.right, q.right), top: q.top, bottom: q.bottom };
+            }
+            return (
+              Math.min(b.right, L.right) > Math.max(b.left, L.left) &&
+              Math.min(b.bottom, L.bottom) > Math.max(b.top, L.top)
+            );
+          })
+          .map(e => e.closest(".rt").dataset.v);
+        const cx = d.left + d.width / 2,
+          cy = d.top + d.height / 2,
+          near = Math.hypot(Math.max(L.left, Math.min(cx, L.right)) - cx, Math.max(L.top, Math.min(cy, L.bottom)) - cy);
+        const out = {
+          up: lab.classList.contains("up"),
+          underChips: +(L.top - strip.bottom).toFixed(1),
+          right: +(ring.right - L.right).toFixed(1),
+          fromRingTop: +(L.top - ring.top).toFixed(1),
+          aboveRing: +(ring.top - L.bottom).toFixed(1),
+          ringTop: +(ring.top - strip.bottom).toFixed(1),
+          h: +L.height.toFixed(1),
+          over,
+          outsideDonut: near > d.width / 2,
+          inView: L.left >= 0 && L.right <= innerWidth,
+        };
+        return out;
+      },
+      [n, scale, w]
+    );
+  await page.setViewportSize({ width: 393, height: 852 });
+  const free = await corner(11, 1);
+  ok(
+    !free.up && free.underChips === 6 && free.right === 2 && free.fromRingTop === 2 && free.ringTop === 4,
+    "a ring of 11: the label in its top right corner, 6px under the chips, the ring where it was " +
+      JSON.stringify(free)
+  );
+  ok(!free.over.length && free.outsideDonut && free.inView, "… outside the donut, clear of every tile");
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const n of [4, 5]) {
+    const b = await corner(n, 1.3);
+    ok(
+      b.up &&
+        b.underChips === 6 &&
+        b.right === 2 &&
+        b.aboveRing >= 2 &&
+        b.aboveRing < 3 &&
+        b.ringTop === 4 + Math.ceil(b.h) + 4,
+      n +
+        " tiles at 360px, text 1.3×: the label on its own line above the ring, 6px under the chips, the ring moved down by it " +
+        JSON.stringify(b)
+    );
+    ok(!b.over.length && b.outsideDonut && b.inView, "… clear of every tile " + JSON.stringify(b.over));
+  }
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.evaluate(() => {
+    Android.fontScale = () => 1;
+    applyTextScale();
+  });
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

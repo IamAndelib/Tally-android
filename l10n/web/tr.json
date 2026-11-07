@@ -298,11 +298,14 @@
     "yellow": "Sarı"
   },
   "ring": {
+    "charges": "Masraflar",
     "add": "{{cat}} ekle",
     "addShare": "{{cat}} ekle, harcamadaki payı {{share}}",
     "tapCat": "Bir kategoriye dokun",
     "summary": "Harcama özeti: {{spent}} harcandı",
     "summaryGot": "Harcama özeti: {{spent}} harcandı, {{got}} geldi",
+    "summaryCharges": "Harcama özeti: {{spent}} harcandı, bunun {{charges}} tutarı masraf",
+    "summaryChargesGot": "Harcama özeti: {{spent}} harcandı, bunun {{charges}} tutarı masraf, {{got}} geldi",
     "switchCur": "{{cur}} gösteriliyor. {{next}} para birimine geç"
   },
   "donut": {

@@ -112,6 +112,9 @@ function sampleState(t, nCats) {
     spend.forEach(([cat, a], i) => (d + i) % 3 === 0 && add(ago(d), "expense", a, i % 2 ? "c" : "b", { cat }));
   add(ago(1), "income", 2450, "b", { cat: "income" });
   add(ago(2), "transfer", 200, "b", { to: "c" });
+  /* today's transfer with a charge: Home's ring shows its grey part and the Charges label (docs/specs/charges.md) */
+  add(ago(0), "transfer", 80, "b", { to: "k", feeId: "t" + (n + 2) });
+  add(ago(0), "expense", 1.5, "b", { cat: "other", feeOf: "t" + n });
   add(ago(5), "loan", 300, "c", {
     dir: "out",
     loan: "L1",
@@ -263,7 +266,7 @@ function inspect() {
   for (const e of all) {
     if (![...e.childNodes].some(c => c.nodeType === 3 && c.textContent.trim())) continue;
     const px = parseFloat(getComputedStyle(e).fontSize);
-    if (px < (e.matches(".rt .cn, .rt .cp") ? 9 : 10) && (!tiny || px < tiny[0])) tiny = [px, e]; // ring names: see ringHTML
+    if (px < (e.matches(".rt .cn, .rt .cp, .rchg *") ? 9 : 10) && (!tiny || px < tiny[0])) tiny = [px, e]; // ring names: see ringHTML
   }
   if (tiny)
     out.push(
@@ -413,6 +416,38 @@ function inspect() {
             eb.className.split(" ")[0]
         );
     }
+  // 12. Home's Charges label: wholly in view, outside the donut, clear of every tile's icon, name and %; in the ring's
+  //     top right corner, or, where a tile reaches into it, on a line of its own above the ring; 6px under the chips
+  const chl = layer.id === "app" && document.querySelector("#ring .rchg"),
+    ring0 = document.getElementById("ring");
+  if (chl && vis(chl)) {
+    const L = chl.getBoundingClientRect(),
+      rg = ring0.getBoundingClientRect(),
+      dw = ring0.querySelector(".dwrap").getBoundingClientRect(),
+      st = document.querySelector("#app .strip");
+    if (L.left < 0 || L.right > vw) out.push("Charges label off screen");
+    const cx = dw.left + dw.width / 2,
+      cy = dw.top + dw.height / 2;
+    if (
+      Math.hypot(Math.max(L.left, Math.min(cx, L.right)) - cx, Math.max(L.top, Math.min(cy, L.bottom)) - cy) <
+      dw.width / 2
+    )
+      out.push("Charges label on the donut");
+    for (const [e, b] of tiles)
+      if (
+        Math.min(b.right, L.right) > Math.max(b.left, L.left) &&
+        Math.min(b.bottom, L.bottom) > Math.max(b.top, L.top)
+      )
+        out.push("Charges label over " + e.closest(".cat").dataset.v + "." + e.className.split(" ")[0]);
+    if (Math.abs(rg.right - L.right - 2) > 0.6)
+      out.push("Charges label not at the ring's right " + (rg.right - L.right));
+    if (chl.classList.contains("up") ? L.bottom > rg.top + 0.5 : Math.abs(L.top - rg.top - 2) > 0.6)
+      out.push("Charges label out of its place " + Math.round(L.top - rg.top));
+    if (st && Math.abs(L.top - st.getBoundingClientRect().bottom - 6) > 0.6)
+      out.push("Charges label not 6px under the chips " + (L.top - st.getBoundingClientRect().bottom));
+  }
+  if (chl && chl.classList.contains("gone") && !document.body.classList.contains("land"))
+    out.push("Charges label left out on an upright screen");
   // 8. the amount being typed is never under the calculator keypad
   const pad = [...document.querySelectorAll(".calc")].find(vis),
     amt = document.querySelector(".amtwrap.calcing");
@@ -464,7 +499,8 @@ function inspect() {
 
 (async () => {
   const browser = await chromium.launch(launchOptions);
-  const summary = {};
+  const summary = {},
+    chgSeen = {}; // where Home's Charges label went: in its corner, up on its own line, or left out (sideways)
   for (const dev of runs) {
     const ctx = await browser.newContext({
       uiLang: dev.lang,
@@ -538,6 +574,31 @@ function inspect() {
     await seed(12);
     const ev = f => () => page.evaluate(f);
     await shot("home", null);
+    if (!(await page.evaluate(() => !!document.querySelector("#ring .rchg"))))
+      summary[tag + " home"] = ["no Charges label on Home"];
+    /* a few big tiles: the one right of 12 o'clock can reach into the label's corner (then it takes its own line) */
+    const charges = async label => {
+      const c = await page.evaluate(() => {
+        const l = document.querySelector("#ring .rchg");
+        return l ? (l.classList.contains("up") ? "up" : l.classList.contains("gone") ? "gone" : "corner") : "none";
+      });
+      chgSeen[c] = (chgSeen[c] || []).concat(tag + " " + label);
+    };
+    const shown = await page.evaluate(() => S.cats.map(c => c.hidden));
+    for (const k of [4, 6]) {
+      await shot("home-" + k, () =>
+        page.evaluate(k => {
+          S.cats.filter(c => c.kind === "out").forEach((c, i) => (c.hidden = i >= k));
+          render();
+        }, k)
+      );
+      await charges("home-" + k);
+    }
+    await page.evaluate(shown => {
+      S.cats.forEach((c, i) => (c.hidden = shown[i]));
+      save();
+      render();
+    }, shown);
     await shot(
       "home-check",
       ev(() => {
@@ -1021,6 +1082,9 @@ function inspect() {
     await shot("search-note", findOpen("coins", "", "note"));
     await page.evaluate(() => recentSave([]));
     await shot("search-empty", findOpen("", "", "empty"));
+    await seed(15);
+    await shot("home-15", null);
+    await charges("home-15");
     await seed(24);
     await shot("home-24", null);
     await shot(
@@ -1056,6 +1120,16 @@ function inspect() {
     ]);
     ok(!cls[0] && !cls[1], "an upright phone with the keyboard open stays upright: " + JSON.stringify(cls));
     await ctx.close();
+  }
+  console.log(
+    "Charges label: " + JSON.stringify(Object.fromEntries(Object.entries(chgSeen).map(([k, v]) => [k, v.length])))
+  );
+  if (!ONLY.length && !SIZES.length) {
+    ok(
+      (chgSeen.up || []).some(x => x.startsWith("small-16x9@1.3")) && (chgSeen.corner || []).length > 0,
+      "the Charges label takes its own line where a tile reaches into its corner, and keeps its corner elsewhere " +
+        JSON.stringify(chgSeen.up)
+    );
   }
   const keys = Object.keys(summary);
   for (const k of keys) console.log("  " + k + "\n    - " + summary[k].join("\n    - "));

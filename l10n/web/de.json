@@ -298,11 +298,14 @@
     "yellow": "Gelb"
   },
   "ring": {
+    "charges": "Gebühren",
     "add": "{{cat}} hinzufügen",
     "addShare": "{{cat}} hinzufügen, {{share}} der Ausgaben",
     "tapCat": "Tippe auf eine Kategorie",
     "summary": "Ausgabenübersicht: {{spent}} ausgegeben",
     "summaryGot": "Ausgabenübersicht: {{spent}} ausgegeben, {{got}} erhalten",
+    "summaryCharges": "Ausgabenübersicht: {{spent}} ausgegeben, davon Gebühren {{charges}}",
+    "summaryChargesGot": "Ausgabenübersicht: {{spent}} ausgegeben, davon Gebühren {{charges}}, {{got}} erhalten",
     "switchCur": "Zeigt {{cur}}. Zu {{next}} wechseln"
   },
   "donut": {
