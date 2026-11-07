@@ -284,6 +284,184 @@ const bad = {
   assets: [],
 };
 
+/* what version 7's loanInfo() gave for each loan of the v7 save on the suites' day (2026-06-17): total, paid, left,
+   rem, next due day, due amount and status */
+const RECORDED7 = {
+  B: [15000, 5000, 10000, { bd1: 5000, bd2: 5000 }, "2026-07-01", 5000, "partly"],
+  L: [3000, 1500, 1500, { ld1: 500, ld2: 1000 }, "2026-07-01", 500, "partly"],
+  W: [800, 300, 500, { wd: 500 }, "", 0, "writeoff"],
+};
+/* ---- the loanInfo() and runBal() of data version 7 (commit fa17d61), kept here exactly as they were (runBal without
+   its cache): every loan recorded before version 8, which has no transfer charge on a draw and no onTop, must give
+   exactly their results. Put into the page as loanInfo7() and runBal7(). */
+const before8 = () => {
+  window.loanInfo7 = function (l) {
+    const mine = loanEntries(l.id);
+    const draws = mine.filter(t => t.principal).sort(byOldest);
+    const pays = mine.filter(t => !t.principal);
+    const newest = draws[draws.length - 1],
+      a = acc(newest ? newest.account : l.account),
+      cur = a ? a.currency : S.settings.cur,
+      owed = n => (shown(n, cur) > 0 ? rnd(n) : 0);
+    const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
+      paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
+      left = owed(total - paid);
+    const order = draws.slice().sort((x, y) => (x.due ? (y.due ? cmpDay(x.due, y.due) : -1) : y.due ? 1 : 0)),
+      rem = {};
+    draws.forEach(t => (rem[t.id] = t.amount));
+    const take = (by, n) => {
+      for (const t of order) {
+        if (n <= 0) break;
+        if (by && t.date > by) continue;
+        const x = Math.min(rem[t.id], n);
+        rem[t.id] = rnd(rem[t.id] - x);
+        n = rnd(n - x);
+      }
+      return n;
+    };
+    let credit = 0;
+    pays
+      .slice()
+      .sort(byOldest)
+      .forEach(p => (credit = take(p.date, rnd(credit + p.amount))));
+    take("", credit);
+    draws.forEach(t => (rem[t.id] = owed(rem[t.id])));
+    const owing = order.filter(t => rem[t.id] > 0),
+      dueDraw = owing.find(t => t.due) || null,
+      nextDue = dueDraw ? dueDraw.due : "",
+      by = nextDue > today() ? nextDue : today(),
+      dueAmt = rnd(owing.filter(t => t.due && t.due <= by).reduce((s, t) => s + rem[t.id], 0));
+    const st =
+      left <= 0
+        ? "cleared"
+        : l.status === "writeoff"
+          ? "writeoff"
+          : nextDue && nextDue < today()
+            ? "overdue"
+            : paid > 0
+              ? "partly"
+              : "active";
+    return {
+      draws,
+      pays,
+      total,
+      paid,
+      left,
+      cur,
+      rem,
+      nextDue,
+      dueDraw,
+      dueAmt,
+      st,
+      open: st !== "cleared" && st !== "writeoff",
+    };
+  };
+  window.runBal7 = function () {
+    const b = openingBalances(),
+      m = {},
+      paid = {},
+      amt = {},
+      all = {};
+    S.loans.forEach(l => {
+      amt[l.id] = 0;
+      paid[l.id] = 0;
+      all[l.id] = 0;
+    });
+    S.txns.forEach(t => {
+      if (t.type === "loan" && t.principal && t.loan in all) all[t.loan] += t.amount;
+    });
+    S.txns
+      .slice()
+      .sort(byOldest)
+      .forEach(t => {
+        if (!applyEntry(b, t)) return;
+        const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
+        if (t.type === "loan" && t.loan in amt) {
+          if (t.principal) amt[t.loan] += t.amount;
+          else {
+            paid[t.loan] += t.amount;
+            const owed = paid[t.loan] > amt[t.loan] + 0.0005 ? all[t.loan] : amt[t.loan];
+            r.left = Math.max(0, rnd(owed - paid[t.loan]));
+            if (shown(r.left, (acc(t.account) || {}).currency) <= 0) r.left = 0;
+            r.ls = r.left <= 0 ? "cleared" : "partly";
+          }
+        }
+        m[t.id] = r;
+      });
+    return m;
+  };
+};
+/* ---- a varied v7 notebook of loans, the same every run (a seeded generator): 1 to 4 draws each, with and without due
+   days (past, today's month, later), payments before, between and after them, part paid, paid off, paid over, thirds
+   of a cent, written off and forgiven, in taka, dollars and yen (no decimals), on an archived account too, and older
+   fees on payments */
+function variedV7() {
+  let seed = 20261107;
+  const rand = () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const pick = list => list[Math.floor(rand() * list.length)];
+  const day = n => {
+    const d = new Date(Date.UTC(2026, 0, 1) + n * 864e5);
+    return d.toISOString().slice(0, 10);
+  };
+  const amount = () =>
+    pick([
+      () => Math.round(rand() * 5000),
+      () => Math.round(rand() * 500000) / 100,
+      () => Math.round(rand() * 300000) / 1000,
+      () => 33.333,
+      () => 100,
+    ])();
+  const accounts = [
+    acct("a", "Bank", "bank", "BDT", 50000),
+    acct("k", "Bkash", "wallet", "BDT", 20000),
+    acct("u", "Dollars", "savings", "USD", 1000),
+    acct("y", "Yen", "cash", "JPY", 100000),
+    { ...acct("z", "Old", "bank", "BDT", 0), archived: true },
+  ];
+  const txns = [],
+    loans = [];
+  let ts = 1;
+  for (let n = 0; n < 120; n++) {
+    const id = "V" + n,
+      kind = rand() < 0.5 ? "lend" : "borrow",
+      account = pick(["a", "k", "u", "y", "z"]),
+      out = kind === "lend" ? "out" : "in",
+      back = kind === "lend" ? "in" : "out",
+      start = Math.floor(rand() * 200),
+      draws = [];
+    const nd = 1 + Math.floor(rand() * 4);
+    for (let j = 0; j < nd; j++) {
+      const date = day(start + Math.floor(rand() * 60) + j * 5),
+        due = pick(["", "", day(start + Math.floor(rand() * 250)), day(160 + Math.floor(rand() * 60))]),
+        t = x(id + "d" + j, ts++, date, "loan", amount(), account, { dir: out, loan: id, principal: true });
+      if (due) t.due = due;
+      draws.push(t);
+      txns.push(t);
+    }
+    const total = draws.reduce((s, t) => s + t.amount, 0),
+      np = Math.floor(rand() * 6),
+      share = pick([0.3, 0.6, 1, 1, 1.2]);
+    for (let j = 0; j < np; j++) {
+      const date = day(start + Math.floor(rand() * 90)),
+        amt = pick([() => Math.round(((total * share) / np) * 1000) / 1000, amount])(),
+        p = x(id + "p" + j, ts++, date, "loan", amt || 1, account, { dir: back, loan: id });
+      txns.push(p);
+      if (rand() < 0.2) {
+        p.feeId = p.id + "f";
+        txns.push(x(p.id + "f", ts++, date, "expense", 5, account, { cat: "fees", feeOf: p.id }));
+      }
+    }
+    loans.push(loanOf(id, kind, "P" + n, account, draws[0].date, rand() < 0.2 ? "writeoff" : "open"));
+  }
+  loans.push(loanOf("E", "lend", "Nobody", "k", day(10))); // a loan with no entries at all
+  return { v: 7, settings, accounts, types: [], cats: cats7, txns, loans, assets: [] };
+}
+
 (async () => {
   const browser = await chromium.launch(launchOptions);
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
@@ -746,6 +924,404 @@ const bad = {
       "v<6: the loan's due day goes on its draw, not on its transfer charge " + J(r.m.txns)
     );
     ok(same(r.m, r.m2), "… and migrating it twice changes nothing more");
+  }
+
+  /* ---- what is owed, the share-out and the worked-out parts (docs/specs/charges.md, "loanInfo() in version 8").
+     In the page: the notebook o read by migrate(), then after each step (entries added, a loan's status set) what
+     loanInfo() says of each loan, loanParts(), each payment's runBal() and the balances */
+  const loanRun = (o, steps) =>
+    page.evaluate(
+      ([o, steps]) => {
+        const keep = S,
+          out = [];
+        try {
+          S = migrate(o);
+          const look = () => {
+            RBC = null;
+            LPC = null;
+            const info = {};
+            S.loans.forEach(l => {
+              const i = loanInfo(l);
+              info[l.id] = {
+                draws: i.draws.map(t => t.id),
+                total: i.total,
+                money: i.money,
+                top: i.top,
+                paid: i.paid,
+                left: i.left,
+                moneyLeft: i.moneyLeft,
+                topLeft: i.topLeft,
+                topPaid: i.topPaid,
+                feeLeft: i.feeLeft,
+                rem: i.rem,
+                nextDue: i.nextDue,
+                dueDraw: i.dueDraw && i.dueDraw.id,
+                dueAmt: i.dueAmt,
+                st: i.st,
+              };
+            });
+            const rb = runBal(),
+              pays = {};
+            S.txns.forEach(t => {
+              if (t.type === "loan" && !t.principal) pays[t.id] = { left: rb[t.id].left, ls: rb[t.id].ls };
+            });
+            return { info, parts: typeof loanParts === "function" ? loanParts() : null, pays, bal: balances() };
+          };
+          out.push(look());
+          for (const s of steps) {
+            if (s.add) S.txns.push(...JSON.parse(JSON.stringify(s.add)));
+            if (s.status) loan(s.status[0]).status = s.status[1];
+            out.push(look());
+          }
+          return out;
+        } finally {
+          S = keep;
+          RBC = null;
+          LPC = null;
+        }
+      },
+      [o, steps]
+    );
+  const notebook = (txns, loans) => ({
+    v: 8,
+    settings,
+    accounts: [acct("a", "Bank", "bank", "BDT", 50000), acct("k", "Bkash", "wallet", "BDT", 20000)],
+    types: [],
+    cats: cats8,
+    txns,
+    loans,
+    assets: [],
+  });
+  /* Rafi: lent ৳1,000.00 from Bkash with a ৳100.00 transfer charge and a ৳150.00 extra; Sam: borrowed ৳1,000.00 into
+     Bank with ৳100.00 of charges */
+  const rafi = () => [
+    x("rD", 300, D.d1, "loan", 1000, "k", { dir: "out", loan: "R", principal: true, onTop: 150, feeId: "rDc" }),
+    x("rDc", 301, D.d1, "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+  ];
+  const sam = () => [x("sD", 200, D.d1, "loan", 1000, "a", { dir: "in", loan: "S", principal: true, onTop: 100 })];
+  const back = (id, ts, date, amount, l = "R", account = "k", dir = "in") =>
+    x(id, ts, date, "loan", amount, account, { dir, loan: l });
+  const twoLoans = () =>
+    notebook(rafi().concat(sam()), [loanOf("R", "lend", "Rafi", "k", D.d1), loanOf("S", "borrow", "Sam", "a", D.d1)]);
+  const partsOf = (r, of) => r.parts && r.parts.filter(p => !of || of.includes(p.of));
+
+  // ---- 10. a lend with a transfer charge and an extra, a borrow with charges
+  try {
+    const [r] = await loanRun(twoLoans(), []),
+      R = r.info.R,
+      Sm = r.info.S;
+    ok(same(R.draws, ["rD"]), "a lend and its transfer charge are one draw " + J(R.draws));
+    ok(
+      R.total === 1250 && R.money === 1100 && R.top === 150 && R.left === 1250,
+      "Rafi owes ৳1,250.00: ৳1,100.00 of money, ৳150.00 on top " + J(R)
+    );
+    ok(R.moneyLeft === 1100 && R.topLeft === 150 && R.rem.rD === 1250, "nothing paid yet: all of it left " + J(R));
+    ok(r.bal.k === 20000 - 1100, "Bkash −৳1,100.00 " + r.bal.k);
+    ok(Sm.total === 1100 && Sm.money === 1000 && Sm.top === 100 && Sm.left === 1100, "you owe Sam ৳1,100.00 " + J(Sm));
+    ok(r.bal.a === 50000 + 1000, "Bank +৳1,000.00 " + r.bal.a);
+    ok(same(r.parts, []), "nothing counts yet " + J(r.parts));
+  } catch (e) {
+    ok(false, "a lend's and a borrow's add-ons: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 11. part paybacks, in order: the money first, the extra last
+  try {
+    const r = await loanRun(twoLoans(), [
+      { add: [back("p1", 400, D.d2, 500)] },
+      { add: [back("p2", 410, D.d3, 700)] },
+      { add: [back("p3", 420, D.d4, 50)] },
+      { add: [back("sp", 430, D.d4, 1100, "S", "a", "out")] },
+    ]);
+    const [, s1, s2, s3, s4] = r;
+    ok(
+      s1.info.R.moneyLeft === 600 && s1.info.R.topLeft === 150 && !(s1.info.R.topPaid.p1 > 0) && s1.info.R.left === 750,
+      "৳500.00 back covers money only: ৳600.00 of it left, then the ৳150.00 extra " + J(s1.info.R)
+    );
+    ok(s1.info.R.st === "partly" && same(partsOf(s1), []), "… partly paid, nothing counted " + J(s1.parts));
+    ok(
+      s2.info.R.moneyLeft === 0 && s2.info.R.topLeft === 50 && s2.info.R.topPaid.p2 === 100 && s2.info.R.left === 50,
+      "then ৳700.00 covers ৳600.00 of money and ৳100.00 of the extra " + J(s2.info.R)
+    );
+    ok(
+      s3.info.R.topPaid.p3 === 50 && s3.info.R.topLeft === 0 && s3.info.R.left === 0 && s3.info.R.st === "cleared",
+      "then ৳50.00 the rest of the extra, and it's cleared " + J(s3.info.R)
+    );
+    ok(
+      same(partsOf(s3, ["p1", "p2", "p3"]), [
+        { of: "p2", date: D.d3, cur: "BDT", amount: 100, as: "income" },
+        { of: "p3", date: D.d4, cur: "BDT", amount: 50, as: "income" },
+      ]),
+      "loanParts(): income ৳100.00 and ৳50.00, on those days " + J(s3.parts)
+    );
+    ok(
+      same(
+        [s3.pays.p1, s3.pays.p2, s3.pays.p3],
+        [
+          { left: 750, ls: "partly" },
+          { left: 50, ls: "partly" },
+          { left: 0, ls: "cleared" },
+        ]
+      ),
+      "each payback's own line: what was left after it, the extra included " + J(s3.pays)
+    );
+    ok(
+      s4.info.S.left === 0 &&
+        s4.info.S.topPaid.sp === 100 &&
+        same(partsOf(s4, ["sp"]), [{ of: "sp", date: D.d4, cur: "BDT", amount: 100, as: "spend" }]),
+      "the borrow's ৳1,100.00 payback: ৳100.00 of spending, on its day " + J(s4.parts)
+    );
+    ok(same(s4.pays.sp, { left: 0, ls: "cleared" }), "… and it clears the loan " + J(s4.pays.sp));
+    ok(
+      s4.bal.k === 20000 - 1100 + 1250 && s4.bal.a === 50000 + 1000 - 1100,
+      "balances: Bkash and Bank as the money moved " + J(s4.bal)
+    );
+    const once = await loanRun(twoLoans(), [
+      { add: [back("p", 400, D.d2, 1250), back("sp", 430, D.d4, 1000, "S", "a", "out")] },
+    ]);
+    ok(
+      once[1].info.R.topPaid.p === 150 &&
+        once[1].info.S.left === 100 &&
+        !(once[1].info.S.topPaid.sp > 0) &&
+        same(partsOf(once[1]), [{ of: "p", date: D.d2, cur: "BDT", amount: 150, as: "income" }]),
+      "a ৳1,250.00 payback counts ৳150.00 as income; ৳1,000.00 of a borrow paid back counts none " + J(once[1].parts)
+    );
+  } catch (e) {
+    ok(false, "part paybacks: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 12. several draws with due days, and credit
+  try {
+    const joy = notebook(
+      [
+        // m1: ৳650.00 of money (৳50.00 charge) + ৳60.00, due later; m2: ৳420.00 + ৳40.00, due sooner; m3: ৳300.00 + ৳30.00
+        x("m1", 300, D.d1, "loan", 600, "k", {
+          dir: "out",
+          loan: "M",
+          principal: true,
+          due: D.due2,
+          onTop: 60,
+          feeId: "m1c",
+        }),
+        x("m1c", 301, D.d1, "loan", 50, "k", { dir: "out", loan: "M", principal: true, feeOf: "m1" }),
+        x("m2", 310, D.d2, "loan", 400, "k", {
+          dir: "out",
+          loan: "M",
+          principal: true,
+          due: D.due1,
+          onTop: 40,
+          feeId: "m2c",
+        }),
+        x("m2c", 311, D.d2, "loan", 20, "k", { dir: "out", loan: "M", principal: true, feeOf: "m2" }),
+        x("m3", 320, D.d3, "loan", 300, "k", { dir: "out", loan: "M", principal: true, onTop: 30 }),
+      ],
+      [loanOf("M", "lend", "Joy", "k", D.d1)]
+    );
+    const [s0, s1, s2] = await loanRun(joy, [
+      { add: [back("q1", 400, D.d4, 500, "M")] },
+      { add: [back("q2", 410, D.d5, 650, "M")] },
+    ]);
+    ok(
+      same(s0.info.M.draws, ["m1", "m2", "m3"]) &&
+        s0.info.M.total === 1500 &&
+        same(s0.info.M.rem, { m1: 710, m2: 460, m3: 330 }),
+      "each draw owes its amount, its transfer charge and its amount on top " + J(s0.info.M)
+    );
+    ok(
+      s0.info.M.nextDue === D.due1 && s0.info.M.dueDraw === "m2" && s0.info.M.dueAmt === 460,
+      "what's due first includes its amount on top " + J(s0.info.M)
+    );
+    ok(
+      same(s1.info.M.rem, { m1: 670, m2: 0, m3: 330 }) && s1.info.M.topPaid.q1 === 40,
+      "a payment fills the draw due soonest (amount, charge, extra) before the next " + J(s1.info.M)
+    );
+    ok(
+      s1.info.M.nextDue === D.due2 && s1.info.M.dueDraw === "m1" && s1.info.M.dueAmt === 670 && s1.info.M.left === 1000,
+      "then the next due, with its extra " + J(s1.info.M)
+    );
+    ok(
+      same(s2.info.M.rem, { m1: 20, m2: 0, m3: 330 }) &&
+        s2.info.M.topPaid.q2 === 40 &&
+        s2.info.M.moneyLeft === 300 &&
+        s2.info.M.topLeft === 50 &&
+        s2.info.M.dueAmt === 20,
+      "a draw's extra is the last money paid back on it " + J(s2.info.M)
+    );
+    ok(
+      same(
+        partsOf(s2).map(p => [p.of, p.amount, p.as]),
+        [
+          ["q1", 40, "income"],
+          ["q2", 40, "income"],
+        ]
+      ),
+      "each payment's extra counts on its own day " + J(s2.parts)
+    );
+    // a payment before a later draw is credit for it, as before
+    const cr = notebook(
+      [
+        x("c1", 300, D.d1, "loan", 500, "k", { dir: "out", loan: "C", principal: true, onTop: 50 }),
+        back("cp", 310, D.d2, 800, "C"),
+        x("c2", 320, D.d3, "loan", 400, "k", { dir: "out", loan: "C", principal: true, onTop: 40, feeId: "c2c" }),
+        x("c2c", 321, D.d3, "loan", 10, "k", { dir: "out", loan: "C", principal: true, feeOf: "c2" }),
+      ],
+      [loanOf("C", "lend", "Ana", "k", D.d1)]
+    );
+    const [c] = await loanRun(cr, []);
+    ok(
+      same(c.info.C.rem, { c1: 0, c2: 200 }) &&
+        c.info.C.total === 1000 &&
+        c.info.C.left === 200 &&
+        c.info.C.moneyLeft === 160 &&
+        c.info.C.topLeft === 40 &&
+        c.info.C.topPaid.cp === 50,
+      "a payment before a later draw: what's over is credit for it, its money first " + J(c.info.C)
+    );
+  } catch (e) {
+    ok(false, "several draws: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 13. writing off, reopening, forgiving
+  try {
+    const wo = paid =>
+      loanRun(twoLoans(), [
+        { add: [back("w1", 400, D.d2, paid), back("sw", 430, D.d2, 600, "S", "a", "out")] },
+        { status: ["R", "writeoff"] },
+        { status: ["R", "open"] },
+        { status: ["S", "writeoff"] },
+      ]);
+    const [, , a1] = await wo(1000);
+    ok(
+      a1.info.R.st === "writeoff" && a1.info.R.left === 100 && same(a1.info.R.feeLeft, { rD: 100 }),
+      "written off after ৳1,000.00 back: ৳100.00 let go, the transfer charge unpaid " + J(a1.info.R)
+    );
+    ok(
+      same(partsOf(a1, ["rD", "rDc", "w1"]), [{ of: "rD", date: D.d1, cur: "BDT", amount: 100, as: "spend" }]),
+      "… its transfer charge counts as spending on the lend's day, the extra is gone " + J(a1.parts)
+    );
+    const [, , b1, b2, b3] = await wo(500);
+    ok(
+      b1.info.R.left === 600 &&
+        same(partsOf(b1, ["rD", "rDc", "w1"]), [{ of: "rD", date: D.d1, cur: "BDT", amount: 100, as: "spend" }]),
+      "written off after ৳500.00 back: ৳100.00 of spending, ৳600.00 let go " + J(b1)
+    );
+    ok(
+      b2.info.R.st === "partly" && b2.info.R.left === 750 && same(partsOf(b2, ["rD", "rDc", "w1"]), []),
+      "reopened: nothing counted, ৳750.00 left " + J(b2.info.R)
+    );
+    ok(
+      b3.info.S.st === "writeoff" && b3.info.S.left === 400 && same(partsOf(b3, ["sD", "sw"]), []),
+      "a borrow forgiven after ৳600.00 back: ৳400.00 let go, its charges never spending " + J(b3.info.S)
+    );
+    const [, , all] = await wo(1100);
+    ok(
+      all.info.R.left === 0 && same(partsOf(all, ["rD", "rDc", "w1"]), []),
+      "written off with all the money back: nothing let go, nothing counted " + J(all.info.R)
+    );
+  } catch (e) {
+    ok(false, "write-off: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 13b. deleting a draw: what the others owe, transfer charge and extra included, must cover what was paid back
+  try {
+    const o = notebook(
+      rafi().concat([
+        x("rD2", 310, D.d2, "loan", 500, "k", { dir: "out", loan: "R", principal: true }),
+        back("rp", 400, D.d3, 1200),
+      ]),
+      [loanOf("R", "lend", "Rafi", "k", D.d1)]
+    );
+    const r = await page.evaluate(o => {
+      const keep = S;
+      try {
+        S = migrate(o);
+        return [loanBlock(["rD2"]), loanBlock(["rD"])];
+      } finally {
+        S = keep;
+      }
+    }, o);
+    ok(r[0] === "", "the other draw may go: Rafi's ৳1,250.00 still covers the ৳1,200.00 paid back " + J(r));
+    ok(r[1] !== "", "… but not the lend itself: ৳500.00 left against ৳1,200.00 paid back " + J(r));
+  } catch (e) {
+    ok(false, "loanBlock(): " + e.message.split("\n")[0]);
+  }
+
+  // ---- 14. old data: every loan recorded before version 8 gives exactly what version 7 gave
+  try {
+    await page.evaluate(before8);
+    const compare = o =>
+      page.evaluate(o => {
+        const keep = S;
+        try {
+          S = migrate(o);
+          RBC = null;
+          const pick = i => ({
+            draws: i.draws.map(t => t.id),
+            pays: i.pays.map(t => t.id),
+            total: i.total,
+            paid: i.paid,
+            left: i.left,
+            cur: i.cur,
+            rem: i.rem,
+            nextDue: i.nextDue,
+            dueDraw: i.dueDraw && i.dueDraw.id,
+            dueAmt: i.dueAmt,
+            st: i.st,
+            open: i.open,
+          });
+          const now = {},
+            was = {};
+          S.loans.forEach(l => {
+            now[l.id] = pick(loanInfo(l));
+            was[l.id] = pick(loanInfo7(l));
+          });
+          const rb = runBal(),
+            rb7 = runBal7();
+          return {
+            now,
+            was,
+            rbSame: JSON.stringify(rb) === JSON.stringify(rb7),
+            parts: typeof loanParts === "function" ? loanParts() : null,
+            n: S.loans.length,
+          };
+        } finally {
+          S = keep;
+          RBC = null;
+          LPC = null;
+        }
+      }, o);
+    const r7 = await compare(copy(v7));
+    ok(same(r7.now, r7.was), "v7 notebook: every loan's loanInfo() exactly as version 7's " + J(r7.now));
+    ok(r7.rbSame && same(r7.parts, []), "v7 notebook: each payment's runBal() the same, nothing worked out");
+    /* recorded from version 7 on the suites' day (2026-06-17); on another day the status and dues move with it */
+    if ((await page.evaluate(() => today())) === "2026-06-17")
+      ok(
+        same(
+          Object.fromEntries(
+            Object.entries(r7.now).map(([k, i]) => [k, [i.total, i.paid, i.left, i.rem, i.nextDue, i.dueAmt, i.st]])
+          ),
+          RECORDED7
+        ),
+        "v7 notebook: total, paid, left, rem, next due, due amount and status as recorded from version 7"
+      );
+    const vr = variedV7(),
+      rv = await compare(vr);
+    const off = Object.keys(rv.was).filter(id => !same(rv.now[id], rv.was[id]));
+    ok(
+      rv.n === vr.loans.length && !off.length,
+      "a varied v7 notebook (" +
+        rv.n +
+        " loans): every loanInfo() exactly as version 7's " +
+        J(off.slice(0, 3).map(id => [rv.now[id], rv.was[id]]))
+    );
+    const sts = new Set(Object.values(rv.was).map(i => i.st));
+    ok(
+      ["active", "partly", "overdue", "cleared", "writeoff"].every(s => sts.has(s)),
+      "… with every status among them " + J([...sts])
+    );
+    ok(rv.rbSame, "… each payment's runBal() the same");
+    ok(same(rv.parts, []), "… and nothing worked out as income or spending " + J(rv.parts && rv.parts.slice(0, 3)));
+  } catch (e) {
+    ok(false, "old data: " + e.message.split("\n")[0]);
   }
 
   ok(errors.length === 0, "no page errors " + J(errors));

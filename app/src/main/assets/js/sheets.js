@@ -920,7 +920,7 @@ function restoreCat(id) {
   snack(T("category.back", { name: catName(c) }));
 }
 function entriesSheet() {
-  RBC = null;
+  RBC = LPC = null;
   V.open = "";
   rowsClose($("#app")); // one open row at a time: not the page's behind this list
   const list = periodTxns().sort(byNewest);

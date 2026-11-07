@@ -25,6 +25,7 @@ const lineAt = (s, i) => s.slice(0, i).split("\n").length;
 /* findings that are fine, each with why; key "<check>:<name>" */
 const ALLOW = {
   // e.g. "css-class:foo": "set by MainActivity on the WebView, not by the page",
+  "js:loanParts": "worked out now, added to every total by the counting rule (charges plan, Task 3)",
 };
 
 const findings = [];

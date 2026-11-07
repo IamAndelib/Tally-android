@@ -609,8 +609,9 @@ function catsFull(kind) {
   return true;
 }
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
-/* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment
-   left the loan partly paid or cleared. Cached until the next render. */
+/* balance of each account right after each entry (date, then time order) and, for loan payments, what that payment
+   left owed (r.left: every draw so far with its transfer charge and amount on top, less every payment so far) and
+   whether that left the loan partly paid or cleared. Cached until the next render. */
 let RBC = null;
 function runBal() {
   if (RBC) return RBC;
@@ -625,7 +626,7 @@ function runBal() {
     all[l.id] = 0;
   });
   S.txns.forEach(t => {
-    if (t.type === "loan" && t.principal && t.loan in all) all[t.loan] += t.amount;
+    if (t.type === "loan" && t.principal && t.loan in all) all[t.loan] += t.amount + (t.onTop || 0);
   });
   S.txns
     .slice()
@@ -634,7 +635,7 @@ function runBal() {
       if (!applyEntry(b, t)) return;
       const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
       if (t.type === "loan" && t.loan in amt) {
-        if (t.principal) amt[t.loan] += t.amount;
+        if (t.principal) amt[t.loan] += t.amount + (t.onTop || 0);
         else {
           paid[t.loan] += t.amount;
           /* a payment before what it pays (saved by an older version) is measured against the whole tab */
@@ -647,6 +648,25 @@ function runBal() {
       m[t.id] = r;
     });
   return (RBC = m);
+}
+/* The parts of loans and lendings that count as income or spending with no entry of their own (docs/specs/charges.md,
+   "Counting"), worked out by loanInfo() of every loan: the amount on top each payment covered (a lending's extra:
+   income; a loan's charges: spending, in Charges) on the payment's day, and a written-off lending's transfer charge
+   still unpaid (spending, in Charges) on its draw's day. Each is {of: the entry whose row it is in, date, cur (that
+   entry's account's), amount, as: "income" | "spend"}. Cached until the next render, as runBal(). */
+/* exported loanParts -- until the counting rule (charges plan, Task 3) adds it to every total */
+let LPC = null;
+function loanParts() {
+  if (LPC) return LPC;
+  const out = [],
+    add = (t, i, amount, as) =>
+      out.push({ of: t.id, date: t.date, cur: (acc(t.account) || {}).currency || i.cur, amount, as });
+  S.loans.forEach(l => {
+    const i = loanInfo(l);
+    i.pays.forEach(p => i.topPaid[p.id] > 0 && add(p, i, i.topPaid[p.id], l.kind === "lend" ? "income" : "spend"));
+    i.draws.forEach(t => i.feeLeft[t.id] > 0 && add(t, i, i.feeLeft[t.id], "spend"));
+  });
+  return (LPC = out);
 }
 /* Account balances from starting balance + every entry. With `before`, only entries dated earlier (start of that day). */
 function balances(before) {

@@ -85,7 +85,7 @@ function toAnchor(a, box, scroller) {
 }
 function drawScreen() {
   const app = $("#app");
-  RBC = null;
+  RBC = LPC = null;
   if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
   if (V.screen !== "history") {
     V.sel = null;

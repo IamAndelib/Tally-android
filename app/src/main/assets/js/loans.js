@@ -21,32 +21,71 @@ function loanEntries(id) {
   return LOANIX.m.get(id) || [];
 }
 /* paid so far, what is left and the status; everything is derived from the loan's entries */
-/* a loan/lending is one or more "draws" (principal entries), each with its own amount, date and optional due date.
-   Payments go to the draw due soonest first (draws without a due date last, oldest first): rem[id] is what is still
-   out of each draw, nextDue the earliest due date still unpaid, dueAmt what is due by then (or by today) */
+/* a loan/lending is one or more "draws" (principal entries), each with its own amount, date and optional due date. A
+   lend's transfer charge (a principal entry linked to its draw, feeOf ↔ feeId) is part of that draw, never a draw of
+   its own. Each draw owes its money (its amount + that charge) and its amount on top (onTop: a lend's extra, a borrow's
+   charges). Payments, oldest first, go to the draws made by their day, due soonest first (draws without a due date
+   last, oldest first); within a draw to its amount, then its charge, then its amount on top, so the amount on top is
+   the last money paid back on it. rem[id] is what is still out of each draw (money and top), nextDue the earliest due
+   date still unpaid, dueAmt what is due by then (or by today); money / top and moneyLeft / topLeft the loan's, and
+   topPaid[payment id] the amount on top each payment covered (income on a lending, spending on a loan, on its day:
+   loanParts()). Written off or forgiven, left is the money still unpaid (the top still unpaid is let go), and a
+   lending's feeLeft[draw id] its transfer charge still unpaid (spending, on the draw's day). A loan with no transfer
+   charge and no onTop (every loan before data version 8) gives exactly what version 7 gave (tests/e2e/45-charges.js). */
 function loanInfo(l) {
-  const mine = loanEntries(l.id);
-  const draws = mine.filter(t => t.principal).sort(byOldest);
+  const mine = loanEntries(l.id),
+    fee = {}; // draw id -> its transfer charge
+  mine.forEach(t => {
+    const a = t.principal && !t.feeOf ? addOnOf(t) : null;
+    if (a && a.type === "loan" && a.principal && a.loan === l.id) fee[t.id] = a;
+  });
+  const fees = new Set(Object.values(fee));
+  const draws = mine.filter(t => t.principal && !fees.has(t)).sort(byOldest);
   const pays = mine.filter(t => !t.principal);
   const newest = draws[draws.length - 1],
     a = acc(newest ? newest.account : l.account),
     cur = a ? a.currency : S.settings.cur,
     /* what's left, none when it shows as nothing (a third of a cent, after paying the $33.33 shown of $33.333) */
     owed = n => (shown(n, cur) > 0 ? rnd(n) : 0);
-  const total = rnd(draws.reduce((s, t) => s + t.amount, 0)),
+  const mon = {},
+    top = {};
+  draws.forEach(t => {
+    mon[t.id] = fee[t.id] ? rnd(t.amount + fee[t.id].amount) : t.amount;
+    top[t.id] = t.onTop || 0;
+  });
+  const sum = m => draws.reduce((s, t) => s + m[t.id], 0),
+    total = rnd(draws.reduce((s, t) => s + mon[t.id] + top[t.id], 0)),
     paid = rnd(pays.reduce((s, t) => s + t.amount, 0)),
-    left = owed(total - paid);
+    all = owed(total - paid);
   const order = draws.slice().sort((x, y) => (x.due ? (y.due ? cmpDay(x.due, y.due) : -1) : y.due ? 1 : 0)),
-    rem = {};
-  draws.forEach(t => (rem[t.id] = t.amount));
+    mRem = { ...mon },
+    tRem = { ...top },
+    topPaid = {},
+    from = []; // the money not yet shared out: [payment, amount], oldest first
+  /* n of the money in `from`, oldest first; what covers an amount on top is counted on its payment */
+  const use = (n, onTop) => {
+    while (n > 0 && from.length) {
+      const f = from[0],
+        x = Math.min(f[1], n);
+      f[1] = rnd(f[1] - x);
+      n = rnd(n - x);
+      if (onTop && x > 0) topPaid[f[0].id] = rnd((topPaid[f[0].id] || 0) + x);
+      if (f[1] <= 0) from.shift();
+    }
+  };
   /* a payment goes to the draws made by its day, due soonest first: never to one lent or borrowed after it, whose
      due date would otherwise vanish; anything over is credit, for the draws that came later */
   const take = (by, n) => {
     for (const t of order) {
       if (n <= 0) break;
       if (by && t.date > by) continue;
-      const x = Math.min(rem[t.id], n);
-      rem[t.id] = rnd(rem[t.id] - x);
+      const x = Math.min(tRem[t.id] ? rnd(mRem[t.id] + tRem[t.id]) : mRem[t.id], n),
+        xm = Math.min(mRem[t.id], x),
+        xt = rnd(x - xm);
+      mRem[t.id] = rnd(mRem[t.id] - xm);
+      tRem[t.id] = rnd(tRem[t.id] - xt);
+      use(xm, false);
+      use(xt, true);
       n = rnd(n - x);
     }
     return n;
@@ -55,16 +94,20 @@ function loanInfo(l) {
   pays
     .slice()
     .sort(byOldest)
-    .forEach(p => (credit = take(p.date, rnd(credit + p.amount))));
+    .forEach(p => {
+      from.push([p, p.amount]);
+      credit = take(p.date, rnd(credit + p.amount));
+    });
   take("", credit);
-  draws.forEach(t => (rem[t.id] = owed(rem[t.id])));
+  const rem = {};
+  draws.forEach(t => (rem[t.id] = owed(mRem[t.id] + tRem[t.id])));
   const owing = order.filter(t => rem[t.id] > 0),
     dueDraw = owing.find(t => t.due) || null,
     nextDue = dueDraw ? dueDraw.due : "",
     by = nextDue > today() ? nextDue : today(),
     dueAmt = rnd(owing.filter(t => t.due && t.due <= by).reduce((s, t) => s + rem[t.id], 0));
   const st =
-    left <= 0
+    all <= 0
       ? "cleared"
       : l.status === "writeoff"
         ? "writeoff"
@@ -73,12 +116,24 @@ function loanInfo(l) {
           : paid > 0
             ? "partly"
             : "active";
+  const moneyLeft = owed(sum(mRem)),
+    feeLeft = {};
+  if (st === "writeoff" && l.kind === "lend")
+    draws.forEach(t => fee[t.id] && (feeLeft[t.id] = owed(Math.min(fee[t.id].amount, mRem[t.id]))));
   return {
     draws,
     pays,
     total,
+    money: rnd(sum(mon)),
+    top: rnd(sum(top)),
     paid,
-    left,
+    left: st === "writeoff" ? owed(total - paid - sum(tRem)) : all,
+    moneyLeft,
+    topLeft: owed(sum(tRem)),
+    topPaid,
+    fee,
+    feeLeft,
+    owes: Object.fromEntries(draws.map(t => [t.id, rnd(mon[t.id] + top[t.id])])),
     cur,
     rem,
     nextDue,
@@ -111,18 +166,18 @@ function relinkLoan(id) {
   l.date = d[0].date;
 }
 /* why deleting these entries would break a loan, or "" (a loan losing every draw goes as a whole): its remaining
-   draws would come to less than was already paid back (the extra would silently drop out of it), or a payment would
-   come before its first draw */
+   draws (each with its transfer charge and amount on top) would come to less than was already paid back (the extra
+   would silently drop out of it), or a payment would come before its first draw */
 function loanBlock(ids) {
   ids = new Set(ids);
-  const sum = list => rnd(list.reduce((s, t) => s + t.amount, 0));
   for (const l of S.loans) {
     const i = loanInfo(l),
       keep = i.draws.filter(t => !ids.has(t.id));
     if (!keep.length || keep.length === i.draws.length) continue;
     const pays = i.pays.filter(t => !ids.has(t.id)),
-      first = pays.map(t => t.date).sort()[0];
-    if (sum(pays) - sum(keep) > Math.max(0, i.paid - i.total) + 0.0005)
+      first = pays.map(t => t.date).sort()[0],
+      owes = rnd(keep.reduce((s, t) => s + i.owes[t.id], 0));
+    if (rnd(pays.reduce((s, t) => s + t.amount, 0)) - owes > Math.max(0, i.paid - i.total) + 0.0005)
       return T("loan.blockPaid", { who: loanWho(l), amount: money(i.paid, i.cur) });
     if (first && first < keep[0].date) return T("loan.blockOrder", { who: loanWho(l), date: dayLabel(first) });
   }
@@ -274,7 +329,7 @@ function loanForm(kind) {
   }, 60);
 }
 function loanOpen(id, focusPay) {
-  RBC = null;
+  RBC = LPC = null;
   const l = loan(id);
   if (!l) {
     snack(T("loan.gone"));
