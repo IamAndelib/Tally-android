@@ -619,7 +619,7 @@
     "charges": "Cargos",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "menos de {{pct}}"
+    "under": "menos del {{pct}}"
   },
   "search": {
     "title": "Buscar",

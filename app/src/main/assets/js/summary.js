@@ -107,8 +107,8 @@ function catSplit(list) {
 /* a part's name: a category's, or the word Charges (no category: no emblem, never renamed) */
 const partName = k => (k === CHARGES ? T("summary.charges") : catName(cat(k)));
 /* one line of Summary's list: the emblem (for Charges, a grey dot in its place), the name, its share on Months and
-   Year ("<1%"), a bar in the part's colour (sliceCol) and the amount. TalkBack hears it as one sentence, "Charges,
-   ৳158.00, less than 1%", so what is drawn is hidden from it. */
+   Year ("<1%"), a bar in the part's colour (sliceCol) and the amount. TalkBack hears the whole line, wherever it is
+   touched, as one sentence: "Charges, ৳158.00, less than 1%" (as the Year tab's bars, an image with its label). */
 function smRow([k, v], total, share) {
   const name = partName(k),
     amount = money(v, SM.cur),
@@ -116,22 +116,22 @@ function smRow([k, v], total, share) {
     small = p < 1,
     pct = percent(small ? 1 : Math.round(p));
   return (
-    '<div class="tx"><span class="vh">' +
+    '<div class="tx" role="img" aria-label="' +
     esc(
       share
         ? T("summary.sayShare", { name, amount, share: small ? T("summary.under", { pct }) : pct })
         : T("summary.say", { name, amount })
     ) +
-    '</span><span class="smi" aria-hidden="true">' +
+    '"><span class="smi">' +
     (k === CHARGES ? '<i class="chdot" style="background:' + CHARGES_C + '"></i>' : emblem(cat(k), "em")) +
-    '</span><span class="mid"><div class="d" dir="auto" aria-hidden="true">' +
+    '</span><span class="mid"><div class="d" dir="auto">' +
     esc(name) +
     (share ? ' <span class="muted small">' + esc((small ? "<" : "") + pct) + "</span>" : "") +
     '</div><span class="pbar"><span style="width:' +
     p.toFixed(1) +
     "%;background:" +
     sliceCol(k) +
-    '"></span></span></span><span class="a" aria-hidden="true">' +
+    '"></span></span></span><span class="a">' +
     esc(amount) +
     "</span></div>"
   );

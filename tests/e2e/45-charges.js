@@ -1986,10 +1986,16 @@ function variedV7() {
           RBC = LPC = null;
           let ring = null;
           window.ringHTML = (c, r) => ((ring = r.mode === "home" ? r : ring), keepRing(c, r));
-          Object.assign(V, { screen: "home", cur }, home);
+          const cl = v => (v == null ? v : String(v).replace(/\u2060/g, ""));
+          /* Home for the same period: the one given, or (home "bucket") the bucket picked, as "Open … on Home" opens it */
+          const homeFor = h => {
+            closeSheet();
+            Object.assign(V, { screen: "home", cur }, h);
+            render();
+            return cl(money(ring.spent, cur));
+          };
+          Object.assign(V, { screen: "home", cur }, home === "bucket" ? { period: "day", anchor: today() } : home);
           render();
-          const cl = v => (v == null ? v : String(v).replace(/\u2060/g, "")),
-            homeSpent = cl(money(ring.spent, cur));
           summarySheet();
           Object.assign(SM, { cur, end, mode, sel });
           smRender();
@@ -2003,9 +2009,9 @@ function variedV7() {
               name: (sm ? d.textContent.replace(sm.textContent, "") : d.textContent).trim(),
               share: sm ? sm.textContent : "",
               amount: cl(e.querySelector(".a").textContent),
-              say: cl((e.querySelector(".vh") || {}).textContent),
-              /* what is drawn is hidden from TalkBack, which hears the sentence */
-              shown: [...e.querySelectorAll(".d, .a, .smi")].every(c => c.closest('[aria-hidden="true"]')),
+              /* TalkBack hears the whole line, wherever it is touched, as one sentence */
+              say: cl(e.getAttribute("aria-label")),
+              shown: e.getAttribute("role") === "img",
               dot: dot ? getComputedStyle(dot).backgroundColor : null,
               emblem: !!e.querySelector(".emb"),
               bar: getComputedStyle(bar).backgroundColor,
@@ -2019,10 +2025,16 @@ function variedV7() {
             title: (p.querySelector("title") || {}).textContent,
           }));
           const said = n => money(n, cur);
+          const smd = cl($("#sm .smd").textContent),
+            total = cl($("#sm .big.spent").textContent);
+          const homeSpent = homeFor(
+            home === "bucket" ? { period: "range", rs: b.s, re: b.e > today() ? today() : b.e } : home
+          );
           return {
             rows,
             pie,
-            total: cl($("#sm .big.spent").textContent),
+            total,
+            smd,
             homeSpent,
             span: b ? [b.s, b.e] : null,
             under: cl(T("summary.under", { pct: percent(1) })),
@@ -2049,7 +2061,17 @@ function variedV7() {
       x("s1", 801, dd(0), "expense", 500, "a", { cat: "shopping" }),
       x("f1", 802, dd(0), "expense", 400, "a", { cat: "fun" }),
       x("m1", 803, dd(0), "expense", 300, "a", { cat: "health" }),
-      x("b1", 804, dd(0), "expense", 5, "a", { cat: "transport" })
+      x("b1", 804, dd(0), "expense", 5, "a", { cat: "transport" }),
+      // last month: ৳3,000.00 of bills, for the Months tab's comparison
+      x(
+        "pm",
+        805,
+        new Date(Date.UTC(+dd(0).slice(0, 4), +dd(0).slice(5, 7) - 2, 15)).toISOString().slice(0, 10),
+        "expense",
+        3000,
+        "a",
+        { cat: "bills" }
+      )
     );
     /* by hand: charges outside purchases, by day (Joy's written-off transfer charge, an older paid fee, Sam's ৳100.00
        charges paid back with a ৳5.00 transfer charge, today's transfer charge) */
@@ -2093,12 +2115,13 @@ function variedV7() {
         J([d1.rows.map(x => x.name), d1.total, d1.homeSpent])
     );
     /* Weeks: this week's top three and Charges, its charges worked out included */
-    const w0 = await smView(book, "BDT", week, "w", 7, { period: "day", anchor: dd(0) });
+    const w0 = await smView(book, "BDT", week, "w", 7, "bucket");
     c = chargeRow(w0, "Weeks");
     ok(
       w0.rows.length === 4 && c.amount === mo(w0, sumIn(CH.BDT, ...w0.span)) && c.share === "",
       "Weeks: the three top categories, then Charges " + sumIn(CH.BDT, ...w0.span) + " " + J(w0.rows)
     );
+    ok(w0.total === w0.homeSpent, "Weeks: the total is Home's for that week " + J([w0.span, w0.total, w0.homeSpent]));
     /* Months: every category, then Charges, whatever its size, with "<1%"; the pie ends grey */
     const mon = dd(0).slice(0, 7);
     const m0 = await smView(book, "BDT", week, "m", 6, { period: "month", anchor: dd(0) });
@@ -2124,6 +2147,25 @@ function variedV7() {
     const pctSum = m0.rows.reduce((q, r) => q + (parseInt(r.share.replace("<", "")) || 0), 0);
     ok(Math.abs(pctSum - 100) <= m0.rows.length, "Months: the shares add up to about 100% " + pctSum);
     ok(m0.total === m0.homeSpent, "Months: the total is Home's " + J([m0.total, m0.homeSpent]));
+    /* the month so far against last month (৳3,000.00 of bills), by daily average: both include the charges and Sam's
+       charges paid back (worked out from his loan) */
+    const tot = sumIn(SPENT.BDT, mon + "-01", mon + "-31") + 101205,
+      [yy, mm] = mon.split("-").map(Number),
+      lenPrev = new Date(Date.UTC(yy, mm - 1, 0)).getUTCDate(),
+      days = +dd(0).slice(8),
+      pc = Math.round((tot / days / (3000 / lenPrev) - 1) * 100);
+    const smdWant = await page.evaluate(
+      ([n, d, p]) =>
+        [
+          T("summary.avg", { amount: money(rnd(n / d), "BDT") }),
+          T("summary." + (p === 0 ? "same" : p > 0 ? "up" : "down") + ".m", { pct: percent(Math.abs(p)) }),
+        ].map(t => t.replace(/\u2060/g, "")),
+      [tot, days, pc]
+    );
+    ok(
+      smdWant.every(t => m0.smd.includes(t)) && tot === 102843,
+      "Months: the average and the comparison with last month count the charges " + J([m0.smd, smdWant])
+    );
     /* Year: every category, then Charges */
     const y0 = await smView(book, "BDT", week, "y", null, { period: "year", anchor: dd(0) });
     c = chargeRow(y0, "Year");

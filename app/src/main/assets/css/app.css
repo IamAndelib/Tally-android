@@ -1176,8 +1176,7 @@ html[dir="rtl"] .strip.fade {
   row-gap: 4px;
   align-items: center;
 }
-/* the emblem's place (hidden from TalkBack, which hears the line as one sentence); for Charges, which is no category,
-   a grey dot in it (docs/specs/charges.md, Summary) */
+/* the emblem's place; for Charges, which is no category, a grey dot in it (docs/specs/charges.md, Summary) */
 .smtop .tx > .smi {
   grid-row: 1 / -1;
   display: grid;

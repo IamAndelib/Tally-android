@@ -221,7 +221,7 @@ const ok = (c, m) => {
       return {
         cats: [...document.querySelectorAll("#sm .smtop .tx .d")].map(d => d.textContent.replace(/\s+/g, " ").trim()),
         amt: $("#sm .smtop .tx:last-child .a").textContent,
-        say: ($("#sm .smtop .tx:last-child .vh") || {}).textContent,
+        say: $("#sm .smtop .tx:last-child").getAttribute("aria-label"),
         head: $("#sm .smd").textContent,
       };
     });
