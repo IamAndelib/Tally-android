@@ -371,9 +371,9 @@ const ok = (c, m) => {
   /* ---- the Charges label (docs/specs/charges.md, Home): in the ring's top right corner, 6px under the account chips,
      outside the donut, clear of every tile; where a tile reaches into the corner (a few big tiles, large text), on a
      line of its own above the ring, still 6px under the chips, and the ring moves down by it */
-  const corner = (n, scale, w) =>
+  const corner = (n, scale) =>
     page.evaluate(
-      ([n, scale, w]) => {
+      ([n, scale]) => {
         const t = today();
         window.Android = Object.assign(window.Android || {}, { fontScale: () => scale });
         applyTextScale();
@@ -452,7 +452,7 @@ const ok = (c, m) => {
         };
         return out;
       },
-      [n, scale, w]
+      [n, scale]
     );
   await page.setViewportSize({ width: 393, height: 852 });
   const free = await corner(11, 1);
@@ -504,7 +504,7 @@ const ok = (c, m) => {
         !b.over.length &&
         b.right === 2 &&
         (n === 4
-          ? b.up && g.cut && g.labTop >= 6 && b.aboveRing >= 2 && g.h < full
+          ? b.up && g.cut && g.labTop === 6 && b.aboveRing >= 2 && g.h < full
           : !b.up && !g.cut && (full = g.h) > 300),
       "sideways, " +
         n +

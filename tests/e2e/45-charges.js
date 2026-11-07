@@ -1921,6 +1921,17 @@ function variedV7() {
         "… hidden from TalkBack; the donut's button says it: " + r.aria
       );
     }
+    /* a hidden category with spending has no tile either: its slice still comes before the grey one */
+    const hid = countBook();
+    hid.cats = cats7.map(c => (c.id === "health" ? { ...c, hidden: true } : c));
+    hid.txns.push(x("hH", 900, dd(0), "expense", 362, "a", { cat: "health" }));
+    const h = (await homeRing(hid, { ...week, cur: "BDT" })).both,
+      hl = h.segs[h.segs.length - 1];
+    ok(
+      hl && hl.col === "#7a8190" && h.segs.length === 5 && Math.abs(1 - hl.start - 138 / 2000) < 1e-4,
+      "a hidden category's slice comes before the grey one, which stays last and true to size " +
+        J(h.segs.map(x => x.col))
+    );
     const usd = await homeRing(countBook(), { ...week, cur: "USD" });
     ok(
       usd.both.lab &&

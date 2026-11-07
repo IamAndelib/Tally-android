@@ -139,8 +139,9 @@ function ringHTML(cats, o) {
     const posOf = id => pos.find(p => p.c.id === id);
     const ent = Object.entries(o.by)
       .filter(([, v]) => v > 0)
-      .map(([id, v]) => ({ id, v, w: v / o.spent, p: posOf(id) })) // CHARGES has no tile: its slice comes last
-      .sort((a, b) => (a.p ? a.p.ang : 2) - (b.p ? b.p.ang : 2));
+      .map(([id, v]) => ({ id, v, w: v / o.spent, p: posOf(id) }))
+      /* a hidden category (no tile) after the tiles' slices, and CHARGES last of all */
+      .sort((a, b) => (a.p ? a.p.ang : a.id === CHARGES ? 3 : 2) - (b.p ? b.p.ang : b.id === CHARGES ? 3 : 2));
     let off = 0;
     ent.forEach(s => {
       s.start = off;
@@ -373,7 +374,7 @@ function ringHTML(cats, o) {
   );
 }
 /* Home's Charges label (measured: fitFigures). The tiles leave the ring's top right corner free in most rings, but not
-   all: with 4 to 7 tiles, or 14 to 16 on a phone held sideways, a large text size or a long word reaches the tile just
+   all: with 4 to 7 tiles, or many on a phone held sideways, a large text size or a long word reaches the tile just
    right of 12 o'clock. Then the label takes a line of its own above the ring, right-aligned: the ring moves down by
    it (still 6px under the account chips). On a phone held sideways the ring stays centred in the window's height and
    the label sits in the room above it; where that room is too small, the ring is drawn again smaller by just what the
@@ -407,7 +408,9 @@ function fitChargeLabel(root) {
   if (document.body.classList.contains("land")) {
     const pane = ring.parentNode,
       room = ring.getBoundingClientRect().top - pane.getBoundingClientRect().top;
-    /* once per render: the ring a little smaller, centred as before, with the room above it the label needs */
+    /* once per render: the ring a little smaller, centred as before, with the room above it the label needs; never
+       under 240px, so in a window too short for that (about 336px tall at the largest text) the label comes closer
+       to the top than 6px (5px at 800×336) */
     if (room < h + 8 && !ring.dataset.cut && HOME_RING && RINGW) {
       RINGW = Math.max(240, RINGW - Math.ceil(2 * (h + 8 - room)));
       ring.outerHTML = ringHTML(HOME_RING[0], HOME_RING[1]);

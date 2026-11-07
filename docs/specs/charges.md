@@ -405,7 +405,7 @@ its add-on), as today.
   ("৳657.50"). No icon, no %, and **no leader line** to the slice. The word and amount are the size of the tiles'
   names, in the app's muted text colour (the grey `#7a8190` is only the dot's and the slice's, never text). The tiles
   stand on a circle, which leaves the corner free in most rings, but not with 4 to 7 tiles at large text or in long
-  words, nor with 14 to 16 on a phone held sideways. There (measured, `fitChargeLabel()`) the label takes **a line of
+  words, nor with many categories on a phone held sideways. There (measured, `fitChargeLabel()`) the label takes **a line of
   its own above the ring**, right-aligned and still 6 px under the chips, and the ring moves down by it (the
   maintainer's pick, B, over leaving it out). On a phone held sideways the ring stays centred in the window's height
   and the label sits in the room above it; where that room is too small (the wider sideways phones, 720 to 932 px),
