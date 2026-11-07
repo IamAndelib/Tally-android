@@ -702,7 +702,7 @@
     },
     "deleted_other": "已删除{{count}}条记录",
     "words": {
-      "moved": "转移{{amount}}",
+      "moved": "转账{{amount}}",
       "lent": "借出{{amount}}",
       "gotBack": "收回{{amount}}",
       "borrowed": "借入{{amount}}",

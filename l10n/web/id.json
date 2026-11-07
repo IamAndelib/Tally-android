@@ -454,7 +454,7 @@
     "fullHistory": "Buka semua riwayat",
     "delUpdate": "Hapus dan perbarui saldo",
     "delKeep": "Hapus, pertahankan saldo",
-    "delTitle_other": "Hapus transaksi ini?",
+    "delTitle_other": "Hapus {{count}} transaksi ini?",
     "delBody": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?",
     "delBodyMany": "Apakah jumlahnya dikembalikan ke akun, atau saldo tetap seperti sekarang?"
   },
@@ -702,7 +702,7 @@
     },
     "deleted_other": "{{count}} transaksi dihapus",
     "words": {
-      "moved": "Dipindahkan {{amount}}",
+      "moved": "Ditransfer {{amount}}",
       "lent": "{{amount}} dipinjamkan",
       "gotBack": "{{amount}} kembali",
       "borrowed": "{{amount}} dipinjam",
