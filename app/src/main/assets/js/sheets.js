@@ -1039,7 +1039,6 @@ function saveTr() {
     date = v.date,
     note = (v.note || "").trim(),
     nid = newId(),
-    fid = newId(),
     ts = Date.now();
   const mutate = () => {
     let t = id ? entry(id) : null;
@@ -1047,27 +1046,10 @@ function saveTr() {
       t = { id: nid, ts };
       S.txns.push(t);
     }
-    const oldFee = t.feeId ? entry(t.feeId) : null;
     Object.assign(t, { type: "transfer", amount: amt, account: from, to, date, note });
     if (diff) t.toAmount = got;
     else delete t.toAmount;
-    if (fee > 0) {
-      const f = oldFee || { id: fid, ts: (t.ts || ts) + 1 }; // just after its transfer, as balances see them
-      if (!oldFee) S.txns.push(f);
-      Object.assign(f, {
-        type: "expense",
-        amount: rnd(fee),
-        account: from,
-        cat: "fees",
-        date,
-        note: "",
-        feeOf: t.id,
-      });
-      t.feeId = f.id;
-    } else {
-      if (oldFee) S.txns = S.txns.filter(x => x !== oldFee);
-      delete t.feeId;
-    }
+    setAddOn(t, "charge", fee); // its fee: from From, on its day, just after it; none when 0
   };
   saveChecked(
     mutate,

@@ -263,6 +263,11 @@ const ok = (c, m) => {
       .map(e => e.closest("[data-v]").dataset.v + " " + e.textContent),
   }));
   ok(up.bal.a === 99940 && up.bal.b === 65000, "after the update: balances as before " + JSON.stringify(up.bal));
+  const upCat = await page.evaluate(() => [S.v, S.cats.find(c => c.id === "fees")]);
+  ok(
+    upCat[0] === 8 && upCat[1] && upCat[1].name === "Food" && !upCat[1].hidden,
+    "after the update: version 8, the renamed Fees category kept as it was " + JSON.stringify(upCat)
+  );
   ok(
     /50\.00/.test(up.centre) && !/60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 100%"]',
     "after the update: spent 50, only Groceries on the ring, nothing under Food " + JSON.stringify(up)

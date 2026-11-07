@@ -401,8 +401,8 @@ const ok = (c, m) => {
   const cof = S.cats.find(c => c.name === "Coffee");
   ok(cof && cof.kind === "out" && cof.e === "☕" && !cof.i && cof.c === "#a646c9", "custom spending category added");
   ok(
-    (await page.evaluate(() => document.querySelectorAll(".ring.edit .tile").length)) === 13,
-    "preview re-laid out with 13 categories"
+    (await page.evaluate(() => document.querySelectorAll(".ring.edit .tile").length)) === 12,
+    "preview re-laid out with 12 categories (the 11 built in, no Fees since data v8, and Coffee)"
   );
   await act("cat-new", "in");
   await page.fill("#f-cname", "Tutoring");

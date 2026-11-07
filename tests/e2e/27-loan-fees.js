@@ -283,7 +283,7 @@ const ok = (c, m) => {
       });
       return !m.txns.find(x => x.id === "f").feeOf;
     }),
-    "a fee may only hang on a transfer or a payment, never on a draw"
+    "an expense charge never hangs on a draw (a lend's transfer charge is a loan entry)"
   );
 
   // ---- 7. deleting the loan takes its payments' fees with it

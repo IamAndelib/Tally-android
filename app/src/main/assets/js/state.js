@@ -8,7 +8,12 @@
 const LS = "tally:v1";
 function blank() {
   return {
-    v: 7, // 7: entries may have a payee (an older Tally restoring a backup warns it's newer, see restoreText)
+    /* 7: entries may have a payee. 8: charges and extras (docs/specs/charges.md): an add-on that moves money is an
+       entry linked both ways to its entry (feeOf on it, feeId on the entry: a charge on a transfer, a loan payment or a
+       purchase, a tip on a lending's payment, a lend's transfer charge), what only changes what is owed is a draw's
+       onTop; a new notebook has no Fees category. An older Tally restoring a backup warns it's newer (restoreText) and
+       drops what it doesn't know, so it may lose onTop, never a balance. */
+    v: 8,
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
          times show as 24-hour (ISO 8601) until changed in Settings → Region */
@@ -27,7 +32,7 @@ function blank() {
     },
     accounts: [],
     types: [],
-    cats: CATS.map(c => ({ ...c, hidden: false })),
+    cats: CATS.filter(c => !c.retired).map(c => ({ ...catCopy(c), hidden: false })),
     txns: [],
     loans: [],
     assets: [],
@@ -177,6 +182,9 @@ function migrate(o) {
         c: hex(a.c) ? a.c : "",
       };
     });
+  /* the built-in Fees is retired from version 8 on: older saves keep it, as every older version gave it back (a 1.0
+     save, with no list of its own, too) */
+  if (!(ver >= 8)) s.cats = CATS.map(c => ({ ...catCopy(c), hidden: false }));
   if (Array.isArray(o.cats)) {
     const valid = o.cats.filter(c => c && c.id && str(c.name) && c.id !== "transfer");
     if (ver >= 2) {
@@ -197,7 +205,7 @@ function migrate(o) {
           if (String(c.c).toLowerCase() === String(OLD_CAT_COLS[c.id] || "").toLowerCase()) c.c = d.c;
         });
       CATS.forEach(d => {
-        if (!s.cats.some(c => c.id === d.id)) s.cats.push({ ...d });
+        if ((!d.retired || !(ver >= 8)) && !s.cats.some(c => c.id === d.id)) s.cats.push(catCopy(d));
       });
     } else {
       valid
@@ -259,7 +267,11 @@ function migrate(o) {
         t.loan = sid(t0.loan);
         if (t0.principal) t.principal = true;
         if (t0.principal && isDay(t0.due)) t.due = day(t0.due);
-        if (!t0.principal && t0.feeId) t.feeId = sid(t0.feeId);
+        if (t0.feeId) t.feeId = sid(t0.feeId); // a payment's charge or tip, a draw's transfer charge (checked below)
+        if (t0.feeOf) t.feeOf = sid(t0.feeOf); // a lend's transfer charge
+        /* what a draw owes on top (a lend's extra, a borrow's charges): a number above 0 that a field takes, or none */
+        const top = okNum(t0.onTop) ? rnd(+t0.onTop) : 0;
+        if (t0.principal && top > 0 && amtOk(top) != null) t.onTop = top;
       } else if (t0.type === "expense" || t0.type === "income") {
         if (t0.cat === "transfer") {
           // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
@@ -272,10 +284,9 @@ function migrate(o) {
           if (t0.type === "income" && c === "other") c = "otherin";
           t.cat = c;
           if (t0.feeOf) t.feeOf = sid(t0.feeOf);
-          else {
-            const p = str(t0.payee); // who was paid, or who paid: kept as written, only when there is one
-            if (p.trim()) t.payee = p;
-          }
+          if (t0.type === "expense" && t0.feeId) t.feeId = sid(t0.feeId); // a purchase's charge
+          const p = str(t0.payee); // who was paid, or who paid: kept as written, only when there is one (not an add-on)
+          if (p.trim()) t.payee = p;
         }
       } else return null;
       return t;
@@ -286,14 +297,6 @@ function migrate(o) {
      they were written, so the newest still comes first; balances don't depend on it */
   s.txns.forEach((t, i) => {
     if (!t.ts) t.ts = parseISO(t.date).getTime() + i;
-  });
-  /* a transfer or loan payment and its fee point at each other; a fee whose transfer or payment is gone is plain
-     spending, and one whose fee is gone has none (balances stay as they are either way) */
-  const byId = new Map(s.txns.map(t => [t.id, t])),
-    feeHost = x => !!x && (x.type === "transfer" || (x.type === "loan" && !x.principal));
-  s.txns.forEach(t => {
-    if (t.feeOf && !feeHost(byId.get(t.feeOf))) delete t.feeOf;
-    if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
   });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
   const drawsOf = new Map();
@@ -321,6 +324,31 @@ function migrate(o) {
     })
     .filter(Boolean);
   uniq(s.loans);
+  /* An entry and its add-on point at each other (feeId on the entry, feeOf on the add-on), and only the pairs
+     addOnFits() allows are kept; an add-on never carries one of its own (in a chain, every link after the first goes).
+     Any other link is dropped from both ends and the former add-on stands as what it is: a plain expense or income in
+     its stored category, or a draw of its loan. A kept add-on has no payee, due day or amount on top, and a purchase's
+     charge has its purchase's category (only older versions and the CSV read it). Amounts, accounts, dates and so
+     every balance stay as they are. */
+  const byId = new Map(s.txns.map(t => [t.id, t])),
+    lends = new Set(s.loans.filter(l => l.kind === "lend").map(l => l.id)),
+    hostOf = new Map();
+  s.txns.forEach(a => {
+    const h = a.feeOf && byId.get(a.feeOf);
+    if (h && h !== a && h.feeId === a.id && addOnFits(a, h, id => lends.has(id))) hostOf.set(a, h);
+  });
+  const kept = new Map([...hostOf].filter(([, h]) => !hostOf.has(h))),
+    hosts = new Set(kept.values());
+  s.txns.forEach(t => {
+    if (!kept.has(t)) delete t.feeOf;
+    if (!hosts.has(t)) delete t.feeId;
+  });
+  kept.forEach((h, a) => {
+    delete a.payee;
+    delete a.due;
+    delete a.onTop;
+    if (h.type === "expense") a.cat = h.cat;
+  });
   /* v6: a loan's due date used to live on the loan itself; move it onto its (first/only) principal draw */
   if (!(ver >= 6) && Array.isArray(o.loans))
     o.loans.forEach(ol => {
@@ -491,6 +519,72 @@ function homeAccounts() {
    Its stored category ("fees") is only for older versions: Tally never files an entry under a category by itself,
    since a built-in one keeps its id when renamed into anything. */
 const isSpend = t => t.type === "expense" && !t.feeOf;
+/* Whether entry a may be entry h's add-on (docs/specs/charges.md, "Allowed links"): an expense charge on a transfer, a
+   loan payment (a lending payment's only as the paid fee an older version recorded) or an expense; an income tip on a
+   lending's payment; a loan entry, a lend's transfer charge, on a draw of the same lending (lend(id): whether loan id
+   is a lending). Whether either is itself an add-on is for the caller to check. */
+function addOnFits(a, h, lend) {
+  if (a.type === "expense") return h.type === "transfer" || h.type === "expense" || (h.type === "loan" && !h.principal);
+  if (a.type === "income") return h.type === "loan" && !h.principal && h.dir === "in";
+  return (
+    a.type === "loan" &&
+    !!a.principal &&
+    a.dir === "out" &&
+    h.type === "loan" &&
+    !!h.principal &&
+    h.dir === "out" &&
+    a.loan === h.loan &&
+    lend(h.loan)
+  );
+}
+/* whether entry t is another entry's add-on (a charge, a tip, a lend's transfer charge) */
+const isAddOn = t => !!t && !!t.feeOf && !!entry(t.feeOf);
+/* entry t's linked add-on, or null */
+const addOnOf = t => {
+  const a = t && t.feeId ? entry(t.feeId) : null;
+  return a && a.feeOf === t.id ? a : null;
+};
+/* Gives entry t its add-on of one kind, or takes it away: "charge" (money paid with it, an expense from its account on
+   a transfer, a loan payment or a purchase, in the purchase's category or else "fees"; on a lend's draw a loan entry of
+   the same lending), "extra" (a tip on a lending's payment: an income into its account, in Other) or "top" (a draw's
+   amount on top, onTop: a lend's extra or a borrow's charges). An amount above 0 makes the add-on or updates it with
+   the entry's account, day and category, just after the entry (ts + 1); anything else removes it. An entry has one
+   add-on: another kind already there is never replaced. A lending payment's new add-on is an extra, so "charge" there
+   only changes or removes the paid fee an older version recorded. False (and nothing changed) when t can't take it. */
+function setAddOn(t, kind, amount) {
+  if (!t || isAddOn(t)) return false;
+  const n = rnd(+amount || 0);
+  if (kind === "top") {
+    if (!(t.type === "loan" && t.principal)) return false;
+    if (n > 0) t.onTop = n;
+    else delete t.onTop;
+    return true;
+  }
+  const old = addOnOf(t),
+    lend = t.type === "loan" && !!t.principal && t.dir === "out" && (loan(t.loan) || {}).kind === "lend",
+    shape =
+      kind === "extra"
+        ? { type: "income", cat: "otherin" }
+        : kind !== "charge"
+          ? null
+          : lend
+            ? { type: "loan", dir: "out", loan: t.loan, principal: true }
+            : { type: "expense", cat: t.type === "expense" ? t.cat : "fees" };
+  if (!shape || !addOnFits(shape, t, () => lend)) return false;
+  if (old && (old.type === "income") !== (kind === "extra")) return !(n > 0); // another kind: never replaced
+  if (n > 0 && !old && kind === "charge" && t.type === "loan" && t.dir === "in") return false;
+  if (!(n > 0)) {
+    if (old) S.txns = S.txns.filter(x => x !== old);
+    delete t.feeId;
+    return true;
+  }
+  const a = old || { id: newId(), ts: (t.ts || Date.now()) + 1 };
+  Object.keys(a).forEach(k => k === "id" || k === "ts" || delete a[k]);
+  Object.assign(a, { date: t.date, type: shape.type, amount: n, account: t.account, note: "" }, shape, { feeOf: t.id });
+  if (!old) S.txns.push(a);
+  t.feeId = a.id;
+  return true;
+}
 /* whether entry t is in currency cur (its account's) */
 const inCur = (t, cur) => (acc(t.account) || {}).currency === cur;
 /* what was spent on day d in currency cur, and the active accounts' total in it (b: balances()) */
@@ -655,7 +749,8 @@ function deleteEntries(ids, keep) {
   keep = keep && canKeepBalance([...ids]); // a loan entry never keeps the balance, whatever the caller asked
   ids = new Set(ids);
   const was = keep && S.txns;
-  const isDraw = t => t.type === "loan" && t.principal,
+  /* a lend's transfer charge is part of its draw: deleted with it, never a draw that keeps the lending */
+  const isDraw = t => t.type === "loan" && t.principal && !isAddOn(t),
     hit = new Set(S.txns.filter(t => ids.has(t.id) && isDraw(t)).map(t => t.loan)),
     gone = new Set([...hit].filter(lid => S.txns.every(t => !(isDraw(t) && t.loan === lid) || ids.has(t.id))));
   if (gone.size) {

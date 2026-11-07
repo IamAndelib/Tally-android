@@ -1,7 +1,7 @@
 // Payee (GitHub issue #32): "Paid to" beside the picked category on spending, "Received from" under the categories on
 // money in; saved trimmed and only when filled, cleared on edit, kept by Undo and the low-balance question; earlier
 // names offered as you type (any case or accents, Turkish İ too, same kind first, newest first); shown in lists as the
-// entry's title; the CSV's last column; kept on spending and money in by migrate(), whose saves are version 7, so an
+// entry's title; the CSV's last column; kept on spending and money in by migrate() (version 7 brought payees; saves are now 8), so an
 // older Tally warns before restoring a newer backup. The account chips fit three short names on a phone's row and
 // keep their size when one is picked.
 const { chromium, appUrl, launchOptions } = require("./harness");
@@ -283,7 +283,7 @@ const ok = (c, m) => {
       const p = id => n.txns.find(x => x.id === id).payee;
       return { v: n.v, p1: p("1"), p2: p("2"), p3: p("3"), p4: p("4"), p5: p("5") };
     });
-    ok(r.v === 7, "saves are version 7");
+    ok(r.v === 8, "saves are version 8");
     ok(r.p1 === " Shop " && r.p2 === "42", "a payee is kept as written on spending and money in");
     ok(r.p3 === undefined && r.p4 === undefined && r.p5 === undefined, "none kept that isn't text, on a fix, or blank");
     const q = async v => {
@@ -293,7 +293,7 @@ const ok = (c, m) => {
       }, v);
       return (await page.textContent("#pop")).includes("newer version");
     };
-    ok(!(await q(7)) && (await q(8)), "a version 8 backup is newer, a 7 isn't");
+    ok(!(await q(7)) && !(await q(8)) && (await q(9)), "a version 9 backup is newer, a 7 or 8 isn't");
     await ctx.close();
   }
 

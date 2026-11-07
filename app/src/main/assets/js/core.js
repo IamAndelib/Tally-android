@@ -15,12 +15,16 @@ const CATS = [
   { id: "health", name: "Health", e: "💊", c: "#e0504f", i: "medication", kind: "out" },
   { id: "fun", name: "Fun", e: "🎬", c: "#2a78d6", i: "movie", kind: "out" },
   { id: "family", name: "Family", e: "🎁", c: "#df5f2b", i: "family_restroom", kind: "out" },
-  { id: "fees", name: "Fees", e: "🏦", c: "#00897b", i: "account_balance", kind: "out" },
+  /* retired (data v8): a new notebook has no Fees, since charges count in their purchase's category or in Charges;
+     an older notebook keeps it, its name and its entries (migrate()), and catName() still says it in Tally's language */
+  { id: "fees", name: "Fees", e: "🏦", c: "#00897b", i: "account_balance", kind: "out", retired: true },
   { id: "other", name: "Other", e: "🧾", c: "#b0671f", i: "category", kind: "out" },
   { id: "income", name: "Income", e: "💰", c: "#15a06f", i: "payments", kind: "in" },
   { id: "gift", name: "Gift", e: "🎁", c: "#e0578c", i: "redeem", kind: "in" },
   { id: "otherin", name: "Other", e: "➕", c: "#5f7389", i: "add_circle", kind: "in" },
 ];
+/* a built-in category as a notebook stores it (CATS' marks, like retired, are never saved) */
+const catCopy = d => ({ id: d.id, name: d.name, e: d.e, c: d.c, i: d.i, kind: d.kind });
 /* colours the built-in categories had before emblems (v<4), to upgrade only untouched ones */
 const OLD_CAT_COLS = {
   groceries: "#2E9E6B",
