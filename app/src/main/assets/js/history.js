@@ -426,13 +426,13 @@ function histChips() {
     h.push(
       histChip(
         "acc",
-        '<span class="adot" style="--acr:' +
-          hexRgb(accEmb(a).c).join(" ") +
-          '"></span><span class="chn" dir="auto">' +
+        '<span class="adot"' +
+          accVar(a) +
+          '></span><span class="chn" dir="auto">' +
           esc(a.name) +
           "</span>",
         a.name,
-        ' style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"'
+        accVar(a)
       )
     );
   if (HF.kind) {

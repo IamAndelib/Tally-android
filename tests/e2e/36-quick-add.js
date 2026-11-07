@@ -346,13 +346,18 @@ const ok = (c, m) => {
             return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
           };
           const chip = $('#sheet [data-act="f-acc"][aria-pressed="true"]');
-          const probe = document.createElement("button");
-          probe.className = "chip hfc tinted";
-          probe.setAttribute("style", chip.getAttribute("style")); // Filters' chip, same colour variable
-          probe.textContent = "Bank";
-          chip.parentElement.append(probe);
-          const r = { form: ratio(chip), filters: ratio(probe) };
-          probe.remove();
+          const r = { form: ratio(chip) };
+          closeSheet();
+          // the real History filter chip (account filter set), not a copy of a style
+          HF.acc = S.accounts[0].id;
+          V.screen = "history";
+          render();
+          const hc = $('#app .hchip[data-v="acc"]');
+          r.filters = ratio(hc);
+          r.dot = hc.querySelector(".adot").getAttribute("style");
+          HF.acc = "";
+          V.screen = "home";
+          render();
           return r;
         });
         ok(
