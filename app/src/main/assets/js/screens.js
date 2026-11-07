@@ -715,16 +715,18 @@ function balBar(b, n) {
 /* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
    helps to spot it */
 const accTag = a => (a ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl(a.name) + "</bdi>" : bdi("?"));
-/* An entry's row: two lines. What it was | how much (a fee under it: "+ $2.00 fee"; a transfer between currencies: what
-   arrived), then its category when the title is a payee or a note (a note, for a loan) and its account with the dot of
-   its colour; a transfer: From → To. No balance on the row: tapping it opens it in place (txOpenView), where the balances,
-   the time it was written down and the actions are. A transfer's or loan payment's fee has no row (histRows). Every text
-   wraps, nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the
-   title the whole width, the amount the line below it, then the second line. */
+/* An entry's row: two lines. What it was | how much, the money that moved (a purchase: with its charge), with small
+   lines under it naming what is inside it or on top of it (docs/specs/charges.md, "History rows": "incl. $150.00
+   charge", "+ $10.00 transfer charge", "incl. $150.00 extra" in green; a transfer between currencies: what arrived),
+   then its category when the title is a payee or a note (a note, for a loan) and its account with the dot of its
+   colour; a transfer: From → To. No balance on the row: tapping it opens it in place (txOpenView), where the balances,
+   the time it was written down and the actions are. An add-on has no row of its own (histRows). Every text wraps,
+   nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the title
+   the whole width, the amount the line below it, then the second line. */
 function txLine(t) {
   const a = acc(t.account),
     cur = a ? a.currency : S.settings.cur,
-    f = t.feeId ? entry(t.feeId) : null;
+    f = addOnOf(t);
   let em,
     d,
     amt,
@@ -774,14 +776,23 @@ function txLine(t) {
         .join(" \u00b7 ");
       sub = "<bdi>" + hl(catName(k)) + "</bdi> \u00b7 " + sub;
     } else d = hl(catName(k));
-    amt = esc(signed(out ? -t.amount : t.amount, cur));
+    const sum = out && f && f.type === "expense" ? rnd(t.amount + f.amount) : t.amount; // a purchase with its charge
+    amt = esc(signed(out ? -sum : sum, cur));
     cls = out ? "spent" : "got";
   }
-  if (f)
-    small +=
-      "<small>" +
-      TH("tx.feeLine", { amount: money(f.amount, (acc(f.account) || a || {}).currency || cur) }) +
-      "</small>";
+  /* what is inside the amount (charges or an extra a payment covered, a purchase's charge), then what is on top of it */
+  const top = t.type === "loan" && !t.principal ? topPaidOf(t.id) : 0,
+    lendL = t.type === "loan" && (loan(t.loan) || {}).kind === "lend",
+    line = (key, amount, extra) => "<small" + (extra ? ' class="xtra"' : "") + ">" + TH(key, { amount }) + "</small>";
+  if (top > 0) small += line(lendL ? "tx.extraIncl" : "tx.chargesIncl", money(top, cur), lendL);
+  if (f) {
+    const fm = money(f.amount, (acc(f.account) || a || {}).currency || cur);
+    if (f.type === "income") small += line("tx.extraOn", fm, true);
+    else if (t.type === "expense") small += line("tx.chargeIncl", fm);
+    else if (t.type === "loan" && t.dir === "in")
+      small += line("tx.chargeOff", fm); // a lending payment's older fee
+    else small += line("tx.xchargeOn", fm);
+  }
   const selMode = !!V.sel && V.screen === "history",
     on = selMode && V.sel.has(t.id),
     isOpen = !selMode && V.open === t.id;
@@ -823,25 +834,33 @@ function txLine(t) {
     opened
   );
 }
-/* What an opened row adds to what the row shows: when it was written down, the balance it left (after its fee), what a
+/* What an opened row adds to what the row shows: when it was written down, the balance it left (after its add-on), what a
    transfer or a loan adds, and the actions. A box is a small label over a bold figure; an account is named only to tell
-   two balances apart. Built on demand: the tap that opens a row puts it after the row (rowToggle). */
+   two balances apart. Never a total beside one of its parts (docs/specs/charges.md, "History rows"): the first box may
+   repeat the row's figure, so the boxes read "this, plus that" ("Sent | Transfer charge"); a part a payment covered
+   (an extra, charges) is a box of its own with what it counted as. A loan's box says what is owed, with a draw's own
+   parts as chips inside it (lend-refine) or, on a payment while both are left, what is left of the money and on top.
+   Built on demand: the tap that opens a row puts it after the row (rowToggle). */
 function txOpenView(t) {
   const a = acc(t.account),
     cur = a ? a.currency : S.settings.cur,
     RB = runBal(),
     r = RB[t.id] || {},
-    f = t.feeId ? entry(t.feeId) : null,
-    after = (f && RB[f.id]) || r, // the balance after the entry and its fee
+    f = addOnOf(t),
+    fc = f ? (acc(f.account) || a || {}).currency || cur : cur,
+    after = (f && RB[f.id]) || r, // the balance after the entry and its add-on
     M = (v, c) => esc(money(v, c));
-  const box = (cap, val, extra) =>
+  const box = (cap, val, extra, cls) =>
     '<div class="fbox"><div class="bcap">' +
     cap +
-    '</div><div class="bval">' +
+    '</div><div class="bval' +
+    (cls ? " " + cls : "") +
+    '">' +
     val +
     "</div>" +
     (extra || "") +
     "</div>";
+  const note = key => '<div class="bin">' + TH(key) + "</div>";
   const bal = (x, v) =>
     x && v != null
       ? box(
@@ -875,36 +894,79 @@ function txOpenView(t) {
     h += '<div class="onote" dir="auto">' + bdi(t.note) + "</div>";
   if (t.type === "transfer") {
     const to = acc(t.to);
-    h += row(f ? box(TH("tx.paidInAll"), M(t.amount + f.amount, cur)) : "");
+    h += row(f ? box(TH("tx.sent"), M(t.amount, cur)) + box(TH("tx.xcharge"), M(f.amount, fc)) : "");
     h += row(bal(a, after.a) + bal(to, r.t));
   } else if (t.type === "loan" && loan(t.loan)) {
     const l = loan(t.loan),
       i = loanInfo(l),
       lend = l.kind === "lend",
       who = { html: bdi(loanWho(l)) },
-      paid = Math.max(0, rnd(i.total - i.left)),
+      /* what is still owed; written off or forgiven, the money still unpaid, or, all of it back, what is unpaid on top */
+      owed = i.left > 0 || i.st === "cleared" ? i.left : i.unpaid,
+      paid = Math.max(0, rnd(i.total - i.unpaid)),
       pct = i.total ? Math.min(100, Math.round((paid / i.total) * 100)) : 0;
+    let inBox = "",
+      boxes = [];
+    if (t.principal) {
+      /* the draw's own parts, when it has more than its amount: Lent or Borrowed, a lend's transfer charge, the extra
+         or charges on top */
+      const parts = [[lend ? "tx.lent" : "tx.borrowed", t.amount]];
+      if (f && f.type === "loan") parts.push(["tx.xcharge", f.amount]);
+      if (t.onTop) parts.push([lend ? "tx.extra" : "tx.charges", t.onTop]);
+      if (parts.length > 1)
+        inBox =
+          '<div class="lparts">' +
+          parts
+            .map(
+              ([k, v]) =>
+                '<div class="lpart"><span class="lpc">' +
+                TH(k) +
+                '</span><span class="lpv">' +
+                M(v, cur) +
+                "</span></div>"
+            )
+            .join("") +
+          "</div>";
+      if (t.due && i.rem[t.id] > 0) boxes.push(box(TH("tx.due"), esc(shortDay(t.due))));
+    } else {
+      if (i.open && i.moneyLeft > 0 && i.topLeft > 0)
+        inBox =
+          '<div class="lfoot">' +
+          TH(lend ? "tx.leftExtra" : "tx.leftCharges", {
+            money: money(i.moneyLeft, i.cur),
+            [lend ? "extra" : "charges"]: money(i.topLeft, i.cur),
+          }) +
+          "</div>";
+      const top = topPaidOf(t.id),
+        tip = f && f.type === "income" ? f.amount : 0;
+      /* what the payment covered on top (with a tip, one Extra box with their sum), then its charge; the amount itself
+         only beside what is on top of it, never beside a part of it */
+      if (rnd(top + tip) > 0)
+        boxes.push(
+          lend
+            ? box(TH("tx.extra"), esc(signed(rnd(top + tip), cur)), note("tx.asIncome"), "got")
+            : box(TH("tx.charges"), M(top, cur), note("tx.asSpending"))
+        );
+      if (f && f.type === "expense") boxes.push(box(TH(lend ? "tx.charge" : "tx.xcharge"), M(f.amount, fc)));
+      if (boxes.length && !top) boxes.unshift(box(TH(lend ? "tx.gotBack" : "tx.paidBack"), M(t.amount, cur)));
+    }
     h +=
       '<div class="lbox"><div class="lhead"><span>' +
-      (i.left > 0 ? TH(lend ? "tx.owesYou" : "tx.youOwe", { who }) : TH("tx.cleared")) +
+      (owed > 0 ? TH(lend ? "tx.owesYou" : "tx.youOwe", { who }) : TH("tx.cleared")) +
       "</span>" +
-      (i.left > 0 ? "<b>" + M(i.left, i.cur) + "</b>" : "") +
+      (owed > 0 ? "<b>" + M(owed, i.cur) + "</b>" : "") +
       '</div><div class="ltrack" aria-hidden="true"><span style="width:' +
       pct +
       '%"></span></div><div class="lfoot">' +
       TH(lend ? "tx.backOf" : "tx.paidOf", { paid: money(paid, i.cur), total: money(i.total, i.cur) }) +
-      "</div></div>";
-    let boxes = "";
-    if (f)
-      boxes += box(
-        TH(t.dir === "out" ? "tx.paidInAll" : "tx.reachedYou"),
-        M(t.dir === "out" ? t.amount + f.amount : t.amount - f.amount, cur)
-      );
-    if (t.principal && t.due && i.rem[t.id] > 0) boxes += box(TH("tx.due"), esc(shortDay(t.due)));
-    h += row(boxes + bal(a, after.a));
+      "</div>" +
+      inBox +
+      "</div>";
+    h += boxes.length > 1 ? row(boxes.join("")) + row(bal(a, after.a)) : row(boxes.join("") + bal(a, after.a));
   } else if (t.type === "adjust") {
     if (after.a != null) h += row(box(TH("tx.was"), M(after.a - t.amount, cur)) + box(TH("tx.now"), M(after.a, cur)));
-  } else h += row(bal(a, after.a));
+  } else if (t.type === "expense" && f) h += row(box(TH("tx.charge"), M(f.amount, fc)) + bal(a, after.a));
+  else h += row(bal(a, after.a));
   return (
     '<div class="txo" data-v="' +
     t.id +

@@ -1182,9 +1182,10 @@ function variedV7() {
       e.info.E.topPaid.ep === 90 &&
         same(e.parts, [
           { of: "ep", date: D.d2, cur: "BDT", amount: 50, as: "income" },
-          { of: "ep", date: D.d3, cur: "BDT", amount: 40, as: "income" },
+          { of: "ep", date: D.d3, cur: "BDT", amount: 40, as: "income", at: "e2" },
         ]),
       "a payment made before a later draw: its ৳50.00 extra on the payment's day, the later ৳40.00 on its draw's day " +
+        "(at: the draw, for History's heading) " +
         J(e.parts)
     );
     ok(
@@ -2183,6 +2184,466 @@ function variedV7() {
     ok(c.amount === mo(u0, chU) && u0.total === u0.homeSpent, "USD: Charges " + chU + " " + J([c, u0.total]));
   } catch (e) {
     ok(false, "Summary's Charges line: " + e.message.split("\n")[0]);
+  }
+
+  /* ---- History's rows, headings and filters, and search (docs/specs/charges.md, "History rows", "History headings and
+     filters", "Search"; C-rows, lend-refine, lend-payback). One notebook in May 2026 with each kind of row in the
+     spec's two tables; book2 adds Rafi's ৳1,250.00 payback. In the page: History with filters f, its headings, each
+     row's figure and the lines under it, and each row of `opens` opened (its boxes, the chips in the loan's box, the
+     loan box's lines). */
+  const M5 = n => "2026-05-" + String(n).padStart(2, "0");
+  const rowBook = paid => ({
+    v: 8,
+    settings,
+    accounts: [
+      acct("a", "Bank", "bank", "BDT", 50000),
+      acct("k", "Bkash", "wallet", "BDT", 20000),
+      acct("c", "Card", "card", "BDT", 0),
+    ],
+    types: [],
+    cats: cats8,
+    txns: [
+      // Maya: borrowed ৳60,000.00; paid back ৳5,000.00 with a ৳200.00 transfer charge
+      x("mD", 100, M5(1), "loan", 60000, "a", { dir: "in", loan: "MY", principal: true }),
+      x("mP", 900, M5(9), "loan", 5000, "a", { dir: "out", loan: "MY", feeId: "mPc" }),
+      x("mPc", 901, M5(9), "expense", 200, "a", { cat: "fees", feeOf: "mP" }),
+      // Ona: lent ৳5,000.00, paid back ৳3,000.00 with an older paid fee of ৳10.00; Tom: the same with a ৳150.00 tip
+      x("oD", 200, M5(2), "loan", 5000, "c", { dir: "out", loan: "ON", principal: true }),
+      x("tD", 210, M5(2), "loan", 5000, "c", { dir: "out", loan: "TM", principal: true }),
+      x("oP", 1100, M5(11), "loan", 3000, "c", { dir: "in", loan: "ON", feeId: "oPf" }),
+      x("oPf", 1101, M5(11), "expense", 10, "c", { cat: "fees", feeOf: "oP" }),
+      x("tP", 1110, M5(11), "loan", 3000, "c", { dir: "in", loan: "TM", feeId: "tPt" }),
+      x("tPt", 1111, M5(11), "income", 150, "c", { cat: "otherin", feeOf: "tP" }),
+      // Rafi and Nila: lent ৳1,000.00 + ৳100.00 transfer charge + ৳150.00 extra; Nila paid back ৳500.00
+      x("rD", 300, M5(3), "loan", 1000, "k", { dir: "out", loan: "R", principal: true, onTop: 150, feeId: "rDc" }),
+      x("rDc", 301, M5(3), "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+      x("nD", 310, M5(3), "loan", 1000, "k", { dir: "out", loan: "N", principal: true, onTop: 150, feeId: "nDc" }),
+      x("nDc", 311, M5(3), "loan", 100, "k", { dir: "out", loan: "N", principal: true, feeOf: "nD" }),
+      x("nP", 600, M5(6), "loan", 500, "k", { dir: "in", loan: "N" }),
+      // Sam and Lee: borrowed ৳1,000.00 with ৳100.00 of charges; Sam paid back ৳1,100.00, Lee ৳400.00
+      x("sD", 320, M5(3), "loan", 1000, "a", { dir: "in", loan: "S", principal: true, onTop: 100 }),
+      x("lD", 330, M5(3), "loan", 1000, "a", { dir: "in", loan: "L", principal: true, onTop: 100 }),
+      x("sP", 1000, M5(10), "loan", 1100, "a", { dir: "out", loan: "S" }),
+      x("lP", 1010, M5(10), "loan", 400, "a", { dir: "out", loan: "L" }),
+      // Joy: lent ৳500.00 + ৳20.00 transfer charge, written off
+      x("jD", 340, M5(3), "loan", 500, "k", { dir: "out", loan: "J", principal: true, feeId: "jDc" }),
+      x("jDc", 341, M5(3), "loan", 20, "k", { dir: "out", loan: "J", principal: true, feeOf: "jD" }),
+      // dinner ৳1,000.00 + ৳150.00 charge; a transfer of ৳1,000.00 with a ৳10.00 charge
+      x("pE", 1200, M5(12), "expense", 1000, "c", { cat: "food", payee: "Star Kabab", feeId: "pEc" }),
+      x("pEc", 1201, M5(12), "expense", 150, "c", { cat: "food", feeOf: "pE" }),
+      x("tX", 1300, M5(13), "transfer", 1000, "a", { to: "k", feeId: "tXc" }),
+      x("tXc", 1301, M5(13), "expense", 10, "a", { cat: "fees", feeOf: "tX" }),
+    ].concat(paid ? [x("rP", 800, M5(8), "loan", 1250, "k", { dir: "in", loan: "R" })] : []),
+    loans: [
+      loanOf("MY", "borrow", "Maya", "a", M5(1)),
+      loanOf("ON", "lend", "Ona", "c", M5(2)),
+      loanOf("TM", "lend", "Tom", "c", M5(2)),
+      loanOf("R", "lend", "Rafi", "k", M5(3)),
+      loanOf("N", "lend", "Nila", "k", M5(3)),
+      loanOf("S", "borrow", "Sam", "a", M5(3)),
+      loanOf("L", "borrow", "Lee", "a", M5(3)),
+      loanOf("J", "lend", "Joy", "k", M5(3), "writeoff"),
+    ],
+    assets: [],
+  });
+  const histLook = (o, f, opens = []) =>
+    page.evaluate(
+      ([o, f, opens]) => {
+        const keep = S,
+          keepV = { ...V },
+          keepHF = HF,
+          keepHP = { ...HP };
+        const cl = s => s.replace(/⁠/g, "").replace(/\s+/g, " ").trim();
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          openHistory(f);
+          const g = document.createElement("span");
+          g.className = "got";
+          document.body.appendChild(g);
+          const green = getComputedStyle(g).color;
+          g.remove();
+          const isGreen = e => getComputedStyle(e).color === green;
+          const col = e => [...e.querySelectorAll(".hcl")].map(l => cl(l.textContent));
+          const out = {
+            tpl: cl(money(1234.5, "BDT")),
+            mon: [...document.querySelectorAll("#app .hmon")].map(e => [cl(e.firstElementChild.textContent), col(e)]),
+            day: [...document.querySelectorAll("#app .dayh")].map(e => [cl(e.firstElementChild.textContent), col(e)]),
+            dayTitle: Object.fromEntries(
+              Array.from({ length: 31 }, (_, i) => i + 1).map(n => {
+                const d = "2026-05-" + String(n).padStart(2, "0");
+                return [n, capFirst(dayLabel(d))];
+              })
+            ),
+            rows: {},
+            open: {},
+          };
+          document.querySelectorAll("#app .tx[data-v]").forEach(e => {
+            const a = e.querySelector(".a"),
+              sm = [...a.querySelectorAll("small")];
+            out.rows[e.dataset.v] = {
+              amt: cl(
+                [...a.childNodes]
+                  .filter(n => n.nodeName !== "SMALL")
+                  .map(n => n.textContent)
+                  .join("")
+              ),
+              small: sm.map(s => cl(s.textContent)),
+              green: sm.map(isGreen),
+            };
+          });
+          opens.forEach(id => {
+            V.open = id;
+            render();
+            const t = document.querySelector("#app .txo");
+            if (!t) return;
+            const box = t.querySelector(".lbox");
+            out.open[id] = {
+              text: cl(t.textContent),
+              boxes: [...t.querySelectorAll(".fbox")].map(b => ({
+                cap: cl(b.querySelector(".bcap").textContent),
+                val: cl(b.querySelector(".bval").textContent),
+                sub: [...b.querySelectorAll(".bin")].map(s => cl(s.textContent)).join(" "),
+                green: isGreen(b.querySelector(".bval")),
+              })),
+              perRow: [...t.querySelectorAll(".frow")].map(r => r.querySelectorAll(".fbox").length),
+              head: box ? [...box.querySelector(".lhead").children].map(c => cl(c.textContent)).join(" ") : null,
+              foot: box ? [...box.querySelectorAll(".lfoot")].map(s => cl(s.textContent)) : [],
+              chips: box
+                ? [...box.querySelectorAll(".lpart")].map(c => [...c.children].map(s => cl(s.textContent)))
+                : [],
+              chipsOut: t.querySelectorAll(".lpart").length - (box ? box.querySelectorAll(".lpart").length : 0),
+            };
+          });
+          return out;
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          HF = keepHF;
+          Object.assign(HP, keepHP);
+          RBC = LPC = null;
+          render();
+        }
+      },
+      [o, f, opens]
+    );
+  /* ৳ figures as the page writes them */
+  const tkOf = r => (n, sign) =>
+    (sign === "-" ? "−" : sign === "+" ? "+" : "") +
+    r.tpl.replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }));
+  const bx = (o, cap) => (o && o.boxes.find(b => b.cap === cap)) || {};
+
+  // ---- 20. History's rows, collapsed and opened: the money that moved, the small line, the boxes and the chips
+  try {
+    const OPEN = ["tX", "pE", "mP", "sP", "rD", "sD", "nP", "tP", "oP", "lP", "jD"];
+    const r = await histLook(rowBook(false), {}, OPEN),
+      r2 = await histLook(rowBook(true), {}, ["rP"]),
+      tk = tkOf(r),
+      row = id => r.rows[id] || {},
+      op = id => r.open[id] || { boxes: [], foot: [], chips: [], perRow: [] };
+    // a transfer: ৳1,000.00 / + ৳10.00 transfer charge; opened Sent | Transfer charge, then both Left after
+    ok(
+      row("tX").amt === tk(1000) && J(row("tX").small) === J(["+ " + tk(10) + " transfer charge"]),
+      "transfer row: ৳1,000.00 / + ৳10.00 transfer charge " + J(row("tX"))
+    );
+    ok(
+      J(op("tX").boxes.map(b => [b.cap, b.val])) ===
+        J([
+          ["Sent", tk(1000)],
+          ["Transfer charge", tk(10)],
+          ["Left after", tk(refBalances(rowBook(false)).a)],
+          ["Left after", tk(refBalances(rowBook(false)).k)],
+        ]) && J(op("tX").perRow) === J([2, 2]),
+      "transfer opened: Sent | Transfer charge, then both Left after " + J(op("tX"))
+    );
+    // spending: −৳1,150.00 / incl. ৳150.00 charge; opened Charge | Left after
+    ok(
+      row("pE").amt === tk(1150, "-") && J(row("pE").small) === J(["incl. " + tk(150) + " charge"]),
+      "purchase row: the total −৳1,150.00 / incl. ৳150.00 charge " + J(row("pE"))
+    );
+    ok(
+      J(op("pE").boxes.map(b => b.cap)) === J(["Charge", "Left after"]) && bx(op("pE"), "Charge").val === tk(150),
+      "purchase opened: Charge ৳150.00 · Left after " + J(op("pE").boxes)
+    );
+    // paid back a loan: −৳5,000.00 / + ৳200.00 transfer charge; opened the loan's box, Paid back | Transfer charge
+    ok(
+      row("mP").amt === tk(5000, "-") && J(row("mP").small) === J(["+ " + tk(200) + " transfer charge"]),
+      "loan payment row " + J(row("mP"))
+    );
+    ok(
+      op("mP").head === "You owe Maya " + tk(55000) &&
+        J(op("mP").boxes.map(b => [b.cap, b.val])) ===
+          J([
+            ["Paid back", tk(5000)],
+            ["Transfer charge", tk(200)],
+            ["Left after", op("mP").boxes[2] && op("mP").boxes[2].val],
+          ]) &&
+        J(op("mP").perRow) === J([2, 1]),
+      "loan payment opened: the loan's box, Paid back ৳5,000.00 | Transfer charge ৳200.00, then Left after " +
+        J(op("mP"))
+    );
+    // paid back a loan, covering its charges: −৳1,100.00 / incl. ৳100.00 charges; opened Charges, counted as spending
+    ok(
+      row("sP").amt === tk(1100, "-") && J(row("sP").small) === J(["incl. " + tk(100) + " charges"]),
+      "loan payment covering its charges " + J(row("sP"))
+    );
+    ok(
+      op("sP").head === "Cleared" &&
+        J(op("sP").boxes.map(b => b.cap)) === J(["Charges", "Left after"]) &&
+        bx(op("sP"), "Charges").val === tk(100) &&
+        bx(op("sP"), "Charges").sub === "counted as spending",
+      "… opened: Charges ৳100.00, counted as spending · Left after " + J(op("sP"))
+    );
+    // lent: −৳1,000.00 / + ৳100.00 transfer charge (the extra moves no money); opened: chips in Rafi's box
+    ok(
+      row("rD").amt === tk(1000, "-") && J(row("rD").small) === J(["+ " + tk(100) + " transfer charge"]),
+      "lend row: −৳1,000.00 / + ৳100.00 transfer charge, no extra " + J(row("rD"))
+    );
+    ok(
+      op("rD").head === "Rafi owes you " + tk(1250) &&
+        J(op("rD").foot) === J([tk(0) + " of " + tk(1250) + " back"]) &&
+        J(op("rD").chips) ===
+          J([
+            ["Lent", tk(1000)],
+            ["Transfer charge", tk(100)],
+            ["Extra", tk(150)],
+          ]) &&
+        op("rD").chipsOut === 0,
+      "lend opened: Rafi owes you ৳1,250.00, ৳0.00 of ৳1,250.00 back, chips Lent · Transfer charge · Extra in his box " +
+        J(op("rD"))
+    );
+    ok(
+      J(op("rD").boxes.map(b => [b.cap, b.val])) === J([["Left after", tk(18900)]]) && /in Bkash/.test(op("rD").text),
+      "… then only Left after ৳18,900.00 in Bkash " + J(op("rD").boxes)
+    );
+    // borrowed: +৳1,000.00 with no small line; opened: chips Borrowed · Charges
+    ok(
+      row("sD").amt === tk(1000, "+") && !row("sD").small.length,
+      "borrow row: +৳1,000.00, no small line " + J(row("sD"))
+    );
+    ok(
+      J(op("sD").chips) ===
+        J([
+          ["Borrowed", tk(1000)],
+          ["Charges", tk(100)],
+        ]),
+      "borrow opened: chips Borrowed · Charges " + J(op("sD").chips)
+    );
+    // a plain draw keeps its box without chips
+    ok(
+      !op("jD").chips.length || op("jD").chips.length > 1,
+      "a draw's chips only when it has parts " + J(op("jD").chips)
+    );
+    // a lending paid back, covering its extra: +৳1,250.00 / incl. ৳150.00 extra, in green; opened Extra +৳150.00
+    const rp = r2.rows.rP || {},
+      rpo = r2.open.rP || { boxes: [] };
+    ok(
+      rp.amt === tk(1250, "+") && J(rp.small) === J(["incl. " + tk(150) + " extra"]) && rp.green[0] === true,
+      "payback covering the extra: +৳1,250.00 / incl. ৳150.00 extra, green " + J(rp)
+    );
+    ok(
+      rpo.head === "Cleared" &&
+        J(rpo.boxes.map(b => b.cap)) === J(["Extra", "Left after"]) &&
+        bx(rpo, "Extra").val === tk(150, "+") &&
+        bx(rpo, "Extra").green &&
+        bx(rpo, "Extra").sub === "counted as income" &&
+        J(rpo.perRow) === J([2]),
+      "… opened: Extra +৳150.00 (green), counted as income · Left after " + J(rpo)
+    );
+    // a lending paid back with a tip: +৳3,000.00 / + ৳150.00 extra, green; opened Got back | Extra, then Left after
+    ok(
+      row("tP").amt === tk(3000, "+") && J(row("tP").small) === J(["+ " + tk(150) + " extra"]) && row("tP").green[0],
+      "payback with a tip " + J(row("tP"))
+    );
+    ok(
+      J(op("tP").boxes.map(b => [b.cap, b.val])) ===
+        J([
+          ["Got back", tk(3000)],
+          ["Extra", tk(150, "+")],
+          ["Left after", (op("tP").boxes[2] || {}).val],
+        ]) &&
+        bx(op("tP"), "Extra").sub === "counted as income" &&
+        bx(op("tP"), "Extra").green,
+      "… opened: Got back ৳3,000.00 · Extra +৳150.00 counted as income · Left after " + J(op("tP").boxes)
+    );
+    // a lending paid back in part, before the extra: +৳500.00, no small line; the quiet line in the loan's box
+    ok(row("nP").amt === tk(500, "+") && !row("nP").small.length, "part payback: +৳500.00 alone " + J(row("nP")));
+    ok(
+      op("nP").head === "Nila owes you " + tk(750) &&
+        J(op("nP").foot) ===
+          J([
+            tk(500) + " of " + tk(1250) + " back",
+            "Left: " + tk(600) + " of the money, then the " + tk(150) + " extra",
+          ]),
+      "… opened: Nila owes you ৳750.00, ৳500.00 of ৳1,250.00 back, Left: ৳600.00 of the money, then the ৳150.00 extra " +
+        J(op("nP"))
+    );
+    ok(
+      J(op("lP").foot.slice(1)) === J(["Left: " + tk(600) + " of the money, then the " + tk(100) + " charges"]),
+      "a loan paid back in part: Left: ৳600.00 of the money, then the ৳100.00 charges " + J(op("lP").foot)
+    );
+    // a lending paid back, older paid fee: +৳3,000.00 / − ৳10.00 charge; opened Got back | Charge
+    ok(
+      row("oP").amt === tk(3000, "+") && J(row("oP").small) === J(["− " + tk(10) + " charge"]) && !row("oP").green[0],
+      "payback with an older paid fee " + J(row("oP"))
+    );
+    ok(
+      J(
+        op("oP")
+          .boxes.slice(0, 2)
+          .map(b => [b.cap, b.val])
+      ) ===
+        J([
+          ["Got back", tk(3000)],
+          ["Charge", tk(10)],
+        ]),
+      "… opened: Got back ৳3,000.00 · Charge ৳10.00 " + J(op("oP").boxes)
+    );
+    // written off with all the money back but the extra: what is unpaid, never "Cleared"
+    const wo = rowBook(false);
+    wo.txns.push(x("rW", 800, M5(8), "loan", 1100, "k", { dir: "in", loan: "R" }));
+    wo.loans.find(l => l.id === "R").status = "writeoff";
+    const w = (await histLook(wo, {}, ["rW"])).open.rW || {};
+    ok(
+      w.head === "Rafi owes you " + tk(150) && J(w.foot) === J([tk(1100) + " of " + tk(1250) + " back"]),
+      "written off with only the extra unpaid: Rafi owes you ৳150.00, ৳1,100.00 of ৳1,250.00 back " + J(w)
+    );
+    // never a total beside one of its parts
+    const all = Object.values(r.open)
+      .concat(Object.values(r2.open))
+      .map(o => o.text)
+      .join(" | ");
+    ok(!/Paid in all|Reached you/.test(all), "no Paid in all or Reached you anywhere");
+    ok(
+      !/fee\b/i.test(
+        Object.values(r.rows)
+          .map(x => x.small.join(" "))
+          .join(" ")
+      ),
+      "no row says fee"
+    );
+  } catch (e) {
+    ok(false, "History's rows: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 21. History's headings and filters
+  try {
+    const may = "May 2026";
+    const view = f => histLook(rowBook(true), f);
+    const d = await view({}),
+      tk = tkOf(d),
+      monOf = r => (r.mon.find(m => m[0] === may) || [])[1],
+      dayOf = (r, n) => (r.day.find(x => x[0] === r.dayTitle[n]) || [])[1];
+    ok(J(monOf(d)) === J([tk(300, "+"), tk(1490, "-")]), "default: +৳300.00 received, −৳1,490.00 spent " + J(monOf(d)));
+    const rafi = await view({ kind: "lend", who: "Rafi" });
+    ok(
+      J(monOf(rafi)) === J([tk(1250, "+"), tk(1100, "-"), "Extras " + tk(150)]),
+      "Lent, Rafi: +৳1,250.00 / −৳1,100.00 / Extras ৳150.00 " + J(monOf(rafi))
+    );
+    ok(
+      J(dayOf(rafi, 8)) === J([tk(1250, "+"), "Extras " + tk(150)]) && J(dayOf(rafi, 3)) === J([tk(1100, "-")]),
+      "… the days: +৳1,250.00 / Extras ৳150.00 and −৳1,100.00 " + J(rafi.day)
+    );
+    const lent = await view({ kind: "lend" });
+    ok(
+      J(monOf(lent)) === J([tk(7900, "+"), tk(12720, "-"), "Extras " + tk(300), "Charges " + tk(30)]),
+      "Lent: back with the extras, lent with the transfer charges, Extras, and Charges (Joy's written-off ৳20.00, Ona's " +
+        "older ৳10.00) " +
+        J(monOf(lent))
+    );
+    const bor = await view({ kind: "borrow" });
+    ok(
+      J(monOf(bor)) === J([tk(62000, "+"), tk(6500, "-"), "Charges " + tk(300)]),
+      "Borrowed: +৳62,000.00 / −৳6,500.00 / Charges ৳300.00 (charges paid back and transfer charges) " + J(monOf(bor))
+    );
+    const xf = await view({ kind: "xfer" });
+    ok(
+      J(monOf(xf)) === J(["Transferred " + tk(1000), "Charges " + tk(10)]),
+      "Transfers: Transferred ৳1,000.00 / Charges ৳10.00 " + J(monOf(xf))
+    );
+    const sp = await view({ kind: "out" });
+    ok(
+      J(Object.keys(sp.rows).sort()) === J(["jD", "mP", "oP", "pE", "sP", "tX"]) &&
+        J(monOf(sp)) === J([tk(1490, "-")]) &&
+        monOf(sp)[0] === monOf(d)[1],
+      "Spent: the entries carrying spending, its heading the default view's spent " +
+        J([Object.keys(sp.rows), monOf(sp)])
+    );
+    const rc = await view({ kind: "in" });
+    ok(
+      J(Object.keys(rc.rows).sort()) === J(["rP", "tP"]) && J(monOf(rc)) === J([tk(300, "+")]),
+      "Received: the paybacks with extras, counting only the extras " + J([Object.keys(rc.rows), monOf(rc)])
+    );
+    const food = await view({ cat: "food" });
+    ok(J(monOf(food)) === J([tk(1150, "-")]), "Eating out counts ৳1,150.00 " + J(monOf(food)));
+    const bothSay = await page.evaluate(() => [
+      T("history.words.charges", { amount: "X" }),
+      T("history.words.extras", { amount: "X" }),
+    ]);
+    ok(J(bothSay) === J(["Charges X", "Extras X"]), "the words lines' texts " + J(bothSay));
+    /* credit from an earlier payment that covers a later draw's extra counts on that draw's day: under every filter
+       that keeps the payment, that day has its heading */
+    const credit = {
+      ...rowBook(false),
+      txns: [
+        x("aD1", 100, M5(2), "loan", 500, "k", { dir: "out", loan: "A", principal: true, onTop: 50 }),
+        x("aP", 200, M5(4), "loan", 1000, "k", { dir: "in", loan: "A", note: "cash back" }),
+        x("aD2", 300, M5(20), "loan", 400, "k", { dir: "out", loan: "A", principal: true, onTop: 40 }),
+      ],
+      loans: [loanOf("A", "lend", "Ana", "k", M5(2))],
+    };
+    for (const [tag, f] of [
+      ["Received", { kind: "in" }],
+      ["Bkash", { acc: "k" }],
+      ["a search", { q: "cash" }],
+    ]) {
+      const c = await histLook(credit, f);
+      ok(
+        J(dayOf(c, 20)) === J([tk(40, "+")]) && J(dayOf(c, 4)) === J([tk(50, "+")]) && J(monOf(c)) === J([tk(90, "+")]),
+        tag + ": the extra covered by credit has its day's heading " + J([c.day, c.mon])
+      );
+    }
+  } catch (e) {
+    ok(false, "History's headings: " + e.message.split("\n")[0]);
+  }
+
+  // ---- 22. Search: a number finds the figure a row or its opened part shows; more and less than, the row's figure
+  try {
+    const hits = async f => Object.keys((await histLook(rowBook(true), f)).rows).sort();
+    const h1150 = await hits({ q: "1150" });
+    ok(h1150.includes("pE"), "“1150” finds the purchase by its row's total " + J(h1150));
+    const h100 = await hits({ q: "100" });
+    ok(h100.includes("rD"), "“100” finds Rafi's lend by its chip " + J(h100));
+    const h150 = await hits({ q: "150" });
+    ok(
+      ["rD", "nD", "pE", "rP", "tP"].every(id => h150.includes(id)),
+      "“150” finds the extras (chips, covered, tipped) and the charge " + J(h150)
+    );
+    const more = await hits({ q: ">1100" }),
+      less = await hits({ q: "<1100" });
+    ok(
+      more.includes("pE") && more.includes("rP") && !more.includes("rD") && !more.includes("sP"),
+      "“>1100” compares the row's figure (৳1,150.00, not ৳1,000.00) " + J(more)
+    );
+    ok(!less.includes("pE") && less.includes("rD"), "“<1100” too " + J(less));
+    const gt = await hits({ amt: "gt:1100" }),
+      lt = await hits({ amt: "lt:1100" }),
+      eq = await hits({ amt: "eq:1150:1151" });
+    ok(gt.includes("pE") && !lt.includes("pE") && eq.includes("pE"), "the amount filters too " + J([gt, lt, eq]));
+    const sugs = await page.evaluate(o => {
+      const keep = S;
+      try {
+        S = migrate(o);
+        RBC = LPC = null;
+        return sugCount({ ...histBlank(), q: "1150" }, { period: "all" });
+      } finally {
+        S = keep;
+        RBC = LPC = null;
+      }
+    }, rowBook(true));
+    ok(sugs === h1150.length, "the suggestion's count follows the rows " + J([sugs, h1150.length]));
+  } catch (e) {
+    ok(false, "Search: " + e.message.split("\n")[0]);
   }
 
   ok(errors.length === 0, "no page errors " + J(errors));

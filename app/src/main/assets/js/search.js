@@ -243,21 +243,40 @@ function srCached(t) {
   return c;
 }
 const srFolded = t => srCached(t).texts;
-/* an entry is found by its own words and amounts, or by its fee's (a fee has no row of its own: it is shown inside its
-   transfer or payment, so that is the hit, listed once); ">50" and "<50" compare only the entry's own amount */
+/* The figures a number finds an entry by (docs/specs/charges.md, "Search"): what its row and its opened part show of it,
+   its own amounts (a transfer: what was sent and what arrived), its add-on's (a charge, a tip, a lend's transfer
+   charge), a purchase's total with its charge, a draw's amount on top (a chip) and what a payment covered on top (with
+   a tip, the Extra box's sum). srRowFigs: the row's figure (a purchase: with its charge), which "more than" and "less
+   than" compare. */
+function srRowFigs(t) {
+  const a = addOnOf(t);
+  return [t.type === "expense" && a && a.type === "expense" ? rnd(t.amount + a.amount) : t.amount, t.toAmount].filter(
+    v => v != null
+  );
+}
+function srFigs(t) {
+  const a = addOnOf(t),
+    out = srRowFigs(t).concat(t.amount);
+  if (a) out.push(a.amount);
+  if (t.type === "loan" && t.principal && t.onTop) out.push(t.onTop);
+  const top = t.type === "loan" && !t.principal ? topPaidOf(t.id) : 0;
+  if (top) out.push(top, rnd(top + (a && a.type === "income" ? a.amount : 0)));
+  return out;
+}
+/* an entry is found by its own words and figures, or by its add-on's words (an add-on has no row of its own: it is
+   shown inside its entry, so that is the hit, listed once); ">50" and "<50" compare the row's figure */
 function srEntryHit(t, q, fuzzy) {
-  const fee = t.feeId && entry(t.feeId),
-    one = (x, w, n, c) => {
-      if (c) return [x.amount, x.toAmount].some(a => a != null && (c[0] === ">" ? a > rnd(n.lo) : a < rnd(n.lo)));
-      if (n && [x.amount, x.toAmount].some(a => a != null && a >= n.lo - 1e-9 && a < n.hi)) return true;
+  const fee = addOnOf(t),
+    words = (x, w) => {
       const tx = srFolded(x);
       return tx.some((s, i) => srHitFolded(s, tx.words[i], w, fuzzy));
     };
   return q.every(w => {
     const c = /^[<>]/.test(w) ? w : "", // ">50" / "<50": more / less than, as the suggestion
       n = srNum(c ? w.slice(1) : w);
-    // more / less than: the entry's own amount only
-    return c ? one(t, w, n, c) : one(t, w, n) || (fee && one(fee, w, n));
+    if (c) return srRowFigs(t).some(a => (c[0] === ">" ? a > rnd(n.lo) : a < rnd(n.lo)));
+    if (n && srFigs(t).some(a => a >= n.lo - 1e-9 && a < n.hi)) return true;
+    return words(t, w) || (!!fee && words(fee, w));
   });
 }
 /* ---- the payee and amount filters of History (`HF.pay`, `HF.amt`) */
@@ -277,14 +296,13 @@ function srPayName(pay) {
   });
   return i < 0 || !best ? "" : best.payee.trim();
 }
-/* "eq:lo:hi" is lo up to but not including hi, "gt:n" more than n, "lt:n" less than n; an entry counts by its own
-   amount (a transfer: the amount sent or received) */
+/* "eq:lo:hi" is lo up to but not including hi, "gt:n" more than n, "lt:n" less than n; as a typed number: an amount
+   finds any figure of the entry (srFigs), more and less than compare its row's (srRowFigs) */
 function srAmtHit(t, amt) {
-  const p = amt.split(":"),
-    v = [t.amount, t.toAmount].filter(a => a != null);
-  if (p[0] === "eq") return v.some(a => a >= +p[1] - 1e-9 && a < +p[2]);
-  if (p[0] === "gt") return v.some(a => a > +p[1]);
-  if (p[0] === "lt") return v.some(a => a < +p[1]);
+  const p = amt.split(":");
+  if (p[0] === "eq") return srFigs(t).some(a => a >= +p[1] - 1e-9 && a < +p[2]);
+  if (p[0] === "gt") return srRowFigs(t).some(a => a > +p[1]);
+  if (p[0] === "lt") return srRowFigs(t).some(a => a < +p[1]);
   return true;
 }
 /* the chip's words: "$50.00 to $50.99", "More than $50.00", "Less than $50.00". In the notebook's currency when every

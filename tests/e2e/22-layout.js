@@ -227,6 +227,7 @@ function inspect() {
       e.scrollHeight > e.clientHeight + 2 &&
       s.overflowY === "hidden" &&
       !/-webkit-box/.test(s.display) &&
+      !(s.webkitLineClamp && s.webkitLineClamp !== "none") && // clamped lines end in "…" (newer Chrome: flow-root)
       e.clientHeight > 0 &&
       s.whiteSpace !== "nowrap"
     )
@@ -740,6 +741,68 @@ function inspect() {
         if (o) o.scrollIntoView({ block: "center" });
       })
     );
+    /* charges and extras (docs/specs/charges.md, "History rows"): a lend with a transfer charge and an extra (its chips
+       in the loan's box), its part payback (the quiet line), a payback with a tip, a purchase with its charge, a loan
+       payment covering its charges with a transfer charge; then the Lent and Borrowed headings with their words */
+    await page.evaluate(() => {
+      const d = today(),
+        e = (id, type, amount, account, more) =>
+          S.txns.push({ id, ts: 9000 + S.txns.length, date: d, type, amount, account, note: "", ...more });
+      S.loans.push({
+        id: "L9",
+        kind: "lend",
+        person: "Maximiliane Hoffmann-Lindqvist",
+        account: "c",
+        date: d,
+        note: "",
+        status: "open",
+      });
+      e("c9d", "loan", 1000, "c", { dir: "out", loan: "L9", principal: true, onTop: 150, feeId: "c9c" });
+      e("c9c", "loan", 100, "c", { dir: "out", loan: "L9", principal: true, feeOf: "c9d" });
+      e("c9p", "loan", 500, "c", { dir: "in", loan: "L9" });
+      e("c9e", "expense", 1000, "b", { cat: "food", payee: "Restaurant am Marktplatz", feeId: "c9x" });
+      e("c9x", "expense", 150, "b", { cat: "food", feeOf: "c9e" });
+      e("c9t", "loan", 300, "c", { dir: "in", loan: "L1", feeId: "c9tt" });
+      e("c9tt", "income", 25, "c", { cat: "otherin", feeOf: "c9t" });
+      S.txns.find(t => t.loan === "L2" && t.principal).onTop = 100;
+      e("c9b", "loan", 2600, "s", { dir: "out", loan: "L2", feeId: "c9bc" });
+      e("c9bc", "expense", 5, "s", { cat: "fees", feeOf: "c9b" });
+      save();
+    });
+    /* each row opened at the top of History, filtered to its loan or category so that it is in view unscrolled */
+    const openRow = (id, f) => () =>
+      page.evaluate(
+        ([id, f]) => {
+          openHistory(f);
+          V.open = id;
+          render();
+        },
+        [id, f]
+      );
+    const maxi = { who: "Maximiliane Hoffmann-Lindqvist" };
+    for (const [label, id, f] of [
+      ["history-open-lend-chips", "c9d", maxi],
+      ["history-open-part-payback", "c9p", maxi],
+      ["history-open-tip", "c9t", { who: "Alexandra Johnson-Smith" }],
+      ["history-open-purchase-charge", "c9e", { cat: "food" }],
+      ["history-open-loan-charges", "c9b", { who: "Sam" }],
+    ])
+      await shot(label, openRow(id, f));
+    await shot(
+      "history-lent-extras",
+      ev(() => openHistory({ kind: "lend" }))
+    );
+    await shot(
+      "history-borrowed-charges",
+      ev(() => openHistory({ kind: "borrow" }))
+    );
+    await page.evaluate(() => {
+      S.txns = S.txns.filter(t => !/^c9/.test(t.id));
+      S.loans = S.loans.filter(l => l.id !== "L9");
+      delete S.txns.find(t => t.loan === "L2" && t.principal).onTop;
+      histClear();
+      save();
+    });
     await shot(
       "settings",
       ev(() => {

@@ -114,8 +114,8 @@ const ok = (c, m) => {
   await settle();
   const row = (await page.textContent(`[data-v="${tr.id}"]`)).replace(/\s+/g, " ");
   ok(
-    /City Bank.*→.*Brac Joint/.test(row) && /\+ .*10\.00 fee/.test(row) && !row.includes("Food"),
-    "History: the transfer row, with its fee under the amount: " + row
+    /City Bank.*→.*Brac Joint/.test(row) && /\+ .*10\.00 transfer charge/.test(row) && !row.includes("Food"),
+    "History: the transfer row, with its transfer charge under the amount: " + row
   );
   ok(!(await page.$(`[data-v="${fee.id}"]`)), "the fee has no row of its own");
   const day = (await page.textContent("#app .day")).replace(/\s+/g, " ");
@@ -285,7 +285,7 @@ const ok = (c, m) => {
     " "
   );
   ok(
-    /City Bank.*→.*Brac Joint/.test(upRow) && /\+ .*fee/.test(upRow) && !upRow.includes("Food"),
+    /City Bank.*→.*Brac Joint/.test(upRow) && /\+ .*transfer charge/.test(upRow) && !upRow.includes("Food"),
     "after the update, History: " + upRow
   );
   ok((await page.textContent("#app .day")).includes("60.00"), "the day's spent is 50 and the 10 fee");

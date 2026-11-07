@@ -29,7 +29,7 @@ function loanEntries(id) {
    the last money paid back on it. rem[id] is what is still out of each draw (money and top), nextDue the earliest due
    date still unpaid, dueAmt what is due by then (or by today); money / top and moneyLeft / topLeft the loan's, and
    topPaid[payment id] the amount on top each payment covered (income on a lending, spending on a loan: loanParts()),
-   topOn the same by day, [payment, day, amount]: the payment's day, or the draw's when credit from an earlier
+   topOn the same by day, [payment, day, amount, draw]: the payment's day, or the draw's when credit from an earlier
    payment covers a later draw (nothing is earned or owed on top before the draw). unpaid is everything still owed.
    Written off or forgiven, left is the money still unpaid (the top still unpaid is let go), and a lending's
    feeLeft[draw id] its transfer charge still unpaid (spending, on the draw's day). A loan with no transfer
@@ -79,7 +79,7 @@ function loanInfo(l) {
           last = topOn[topOn.length - 1];
         topPaid[p.id] = rnd((topPaid[p.id] || 0) + x);
         if (last && last[0] === p && last[1] === day) last[2] = rnd(last[2] + x);
-        else topOn.push([p, day, x]);
+        else topOn.push([p, day, x, t]);
       }
       if (f[1] <= 0) from.shift();
     }

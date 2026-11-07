@@ -174,7 +174,7 @@ const ok = (c, m) => {
     );
     ok(!r.xrows.split(",").includes("fx") && r.xrows.split(",").includes("t2"), "histRows drops the fee: " + r.xrows);
     ok(
-      JSON.stringify(r.xwords) === '["Transferred $240.00","Fees $2.00"]',
+      JSON.stringify(r.xwords) === '["Transferred $240.00","Charges $2.00"]',
       "transfer words: " + JSON.stringify(r.xwords)
     );
     ok(
@@ -203,8 +203,8 @@ const ok = (c, m) => {
       "lend and borrow, in and out: " + JSON.stringify(back)
     );
     ok(
-      JSON.stringify(r.borrow) === '["$600.00 borrowed","$100.00 paid back"]',
-      "borrowed words, no fees line: " + JSON.stringify(r.borrow)
+      JSON.stringify(r.borrow) === '["$600.00 borrowed","$100.00 paid back","Charges $1.00"]',
+      "borrowed words, the payment's transfer charge as Charges: " + JSON.stringify(r.borrow)
     );
     ok(JSON.stringify(r.fix) === '["$10.00 added","$4.00 taken off"]', "fix words: " + JSON.stringify(r.fix));
     ok(
@@ -343,23 +343,23 @@ const ok = (c, m) => {
     // the Spent view: every charge adds to spent too, as on the default view
     h = await heads("out");
     ok(J(h.mon[0].lines) === J(["−$47.75", "−€10.00"]), "Spent: the transfer's fee too " + J(h.mon[0].lines));
-    // Transfers: words, Fees only when there are fees
+    // Transfers: words, Charges only when there are charges
     h = await heads("xfer");
     ok(
-      J(h.mon[0].lines) === J(["Transferred $200.00", "Fees $2.50"]) && h.mon[0].title === "June 2026",
-      "Transfers month, with fees: " + J(h.mon[0].lines)
+      J(h.mon[0].lines) === J(["Transferred $200.00", "Charges $2.50"]) && h.mon[0].title === "June 2026",
+      "Transfers month, with charges: " + J(h.mon[0].lines)
     );
-    ok(J(h.mon[1].lines) === J(["Transferred $50.00"]), "Transfers month without fees: " + J(h.mon[1].lines));
+    ok(J(h.mon[1].lines) === J(["Transferred $50.00"]), "Transfers month without charges: " + J(h.mon[1].lines));
     ok(
-      J(h.day[0].lines) === J(["Transferred $200.00", "Fees $2.50"]) && h.day.length === 2,
-      "Transfers day, with fees: " + J(h.day[0].lines)
+      J(h.day[0].lines) === J(["Transferred $200.00", "Charges $2.50"]) && h.day.length === 2,
+      "Transfers day, with charges: " + J(h.day[0].lines)
     );
-    ok(J(h.day[1].lines) === J(["Transferred $50.00"]), "Transfers day without fees: " + J(h.day[1].lines));
+    ok(J(h.day[1].lines) === J(["Transferred $50.00"]), "Transfers day without charges: " + J(h.day[1].lines));
     ok(
-      h.mon[0].label === "June 2026, Transferred $200.00, Fees $2.50",
+      h.mon[0].label === "June 2026, Transferred $200.00, Charges $2.50",
       "the Transfers month reads in words: " + h.mon[0].label
     );
-    ok(h.fee === 2, "the Fees lines exist only on Transfers: " + h.fee);
+    ok(h.fee === 2, "the Charges lines of these Transfers: " + h.fee);
     // lent and borrowed: the rows' signs
     h = await heads("lend");
     ok(J(h.mon[0].lines) === J(["+$20.00", "−$50.00"]), "Lent month: got back +, lent −: " + J(h.mon[0].lines));
@@ -1111,10 +1111,13 @@ const ok = (c, m) => {
     );
     ok(rb.noBal, "no running balance on the row");
     const tr = await text(row("tr1"));
-    ok(tr.includes("+ $2.00 fee") && tr.includes("$200.00"), "a transfer's fee is under its amount: " + tr);
+    ok(
+      tr.includes("+ $2.00 transfer charge") && tr.includes("$200.00"),
+      "a transfer's charge is under its amount: " + tr
+    );
     ok(/Everyday\s*→\s*Cash/.test(tr), "a transfer reads From → To: " + tr);
     const pr = await text(row("pay"));
-    ok(pr.includes("+ $1.50 fee"), "a loan payment's fee is under its amount: " + pr);
+    ok(pr.includes("+ $1.50 transfer charge"), "a loan payment's transfer charge is under its amount: " + pr);
     const cf = await text(row("coffee"));
     const cs = await page.textContent(row("coffee") + " .s");
     ok(cs.replace(/\s+/g, " ").trim() === "Eating out · Cash", "category and account on the second line: " + cs);
@@ -1159,7 +1162,12 @@ const ok = (c, m) => {
       xo.boxes.filter(b => b.includes("Left after")).length === 2,
       "a transfer: a Left after box for each account: " + xo.boxes
     );
-    ok(xo.text.includes("Paid in all") && xo.text.includes("$202.00"), "Paid in all $202.00: " + xo.text);
+    ok(
+      /^Sent ?\$200\.00$/.test(xo.boxes[0]) &&
+        /^Transfer charge ?\$2\.00$/.test(xo.boxes[1]) &&
+        !xo.text.includes("Paid in all"),
+      "Sent $200.00 | Transfer charge $2.00, no total: " + xo.boxes
+    );
     ok(
       xo.boxes.some(b => b.includes("$5,435.50") && b.includes("in Everyday")),
       "the paying account's balance is after its fee ($5,050 + $600 draw - $12.50 cinema - $200 - $2): " + xo.boxes
@@ -1344,7 +1352,10 @@ const ok = (c, m) => {
     /* more kinds of rows */
     await page.click(row("got"));
     const got = await txt("#app .txo");
-    ok(got.includes("Reached you"), "an incoming loan payment with a fee shows Reached you: " + got);
+    ok(
+      /Got back ?\$30\.00/.test(got) && /Charge ?\$0\.50/.test(got) && !got.includes("Reached you"),
+      "an incoming loan payment with an older paid fee: Got back | Charge, no total: " + got
+    );
     await page.click(row("lend"));
     const lent = await txt("#app .txo");
     ok(lent.includes("Due"), "a draw with a due date still owed shows Due: " + lent);

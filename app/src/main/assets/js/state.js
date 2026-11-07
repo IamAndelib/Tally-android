@@ -691,19 +691,38 @@ function runBal() {
    income; a loan's charges: spending, in Charges) on the payment's day (a later draw's, covered by credit, on the
    draw's day: topOn), and a written-off lending's transfer charge
    still unpaid (spending, in Charges) on its draw's day. Each is {of: the entry whose row it is in, date, cur (that
-   entry's account's), amount, as: "income" | "spend"}. Cached until the next render, as runBal(). */
+   entry's account's), amount, as: "income" | "spend", and at: the draw it is dated on, only when that isn't its payment's
+   day (credit), so that History shows a heading there}. Cached until the next
+   render, as runBal(). */
 let LPC = null;
 function loanParts() {
   if (LPC) return LPC;
   const out = [],
-    add = (t, date, i, amount, as) =>
-      out.push({ of: t.id, date, cur: (acc(t.account) || {}).currency || i.cur, amount, as });
+    add = (t, date, i, amount, as, more) =>
+      out.push({ of: t.id, date, cur: (acc(t.account) || {}).currency || i.cur, amount, as, ...more });
   S.loans.forEach(l => {
     const i = loanInfo(l);
-    i.topOn.forEach(([p, day, n]) => n > 0 && add(p, day, i, n, l.kind === "lend" ? "income" : "spend"));
+    i.topOn.forEach(
+      ([p, day, n, d]) =>
+        n > 0 && add(p, day, i, n, l.kind === "lend" ? "income" : "spend", day === p.date ? {} : { at: d.id })
+    );
     i.draws.forEach(t => i.feeLeft[t.id] > 0 && add(t, t.date, i, i.feeLeft[t.id], "spend"));
   });
   return (LPC = out);
+}
+/* what loan payment id covered of its loan's amounts on top (loanInfo()'s topPaid: a lending's extra or a loan's
+   charges paid back), 0 for any other entry; from loanParts(), so worked out once per render */
+let TOPC = null;
+function topPaidOf(id) {
+  const parts = loanParts();
+  if (!TOPC || TOPC.parts !== parts) {
+    TOPC = { parts, m: new Map() };
+    parts.forEach(p => {
+      const t = entry(p.of);
+      if (t && !t.principal) TOPC.m.set(p.of, rnd((TOPC.m.get(p.of) || 0) + p.amount));
+    });
+  }
+  return TOPC.m.get(id) || 0;
 }
 /* Account balances from starting balance + every entry. With `before`, only entries dated earlier (start of that day). */
 function balances(before) {

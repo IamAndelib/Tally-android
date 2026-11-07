@@ -160,7 +160,7 @@ const ok = (c, m) => {
   const row = (await page.textContent(`[data-v="${p1.id}"]`)).replace(/\s+/g, " ");
   ok(
     /paid back Sam/i.test(row) &&
-      /\+ .*20\.00 fee/.test(row) &&
+      /\+ .*20\.00 transfer charge/.test(row) &&
       !/Food/.test(row) &&
       !(await page.$(`[data-v="${f1.id}"]`)),
     "History shows the payment with its fee under the amount, the fee no row: " + row
@@ -200,7 +200,10 @@ const ok = (c, m) => {
   });
   await settle();
   const gb = (await page.textContent(`[data-v="${p2.id}"]`)).replace(/\s+/g, " ");
-  ok(/Rina paid back/.test(gb) && /\+ .*15\.00 fee/.test(gb), "its History row, with the fee under the amount: " + gb);
+  ok(
+    /Rina paid back/.test(gb) && /− .*15\.00 charge/.test(gb),
+    "its History row, with the older paid fee as a charge under the amount: " + gb
+  );
   await page.evaluate(() => loanOpen("L"));
   await settle();
   await click('#sheet [data-act="loan-reopen"]');

@@ -1869,6 +1869,38 @@ mark.hl {
   background: var(--primary);
   border-radius: 4px;
 }
+/* a draw's own parts inside its loan's box (lend-refine): small outlined boxes, a label over a bold figure, that wrap
+   and grow with the text */
+.txo .lparts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.txo .lpart {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 4px 10px;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+.txo .lpc {
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+}
+.txo .lpv {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+.txo .lbox .lfoot + .lfoot {
+  margin-top: 4px;
+}
 .txo .acts {
   display: flex;
   flex-wrap: wrap;
@@ -1948,6 +1980,10 @@ mark.hl {
   font-weight: 400;
   font-size: 0.75em;
   color: var(--on-surface-variant);
+}
+/* an extra a payment brought (covered or on top): green, always with "+" or "incl." and the word "extra" */
+.tx .a small.xtra {
+  color: var(--got);
 }
 .tx .s .st {
   margin-right: 2px;

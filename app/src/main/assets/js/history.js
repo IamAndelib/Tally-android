@@ -1,7 +1,8 @@
 /*
  * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`: account, kind, then a
  * category, a person or a transfer's two sides), which entries they leave (`histList()`, `histMatch()`), which of those
- * are rows (`histRows()`: a fee is shown inside what it was charged on, never as a row), the totals in words
+ * are rows (`histRows()`: an add-on, a charge, a tip or a lend's transfer charge, is shown inside its entry, never as a
+ * row), the totals in words
  * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches.
@@ -41,10 +42,27 @@ function histCarries(t, kind) {
   const a = addOnOf(t);
   return (!!a && a.type === (kind === "out" ? "expense" : "income")) || HCARRY[kind].has(t.id);
 }
+/* The draws a worked-out part is dated on when that isn't its payment's day (credit covering a later draw's extra or
+   charges: loanParts()'s at), each with the payments whose parts they are: whatever keeps such a payment keeps that
+   draw too, so the day the part counts on is drawn, with its heading. Worked out once per loanParts(). */
+let HAT = null;
+function histAt(id) {
+  const parts = loanParts();
+  if (!HAT || HAT.parts !== parts) {
+    HAT = { parts, m: new Map() };
+    parts.forEach(p => p.at && HAT.m.set(p.at, (HAT.m.get(p.at) || []).concat(p.of)));
+  }
+  return HAT.m.get(id);
+}
 /* skip: "acc", "kind" or "sub" (category, person, sides) is left out, to count what an option would leave */
 function histMatch(t, f = HF, skip = "") {
   const host = histHost(t);
   if (host) return histMatch(host, f, skip);
+  if (histOwn(t, f, skip)) return true;
+  const of = histAt(t.id);
+  return !!of && of.some(id => !!entry(id) && histOwn(entry(id), f, skip));
+}
+function histOwn(t, f, skip) {
   if (skip !== "acc" && f.acc && t.account !== f.acc && t.to !== f.acc) return false;
   if (
     skip !== "kind" &&
@@ -72,12 +90,14 @@ function histRows(list) {
   return list.filter(t => !(t.feeOf && entry(t.feeOf)));
 }
 /* the totals of a list as lines, one per currency (by code) for each phrase of the kind shown, in the order they stack in a
-   heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only, Transfers).
-   By the counting rule: a charge is spending (inside "spent") on the default and Spent views, its own "fees" line
-   only on Transfers, and nowhere else (its row says it); a tip on a payback is received; a lend's transfer charge is
-   lent money. With span (the heading's first and last day), the parts of loans worked out as spending or received
-   (loanParts()) of those days whose entry the list's filters keep (histLoanParts()) count in "spent" and "received" too.
-   A phrase whose amount is 0 is left out. */
+   heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only).
+   By the counting rule (docs/specs/charges.md, "History headings and filters"): a charge is spending (inside "spent")
+   on the default and Spent views, and in words ("Charges") on Transfers, Lent and Borrowed; a tip on a payback is
+   received, and on Lent both back (with its payback) and in words ("Extras"); a lend's transfer charge is lent money.
+   With span (the heading's first and last day), the parts of loans worked out (loanParts()) of those days whose entry
+   the list's filters keep (histLoanParts()) count too: in "spent" and "received", or on Lent and Borrowed in words (an
+   extra paid back in "extras", charges paid back or a written-off transfer charge in "charges"). A phrase whose
+   amount is 0 is left out. */
 const HIST_TONE = {
   received: "in",
   gotBack: "in",
@@ -88,7 +108,8 @@ const HIST_TONE = {
   paidBack: "out",
   takenOff: "out",
   moved: "mv",
-  fees: "fee",
+  extras: "fee",
+  charges: "fee",
 };
 const HIST_CLS = { in: "hc-in", out: "hc-out", mv: "hc-mv", fee: "hc-fee" };
 function histLines(list, kind, span) {
@@ -97,10 +118,15 @@ function histLines(list, kind, span) {
     const m = sums[key] || (sums[key] = {});
     m[cur] = rnd((m[cur] || 0) + v);
   };
+  const words = kind === "xfer" || kind === "lend" || kind === "borrow";
   list.forEach(t => {
     const cur = (acc(t.account) || {}).currency || S.settings.cur;
     if (t.feeOf && t.type === "expense")
-      return kind === "xfer" ? add("fees", cur, t.amount) : !kind || kind === "out" ? add("spent", cur, t.amount) : 0;
+      return words ? add("charges", cur, t.amount) : !kind || kind === "out" ? add("spent", cur, t.amount) : 0;
+    if (t.feeOf && t.type === "income" && kind === "lend") {
+      add("gotBack", cur, t.amount);
+      return add("extras", cur, t.amount);
+    }
     if (isSpend(t)) add("spent", cur, t.amount);
     else if (t.type === "income") add("received", cur, t.amount);
     else if (t.type === "transfer") add("moved", cur, t.amount);
@@ -112,15 +138,18 @@ function histLines(list, kind, span) {
   });
   if (span)
     histLoanParts().forEach(
-      p => p.date >= span[0] && p.date <= span[1] && add(p.as === "spend" ? "spent" : "received", p.cur, p.amount)
+      p =>
+        p.date >= span[0] &&
+        p.date <= span[1] &&
+        add(p.as === "spend" ? (words ? "charges" : "spent") : words ? "extras" : "received", p.cur, p.amount)
     );
   const order = {
     "": ["received", "spent"],
     out: ["spent"],
     in: ["received"],
-    xfer: ["moved", "fees"],
-    lend: ["gotBack", "lent"],
-    borrow: ["borrowed", "paidBack"],
+    xfer: ["moved", "charges"],
+    lend: ["gotBack", "lent", "extras", "charges"],
+    borrow: ["borrowed", "paidBack", "charges"],
     fix: ["added", "takenOff"],
   }[kind || ""];
   const lines = [];
