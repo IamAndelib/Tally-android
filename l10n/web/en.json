@@ -609,7 +609,11 @@
       "w": "Open this week on Home",
       "m": "Open this month on Home",
       "y": "Open this year on Home"
-    }
+    },
+    "charges": "Charges",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "less than {{pct}}"
   },
   "search": {
     "title": "Search",

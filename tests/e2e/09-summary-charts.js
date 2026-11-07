@@ -27,7 +27,7 @@ const ok = (c, m) => {
         y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0")
       );
     };
-    return { t: f(0), d1: f(-1), d3: f(-3) };
+    return { t: f(0), d3: f(-3) };
   });
   await page.evaluate(d => {
     const f = n => {
@@ -66,16 +66,29 @@ const ok = (c, m) => {
       principal: true,
       note: "",
     });
+    /* a payback today with a ৳7.00 fee: a charge, in the grey Charges part */
     txns.push({
       id: "r1",
       ts: 1,
-      date: d.d1,
+      date: d.t,
       type: "loan",
       amount: 500,
       account: "k",
       dir: "in",
       loan: "L1",
       note: "",
+      feeId: "r1f",
+    });
+    txns.push({
+      id: "r1f",
+      ts: 2,
+      date: d.t,
+      type: "expense",
+      amount: 7,
+      account: "k",
+      cat: "fees",
+      note: "",
+      feeOf: "r1",
     });
     localStorage.setItem(
       "tally:v1",
@@ -138,6 +151,12 @@ const ok = (c, m) => {
   const home0 = await txt(".pnav .plabel");
   await tap("#ring .dwrap");
   await page.waitForTimeout(300);
+  /* today: its category, then the Charges line (the payback's fee), with no share on Days */
+  const dayRows = await page.$$eval("#sm .smtop .tx", e => e.map(x => x.querySelector(".d").textContent.trim()));
+  ok(
+    dayRows.length === 2 && dayRows[1] === "Charges" && !!(await page.$("#sm .smtop .tx:last-child .chdot")),
+    "days: the list ends with Charges, a grey dot for its emblem " + JSON.stringify(dayRows)
+  );
   ok(await page.evaluate(() => document.body.classList.contains("lock")), "page locked while the sheet is open");
   const c = await (await page.$("#sm .smchart")).boundingBox();
   const span0 = await txt("#sm .cal-h b");
@@ -207,7 +226,8 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="sm-mode"][data-v="m"]');
   const m = await page.evaluate(() => {
     const slices = document.querySelectorAll("#sm .smpie path, #sm .smpie circle").length,
-      rowsEl = [...document.querySelectorAll("#sm .smtop .tx")];
+      rowsEl = [...document.querySelectorAll("#sm .smtop .tx")],
+      paths = [...document.querySelectorAll("#sm .smpie path")];
     const pct = rowsEl.map(r => {
       const t = r.querySelector(".d .small");
       return t ? parseInt(t.textContent.replace("<", "")) : 0;
@@ -218,11 +238,17 @@ const ok = (c, m) => {
       sum: pct.reduce((a, b) => a + b, 0),
       label: document.querySelector("#sm .cal-h b").textContent,
       hub: !!document.querySelector("#sm .smpie .c, #sm .smpie circle[stroke]"),
+      lastFill: paths.length ? paths[paths.length - 1].getAttribute("fill") : "",
+      lastRow: rowsEl.length ? rowsEl[rowsEl.length - 1].querySelector(".d").textContent : "",
     };
   });
   ok(
     m.slices === m.rows && !m.hub && m.rows >= 5 && Math.abs(m.sum - 100) <= m.rows,
     "month pie: one slice per category, legend % ≈ 100, no hub " + JSON.stringify(m)
+  );
+  ok(
+    m.lastFill === "#7a8190" && /^Charges <1%$/.test(m.lastRow.trim()),
+    "month pie: the grey slice last; the list ends with Charges <1% " + JSON.stringify(m)
   );
   await page.screenshot({ path: OUT + "/months.png" });
   await tap('#sm [data-act="sm-nav"][data-v="-1"]');

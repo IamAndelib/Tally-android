@@ -603,7 +603,11 @@
       "w": "Buka minggu tersebut di Beranda",
       "m": "Buka bulan tersebut di Beranda",
       "y": "Buka tahun tersebut di Beranda"
-    }
+    },
+    "charges": "Biaya",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "kurang dari {{pct}}"
   },
   "search": {
     "title": "Cari",

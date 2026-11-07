@@ -94,16 +94,47 @@ function smBuckets() {
   });
   return out;
 }
-/* the categories of a set of spending (spendItems()), biggest first; CHARGES is in the totals, its own line comes with
-   the charges plan's Task 5 */
+/* the parts of a set of spending (spendItems()) as [id, amount]: its categories, biggest first, then CHARGES (the
+   charges outside purchases), whatever its size (docs/specs/charges.md, Summary) */
 function catSplit(list) {
   const m = {};
-  list.forEach(x => {
-    if (x.cat !== CHARGES) m[x.cat] = (m[x.cat] || 0) + x.amount;
-  });
+  list.forEach(x => (m[x.cat] = (m[x.cat] || 0) + x.amount));
   return Object.entries(m)
     .map(([k, v]) => [k, rnd(v)])
-    .sort((p, q) => q[1] - p[1]);
+    .filter(([k, v]) => k !== CHARGES || v > 0)
+    .sort((p, q) => (p[0] === CHARGES) - (q[0] === CHARGES) || q[1] - p[1]);
+}
+/* a part's name: a category's, or the word Charges (no category: no emblem, never renamed) */
+const partName = k => (k === CHARGES ? T("summary.charges") : catName(cat(k)));
+/* one line of Summary's list: the emblem (for Charges, a grey dot in its place), the name, its share on Months and
+   Year ("<1%"), a bar in the part's colour (sliceCol) and the amount. TalkBack hears it as one sentence, "Charges,
+   ৳158.00, less than 1%", so what is drawn is hidden from it. */
+function smRow([k, v], total, share) {
+  const name = partName(k),
+    amount = money(v, SM.cur),
+    p = (v / total) * 100,
+    small = p < 1,
+    pct = percent(small ? 1 : Math.round(p));
+  return (
+    '<div class="tx"><span class="vh">' +
+    esc(
+      share
+        ? T("summary.sayShare", { name, amount, share: small ? T("summary.under", { pct }) : pct })
+        : T("summary.say", { name, amount })
+    ) +
+    '</span><span class="smi" aria-hidden="true">' +
+    (k === CHARGES ? '<i class="chdot" style="background:' + CHARGES_C + '"></i>' : emblem(cat(k), "em")) +
+    '</span><span class="mid"><div class="d" dir="auto" aria-hidden="true">' +
+    esc(name) +
+    (share ? ' <span class="muted small">' + esc((small ? "<" : "") + pct) + "</span>" : "") +
+    '</div><span class="pbar"><span style="width:' +
+    p.toFixed(1) +
+    "%;background:" +
+    sliceCol(k) +
+    '"></span></span></span><span class="a" aria-hidden="true">' +
+    esc(amount) +
+    "</span></div>"
+  );
 }
 /* a month by category as a pie: category colours, true to size (a tiny share stays tiny), a hairline between slices.
    The names, shares and amounts are in the list under it, so the drawing is hidden from screen readers. */
@@ -117,9 +148,9 @@ function smPie(split, total) {
       '<circle cx="50" cy="50" r="' +
       RP +
       '" fill="' +
-      cat(split[0][0]).c +
+      sliceCol(split[0][0]) +
       '"><title>' +
-      esc(catName(cat(split[0][0]))) +
+      esc(partName(split[0][0])) +
       "</title></circle>";
   else if (!split.length) segs = '<circle cx="50" cy="50" r="' + RP + '" fill="var(--surface-highest)"/>';
   else
@@ -137,9 +168,9 @@ function smPie(split, total) {
         " 1 " +
         pt(a1) +
         'Z" fill="' +
-        cat(k).c +
+        sliceCol(k) +
         '" stroke="var(--surface-high, var(--surface))" stroke-width="0.6" stroke-linejoin="round"><title>' +
-        esc(catName(cat(k))) +
+        esc(partName(k)) +
         "</title></path>";
       at = a1;
     });
@@ -253,7 +284,13 @@ function drawSm() {
     cmp = T("summary." + (p === 0 ? "same" : p > 0 ? "up" : "down") + "." + SM.mode, { pct: percent(Math.abs(p)) });
   }
   const avg = SM.mode !== "d" && b.days > 0 && b.v ? T("summary.avg", { amount: money(rnd(b.v / b.days), cur) }) : "";
-  const top = M ? split : split.slice(0, 3);
+  /* Days and Weeks: the three top categories, then Charges; Months: all of them, then Charges */
+  const top = M
+    ? split
+    : split
+        .filter(p => p[0] !== CHARGES)
+        .slice(0, 3)
+        .concat(split.filter(p => p[0] === CHARGES));
   h +=
     '<div class="smd">' +
     (M ? "" : '<div class="muted small">' + esc(b.full) + "</div>") +
@@ -265,32 +302,7 @@ function drawSm() {
       .map(x => '<div class="muted small">' + esc(x) + "</div>")
       .join("") +
     "</div>";
-  if (top.length)
-    h +=
-      '<div class="list smtop">' +
-      top
-        .map(([k, v]) => {
-          const c = cat(k),
-            p = (v / b.v) * 100;
-          return (
-            '<div class="tx">' +
-            emblem(c, "em") +
-            '<span class="mid"><div class="d" dir="auto">' +
-            esc(catName(c)) +
-            (M
-              ? ' <span class="muted small">' + esc(p < 1 ? "<" + percent(1) : percent(Math.round(p))) + "</span>"
-              : "") +
-            '</div><span class="pbar"><span style="width:' +
-            p.toFixed(1) +
-            "%;background:" +
-            c.c +
-            '"></span></span></span><span class="a">' +
-            esc(money(v, cur)) +
-            "</span></div>"
-          );
-        })
-        .join("") +
-      "</div>";
+  if (top.length) h += '<div class="list smtop">' + top.map(x => smRow(x, b.v, M)).join("") + "</div>";
   else
     h +=
       '<div class="empty" style="padding:16px">' +
@@ -411,29 +423,7 @@ function drawSmYear(el) {
     "</div>";
   const split = catSplit(list);
   h += split.length
-    ? '<div class="list smtop">' +
-      split
-        .map(([k, v]) => {
-          const c = cat(k),
-            p = (v / tot) * 100;
-          return (
-            '<div class="tx">' +
-            emblem(c, "em") +
-            '<span class="mid"><div class="d" dir="auto">' +
-            esc(catName(c)) +
-            ' <span class="muted small">' +
-            esc(p < 1 ? "<" + percent(1) : percent(Math.round(p))) +
-            '</span></div><span class="pbar"><span style="width:' +
-            p.toFixed(1) +
-            "%;background:" +
-            c.c +
-            '"></span></span></span><span class="a">' +
-            esc(money(v, cur)) +
-            "</span></div>"
-          );
-        })
-        .join("") +
-      "</div>"
+    ? '<div class="list smtop">' + split.map(x => smRow(x, tot, true)).join("") + "</div>"
     : '<div class="empty" style="padding:16px">' + TH("summary.none.y", { year: y }) + "</div>";
   h += '<div class="gap"></div><button class="btn tonal" data-act="sm-open">' + TH("summary.open.y") + "</button>";
   el.innerHTML = h;

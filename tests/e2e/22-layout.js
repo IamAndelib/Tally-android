@@ -921,6 +921,20 @@ function inspect() {
           out.push("pie outside the sheet");
         if (p.querySelector(".c, circle[stroke]")) out.push("pie has a hub or ring stroke");
         if (!big || big.getBoundingClientRect().top < r.bottom - 1) out.push("total not under the pie");
+        /* today's transfer charge: the list ends with the Charges line (a grey dot in the emblem's place, inside its
+           row), and the pie with the grey slice */
+        const last = document.querySelector("#sm .smtop .tx:last-child"),
+          dot = last && last.querySelector(".smi .chdot"),
+          paths = p.querySelectorAll("path");
+        if (!dot) out.push("no Charges line at the end of the list");
+        else {
+          const d = dot.getBoundingClientRect(),
+            l = last.getBoundingClientRect();
+          if (d.left < l.left || d.right > l.right || d.top < l.top || d.bottom > l.bottom)
+            out.push("the Charges dot outside its row");
+        }
+        if (!paths.length || paths[paths.length - 1].getAttribute("fill") !== "#7a8190")
+          out.push("the pie doesn't end grey");
         return out;
       });
       if (pie.length) summary[tag + " summary-months pie"] = pie;

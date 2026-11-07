@@ -603,7 +603,11 @@
       "w": "在首页打开这一周",
       "m": "在首页打开这个月",
       "y": "在首页打开这一年"
-    }
+    },
+    "charges": "费用",
+    "say": "{{name}}，{{amount}}",
+    "sayShare": "{{name}}，{{amount}}，{{share}}",
+    "under": "低于{{pct}}"
   },
   "search": {
     "title": "搜索",

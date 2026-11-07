@@ -615,7 +615,11 @@
       "w": "Abrir esta semana no Início",
       "m": "Abrir este mês no Início",
       "y": "Abrir este ano no Início"
-    }
+    },
+    "charges": "Taxas",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "menos de {{pct}}"
   },
   "search": {
     "title": "Buscar",

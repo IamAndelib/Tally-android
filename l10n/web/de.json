@@ -609,7 +609,11 @@
       "w": "Diese Woche auf Start öffnen",
       "m": "Diesen Monat auf Start öffnen",
       "y": "Dieses Jahr auf Start öffnen"
-    }
+    },
+    "charges": "Gebühren",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "weniger als {{pct}}"
   },
   "search": {
     "title": "Suchen",

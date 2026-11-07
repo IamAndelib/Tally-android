@@ -426,7 +426,8 @@ Spending only, as in C-summary:
   amount. On Days and Weeks it comes after the three top categories; on Months and Year after all of them, whatever its
   size. It is Summary's legend.
 - The Months pie ends with the grey slice.
-- TalkBack: "Charges, ৳158.00, less than 1%".
+- TalkBack: "Charges, ৳158.00, less than 1%", each line one sentence (a category's alike: "Rent, ৳120,000.00, 68%";
+  no share on Days and Weeks).
 
 ### Assets and Liabilities
 
@@ -536,8 +537,9 @@ New:
   `tx.charges` "Charges" · `tx.extra` "Extra" · `tx.asIncome` "counted as income" · `tx.asSpending` "counted as
   spending" · `tx.leftExtra` "Left: {{money}} of the money, then the {{extra}} extra" · `tx.leftCharges` "Left:
   {{money}} of the money, then the {{charges}} charges"
-- Home, Summary, History: `ring.charges` "Charges" · `summary.charges` "Charges" · `history.words.extras` "Extras
-  {{amount}}"
+- Home, Summary, History: `ring.charges` "Charges" · `summary.charges` "Charges" · `summary.say` "{{name}},
+  {{amount}}" · `summary.sayShare` "{{name}}, {{amount}}, {{share}}" · `summary.under` "less than {{pct}}" (TalkBack)
+  · `history.words.extras` "Extras {{amount}}"
 - Loans: `loan.xchargeAmt` "{{amount}} transfer charge" · `loan.extraAmt` "{{amount}} extra" · `loan.extraIncl` "incl.
   {{amount}} extra" · `loan.chargesIncl` "incl. {{amount}} charges" · `loan.tipAmt` "+{{amount}} extra" ·
   `loan.msg.plusX` "+ {{amount}} transfer charge" · `loan.msg.plusExtra` "+ {{amount}} extra" · `loan.msg.inclExtra`

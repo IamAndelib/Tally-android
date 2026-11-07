@@ -1453,13 +1453,14 @@ function variedV7() {
       x("mP", 610, dd(-1), "loan", 2000, "a", { dir: "in", loan: "M", feeId: "mPt" }),
       x("mPt", 611, dd(-1), "income", 200, "a", { cat: "otherin", feeOf: "mP" }),
       x("e1", 620, dd(-1), "expense", 300, "c", { cat: "fees" }),
-      // a transfer with a ৳10.00 charge, pay, groceries; $50.00 moved with a $1.00 charge; Lee paid back $525.00
+      // yesterday too: $50.00 moved with a $1.00 charge
+      x("uT", 630, dd(-1), "transfer", 50, "u", { to: "w", feeId: "uTc" }),
+      x("uTc", 631, dd(-1), "expense", 1, "u", { cat: "fees", feeOf: "uT" }),
+      // a transfer with a ৳10.00 charge, pay, groceries; Lee paid back $525.00
       x("tA", 700, dd(0), "transfer", 1000, "a", { to: "k", feeId: "tAc" }),
       x("tAc", 701, dd(0), "expense", 10, "a", { cat: "fees", feeOf: "tA" }),
       x("i1", 710, dd(0), "income", 40000, "a", { cat: "income" }),
       x("g1", 720, dd(0), "expense", 50, "a", { cat: "groceries" }),
-      x("uT", 730, dd(0), "transfer", 50, "u", { to: "w", feeId: "uTc" }),
-      x("uTc", 731, dd(0), "expense", 1, "u", { cat: "fees", feeOf: "uT" }),
       x("eP", 740, dd(0), "loan", 525, "u", { dir: "out", loan: "E" }),
     ],
     loans: [
@@ -1474,7 +1475,7 @@ function variedV7() {
   /* by hand: what each day spent and received, per currency, and the period's spending by part */
   const SPENT = {
     BDT: { [dd(-5)]: 20, [dd(-3)]: 3, [dd(-2)]: 105, [dd(-1)]: 1450, [dd(0)]: 60 },
-    USD: { [dd(-2)]: 22, [dd(0)]: 26 },
+    USD: { [dd(-2)]: 22, [dd(-1)]: 1, [dd(0)]: 25 },
   };
   const GOT = { BDT: { [dd(-3)]: 150, [dd(-1)]: 200, [dd(0)]: 40000 }, USD: {} };
   const BY = { BDT: { food: 1150, fees: 300, groceries: 50, _charges: 138 }, USD: { fun: 22, _charges: 26 } };
@@ -1510,6 +1511,7 @@ function variedV7() {
           lastWidget = "";
           syncWidget();
           out.widget = w && w.spent;
+          out.yWords = T("home.checkYesterday", { amount: "{A}" });
           curs.forEach(c => {
             const box = document.createElement("div");
             box.innerHTML = checkCard(balances(), c);
@@ -1642,9 +1644,12 @@ function variedV7() {
       r.widget === plain(r, "BDT", SPENT.BDT[dd(0)]),
       "the widget: spent today ৳60.00, the transfer's charge in it " + r.widget
     );
+    const yWords = (c, n) => r.yWords.replace("{A}", plain(r, c, n));
     ok(
-      r.check.BDT.includes(plain(r, "BDT", 1450)) && !r.check.USD.includes(plain(r, "USD", 22)),
-      "the morning check: yesterday ৳1,450.00 (the dinner's charge and the plain Fees expense in it) " + r.check.BDT
+      r.check.BDT.includes(yWords("BDT", 1450)) && r.check.USD.includes(yWords("USD", 1)),
+      "the morning check: yesterday ৳1,450.00 (the dinner's charge and the plain Fees expense in it), and $1.00 (a " +
+        "transfer's charge, alone) " +
+        J([r.check.BDT, r.check.USD])
     );
     CURS.forEach(c => {
       const h = r.home[c],
@@ -1963,6 +1968,179 @@ function variedV7() {
     );
   } catch (e) {
     ok(false, "Home's Charges part: " + e.message.split("\n")[0]);
+  }
+
+  /* ---- Summary's Charges line (docs/specs/charges.md, Summary; C-summary): every list ends with it whenever the
+     period has charges outside purchases: a grey dot where an emblem would be, the word, its share on Months and Year
+     ("<1%"), a grey bar and the amount; after the top three categories on Days and Weeks, after all of them on Months
+     and Year, whatever its size. The Months pie ends with the grey slice. TalkBack: "Charges, ৳158.00, less than 1%".
+     Summary's total is Home's for the same period. */
+  const smView = (o, cur, end, mode, sel, home) =>
+    page.evaluate(
+      ([o, cur, end, mode, sel, home]) => {
+        const keep = S,
+          keepV = { ...V },
+          keepRing = window.ringHTML;
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          let ring = null;
+          window.ringHTML = (c, r) => ((ring = r.mode === "home" ? r : ring), keepRing(c, r));
+          Object.assign(V, { screen: "home", cur }, home);
+          render();
+          const cl = v => (v == null ? v : String(v).replace(/\u2060/g, "")),
+            homeSpent = cl(money(ring.spent, cur));
+          summarySheet();
+          Object.assign(SM, { cur, end, mode, sel });
+          smRender();
+          const grey = "rgb(122, 129, 144)";
+          const rows = [...document.querySelectorAll("#sm .smtop .tx")].map(e => {
+            const d = e.querySelector(".d"),
+              sm = d.querySelector(".small"),
+              dot = e.querySelector(".smi .chdot"),
+              bar = e.querySelector(".pbar span");
+            return {
+              name: (sm ? d.textContent.replace(sm.textContent, "") : d.textContent).trim(),
+              share: sm ? sm.textContent : "",
+              amount: cl(e.querySelector(".a").textContent),
+              say: cl((e.querySelector(".vh") || {}).textContent),
+              /* what is drawn is hidden from TalkBack, which hears the sentence */
+              shown: [...e.querySelectorAll(".d, .a, .smi")].every(c => c.closest('[aria-hidden="true"]')),
+              dot: dot ? getComputedStyle(dot).backgroundColor : null,
+              emblem: !!e.querySelector(".emb"),
+              bar: getComputedStyle(bar).backgroundColor,
+              ink: getComputedStyle(d).color,
+              grey,
+            };
+          });
+          const b = SM.mode === "y" ? null : smBuckets().slice(1)[SM.sel];
+          const pie = [...document.querySelectorAll("#sm .smpie path, #sm .smpie circle")].map(p => ({
+            fill: p.getAttribute("fill"),
+            title: (p.querySelector("title") || {}).textContent,
+          }));
+          const said = n => money(n, cur);
+          return {
+            rows,
+            pie,
+            total: cl($("#sm .big.spent").textContent),
+            homeSpent,
+            span: b ? [b.s, b.e] : null,
+            under: cl(T("summary.under", { pct: percent(1) })),
+            tpl: said(1234.5).replace(/\u2060/g, ""),
+          };
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          window.ringHTML = keepRing;
+          RBC = LPC = null;
+          closeSheet();
+          render();
+        }
+      },
+      [o, cur, end, mode, sel, home]
+    );
+  // ---- 19. Summary's Charges line, the pie's grey slice, TalkBack, and Summary = Home
+  try {
+    /* today in BDT, beside the ৳10.00 transfer charge and ৳50.00 of groceries: Rent ৳100,000.00 and four more
+       categories, one of them (Transport ৳5.00) smaller than the charge */
+    const book = countBook();
+    book.txns.push(
+      x("h1", 800, dd(0), "expense", 100000, "a", { cat: "housing" }),
+      x("s1", 801, dd(0), "expense", 500, "a", { cat: "shopping" }),
+      x("f1", 802, dd(0), "expense", 400, "a", { cat: "fun" }),
+      x("m1", 803, dd(0), "expense", 300, "a", { cat: "health" }),
+      x("b1", 804, dd(0), "expense", 5, "a", { cat: "transport" })
+    );
+    /* by hand: charges outside purchases, by day (Joy's written-off transfer charge, an older paid fee, Sam's ৳100.00
+       charges paid back with a ৳5.00 transfer charge, today's transfer charge) */
+    const CH = { BDT: { [dd(-5)]: 20, [dd(-3)]: 3, [dd(-2)]: 105, [dd(0)]: 10 }, USD: { [dd(-1)]: 1, [dd(0)]: 25 } };
+    const isCh = r => r.name === "Charges";
+    const mo = (r, n) => r.tpl.replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }));
+    const chargeRow = (r, tag) => {
+      const c = r.rows[r.rows.length - 1];
+      ok(
+        c && isCh(c) && r.rows.filter(isCh).length === 1,
+        tag + ": the list ends with one Charges line " + J(r.rows.map(x => x.name))
+      );
+      ok(
+        c && c.dot === c.grey && !c.emblem && c.bar === c.grey && c.ink !== c.grey,
+        tag + ": a grey dot where an emblem would be, a grey bar, the word not in grey " + J(c)
+      );
+      return c || {};
+    };
+    const week = dd(0);
+    /* Days: today, the top three and Charges */
+    const d0 = await smView(book, "BDT", week, "d", 6, { period: "day", anchor: dd(0) });
+    let c = chargeRow(d0, "Days");
+    ok(
+      same(
+        d0.rows.map(x => x.name),
+        ["Rent", "Shopping", "Fun", "Charges"]
+      ),
+      "Days: the three top categories, then Charges " + J(d0.rows.map(x => x.name))
+    );
+    ok(c.amount === mo(d0, 10) && c.share === "", "Days: Charges ৳10.00, no share " + J(c));
+    ok(c.say === "Charges, " + mo(d0, 10) && c.shown, "Days: TalkBack says " + J(c.say));
+    ok(
+      d0.total === mo(d0, 101265) && d0.total === d0.homeSpent,
+      "Days: the total is Home's " + J([d0.total, d0.homeSpent])
+    );
+    /* yesterday: the dinner's charge is in Eating out, no charge outside a purchase: no Charges line */
+    const d1 = await smView(book, "BDT", week, "d", 5, { period: "day", anchor: dd(-1) });
+    ok(
+      !d1.rows.some(isCh) && d1.rows.length === 2 && d1.total === d1.homeSpent,
+      "Days, yesterday: charges only inside purchases, no Charges line; the total is Home's " +
+        J([d1.rows.map(x => x.name), d1.total, d1.homeSpent])
+    );
+    /* Weeks: this week's top three and Charges, its charges worked out included */
+    const w0 = await smView(book, "BDT", week, "w", 7, { period: "day", anchor: dd(0) });
+    c = chargeRow(w0, "Weeks");
+    ok(
+      w0.rows.length === 4 && c.amount === mo(w0, sumIn(CH.BDT, ...w0.span)) && c.share === "",
+      "Weeks: the three top categories, then Charges " + sumIn(CH.BDT, ...w0.span) + " " + J(w0.rows)
+    );
+    /* Months: every category, then Charges, whatever its size, with "<1%"; the pie ends grey */
+    const mon = dd(0).slice(0, 7);
+    const m0 = await smView(book, "BDT", week, "m", 6, { period: "month", anchor: dd(0) });
+    c = chargeRow(m0, "Months");
+    const chM = sumIn(CH.BDT, mon + "-01", mon + "-31");
+    ok(
+      c.amount === mo(m0, chM) && c.share === "<1%" && c.say === "Charges, " + mo(m0, chM) + ", " + m0.under,
+      "Months: Charges " + chM + " <1%; TalkBack: " + J(c.say)
+    );
+    ok(m0.under === "less than 1%", "… which says less than 1% " + J(m0.under));
+    const names = m0.rows.map(x => x.name);
+    ok(
+      names.indexOf("Transport") >= 0 && names.indexOf("Transport") < names.indexOf("Charges") && names.length >= 7,
+      "Months: every category first, Transport (৳5.00) too, then Charges " + J(names)
+    );
+    ok(
+      m0.pie.length === m0.rows.length &&
+        m0.pie[m0.pie.length - 1].fill === "#7a8190" &&
+        m0.pie[m0.pie.length - 1].title === "Charges" &&
+        m0.pie.filter(p => p.fill === "#7a8190").length === 1,
+      "Months: the pie ends with the one grey slice " + J(m0.pie)
+    );
+    const pctSum = m0.rows.reduce((q, r) => q + (parseInt(r.share.replace("<", "")) || 0), 0);
+    ok(Math.abs(pctSum - 100) <= m0.rows.length, "Months: the shares add up to about 100% " + pctSum);
+    ok(m0.total === m0.homeSpent, "Months: the total is Home's " + J([m0.total, m0.homeSpent]));
+    /* Year: every category, then Charges */
+    const y0 = await smView(book, "BDT", week, "y", null, { period: "year", anchor: dd(0) });
+    c = chargeRow(y0, "Year");
+    const yr = dd(0).slice(0, 4),
+      chY = sumIn(CH.BDT, yr + "-01-01", yr + "-12-31");
+    ok(
+      c.amount === mo(y0, chY) && c.share === "<1%" && c.say === "Charges, " + mo(y0, chY) + ", less than 1%",
+      "Year: Charges " + chY + " <1% " + J(c)
+    );
+    ok(y0.total === y0.homeSpent, "Year: the total is Home's " + J([y0.total, y0.homeSpent]));
+    /* USD: the dollars' charges only */
+    const u0 = await smView(book, "USD", week, "m", 6, { period: "month", anchor: dd(0) });
+    c = chargeRow(u0, "USD");
+    const chU = sumIn(CH.USD, mon + "-01", mon + "-31");
+    ok(c.amount === mo(u0, chU) && u0.total === u0.homeSpent, "USD: Charges " + chU + " " + J([c, u0.total]));
+  } catch (e) {
+    ok(false, "Summary's Charges line: " + e.message.split("\n")[0]);
   }
 
   ok(errors.length === 0, "no page errors " + J(errors));

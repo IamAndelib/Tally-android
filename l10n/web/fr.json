@@ -615,7 +615,11 @@
       "w": "Ouvrir cette semaine dans Accueil",
       "m": "Ouvrir ce mois dans Accueil",
       "y": "Ouvrir cette année dans Accueil"
-    }
+    },
+    "charges": "Frais",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "moins de {{pct}}"
   },
   "search": {
     "title": "Rechercher",

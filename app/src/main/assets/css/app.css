@@ -1176,8 +1176,19 @@ html[dir="rtl"] .strip.fade {
   row-gap: 4px;
   align-items: center;
 }
-.smtop .tx > .em {
+/* the emblem's place (hidden from TalkBack, which hears the line as one sentence); for Charges, which is no category,
+   a grey dot in it (docs/specs/charges.md, Summary) */
+.smtop .tx > .smi {
   grid-row: 1 / -1;
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+}
+.smi .chdot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 }
 .smtop .tx .mid {
   display: contents;

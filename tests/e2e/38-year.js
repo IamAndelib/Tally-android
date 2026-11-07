@@ -202,6 +202,46 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- the Year tab's list ends with the Charges line, after every category, whatever its size
+  {
+    const { ctx, page } = await open();
+    const r = await page.evaluate(() => {
+      const y = today().slice(0, 4);
+      S.accounts.push({ id: "b", name: "Cash", type: "cash", currency: "USD", opening: 0, archived: false });
+      /* a transfer with a $5.00 charge, and $3.00 of fun: smaller than the charge, still before it */
+      S.txns.push(
+        { id: "tr", ts: 2, date: y + "-01-05", type: "transfer", amount: 100, account: "a", to: "b", feeId: "trc" },
+        { id: "trc", ts: 3, date: y + "-01-05", type: "expense", amount: 5, account: "a", cat: "fees", feeOf: "tr" },
+        { id: "fn", ts: 4, date: y + "-01-06", type: "expense", amount: 3, account: "a", cat: "fun" }
+      );
+      V.period = "year";
+      V.anchor = today();
+      render();
+      summarySheet();
+      return {
+        cats: [...document.querySelectorAll("#sm .smtop .tx .d")].map(d => d.textContent.replace(/\s+/g, " ").trim()),
+        amt: $("#sm .smtop .tx:last-child .a").textContent,
+        say: ($("#sm .smtop .tx:last-child .vh") || {}).textContent,
+        head: $("#sm .smd").textContent,
+      };
+    });
+    const m = +(await page.evaluate(() => today().slice(5, 7)));
+    ok(
+      r.cats.length === 4 &&
+        r.cats[0].startsWith("Rent") &&
+        r.cats[2].startsWith("Fun") &&
+        r.cats[3] === "Charges <1%" &&
+        r.amt === "$5.00",
+      "the year's categories, then Charges <1% with its amount: " + r.cats.join(" | ") + " " + r.amt
+    );
+    ok(r.say === "Charges, $5.00, less than 1%", "TalkBack: " + r.say);
+    ok(
+      r.head.includes("$" + (100 * m + 1508).toLocaleString("en-US") + ".00"),
+      "the year's total includes the charge: " + r.head
+    );
+    await ctx.close();
+  }
+
   // ---- Settings → Region → Home opens on
   {
     const { ctx, page } = await open("month");

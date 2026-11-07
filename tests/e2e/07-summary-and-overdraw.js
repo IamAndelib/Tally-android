@@ -62,7 +62,8 @@ const ok = (c, m) => {
       X("e1", d.d2, 1, "expense", 100, "w", { cat: "groceries" }),
       X("r1", d.d2, 2, "loan", 100, "k", { dir: "in", loan: "L1" }),
       X("i1", d.d1, 2, "income", 50, "w", { cat: "income" }),
-      X("t1", d.d1, 3, "transfer", 200, "k", { to: "w" }),
+      X("t1", d.d1, 3, "transfer", 200, "k", { to: "w", feeId: "t1f" }),
+      X("t1f", d.d1, 3, "expense", 5, "k", { cat: "fees", feeOf: "t1" }),
       X("e2", d.t, 4, "expense", 30, "w", { cat: "food" }),
       X("r2", d.t, 5, "loan", 200, "w", { dir: "in", loan: "L1" }),
     ],
@@ -132,7 +133,7 @@ const ok = (c, m) => {
   ok(
     tr.length === 2 &&
       tr[0].includes("Bkash") &&
-      tr[0].includes("100") &&
+      tr[0].includes("95") &&
       tr[1].includes("Wallet") &&
       tr[1].includes("1,080"),
     "transfer shows both accounts " + JSON.stringify(tr)
@@ -160,8 +161,8 @@ const ok = (c, m) => {
   );
   const vals = await page.$$eval("#sheet .smcol .v", e => e.map(x => x.textContent));
   ok(
-    vals[6] === "30" && vals[5] === "" && vals[4] === "100" && vals[3] === "70",
-    "bar values match the entries " + JSON.stringify(vals)
+    vals[6] === "30" && vals[5] === "5" && vals[4] === "100" && vals[3] === "70",
+    "bar values match the entries, yesterday's transfer charge in its bar " + JSON.stringify(vals)
   );
   ok((await txt("#sm .smd")).includes("30") && (await txt("#sm .smd")).includes("Today"), "today selected by default");
   await tap('#sheet .smcol[data-v="4"]');
@@ -171,6 +172,16 @@ const ok = (c, m) => {
     "tapping a bar shows its total and comparison: " + det.replace(/\s+/g, " ")
   );
   ok((await txt("#sm .smtop")).includes("Groceries"), "top categories listed");
+  /* yesterday spent only the transfer's charge: its total, and the list is the Charges line alone */
+  await tap('#sheet .smcol[data-v="5"]');
+  const yd =
+    (await txt("#sm .smd")) +
+    " | " +
+    ((await page.$("#sm .smtop")) ? await txt("#sm .smtop") : "").replace(/\s+/g, " ");
+  ok(
+    yd.includes("BDT 5.00") && (await page.$$("#sm .smtop .tx")).length === 1 && yd.includes("Charges"),
+    "a day with only a transfer charge: its total and the Charges line " + yd
+  );
   await page.screenshot({ path: OUT + "/summary-days.png" });
   await tap('#sheet [data-act="sm-mode"][data-v="w"]');
   ok((await page.$$("#sheet .smrow")).length === 8, "8 week rows");
@@ -351,16 +362,16 @@ const ok = (c, m) => {
   );
   await page.screenshot({ path: OUT + "/overdraw.png" });
   await tap('#pop [data-act="pd-close"]');
-  ok((await page.isVisible("#f-amt")) && (await state()).txns.length === 8, "Go back: sheet stays, nothing saved");
+  ok((await page.isVisible("#f-amt")) && (await state()).txns.length === 9, "Go back: sheet stays, nothing saved");
   await tap('#sheet [data-act="tx-save"]');
   await tap('#pop [data-act="ask-ok"]');
-  ok((await state()).txns.length === 9, "Save anyway saves");
+  ok((await state()).txns.length === 10, "Save anyway saves");
   await addOut("c", 5000);
   ok(
-    !(await page.isVisible('#pop [data-act="ask-ok"]')) && (await state()).txns.length === 10,
+    !(await page.isVisible('#pop [data-act="ask-ok"]')) && (await state()).txns.length === 11,
     "credit card never warns"
   );
-  // transfer from Bkash (100)
+  // transfer from Bkash (95)
   await tap('[data-act="tr-new"]');
   await tap('#sheet [data-act="tr-from"][data-v="k"]').catch(() => {});
   await tap('#sheet [data-act="tr-to"][data-v="w"]').catch(() => {});

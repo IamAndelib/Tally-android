@@ -615,7 +615,11 @@
       "w": "Abrir esta semana en Inicio",
       "m": "Abrir este mes en Inicio",
       "y": "Abrir este año en Inicio"
-    }
+    },
+    "charges": "Cargos",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "menos de {{pct}}"
   },
   "search": {
     "title": "Buscar",

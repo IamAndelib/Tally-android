@@ -609,7 +609,11 @@
       "w": "Bu haftayı Ana sayfada aç",
       "m": "Bu ayı Ana sayfada aç",
       "y": "Bu yılı Ana sayfada aç"
-    }
+    },
+    "charges": "Masraflar",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "{{pct}} altı"
   },
   "search": {
     "title": "Ara",
