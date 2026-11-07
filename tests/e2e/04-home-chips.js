@@ -416,7 +416,7 @@ const ok = (c, m) => {
         render();
         const lab = document.querySelector("#ring .rchg"),
           ring = document.getElementById("ring").getBoundingClientRect(),
-          strip = document.querySelector("#app .strip").getBoundingClientRect(),
+          strip = (document.querySelector("#app .strip") || document.body).getBoundingClientRect(), // none sideways
           L = lab.getBoundingClientRect(),
           d = document.querySelector("#ring .dwrap").getBoundingClientRect();
         const over = [...document.querySelectorAll("#ring .rt .ci, #ring .rt .cn, #ring .rt .cp")]
@@ -477,6 +477,43 @@ const ok = (c, m) => {
         JSON.stringify(b)
     );
     ok(!b.over.length && b.outsideDonut && b.inView, "… clear of every tile " + JSON.stringify(b.over));
+  }
+  /* a phone held sideways (800×360): the ring stays centred in the height; where the room above it is too short for
+     the label, the ring is drawn a little smaller, never the label left out */
+  await page.setViewportSize({ width: 800, height: 360 });
+  let full = 0; // the ring's size with the label in its corner
+  for (const n of [11, 4]) {
+    const b = await corner(n, 1.3);
+    const g = await page.evaluate(() => {
+      const r = document.getElementById("ring").getBoundingClientRect(),
+        l = document.querySelector("#ring .rchg").getBoundingClientRect();
+      return {
+        land: document.body.classList.contains("land"),
+        cut: !!document.getElementById("ring").dataset.cut,
+        h: Math.round(r.height),
+        above: Math.round(r.top),
+        below: Math.round(innerHeight - r.bottom),
+        labTop: Math.round(l.top),
+        shown: getComputedStyle(document.querySelector("#ring .rchg")).display !== "none",
+      };
+    });
+    ok(
+      g.land &&
+        g.shown &&
+        Math.abs(g.above - g.below) <= 1 &&
+        !b.over.length &&
+        b.right === 2 &&
+        (n === 4
+          ? b.up && g.cut && g.labTop >= 6 && b.aboveRing >= 2 && g.h < full
+          : !b.up && !g.cut && (full = g.h) > 300),
+      "sideways, " +
+        n +
+        " tiles at 1.3×: " +
+        (n === 4
+          ? "the label above the ring, made smaller just enough, still centred "
+          : "the label in its corner, the ring full size ") +
+        JSON.stringify([g, b])
+    );
   }
   await page.setViewportSize({ width: 393, height: 852 });
   await page.evaluate(() => {

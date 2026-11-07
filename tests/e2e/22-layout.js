@@ -425,7 +425,8 @@ function inspect() {
       rg = ring0.getBoundingClientRect(),
       dw = ring0.querySelector(".dwrap").getBoundingClientRect(),
       st = document.querySelector("#app .strip");
-    if (L.left < 0 || L.right > vw) out.push("Charges label off screen");
+    if (L.left < 0 || L.right > vw || (document.body.classList.contains("land") && scrollY === 0 && L.top < 0))
+      out.push("Charges label off screen");
     const cx = dw.left + dw.width / 2,
       cy = dw.top + dw.height / 2;
     if (
@@ -446,8 +447,7 @@ function inspect() {
     if (st && Math.abs(L.top - st.getBoundingClientRect().bottom - 6) > 0.6)
       out.push("Charges label not 6px under the chips " + (L.top - st.getBoundingClientRect().bottom));
   }
-  if (chl && chl.classList.contains("gone") && !document.body.classList.contains("land"))
-    out.push("Charges label left out on an upright screen");
+  if (chl && !vis(chl)) out.push("Charges label left out"); // the grey slice is never shown by its colour alone
   // 8. the amount being typed is never under the calculator keypad
   const pad = [...document.querySelectorAll(".calc")].find(vis),
     amt = document.querySelector(".amtwrap.calcing");
@@ -500,7 +500,7 @@ function inspect() {
 (async () => {
   const browser = await chromium.launch(launchOptions);
   const summary = {},
-    chgSeen = {}; // where Home's Charges label went: in its corner, up on its own line, or left out (sideways)
+    chgSeen = {}; // where Home's Charges label went: in its corner, or up on its own line (sideways: "cut", the ring smaller)
   for (const dev of runs) {
     const ctx = await browser.newContext({
       uiLang: dev.lang,
@@ -580,12 +580,13 @@ function inspect() {
     const charges = async label => {
       const c = await page.evaluate(() => {
         const l = document.querySelector("#ring .rchg");
-        return l ? (l.classList.contains("up") ? "up" : l.classList.contains("gone") ? "gone" : "corner") : "none";
+        if (!l) return "none";
+        return l.classList.contains("up") ? (document.getElementById("ring").dataset.cut ? "cut" : "up") : "corner";
       });
       chgSeen[c] = (chgSeen[c] || []).concat(tag + " " + label);
     };
     const shown = await page.evaluate(() => S.cats.map(c => c.hidden));
-    for (const k of [4, 6]) {
+    for (const k of [4, 5, 6, 7]) {
       await shot("home-" + k, () =>
         page.evaluate(k => {
           S.cats.filter(c => c.kind === "out").forEach((c, i) => (c.hidden = i >= k));
@@ -1126,9 +1127,13 @@ function inspect() {
   );
   if (!ONLY.length && !SIZES.length) {
     ok(
-      (chgSeen.up || []).some(x => x.startsWith("small-16x9@1.3")) && (chgSeen.corner || []).length > 0,
-      "the Charges label takes its own line where a tile reaches into its corner, and keeps its corner elsewhere " +
-        JSON.stringify(chgSeen.up)
+      (chgSeen.up || []).some(x => x.startsWith("small-16x9@1.3")) &&
+        (chgSeen.cut || []).some(x => x.startsWith("phone-landscape@1.3")) &&
+        (chgSeen.corner || []).length > 0 &&
+        !chgSeen.none,
+      "the Charges label takes its own line where a tile reaches into its corner (sideways, with the ring a little " +
+        "smaller where the room above it is short), and keeps its corner elsewhere " +
+        JSON.stringify([chgSeen.up, chgSeen.cut])
     );
   }
   const keys = Object.keys(summary);

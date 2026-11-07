@@ -408,9 +408,9 @@ its add-on), as today.
   words, nor with 14 to 16 on a phone held sideways. There (measured, `fitChargeLabel()`) the label takes **a line of
   its own above the ring**, right-aligned and still 6 px under the chips, and the ring moves down by it (the
   maintainer's pick, B, over leaving it out). On a phone held sideways the ring stays centred in the window's height
-  and the label sits in the room above it; on the wider sideways phones (720 to 932 px) that room is smaller than the
-  label, and it is left out there (the donut's TalkBack label and Summary still give the amount). It never touches a
-  tile. With no charges there is neither label nor slice.
+  and the label sits in the room above it; where that room is too small (the wider sideways phones, 720 to 932 px),
+  the ring is drawn smaller by just what the label needs. The label is never left out, so the grey slice is never
+  shown by its colour alone, and it never touches a tile. With no charges there is neither label nor slice.
 - TalkBack: the donut's button says "Spending summary: spent ৳178,137.00, of which charges ৳657.50" (and received, when
   there is some); the label itself is hidden from TalkBack, which already heard it.
 - **A new notebook's ring has no Fees tile**; an existing notebook keeps its own as an ordinary category.

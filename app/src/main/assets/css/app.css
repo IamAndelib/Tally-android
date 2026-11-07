@@ -557,7 +557,7 @@ html[dir="rtl"] .strip.fade {
   flex-shrink: 0;
 }
 /* Home: the Charges part's label in the ring's top right corner, outside the donut, or above the ring where a tile
-   reaches into that corner (fitChargeLabel: .up, or .gone on a phone held sideways without room); a grey dot, the word
+   reaches into that corner (fitChargeLabel: .up; sideways, the ring gives it room); a grey dot, the word
    and the amount under it, the size of the tiles' names, in muted text (the grey is the dot's only) */
 .rchg {
   position: absolute;
@@ -574,9 +574,6 @@ html[dir="rtl"] .strip.fade {
   white-space: nowrap;
   text-align: start;
   pointer-events: none;
-}
-.rchg.gone {
-  display: none;
 }
 .rchg i {
   width: 7px;

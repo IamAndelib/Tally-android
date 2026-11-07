@@ -38,6 +38,7 @@ function nearestInSlice(a, start, w) {
 /* a slice's colour: its category's, or the Charges part's grey */
 const sliceCol = id => (id === CHARGES ? CHARGES_C : cat(id).c);
 let RE = null; /* the Settings preview's layout + order while it is on screen */
+let HOME_RING = null; /* what Home's ring was last drawn from, to draw it again smaller (fitChargeLabel) */
 /* what the middle of the Home donut shows (settings.donut, always one of these: migrate()); tapping the Settings
    donut steps through them in order */
 const DONUT_MODES = ["out", "in", "both", "none"];
@@ -126,6 +127,7 @@ function ringHTML(cats, o) {
   /* the period's charges outside purchases (docs/specs/charges.md, Home): a grey slice after the categories', true to
      size, and a label in the ring's top right corner (or on a line of its own: fitChargeLabel) */
   const chg = home && o.spent > 0 ? rnd(o.by[CHARGES] || 0) : 0;
+  if (home) HOME_RING = [cats, o];
   const R = 40,
     C = 2 * Math.PI * R,
     Rout = (D / 2) * 0.92; /* stroke outer edge: (40+6)/50 of the radius */
@@ -373,14 +375,14 @@ function ringHTML(cats, o) {
 /* Home's Charges label (measured: fitFigures). The tiles leave the ring's top right corner free in most rings, but not
    all: with 4 to 7 tiles, or 14 to 16 on a phone held sideways, a large text size or a long word reaches the tile just
    right of 12 o'clock. Then the label takes a line of its own above the ring, right-aligned: the ring moves down by
-   it (still 6px under the account chips), or, on a phone held sideways where the ring stays centred in the window's
-   height, it sits in the room above the ring; where that room is too small it is left out (TalkBack still hears the
-   charges in the donut's label, and Summary lists them). */
+   it (still 6px under the account chips). On a phone held sideways the ring stays centred in the window's height and
+   the label sits in the room above it; where that room is too small, the ring is drawn again smaller by just what the
+   label needs. It is never left out: the grey slice is never shown by its colour alone. */
 function fitChargeLabel(root) {
   const lab = root.querySelector("#ring .rchg");
   if (!lab) return;
   const ring = lab.parentNode;
-  lab.classList.remove("up", "gone");
+  lab.classList.remove("up");
   lab.style.top = "";
   if (ring.dataset.mt != null) ring.style.marginTop = ring.dataset.mt;
   const L = lab.getBoundingClientRect(),
@@ -401,12 +403,16 @@ function fitChargeLabel(root) {
     );
   });
   if (!taken) return;
-  const h = Math.ceil(L.height),
-    land = document.body.classList.contains("land");
-  if (land) {
-    const room = ring.getBoundingClientRect().top - ring.parentNode.getBoundingClientRect().top;
-    if (room < h + 8) {
-      lab.classList.add("gone");
+  const h = Math.ceil(L.height);
+  if (document.body.classList.contains("land")) {
+    const pane = ring.parentNode,
+      room = ring.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    /* once per render: the ring a little smaller, centred as before, with the room above it the label needs */
+    if (room < h + 8 && !ring.dataset.cut && HOME_RING && RINGW) {
+      RINGW = Math.max(240, RINGW - Math.ceil(2 * (h + 8 - room)));
+      ring.outerHTML = ringHTML(HOME_RING[0], HOME_RING[1]);
+      pane.querySelector("#ring").dataset.cut = "1";
+      fitFigures(pane);
       return;
     }
   } else {
