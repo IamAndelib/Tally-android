@@ -71,7 +71,11 @@ const typeIcon = k => TYPE_ICON[k] || (ctype(k) || {}).i || "account_balance_wal
 const typeCol = k => TYPE_COL[k] || (ctype(k) || {}).c || "#5f7389";
 const accEmb = a => ({ i: a.i || (a.e ? "" : typeIcon(a.type)), e: a.e, c: a.c || typeCol(a.type) });
 /* an account's colour as the --acr custom property (r g b), for a tint of it (the Filters sheet's chips, the forms' picked account) */
-const accVar = a => ' style="--acr:' + hexRgb(accEmb(a).c).join(" ") + '"';
+const accVar = a => {
+  const c = accEmb(a).c;
+  /* a very light colour tints only half as strongly (--tint-k), so the text over it keeps AA on the dark surface */
+  return ' style="--acr:' + hexRgb(c).join(" ") + (lumOf(c) > 0.6 ? ";--tint-k:0.5" : "") + '"';
+};
 /* a chip's leading emblem, with the check its picked state shows in place of the glyph (css .chip.lead) */
 const chipEmb = o => emblem(o, "sm", ic("check"));
 const typeChip = (k, sel) =>

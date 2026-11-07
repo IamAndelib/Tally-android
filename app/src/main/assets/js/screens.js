@@ -672,7 +672,7 @@ function liabsView() {
       if (b[a.id] < 0) add(a.currency, -b[a.id]);
     });
   });
-  h += '<div class="sumcard owe"><div class="t">' + TH("liabs.owe") + "</div>" + curLines(owed) + "</div>";
+  h += '<div class="sumcard soft"><div class="t">' + TH("liabs.owe") + "</div>" + curLines(owed) + "</div>";
   h += loanSection("borrow", T("liabs.loans"), T("liabs.loansHint"), T("liabs.borrowBtn"));
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length

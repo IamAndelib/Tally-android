@@ -2256,7 +2256,7 @@ mark.hl {
 }
 /* an account's colour tints its picked chip in a form, as the Filters sheet's chips do (--acr from accVar) */
 .chip.acchip[aria-pressed="true"] {
-  background: rgb(var(--acr) / var(--tint-a));
+  background: rgb(var(--acr) / calc(var(--tint-a) * var(--tint-k, 1)));
   color: var(--on-surface);
 }
 .icgrid {
@@ -2542,7 +2542,6 @@ body.hasnav .snack {
   padding: 16px 18px;
   margin-top: 4px;
 }
-.sumcard.owe,
 .sumcard.soft {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
@@ -3453,7 +3452,7 @@ body.land.calcopen #snack .snack {
   border-color: transparent;
 }
 .hchip[data-v="acc"] {
-  background: rgb(var(--acr) / var(--tint-a));
+  background: rgb(var(--acr) / calc(var(--tint-a) * var(--tint-k, 1)));
   color: var(--on-surface);
 }
 .hchip .chn {
@@ -3572,7 +3571,7 @@ body.land.calcopen #snack .snack {
 }
 .hfc.acct[aria-pressed="true"],
 .hfc.tinted {
-  background: rgb(var(--acr) / var(--tint-a));
+  background: rgb(var(--acr) / calc(var(--tint-a) * var(--tint-k, 1)));
   color: var(--on-surface);
   border-color: transparent;
 }

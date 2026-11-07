@@ -310,6 +310,58 @@ const ok = (c, m) => {
       ok(cr >= 4.5, scheme + ": the tinted chip's text passes AA (" + cr.toFixed(1) + ":1)");
       await page.evaluate(() => closeSheet());
     }
+    // very light custom colours: the text over the tint still passes AA in both themes, in a form and in Filters
+    for (const scheme of ["light", "dark"]) {
+      for (const col of ["#ffffff", "#ffeb3b"]) {
+        await page.evaluate(
+          ([th, c]) => {
+            S.settings.theme = th;
+            applyTheme();
+            S.accounts[0].c = c;
+            txSheet(null, "expense");
+          },
+          [scheme, col]
+        );
+        const t = await page.evaluate(() => {
+          const rgb = x => x.match(/[\d.]+/g).map(Number);
+          const surfOf = el => {
+            for (let n = el.parentElement; n; n = n.parentElement) {
+              const b = getComputedStyle(n).backgroundColor;
+              if (b !== "rgba(0, 0, 0, 0)" && b !== "transparent") return rgb(b);
+            }
+            return [255, 255, 255];
+          };
+          const lum = c => {
+            const f = v => ((v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+            return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+          };
+          const ratio = el => {
+            const cs = getComputedStyle(el),
+              b = rgb(cs.backgroundColor),
+              a = b[3] == null ? 1 : b[3],
+              s = surfOf(el),
+              mix = [0, 1, 2].map(i => b[i] * a + s[i] * (1 - a)),
+              L1 = lum(mix),
+              L2 = lum(rgb(cs.color));
+            return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+          };
+          const chip = $('#sheet [data-act="f-acc"][aria-pressed="true"]');
+          const probe = document.createElement("button");
+          probe.className = "chip hfc tinted";
+          probe.setAttribute("style", chip.getAttribute("style")); // Filters' chip, same colour variable
+          probe.textContent = "Bank";
+          chip.parentElement.append(probe);
+          const r = { form: ratio(chip), filters: ratio(probe) };
+          probe.remove();
+          return r;
+        });
+        ok(
+          t.form >= 4.5 && t.filters >= 4.5,
+          scheme + " " + col + ": tinted text passes AA in the form and Filters " + JSON.stringify(t)
+        );
+        await page.evaluate(() => closeSheet());
+      }
+    }
     // the same tint in the other forms' chips
     await page.evaluate(() => trSheet());
     ok(
