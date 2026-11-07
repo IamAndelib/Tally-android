@@ -949,6 +949,7 @@ function variedV7() {
                 top: i.top,
                 paid: i.paid,
                 left: i.left,
+                unpaid: i.unpaid,
                 moneyLeft: i.moneyLeft,
                 topLeft: i.topLeft,
                 topPaid: i.topPaid,
@@ -1167,6 +1168,25 @@ function variedV7() {
       [loanOf("C", "lend", "Ana", "k", D.d1)]
     );
     const [c] = await loanRun(cr, []);
+    // credit that covers a later draw's extra counts on that draw's day: nothing is earned before it was lent
+    const late = notebook(
+      [
+        x("e1", 300, D.d1, "loan", 500, "k", { dir: "out", loan: "E", principal: true, onTop: 50 }),
+        back("ep", 310, D.d2, 1000, "E"),
+        x("e2", 320, D.d3, "loan", 400, "k", { dir: "out", loan: "E", principal: true, onTop: 40 }),
+      ],
+      [loanOf("E", "lend", "Ana", "k", D.d1)]
+    );
+    const [e] = await loanRun(late, []);
+    ok(
+      e.info.E.topPaid.ep === 90 &&
+        same(e.parts, [
+          { of: "ep", date: D.d2, cur: "BDT", amount: 50, as: "income" },
+          { of: "ep", date: D.d3, cur: "BDT", amount: 40, as: "income" },
+        ]),
+      "a payment made before a later draw: its ৳50.00 extra on the payment's day, the later ৳40.00 on its draw's day " +
+        J(e.parts)
+    );
     ok(
       same(c.info.C.rem, { c1: 0, c2: 200 }) &&
         c.info.C.total === 1000 &&
@@ -1212,10 +1232,40 @@ function variedV7() {
       b3.info.S.st === "writeoff" && b3.info.S.left === 400 && same(partsOf(b3, ["sD", "sw"]), []),
       "a borrow forgiven after ৳600.00 back: ৳400.00 let go, its charges never spending " + J(b3.info.S)
     );
+    ok(b1.info.R.unpaid === 750, "… while ৳750.00 in all is unpaid, the extra included " + J(b1.info.R));
     const [, , all] = await wo(1100);
     ok(
-      all.info.R.left === 0 && same(partsOf(all, ["rD", "rDc", "w1"]), []),
-      "written off with all the money back: nothing let go, nothing counted " + J(all.info.R)
+      all.info.R.st === "writeoff" &&
+        all.info.R.left === 0 &&
+        all.info.R.unpaid === 150 &&
+        same(partsOf(all, ["rD", "rDc", "w1"]), []),
+      "written off with all the money back, the extra not: still written off, ৳0.00 let go, nothing counted " +
+        J(all.info.R)
+    );
+    // reopening says what is owed again: everything unpaid, the extra included
+    const said = await page.evaluate(
+      o => {
+        const keep = S,
+          snack0 = snack;
+        let msg = "";
+        try {
+          S = migrate(o);
+          snack = m => (msg = m);
+          reopenLoan("R");
+          return [msg, loan("R").status];
+        } finally {
+          snack = snack0;
+          S = keep;
+          save();
+          render();
+        }
+      },
+      notebook(rafi().concat([back("w1", 400, D.d2, 500)]), [loanOf("R", "lend", "Rafi", "k", D.d1, "writeoff")])
+    );
+    const m750 = await page.evaluate(() => money(750, "BDT"));
+    ok(
+      said[1] === "open" && said[0].includes(m750),
+      "reopening Rafi's lending written off after ৳500.00 back: owes ৳750.00 again " + J(said)
     );
   } catch (e) {
     ok(false, "write-off: " + e.message.split("\n")[0]);
@@ -1241,6 +1291,35 @@ function variedV7() {
     }, o);
     ok(r[0] === "", "the other draw may go: Rafi's ৳1,250.00 still covers the ৳1,200.00 paid back " + J(r));
     ok(r[1] !== "", "… but not the lend itself: ৳500.00 left against ৳1,200.00 paid back " + J(r));
+    // a transfer charge taken off on its own: what is left must still cover what was paid back
+    const fee = paid =>
+      page.evaluate(
+        o => {
+          const keep = S;
+          try {
+            S = migrate(o);
+            return loanBlock(["rDc"]);
+          } finally {
+            S = keep;
+          }
+        },
+        notebook(
+          [
+            x("rD", 300, D.d1, "loan", 1000, "k", { dir: "out", loan: "R", principal: true, feeId: "rDc" }),
+            x("rDc", 301, D.d1, "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+            x("rD2", 310, D.d2, "loan", 500, "k", { dir: "out", loan: "R", principal: true }),
+            back("rp", 400, D.d3, paid),
+          ],
+          [loanOf("R", "lend", "Rafi", "k", D.d1)]
+        )
+      );
+    const f1600 = await fee(1600),
+      f1500 = await fee(1500);
+    ok(
+      f1600 !== "",
+      "a transfer charge alone can't go when ৳1,500.00 left would be less than ৳1,600.00 paid " + J(f1600)
+    );
+    ok(f1500 === "", "… and can when what is left still covers it (৳1,500.00 paid) " + J(f1500));
   } catch (e) {
     ok(false, "loanBlock(): " + e.message.split("\n")[0]);
   }
@@ -1253,7 +1332,7 @@ function variedV7() {
         const keep = S;
         try {
           S = migrate(o);
-          RBC = null;
+          RBC = LPC = null;
           const pick = i => ({
             draws: i.draws.map(t => t.id),
             pays: i.pays.map(t => t.id),

@@ -28,9 +28,11 @@ function loanEntries(id) {
    last, oldest first); within a draw to its amount, then its charge, then its amount on top, so the amount on top is
    the last money paid back on it. rem[id] is what is still out of each draw (money and top), nextDue the earliest due
    date still unpaid, dueAmt what is due by then (or by today); money / top and moneyLeft / topLeft the loan's, and
-   topPaid[payment id] the amount on top each payment covered (income on a lending, spending on a loan, on its day:
-   loanParts()). Written off or forgiven, left is the money still unpaid (the top still unpaid is let go), and a
-   lending's feeLeft[draw id] its transfer charge still unpaid (spending, on the draw's day). A loan with no transfer
+   topPaid[payment id] the amount on top each payment covered (income on a lending, spending on a loan: loanParts()),
+   topOn the same by day, [payment, day, amount]: the payment's day, or the draw's when credit from an earlier
+   payment covers a later draw (nothing is earned or owed on top before the draw). unpaid is everything still owed.
+   Written off or forgiven, left is the money still unpaid (the top still unpaid is let go), and a lending's
+   feeLeft[draw id] its transfer charge still unpaid (spending, on the draw's day). A loan with no transfer
    charge and no onTop (every loan before data version 8) gives exactly what version 7 gave (tests/e2e/45-charges.js). */
 function loanInfo(l) {
   const mine = loanEntries(l.id),
@@ -61,15 +63,24 @@ function loanInfo(l) {
     mRem = { ...mon },
     tRem = { ...top },
     topPaid = {},
+    topOn = [],
     from = []; // the money not yet shared out: [payment, amount], oldest first
-  /* n of the money in `from`, oldest first; what covers an amount on top is counted on its payment */
-  const use = (n, onTop) => {
+  /* n of the money in `from`, oldest first; what covers draw t's amount on top (onTop) is counted on its payment, on
+     the later of the payment's day and the draw's */
+  const use = (n, t, onTop) => {
     while (n > 0 && from.length) {
       const f = from[0],
         x = Math.min(f[1], n);
       f[1] = rnd(f[1] - x);
       n = rnd(n - x);
-      if (onTop && x > 0) topPaid[f[0].id] = rnd((topPaid[f[0].id] || 0) + x);
+      if (onTop && x > 0) {
+        const p = f[0],
+          day = p.date > t.date ? p.date : t.date,
+          last = topOn[topOn.length - 1];
+        topPaid[p.id] = rnd((topPaid[p.id] || 0) + x);
+        if (last && last[0] === p && last[1] === day) last[2] = rnd(last[2] + x);
+        else topOn.push([p, day, x]);
+      }
       if (f[1] <= 0) from.shift();
     }
   };
@@ -84,8 +95,8 @@ function loanInfo(l) {
         xt = rnd(x - xm);
       mRem[t.id] = rnd(mRem[t.id] - xm);
       tRem[t.id] = rnd(tRem[t.id] - xt);
-      use(xm, false);
-      use(xt, true);
+      use(xm, t, false);
+      use(xt, t, true);
       n = rnd(n - x);
     }
     return n;
@@ -128,9 +139,11 @@ function loanInfo(l) {
     top: rnd(sum(top)),
     paid,
     left: st === "writeoff" ? owed(total - paid - sum(tRem)) : all,
+    unpaid: all,
     moneyLeft,
     topLeft: owed(sum(tRem)),
     topPaid,
+    topOn,
     fee,
     feeLeft,
     owes: Object.fromEntries(draws.map(t => [t.id, rnd(mon[t.id] + top[t.id])])),
@@ -166,17 +179,18 @@ function relinkLoan(id) {
   l.date = d[0].date;
 }
 /* why deleting these entries would break a loan, or "" (a loan losing every draw goes as a whole): its remaining
-   draws (each with its transfer charge and amount on top) would come to less than was already paid back (the extra
-   would silently drop out of it), or a payment would come before its first draw */
+   draws (each with its transfer charge, unless that is deleted, and amount on top) would come to less than was already
+   paid back (the extra would silently drop out of it), or a payment would come before its first draw */
 function loanBlock(ids) {
   ids = new Set(ids);
   for (const l of S.loans) {
     const i = loanInfo(l),
-      keep = i.draws.filter(t => !ids.has(t.id));
-    if (!keep.length || keep.length === i.draws.length) continue;
+      keep = i.draws.filter(t => !ids.has(t.id)),
+      gone = t => !!i.fee[t.id] && ids.has(i.fee[t.id].id); // a kept draw's transfer charge taken off on its own
+    if (!keep.length || (keep.length === i.draws.length && !keep.some(gone))) continue;
     const pays = i.pays.filter(t => !ids.has(t.id)),
       first = pays.map(t => t.date).sort()[0],
-      owes = rnd(keep.reduce((s, t) => s + i.owes[t.id], 0));
+      owes = rnd(keep.reduce((s, t) => s + i.owes[t.id] - (gone(t) ? i.fee[t.id].amount : 0), 0));
     if (rnd(pays.reduce((s, t) => s + t.amount, 0)) - owes > Math.max(0, i.paid - i.total) + 0.0005)
       return T("loan.blockPaid", { who: loanWho(l), amount: money(i.paid, i.cur) });
     if (first && first < keep[0].date) return T("loan.blockOrder", { who: loanWho(l), date: dayLabel(first) });
@@ -917,7 +931,7 @@ function reopenLoan(id) {
     who = loanWho(l);
   if (i.st === "writeoff") {
     withUndo(
-      T(lend ? "loan.msg.owesAgain" : "loan.msg.oweAgain", { who, amount: money(i.left, i.cur) }),
+      T(lend ? "loan.msg.owesAgain" : "loan.msg.oweAgain", { who, amount: money(i.unpaid, i.cur) }), // the top too
       () => {
         loan(id).status = "open";
       },

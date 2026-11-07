@@ -651,7 +651,8 @@ function runBal() {
 }
 /* The parts of loans and lendings that count as income or spending with no entry of their own (docs/specs/charges.md,
    "Counting"), worked out by loanInfo() of every loan: the amount on top each payment covered (a lending's extra:
-   income; a loan's charges: spending, in Charges) on the payment's day, and a written-off lending's transfer charge
+   income; a loan's charges: spending, in Charges) on the payment's day (a later draw's, covered by credit, on the
+   draw's day: topOn), and a written-off lending's transfer charge
    still unpaid (spending, in Charges) on its draw's day. Each is {of: the entry whose row it is in, date, cur (that
    entry's account's), amount, as: "income" | "spend"}. Cached until the next render, as runBal(). */
 /* exported loanParts -- until the counting rule (charges plan, Task 3) adds it to every total */
@@ -659,12 +660,12 @@ let LPC = null;
 function loanParts() {
   if (LPC) return LPC;
   const out = [],
-    add = (t, i, amount, as) =>
-      out.push({ of: t.id, date: t.date, cur: (acc(t.account) || {}).currency || i.cur, amount, as });
+    add = (t, date, i, amount, as) =>
+      out.push({ of: t.id, date, cur: (acc(t.account) || {}).currency || i.cur, amount, as });
   S.loans.forEach(l => {
     const i = loanInfo(l);
-    i.pays.forEach(p => i.topPaid[p.id] > 0 && add(p, i, i.topPaid[p.id], l.kind === "lend" ? "income" : "spend"));
-    i.draws.forEach(t => i.feeLeft[t.id] > 0 && add(t, i, i.feeLeft[t.id], "spend"));
+    i.topOn.forEach(([p, day, n]) => n > 0 && add(p, day, i, n, l.kind === "lend" ? "income" : "spend"));
+    i.draws.forEach(t => i.feeLeft[t.id] > 0 && add(t, t.date, i, i.feeLeft[t.id], "spend"));
   });
   return (LPC = out);
 }
