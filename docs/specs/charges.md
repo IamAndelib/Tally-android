@@ -385,6 +385,9 @@ its add-on), as today.
   counts in its heading.
 - **Category filter:** a purchase's charge follows its purchase, so "Eating out" counts ৳1,150.00 (as the ring).
 - Kind and category counts in the Filters sheet follow the same rules as the list.
+- Credit from an earlier payment that covers a later draw's extra or charges counts on that draw's day. Every filter
+  that keeps the payment (an account, Spent or Received, a person, a search) also lists that draw, so its day is drawn
+  with its heading.
 
 ### Search
 
@@ -392,6 +395,8 @@ its add-on), as today.
 - A number also finds the figure the row and the opened row show (a purchase's total ৳1,150.00, a box's or a chip's
   figure). "More than" and "less than" compare the row's figure.
 - Suggestion counts follow History's rows and the filters' rules above.
+- As before this version, a number also finds an entry's own amounts on their own: a purchase by its price before
+  the charge, a payback by its tip alone even when the payment also covered an extra (whose box shows their sum).
 
 ### Home
 

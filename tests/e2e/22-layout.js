@@ -227,7 +227,9 @@ function inspect() {
       e.scrollHeight > e.clientHeight + 2 &&
       s.overflowY === "hidden" &&
       !/-webkit-box/.test(s.display) &&
-      !(s.webkitLineClamp && s.webkitLineClamp !== "none") && // clamped lines end in "…" (newer Chrome: flow-root)
+      /* lines clamped on purpose end in "…" (newer Chrome computes their -webkit-box as flow-root): an entry's title
+         (.tx.en .d, two lines; .list.tight .tx.en .d, three) and a tile's name (.cat .cn, two) */
+      !(s.webkitLineClamp && s.webkitLineClamp !== "none") &&
       e.clientHeight > 0 &&
       s.whiteSpace !== "nowrap"
     )

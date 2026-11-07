@@ -2499,14 +2499,34 @@ function variedV7() {
         ]),
       "… opened: Got back ৳3,000.00 · Charge ৳10.00 " + J(op("oP").boxes)
     );
-    // written off with all the money back but the extra: what is unpaid, never "Cleared"
+    /* written off with all the money back but the extra (or forgiven with all of it paid but the charges): what is
+       on top is let go, so the box names the status with no figure, never "owes" or "Cleared"; its bar says what
+       really came back */
     const wo = rowBook(false);
-    wo.txns.push(x("rW", 800, M5(8), "loan", 1100, "k", { dir: "in", loan: "R" }));
+    wo.txns.push(
+      x("rW", 800, M5(8), "loan", 1100, "k", { dir: "in", loan: "R" }),
+      x("lW", 1020, M5(10), "loan", 600, "a", { dir: "out", loan: "L" })
+    );
     wo.loans.find(l => l.id === "R").status = "writeoff";
-    const w = (await histLook(wo, {}, ["rW"])).open.rW || {};
+    wo.loans.find(l => l.id === "L").status = "writeoff";
+    const wl = await histLook(wo, {}, ["rW", "lW", "nP"]),
+      w = wl.open.rW || {},
+      fg = wl.open.lW || {};
     ok(
-      w.head === "Rafi owes you " + tk(150) && J(w.foot) === J([tk(1100) + " of " + tk(1250) + " back"]),
-      "written off with only the extra unpaid: Rafi owes you ৳150.00, ৳1,100.00 of ৳1,250.00 back " + J(w)
+      w.head === "Written off" && J(w.foot) === J([tk(1100) + " of " + tk(1250) + " back"]),
+      "written off with only the extra unpaid: Written off, ৳1,100.00 of ৳1,250.00 back " + J(w)
+    );
+    ok(
+      fg.head === "Forgiven" && J(fg.foot) === J([tk(1000) + " of " + tk(1100) + " paid"]),
+      "forgiven with only the charges unpaid: Forgiven, ৳1,000.00 of ৳1,100.00 paid " + J(fg)
+    );
+    // written off with money still unpaid: what was let go of it, the extra not counted
+    const wn = rowBook(false);
+    wn.loans.find(l => l.id === "N").status = "writeoff";
+    const nw = (await histLook(wn, {}, ["nP"])).open.nP || {};
+    ok(
+      nw.head === "Nila owes you " + tk(600) && J(nw.foot) === J([tk(500) + " of " + tk(1250) + " back"]),
+      "written off with money unpaid: the money only, ৳600.00, and no quiet line " + J(nw)
     );
     // never a total beside one of its parts
     const all = Object.values(r.open)

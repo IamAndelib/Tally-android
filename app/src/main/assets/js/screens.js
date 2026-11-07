@@ -901,8 +901,8 @@ function txOpenView(t) {
       i = loanInfo(l),
       lend = l.kind === "lend",
       who = { html: bdi(loanWho(l)) },
-      /* what is still owed; written off or forgiven, the money still unpaid, or, all of it back, what is unpaid on top */
-      owed = i.left > 0 || i.st === "cleared" ? i.left : i.unpaid,
+      /* what is still owed; written off or forgiven, the money still unpaid (what is unpaid on top is let go) */
+      owed = i.st === "writeoff" ? i.left : i.unpaid,
       paid = Math.max(0, rnd(i.total - i.unpaid)),
       pct = i.total ? Math.min(100, Math.round((paid / i.total) * 100)) : 0;
     let inBox = "",
@@ -952,7 +952,11 @@ function txOpenView(t) {
     }
     h +=
       '<div class="lbox"><div class="lhead"><span>' +
-      (owed > 0 ? TH(lend ? "tx.owesYou" : "tx.youOwe", { who }) : TH("tx.cleared")) +
+      (owed > 0
+        ? TH(lend ? "tx.owesYou" : "tx.youOwe", { who })
+        : i.st === "writeoff" // nothing of the money left, only what was on top: let go, never "owes" or "Cleared"
+          ? TH(lend ? "loan.st.writtenOff" : "loan.st.forgiven")
+          : TH("tx.cleared")) +
       "</span>" +
       (owed > 0 ? "<b>" + M(owed, i.cur) + "</b>" : "") +
       '</div><div class="ltrack" aria-hidden="true"><span style="width:' +
