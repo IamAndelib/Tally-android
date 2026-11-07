@@ -1,7 +1,7 @@
 # History: a pinned header, and archiving entries
 
 Approved by the maintainer on 2026-11-07 from the mock-ups (real app, light and dark, phone and sideways). Built in
-1.4.5 after charges (`docs/plans/2026-11-07-charges.md`), on data version 8, which is not released yet.
+1.5.0 after charges (`docs/plans/2026-11-07-charges.md`), on data version 8, which is not released yet.
 
 ## A · The header stays while the entries scroll
 

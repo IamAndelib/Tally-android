@@ -282,7 +282,7 @@ links that would need the internet.
 
 ## 13. What Tally deliberately does NOT do
 
-- **No budgets** (until 1.5.0's planned budgeting/planning work), **no statement import**, no bank connections.
+- **No budgets** (until 1.6.0's planned budgeting/planning work), **no statement import**, no bank connections.
 - **No network, analytics, ads, accounts or sign-up**, ever. No remote content.
 - **No charts to study.** Summary shows bars (or, in its Months tab, a pie) and a category list with one comparison;
   nothing more.

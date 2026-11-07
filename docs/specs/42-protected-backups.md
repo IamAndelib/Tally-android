@@ -1,6 +1,6 @@
 # #42 Password-protected backups (+ app lock): discovery notes
 
-Target: 1.5.0, with budgeting / planning (docs/roadmap.md). Needs a dedicated security review.
+Target: 1.6.0, with budgeting / planning (docs/roadmap.md). Needs a dedicated security review.
 
 Maintainer's decisions (2026-11-01):
 - **Off by default**; the user turns it on in Settings and sets a password. Plain backups stay readable by every version.
