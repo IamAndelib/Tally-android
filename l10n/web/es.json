@@ -351,6 +351,7 @@
     "lendExtra": "préstamo {{amount}} + extra {{extra}}",
     "lendOff": "préstamo {{amount}} − cargo {{charge}}",
     "owes": "{{who}} debe {{amount}}",
+    "youOwe": "debes {{amount}}",
     "youOweWho": "debes a {{who}} {{amount}}"
   },
   "loan": {
@@ -443,7 +444,9 @@
     "noAccountRecord": "No hay ninguna cuenta en {{cur}} para anotarlo",
     "msg": {
       "lent": "Prestaste {{amount}} a {{who}}",
+      "lentOwes": "Prestaste {{amount}} a {{who}} · {{who}} debe {{owed}}",
       "borrowed": "{{who}} te prestó {{amount}}",
+      "borrowedOwe": "{{who}} te prestó {{amount}} · debes {{owed}}",
       "reopened": "Se reabrió",
       "writtenOff": "Dado por perdido",
       "forgiven": "Marcada como perdonada",

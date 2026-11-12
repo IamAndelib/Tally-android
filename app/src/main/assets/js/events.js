@@ -696,7 +696,7 @@ document.addEventListener("click", ev => {
       if (el2) el2.value = (loan(v) || {}).person || "";
       F.merge = v;
       $("#f-person-sug").hidden = true;
-      mergeHint();
+      formPreview(); // the hint and the preview name the tab picked
       if (el2) el2.focus({ preventScroll: true }); // the chips are gone: back to the name, now filled in
       break;
     }
@@ -774,10 +774,10 @@ document.addEventListener("input", ev => {
       cur = (acc(F.account) || {}).currency,
       same = name && cur ? personCandidates(F.lk, cur, ev.target.value).find(l => curFold(l.person) === name) : null;
     F.merge = same ? same.id : null;
-    mergeHint();
+    formPreview(); // the hint and the preview, which names the person
     personSuggest(ev.target.value);
   } else if (id === "f-payee" && F && F.kind === "tx") payeeSuggest(ev.target.value);
-  else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
+  else if (F && F.kind === "loanf" && ["f-amt", "f-charge", "f-extra"].includes(id)) formPreview();
 });
 document.addEventListener("change", ev => {
   if (ev.target.id === "restore-file") restoreFile(ev.target);

@@ -131,6 +131,14 @@ const ok = (c, m) => {
   await page.fill("#f-amt", "5000");
   await sact("f-acc", "k");
   await noNative("loan form");
+  {
+    const pv = (await page.textContent("#sheet .aoline")).replace(/\s+/g, " ").trim();
+    ok(
+      /^bKash \+.*5,000\.00 · you owe Rahim .*5,000\.00$/.test(pv) &&
+        (await page.isVisible('#sheet [data-act="addon-add"][data-v="charges"]')),
+      "borrow form: the preview under the account chips, and + Add charges " + pv
+    );
+  }
   await pickDate("f-due", d.p3);
   ok(
     (await page.textContent("#f-due")).trim().length > 3 &&
@@ -229,6 +237,15 @@ const ok = (c, m) => {
   await page.fill("#f-person", "Karim");
   await page.fill("#f-amt", "1000");
   await sact("f-acc", "w");
+  {
+    const pv = (await page.textContent("#sheet .aoline")).replace(/\s+/g, " ").trim();
+    ok(
+      /^Wallet −.*1,000\.00 · Karim owes .*1,000\.00$/.test(pv) &&
+        (await page.isVisible('#sheet [data-act="addon-add"][data-v="xcharge"]')) &&
+        (await page.isVisible('#sheet [data-act="addon-add"][data-v="extra"]')),
+      "lend form: the preview under the account chips, + Transfer charge and + Add an extra " + pv
+    );
+  }
   await pickDate("f-date", d.y);
   await page.evaluate(y => {
     document.getElementById("f-due").dataset.v = y;

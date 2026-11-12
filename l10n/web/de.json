@@ -350,6 +350,7 @@
     "lendExtra": "Darlehen {{amount}} + Extra {{extra}}",
     "lendOff": "Darlehen {{amount}} − Gebühr {{charge}}",
     "owes": "{{who}} schuldet {{amount}}",
+    "youOwe": "du schuldest {{amount}}",
     "youOweWho": "du schuldest {{who}} {{amount}}"
   },
   "loan": {
@@ -440,7 +441,9 @@
     "noAccountRecord": "Kein Konto in {{cur}} zum Erfassen",
     "msg": {
       "lent": "{{amount}} an {{who}} verliehen",
+      "lentOwes": "{{amount}} an {{who}} verliehen · {{who}} schuldet {{owed}}",
       "borrowed": "{{amount}} von {{who}} geliehen",
+      "borrowedOwe": "{{amount}} von {{who}} geliehen · du schuldest {{owed}}",
       "reopened": "Wieder geöffnet",
       "writtenOff": "Abgeschrieben",
       "forgiven": "Als erlassen markiert",

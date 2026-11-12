@@ -451,17 +451,25 @@ function inspect() {
       out.push("Charges label not 6px under the chips " + (L.top - st.getBoundingClientRect().bottom));
   }
   if (chl && !vis(chl)) out.push("Charges label left out"); // the grey slice is never shown by its colour alone
-  // 8. the amount being typed is never under the calculator keypad (a card's field: the whole card, its preview too)
+  // 8. the amount being typed is never under the calculator keypad, nor scrolled out of its form (a card's field: its
+  // row down to the card's bottom, the preview too, where they fit; a row above it may scroll away. Where they don't
+  // (two rows at 320 px, 1.3×, the keypad on the first), the row being filled stays whole and the preview goes under)
   const pad = [...document.querySelectorAll(".calc")].find(vis),
     aoRow = document.querySelector(".aorow.calcing"),
-    amt = document.querySelector(".amtwrap.calcing") || (aoRow && aoRow.closest(".aocard"));
+    amt = document.querySelector(".amtwrap.calcing") || aoRow;
   if (pad && amt) {
-    const a = amt.getBoundingClientRect(),
-      k = pad.getBoundingClientRect();
+    const card = aoRow && aoRow.closest(".aocard"),
+      r = amt.getBoundingClientRect(),
+      k = pad.getBoundingClientRect(),
+      sc = amt.closest(".p"),
+      cb = card ? card.getBoundingClientRect().bottom : r.bottom,
+      fits = cb - r.top <= k.top - (sc ? sc.getBoundingClientRect().top : 0) - 8,
+      a = card && fits ? { left: r.left, right: r.right, top: r.top, bottom: cb } : r;
     const under =
       Math.min(a.right, k.right) - Math.max(a.left, k.left) > 2 &&
       Math.min(a.bottom, k.bottom) - Math.max(a.top, k.top) > 2;
-    if (under || a.top < 0 || a.bottom > vh + 1) out.push("amount hidden by the keypad");
+    if (under || a.top < 0 || a.bottom > vh + 1 || (sc && a.top < sc.getBoundingClientRect().top - 1))
+      out.push("amount hidden by the keypad");
   }
   // 9. a phone held sideways: the Home ring is wholly in view
   const ring = document.getElementById("ring");
@@ -991,6 +999,55 @@ function inspect() {
       "lend-form",
       ev(() => loanForm("lend"))
     );
+    /* the lend and borrow forms with their cards (docs/specs/charges.md, "The card"): Lend's one card of two rows with
+       one preview at its bottom (and the keypad on its extra), one row with the other's button back under it, and
+       Borrow's charges; each with a long name, so the preview wraps */
+    const loanFormLook = (kind, kinds, keypad) => async () => {
+      await page.evaluate(kind => loanForm(kind), kind);
+      await page.waitForTimeout(100); // the form focuses the name 60ms after it opens, which would close a keypad
+      await page.evaluate(
+        ([kinds, keypad]) => {
+          $("#f-person").value = "Maximiliane Hoffmann-Lindqvist";
+          $("#f-amt").value = groupDigits("1000");
+          kinds.forEach((k, i) => {
+            $('#sheet [data-act="addon-add"][data-v="' + k + '"]').click();
+            $(k === "extra" ? "#f-extra" : "#f-charge").value = i ? "150" : "100";
+          });
+          formPreview();
+          if (document.activeElement) document.activeElement.blur();
+          if (keypad) {
+            calcToggle(keypad, calcToggleBtn(keypad));
+            ["+", "5"].forEach(calcKey);
+          }
+        },
+        [kinds, keypad]
+      );
+      const bad = await page.evaluate(
+        ([n, keypad]) => {
+          const out = [],
+            card = $("#sheet .aocard"),
+            prev = card.querySelector(".aoprev"),
+            res = CALC && $("#cr-" + CALC.id);
+          if (card.hidden || card.querySelectorAll(".aorow:not([hidden])").length !== n)
+            out.push("no card with " + n + " rows");
+          if (!prev.textContent || card.lastElementChild !== prev) out.push("no preview at the card's bottom");
+          if ($("#sheet .aoline").textContent) out.push("the preview shown twice");
+          if (
+            keypad &&
+            (!res || CALC.id !== keypad || !res.querySelector(".calcname") || !res.querySelector(".calceq"))
+          )
+            out.push("the keypad's bar doesn't name its field and result");
+          return out;
+        },
+        [kinds.length, keypad]
+      );
+      if (bad.length) throw new Error(kind + " form: " + bad.join("; "));
+    };
+    await shot("lend-form-both", loanFormLook("lend", ["xcharge", "extra"]));
+    await shot("lend-form-both-keypad", loanFormLook("lend", ["xcharge", "extra"], "f-extra"));
+    await shot("lend-form-both-keypad-charge", loanFormLook("lend", ["xcharge", "extra"], "f-charge"));
+    await shot("lend-form-extra", loanFormLook("lend", ["extra"]));
+    await shot("borrow-form-charges", loanFormLook("borrow", ["charges"]));
     await shot(
       "loan",
       ev(() => loanOpen("L1"))

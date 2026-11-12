@@ -3298,6 +3298,440 @@ function variedV7() {
     ok(false, "The loan sheet: " + e.message.split("\n")[0]);
   }
 
+  // ---- 25. the lend and borrow forms (docs/specs/charges.md, "The buttons", "The card", "Previews", "Saving";
+  // lend-form, borrow-form, lend-after, lend-refine): the preview under the account chips, Lend's two buttons and its
+  // one card of two rows with one preview at its bottom, Borrow's charges, what is saved and said, the low-balance
+  // question, a merge into an open tab, and the names TalkBack and the keypad's bar give each field
+  try {
+    const formBook = () => ({
+      v: 8,
+      settings,
+      accounts: [
+        acct("a", "Bank", "bank", "BDT", 50000),
+        acct("k", "Bkash", "wallet", "BDT", 20000),
+        acct("c", "Cash", "cash", "BDT", 1050),
+      ],
+      types: [],
+      cats: cats8,
+      // Nila: lent ৳500.00 from Bkash, still open (a lend to her adds to it)
+      txns: [x("nD", 100, D.d1, "loan", 500, "k", { dir: "out", loan: "N", principal: true })],
+      loans: [loanOf("N", "lend", "Nila", "k", D.d1)],
+      assets: [],
+    });
+    const cl = s =>
+      String(s || "")
+        .replace(/⁠/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const tap = async sel => {
+      await page.click(sel);
+      await page.waitForTimeout(320);
+    };
+    const fresh = kind =>
+      page.evaluate(
+        ([o, kind]) => {
+          closeSheet2();
+          closeSheet();
+          closePop();
+          S = migrate(o);
+          RBC = LPC = null;
+          commit();
+          render();
+          loanForm(kind);
+        },
+        [formBook(), kind]
+      );
+    const tk = await page
+      .evaluate(() => money(1234.5, "BDT"))
+      .then(
+        t => (n, sign) =>
+          (sign === "-" ? "−" : sign === "+" ? "+" : "") +
+          cl(t).replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }))
+      );
+    const txt = sel => page.evaluate(s => (document.querySelector(s) || {}).textContent || "", sel).then(cl);
+    const snackText = () => txt("#snack");
+    const db = () => page.evaluate(() => JSON.parse(JSON.stringify({ txns: S.txns, loans: S.loans, bal: balances() })));
+    const typeIn = async (sel, v) => {
+      await page.fill(sel, v);
+      await page.waitForTimeout(60);
+    };
+    const visible = sel => page.isVisible(sel);
+    const line = () => txt("#sheet .aoline");
+    const prev = () => txt("#sheet .aocard .aoprev");
+    const look = () =>
+      page.evaluate(() => {
+        const card = $("#sheet .aocard"),
+          rows = [...card.querySelectorAll(".aorow")].filter(r => !r.hidden);
+        return {
+          card: !card.hidden,
+          group: card.getAttribute("aria-label"),
+          role: card.getAttribute("role"),
+          rows: rows.map(r => r.dataset.k),
+          prevLast: card.lastElementChild.classList.contains("aoprev"),
+          adds: [...$("#sheet .aoadds").children].filter(b => !b.hidden && b.offsetParent).map(b => b.dataset.v),
+        };
+      });
+
+    // Lend: the preview under the account chips, "Someone owes" until a name is typed
+    await fresh("lend");
+    await tap('#sheet [data-act="f-acc"][data-v="k"]');
+    await typeIn("#sheet #f-amt", "1000");
+    ok(
+      (await line()) === "Bkash " + tk(1000, "-") + " · Someone owes " + tk(1000),
+      "lend: ● Bkash −৳1,000.00 · Someone owes ৳1,000.00 before a name " + (await line())
+    );
+    ok(
+      await page.evaluate(() => {
+        const l = $("#sheet .aoline"),
+          chips = $('#sheet [data-act="f-acc"]').parentElement,
+          date = $("#sheet #f-date");
+        return (
+          !!(chips.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+          !!(l.compareDocumentPosition(date) & Node.DOCUMENT_POSITION_FOLLOWING)
+        );
+      }),
+      "… under the account chips, above Date and Due"
+    );
+    await typeIn("#sheet #f-person", "Rafi");
+    ok(
+      (await line()) === "Bkash " + tk(1000, "-") + " · Rafi owes " + tk(1000),
+      "… then ● Bkash −৳1,000.00 · Rafi owes ৳1,000.00 " + (await line())
+    );
+    let lk = await look();
+    ok(
+      !lk.card &&
+        J(lk.adds) === J(["xcharge", "extra"]) &&
+        (await txt('#sheet [data-act="addon-add"][data-v="xcharge"]')) === "Transfer charge" &&
+        (await txt('#sheet [data-act="addon-add"][data-v="extra"]')) === "Add an extra",
+      "… with + Transfer charge and + Add an extra side by side, no card yet " + J(lk)
+    );
+    // with the transfer charge: the card takes the preview
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "100");
+    lk = await look();
+    ok(
+      lk.card &&
+        J(lk.rows) === J(["xcharge"]) &&
+        lk.group === "Transfer charge" &&
+        J(lk.adds) === J(["extra"]) &&
+        (await prev()) === "Bkash " + tk(1100, "-") + " · Rafi owes " + tk(1100) &&
+        (await line()) === "",
+      "with the transfer charge: its card and ● Bkash −৳1,100.00 · Rafi owes ৳1,100.00, the preview only in it " +
+        J(lk) +
+        " " +
+        (await prev())
+    );
+    // with both: one card of two rows, one preview at its bottom
+    await tap('#sheet [data-act="addon-add"][data-v="extra"]');
+    await typeIn("#sheet #f-extra", "150");
+    lk = await look();
+    ok(
+      lk.card &&
+        lk.role === "group" &&
+        J(lk.rows) === J(["xcharge", "extra"]) &&
+        lk.group === "Transfer charge and extra" &&
+        lk.prevLast &&
+        J(lk.adds) === J([]) &&
+        (await page.$$eval("#sheet .aocard", e => e.length)) === 1 &&
+        (await prev()) === "Bkash " + tk(1100, "-") + " · Rafi owes " + tk(1250) &&
+        (await line()) === "",
+      "with both: one card of two rows, the group “Transfer charge and extra”, ● Bkash −৳1,100.00 · Rafi owes " +
+        "৳1,250.00 at its bottom " +
+        J(lk) +
+        " " +
+        (await prev())
+    );
+    const names = await page.evaluate(() =>
+      ["f-charge", "f-extra"].map(id => {
+        const inp = $("#" + id),
+          row = inp.closest(".aorow");
+        return [
+          $("#" + inp.getAttribute("aria-labelledby")).textContent,
+          row.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+          row.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+        ];
+      })
+    );
+    ok(
+      J(names) ===
+        J([
+          ["Transfer charge", "Calculator for the transfer charge", "Remove the transfer charge"],
+          ["Extra", "Calculator for the extra", "Remove the extra"],
+        ]),
+      "TalkBack names each row's field, calculator and ✕ " + J(names)
+    );
+    const bars = await page.evaluate(() =>
+      ["f-charge", "f-extra", "f-amt"].map(id => {
+        calcToggle(id, calcToggleBtn(id));
+        const name = ($("#cr-" + id + " .calcname") || {}).textContent || "";
+        calcClose(id, calcToggleBtn(id));
+        return name;
+      })
+    );
+    ok(
+      J(bars) === J(["Transfer charge", "Extra", "Amount"]),
+      "the keypad's bar names each row, and the amount while the card is open " + J(bars)
+    );
+    // ✕ on a row leaves one row and brings its button back
+    await tap('#sheet [data-act="addon-remove"][data-v="xcharge"]');
+    lk = await look();
+    ok(
+      J(lk.rows) === J(["extra"]) &&
+        lk.group === "Extra" &&
+        J(lk.adds) === J(["xcharge"]) &&
+        (await prev()) === "Bkash " + tk(1000, "-") + " · Rafi owes " + tk(1150),
+      "✕ on the transfer charge: one row left, + Transfer charge back, ● Bkash −৳1,000.00 · Rafi owes ৳1,150.00 " +
+        J(lk) +
+        " " +
+        (await prev())
+    );
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "100");
+    lk = await look();
+    ok(J(lk.rows) === J(["xcharge", "extra"]), "… and it opens again above the extra " + J(lk));
+    // saved: the draw with onTop 150 and its linked loan transfer charge of 100
+    await tap('#sheet [data-act="loan-save"]');
+    let d = await db();
+    const rl = d.loans.find(l => l.person === "Rafi"),
+      rd = rl && d.txns.find(t => t.loan === rl.id && t.principal && !t.feeOf),
+      rc = rd && d.txns.find(t => t.id === rd.feeId);
+    ok(
+      !!rd &&
+        rd.amount === 1000 &&
+        rd.onTop === 150 &&
+        rd.account === "k" &&
+        !!rc &&
+        rc.feeOf === rd.id &&
+        rc.type === "loan" &&
+        rc.dir === "out" &&
+        rc.principal === true &&
+        rc.loan === rl.id &&
+        rc.amount === 100 &&
+        rc.account === "k" &&
+        rc.date === rd.date,
+      "saved: a draw with onTop 150 and a linked loan transfer charge of ৳100.00 " + J([rd, rc])
+    );
+    ok(d.bal.k === 18400, "Bkash −৳1,100.00 (৳20,000.00 − Nila's ৳500.00 − ৳1,100.00) " + d.bal.k);
+    ok(
+      (await snackText()).startsWith("Lent " + tk(1000) + " to Rafi · Rafi owes " + tk(1250)),
+      "Lent ৳1,000.00 to Rafi · Rafi owes ৳1,250.00 " + (await snackText())
+    );
+    await page.evaluate(() => ((V.screen = "assets"), render()));
+    const arow = await txt('#app [data-act="loan-open"][data-v="' + rl.id + '"]');
+    ok(arow.includes(tk(1250)), "Assets: Rafi ৳1,250.00 " + arow);
+    const hr = await page.evaluate(id => {
+      openHistory();
+      const a = document.querySelector('#app .tx[data-v="' + id + '"] .a'),
+        c = s => s.replace(/⁠/g, "").replace(/\s+/g, " ").trim();
+      return a
+        ? {
+            amt: c(
+              [...a.childNodes]
+                .filter(n => n.nodeName !== "SMALL")
+                .map(n => n.textContent)
+                .join("")
+            ),
+            small: [...a.querySelectorAll("small")].map(s => c(s.textContent)),
+          }
+        : null;
+    }, rd.id);
+    ok(
+      !!hr && hr.amt === tk(1000, "-") && J(hr.small) === J(["+ " + tk(100) + " transfer charge"]),
+      "History: −৳1,000.00 / + ৳100.00 transfer charge " + J(hr)
+    );
+    await page.evaluate(() => ((V.screen = "home"), render()));
+
+    // a lend without add-ons says what it says today
+    await fresh("lend");
+    await typeIn("#sheet #f-person", "Tom");
+    await typeIn("#sheet #f-amt", "300");
+    await tap('#sheet [data-act="loan-save"]');
+    ok(
+      (await snackText()).startsWith("Lent " + tk(300) + " to Tom") && !(await snackText()).includes("owes"),
+      "a lend without either: “Lent ৳300.00 to Tom” " + (await snackText())
+    );
+
+    // an extra that can't be read, or is below 0, saves nothing
+    await fresh("lend");
+    await typeIn("#sheet #f-person", "Rafi");
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="extra"]');
+    await page.evaluate(() => ($("#f-extra").value = "1+"));
+    await tap('#sheet [data-act="loan-save"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("That extra isn't a number") && d.loans.length === 1,
+      "an unreadable extra: “That extra isn't a number”, nothing saved " + (await snackText())
+    );
+    await page.evaluate(() => ($("#f-extra").value = "−5"));
+    await tap('#sheet [data-act="loan-save"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("An extra can't be negative") && d.loans.length === 1,
+      "a negative extra: “An extra can't be negative” " + (await snackText())
+    );
+    await page.evaluate(() => ($("#f-extra").value = "0"));
+    await tap('#sheet [data-act="loan-save"]');
+    d = await db();
+    const r0 = d.loans.find(l => l.person === "Rafi"),
+      r0d = r0 && d.txns.find(t => t.loan === r0.id && t.principal);
+    ok(
+      !!r0d && r0d.onTop === undefined && !r0d.feeId && (await snackText()).startsWith("Lent " + tk(1000) + " to Rafi"),
+      "an extra of 0 saves as nothing " + J(r0d) + " " + (await snackText())
+    );
+
+    // a charge setAddOn() refuses is never dropped silently
+    await fresh("lend");
+    await typeIn("#sheet #f-person", "Rafi");
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "20");
+    await page.evaluate(() => {
+      window.__setAddOn = setAddOn;
+      setAddOn = () => false;
+    });
+    await tap('#sheet [data-act="loan-save"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("That charge isn't a number") && d.loans.length === 1,
+      "a lend whose charge is refused is not saved " + (await snackText())
+    );
+    await page.evaluate(() => (setAddOn = window.__setAddOn));
+
+    // the low-balance question counts the transfer charge: Cash ৳1,050.00, lend ৳1,000.00 + ৳100.00
+    await fresh("lend");
+    await typeIn("#sheet #f-person", "Rafi");
+    await tap('#sheet [data-act="f-acc"][data-v="c"]');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "100");
+    await tap('#sheet [data-act="loan-save"]');
+    ok(
+      (await visible('#pop [data-act="ask-ok"]')) && (await db()).loans.length === 1,
+      "the low-balance question counts the transfer charge (Cash would be −৳50.00)"
+    );
+    await tap('#pop [data-act="ask-ok"]');
+    d = await db();
+    ok(d.bal.c === -50 && d.loans.length === 2, "… Save anyway: Cash −৳50.00 " + d.bal.c);
+
+    // a merge into an open tab: the new draw keeps its own add-ons; the hint, the preview and the message say the tab
+    await fresh("lend");
+    await tap('#sheet [data-act="f-acc"][data-v="k"]');
+    await typeIn("#sheet #f-person", "Nila");
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "100");
+    await tap('#sheet [data-act="addon-add"][data-v="extra"]');
+    await typeIn("#sheet #f-extra", "150");
+    ok(
+      (await txt("#sheet #f-mergehint")).includes(tk(1750)) &&
+        (await prev()) === "Bkash " + tk(1100, "-") + " · Nila owes " + tk(1750),
+      "merging into Nila's ৳500.00: the hint and ● Bkash −৳1,100.00 · Nila owes ৳1,750.00 " +
+        (await txt("#sheet #f-mergehint")) +
+        " " +
+        (await prev())
+    );
+    await tap('#sheet [data-act="loan-save"]');
+    d = await db();
+    const nd = d.txns.find(t => t.loan === "N" && t.principal && !t.feeOf && t.id !== "nD"),
+      nc = nd && d.txns.find(t => t.id === nd.feeId);
+    ok(
+      d.loans.length === 1 &&
+        !!nd &&
+        nd.onTop === 150 &&
+        !!nc &&
+        nc.feeOf === nd.id &&
+        nc.loan === "N" &&
+        nc.amount === 100 &&
+        !d.txns.find(t => t.id === "nD").onTop &&
+        !d.txns.find(t => t.id === "nD").feeId,
+      "… the new draw keeps its add-ons, the first draw stays as it was " + J(d.txns)
+    );
+    ok(
+      (await snackText()).startsWith("Lent " + tk(1000) + " to Nila · Nila owes " + tk(1750)) &&
+        (await page.evaluate(() => loanInfo(loan("N")).left)) === 1750,
+      "… Lent ৳1,000.00 to Nila · Nila owes ৳1,750.00 " + (await snackText())
+    );
+
+    // Borrow: + Add charges, its card "Charges BDT 100", "you owe" until a name is typed
+    await fresh("borrow");
+    await tap('#sheet [data-act="f-acc"][data-v="a"]');
+    await typeIn("#sheet #f-amt", "1000");
+    ok(
+      (await line()) === "Bank " + tk(1000, "+") + " · you owe " + tk(1000),
+      "borrow: ● Bank +৳1,000.00 · you owe ৳1,000.00 before a name " + (await line())
+    );
+    await typeIn("#sheet #f-person", "Rafi");
+    lk = await look();
+    ok(
+      (await line()) === "Bank " + tk(1000, "+") + " · you owe Rafi " + tk(1000) &&
+        J(lk.adds) === J(["charges"]) &&
+        (await txt('#sheet [data-act="addon-add"][data-v="charges"]')) === "Add charges",
+      "… then ● Bank +৳1,000.00 · you owe Rafi ৳1,000.00, and + Add charges " + (await line())
+    );
+    await tap('#sheet [data-act="addon-add"][data-v="charges"]');
+    await typeIn("#sheet #f-charge", "100");
+    lk = await look();
+    const bn = await page.evaluate(() => {
+      const row = $("#sheet .aorow:not([hidden])");
+      return [
+        row.querySelector(".aol").textContent,
+        row.querySelector(".aocur").textContent,
+        row.querySelector("input").value,
+        row.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+        row.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+      ];
+    });
+    ok(
+      J(bn) === J(["Charges", "BDT", "100", "Calculator for the charges", "Remove the charges"]) &&
+        lk.group === "Charges" &&
+        J(lk.adds) === J([]) &&
+        (await prev()) === "Bank " + tk(1000, "+") + " · you owe Rafi " + tk(1100),
+      "Charges BDT 100, ● Bank +৳1,000.00 · you owe Rafi ৳1,100.00 " + J(bn) + " " + (await prev())
+    );
+    ok(
+      (await page.evaluate(() => {
+        calcToggle("f-charge", calcToggleBtn("f-charge"));
+        const n = ($("#cr-f-charge .calcname") || {}).textContent;
+        calcClose("f-charge", calcToggleBtn("f-charge"));
+        return n;
+      })) === "Charges",
+      "the keypad's bar names Charges"
+    );
+    await tap('#sheet [data-act="f-acc"][data-v="k"]');
+    ok(
+      (await prev()) === "Bkash " + tk(1000, "+") + " · you owe Rafi " + tk(1100),
+      "the preview follows the account " + (await prev())
+    );
+    await tap('#sheet [data-act="f-acc"][data-v="a"]');
+    await tap('#sheet [data-act="loan-save"]');
+    d = await db();
+    const bl = d.loans.find(l => l.kind === "borrow"),
+      bd = bl && d.txns.find(t => t.loan === bl.id && t.principal);
+    ok(
+      !!bd && bd.onTop === 100 && !bd.feeId && bd.account === "a" && d.bal.a === 51000,
+      "saved with onTop 100 and Bank +৳1,000.00 " + J(bd) + " " + d.bal.a
+    );
+    ok(
+      (await snackText()).startsWith("Borrowed " + tk(1000) + " from Rafi · you owe " + tk(1100)),
+      "Borrowed ৳1,000.00 from Rafi · you owe ৳1,100.00 " + (await snackText())
+    );
+    const bh = await page.evaluate(id => {
+      openHistory();
+      const a = document.querySelector('#app .tx[data-v="' + id + '"] .a');
+      return a
+        ? {
+            amt: a.textContent.replace(/⁠/g, "").replace(/\s+/g, " ").trim(),
+            small: a.querySelectorAll("small").length,
+          }
+        : null;
+    }, bd.id);
+    ok(!!bh && bh.amt === tk(1000, "+") && bh.small === 0, "History: +৳1,000.00 with no small line " + J(bh));
+    await page.evaluate(() => ((V.screen = "home"), render()));
+  } catch (e) {
+    ok(false, "The lend and borrow forms: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

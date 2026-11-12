@@ -350,6 +350,7 @@
     "lendExtra": "alacak {{amount}} + ekstra {{extra}}",
     "lendOff": "alacak {{amount}} − masraf {{charge}}",
     "owes": "{{who}} {{amount}} borçlu",
+    "youOwe": "{{amount}} borçlusun",
     "youOweWho": "{{who}} kişisine {{amount}} borçlusun"
   },
   "loan": {
@@ -440,7 +441,9 @@
     "noAccountRecord": "Kaydetmek için {{cur}} hesabı yok",
     "msg": {
       "lent": "{{amount}} borç verdin · {{who}}",
+      "lentOwes": "{{who}} kişisine {{amount}} borç verdin · {{who}} {{owed}} borçlu",
       "borrowed": "{{amount}} borç aldın · {{who}}",
+      "borrowedOwe": "{{who}} kişisinden {{amount}} borç aldın · {{owed}} borçlusun",
       "reopened": "Yeniden açıldı",
       "writtenOff": "Vazgeçildi",
       "forgiven": "Affedildi",

@@ -444,14 +444,14 @@ function pickAccount(id) {
   setPressed("f-acc", id);
   const c = $("#amt-cur");
   if (c) c.textContent = acc(id).currency;
-  formPreview();
-  if (F.kind !== "loanf") return;
-  if (F.merge) {
-    const ml = loan(F.merge);
-    if (!ml || loanInfo(ml).cur !== acc(id).currency) F.merge = null;
+  if (F.kind === "loanf") {
+    if (F.merge) {
+      const ml = loan(F.merge);
+      if (!ml || loanInfo(ml).cur !== acc(id).currency) F.merge = null;
+    }
+    personSuggest(($("#f-person") || {}).value || "");
   }
-  personSuggest(($("#f-person") || {}).value || "");
-  mergeHint();
+  formPreview(); // a lend's or borrow's with its hint
 }
 function readVals() {
   const g = id => {
@@ -637,6 +637,7 @@ function addOnPreview(sc, html) {
 function formPreview() {
   if (F && F.kind === "tr") trPreview();
   else if (F && F.kind === "loan") loanPreviews();
+  else if (F && F.kind === "loanf") loanFormPreview();
 }
 /* transfer between own accounts, with optional fee */
 function trSheet(id) {

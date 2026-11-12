@@ -350,6 +350,7 @@
     "lendExtra": "lending {{amount}} + extra {{extra}}",
     "lendOff": "lending {{amount}} − charge {{charge}}",
     "owes": "{{who}} owes {{amount}}",
+    "youOwe": "you owe {{amount}}",
     "youOweWho": "you owe {{who}} {{amount}}"
   },
   "loan": {
@@ -440,7 +441,9 @@
     "noAccountRecord": "No account in {{cur}} to record it",
     "msg": {
       "lent": "Lent {{amount}} to {{who}}",
+      "lentOwes": "Lent {{amount}} to {{who}} · {{who}} owes {{owed}}",
       "borrowed": "Borrowed {{amount}} from {{who}}",
+      "borrowedOwe": "Borrowed {{amount}} from {{who}} · you owe {{owed}}",
       "reopened": "Reopened",
       "writtenOff": "Written off",
       "forgiven": "Marked as forgiven",

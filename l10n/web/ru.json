@@ -352,6 +352,7 @@
     "lendExtra": "долг {{amount}} + доплата {{extra}}",
     "lendOff": "долг {{amount}} − комиссия {{charge}}",
     "owes": "{{who}}: долг {{amount}}",
+    "youOwe": "вы должны {{amount}}",
     "youOweWho": "вы должны: {{who}}, {{amount}}"
   },
   "loan": {
@@ -446,7 +447,9 @@
     "noAccountRecord": "Нет счёта в {{cur}}, чтобы записать платёж",
     "msg": {
       "lent": "{{who}}: дали в долг {{amount}}",
+      "lentOwes": "{{who}}: дали в долг {{amount}} · долг {{owed}}",
       "borrowed": "{{who}}: взяли в долг {{amount}}",
+      "borrowedOwe": "{{who}}: взяли в долг {{amount}} · вы должны {{owed}}",
       "reopened": "Снова открыт",
       "writtenOff": "Списано",
       "forgiven": "Отмечен как прощённый",

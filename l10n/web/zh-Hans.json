@@ -349,6 +349,7 @@
     "lendExtra": "借出{{amount}} + 额外款{{extra}}",
     "lendOff": "借出{{amount}} − 费用{{charge}}",
     "owes": "{{who}}欠{{amount}}",
+    "youOwe": "你欠{{amount}}",
     "youOweWho": "你欠{{who}}{{amount}}"
   },
   "loan": {
@@ -437,7 +438,9 @@
     "noAccountRecord": "没有{{cur}}账户可以记录",
     "msg": {
       "lent": "已借给{{who}}{{amount}}",
+      "lentOwes": "已借给{{who}}{{amount}} · {{who}}欠{{owed}}",
       "borrowed": "已向{{who}}借入{{amount}}",
+      "borrowedOwe": "已向{{who}}借入{{amount}} · 你欠{{owed}}",
       "reopened": "已重新打开",
       "writtenOff": "已记为坏账",
       "forgiven": "已标记为免还",

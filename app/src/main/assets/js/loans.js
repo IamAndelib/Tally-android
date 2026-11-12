@@ -292,7 +292,24 @@ function personSuggest(q) {
   el.hidden = !list.length;
   el.innerHTML = list.map(l => nameChip("people", "f-person-pick", l.id, l.person)).join("");
 }
-/* one-line feedback once a suggestion is picked: what the tab will total once this amount is added */
+/* What the lend or borrow form (sc, its sheet) would make owed: {amt, x, top, owed} (a lend's transfer charge x and
+   extra top, a borrow's charges top; owed: the tab's after it, so an open tab it adds to counts too), or null until the
+   amount is a number. A row that is empty or not yet a number adds nothing. */
+function loanFormOwed(sc) {
+  const amt = evalAmt((sc.querySelector("#f-amt") || {}).value || ""),
+    n = {};
+  if (!(amt > 0)) return null;
+  Object.entries(addOnTexts(sc)).forEach(([k, v]) => {
+    const m = evalAmt(v);
+    n[k] = m > 0 ? m : 0;
+  });
+  const lend = F.lk === "lend",
+    x = lend ? n.xcharge || 0 : 0,
+    top = (lend ? n.extra : n.charges) || 0,
+    ml = F.merge && loan(F.merge);
+  return { amt, x, top, owed: rnd((ml ? loanInfo(ml).left : 0) + amt + x + top) };
+}
+/* one-line feedback once a suggestion is picked: what the tab will total once this amount (and its add-ons) is added */
 function mergeHint() {
   const el = $("#f-mergehint");
   if (!el || !F) return;
@@ -303,10 +320,37 @@ function mergeHint() {
   }
   const i = loanInfo(l),
     lend = l.kind === "lend",
-    add = evalAmt(($("#f-amt") || {}).value || "") || 0,
-    tot = rnd(i.left + (add > 0 ? add : 0)); // what will be owed: what is still owed now, plus this
+    o = loanFormOwed($("#sheet .p")),
+    tot = o ? o.owed : i.left; // what will be owed: what is still owed now, plus this
   el.hidden = false;
   el.textContent = T(lend ? "loan.mergeLend" : "loan.mergeBorrow", { who: l.person, amount: money(tot, i.cur) });
+}
+/* The lend and borrow forms' preview (docs/specs/charges.md, "Previews"), the figures in bold: "● Bkash −৳1,100.00 ·
+   Rafi owes ৳1,250.00" (the amount and the transfer charge leave the account; they and the extra are owed), "● Bank
+   +৳1,000.00 · you owe Rafi ৳1,100.00" (the amount arrives; it and the charges are owed); "Someone owes …" / "you owe
+   …" until a name is typed. Under the account chips until a card opens, then at its bottom; with the hint above it. */
+function loanFormPreview() {
+  const sc = $("#sheet .p");
+  if (!sc || !F || F.kind !== "loanf") return;
+  const a = acc(F.account);
+  mergeHint();
+  addOnCur(sc, a ? a.currency : "");
+  const o = a ? loanFormOwed(sc) : null;
+  if (!o) return addOnPreview(sc, "");
+  const cur = a.currency,
+    who = (($("#f-person") || {}).value || "").trim(),
+    b = x => "<b>" + esc(x) + "</b>",
+    owed = { html: b(money(o.owed, cur)) };
+  addOnPreview(
+    sc,
+    accTag(a) +
+      " " +
+      (F.lk === "lend"
+        ? b(signed(-(o.amt + o.x), cur)) + " · " + TH("prev.owes", { who: who || T("loan.someone"), amount: owed })
+        : b(signed(o.amt, cur)) +
+          " · " +
+          (who ? TH("prev.youOweWho", { who, amount: owed }) : TH("prev.youOwe", { amount: owed })))
+  );
 }
 function loanForm(kind) {
   if (!activeAccounts().length) {
@@ -329,6 +373,10 @@ function loanForm(kind) {
   h += '<p class="hint" id="f-mergehint" hidden></p>';
   const dueLbl = T("tx.due");
   h += '<div class="lbl">' + TH("common.account") + "</div>" + accChips("f-acc", F.account);
+  /* the preview under the account chips, then Lend's "+ Transfer charge" and "+ Add an extra" (one card of two rows
+     when both) or Borrow's "+ Add charges" (docs/specs/charges.md, "The buttons") */
+  h +=
+    addOnLine() + addOnCard(lend ? [{ kind: "xcharge" }, { kind: "extra" }] : [{ kind: "charges" }], acc(def).currency);
   h +=
     '<div class="row" style="margin-top:4px"><div class="field"><span>' +
     TH("common.date") +
@@ -353,6 +401,7 @@ function loanForm(kind) {
     "</button>";
   openSheet(T(lend ? "loan.newLend" : "loan.newBorrow"), h);
   personSuggest("");
+  loanFormPreview();
   setTimeout(() => {
     const el = $("#f-person");
     if (el) el.focus();
@@ -701,10 +750,15 @@ function saveLoan() {
     snack(T("loan.dueBefore"));
     return;
   }
+  /* the card: a lend's transfer charge and extra, a borrow's charges */
+  const ao = addOnAmounts($("#sheet .p"), acc(F.account).currency);
+  if (!ao) return;
   const account = F.account,
     acct = acc(account),
     date = v.date,
-    note = (v.note || "").trim();
+    note = (v.note || "").trim(),
+    x = (lend && ao.xcharge) || 0,
+    top = (lend ? ao.extra : ao.charges) || 0;
   let merge = null;
   if (F.merge) {
     const ml = loan(F.merge);
@@ -713,6 +767,7 @@ function saveLoan() {
   const pid = newId(),
     ts = Date.now(),
     l = merge || { id: newId(), kind: F.lk, person, account, date, note, status: "open" };
+  let refused = "";
   const mutate = () => {
     if (!merge) S.loans.push(Object.assign({}, l));
     const t = {
@@ -729,18 +784,31 @@ function saveLoan() {
     if (due) t.due = due;
     t.note = note;
     S.txns.push(t);
+    /* its add-ons, on this draw (also when it adds to an open tab): a lend's transfer charge, lent from the same
+       account on the same day, and what the draw owes on top; false when one is refused */
+    refused = lend && !setAddOn(t, "charge", x) ? "charge.notNumber" : "";
+    if (!refused && !setAddOn(t, "top", top)) refused = lend ? "extra.notNumber" : "charge.notNumber";
     if (merge) relinkLoan(l.id);
+    return !refused;
   };
+  if (!tryChange(mutate)) {
+    snack(T(refused)); // never saved without the add-on it was given
+    return;
+  }
+  /* with an add-on, what is owed after it: the tab's, as the preview says */
+  const M = n => money(n, acct.currency),
+    msg = () =>
+      x > 0 || top > 0
+        ? T(lend ? "loan.msg.lentOwes" : "loan.msg.borrowedOwe", {
+            amount: M(amt),
+            who: person,
+            owed: M(loanInfo(loan(l.id)).left),
+          })
+        : T(lend ? "loan.msg.lent" : "loan.msg.borrowed", { amount: M(amt), who: person });
   guardOverdraw(mutate, date, () => {
     S.settings.lastAcc = account;
     closeSheet();
-    withUndo(
-      T(lend ? "loan.msg.lent" : "loan.msg.borrowed", { amount: money(amt, acct.currency), who: person }),
-      mutate,
-      {
-        row: l.id,
-      }
-    );
+    withUndo(msg, mutate, { row: l.id });
     askNotify();
   });
 }

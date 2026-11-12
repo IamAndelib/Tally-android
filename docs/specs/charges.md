@@ -297,6 +297,8 @@ opens, then at the bottom of the card** (never twice):
 | Spent with a charge | (in the card) | ● Credit card −৳1,150.00 · ৳1,000.00 + charge ৳150.00 |
 
 - "Someone owes …" / "you owe …" until a name is typed.
+- A lend or borrow that adds to an open tab (the form's merge hint) says what the tab owes after it, in the preview and
+  in the message, the same figure as the hint; its add-ons stay on the new draw.
 - On the payment card, a line under the date shows only when the payment would cover part of an extra or of charges
   (the amounts are the share-out `loanInfo()` would make); a tip on top adds to the extra's figure ("+ extra ৳300.00"
   when ৳150.00 is planned and ৳150.00 is a tip); a transfer charge adds its own "+ transfer charge ৳20.00".

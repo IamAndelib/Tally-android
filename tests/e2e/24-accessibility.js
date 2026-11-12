@@ -345,8 +345,9 @@ const ok = (c, m) => {
         .forEach(e => {
           /* the layout size: a sheet or dialog still opening is drawn a little smaller (its animation's scale) */
           const b = { width: e.offsetWidth, height: e.offsetHeight };
-          /* a compact chip's touch target is its ::after, reaching past the drawn chip (History's Filters sheet) */
-          if (e.classList.contains("hfc")) {
+          /* a compact chip's touch target is its ::after, reaching past the drawn chip (History's Filters sheet, the
+             names offered under a field) */
+          if (["hfc", "nchip-pick", "nchip-x"].some(c => e.classList.contains(c))) {
             const q = getComputedStyle(e, "::after");
             if (q.content !== "none" && q.position === "absolute" && q.display !== "none") {
               b.width = Math.max(b.width, parseFloat(q.width) || 0);
@@ -380,6 +381,18 @@ const ok = (c, m) => {
     ["an account", () => accOpen("a")],
     ["a loan", () => loanOpen("L")],
     ["a new loan", () => loanForm("borrow")],
+    [
+      "a new lending, its card of two rows",
+      () => (
+        loanForm("lend"),
+        $('#sheet [data-act="addon-add"][data-v="xcharge"]').click(),
+        $('#sheet [data-act="addon-add"][data-v="extra"]').click()
+      ),
+    ],
+    [
+      "a new loan, its charges card",
+      () => (loanForm("borrow"), $('#sheet [data-act="addon-add"][data-v="charges"]').click()),
+    ],
     ["a category", () => catForm("food")],
     ["the icons", () => iconPicker("food", "#2a78d6", () => {})],
     ["the currencies", () => curPicker("USD", () => {}, "Currency")],
@@ -492,6 +505,76 @@ const ok = (c, m) => {
     "its own calculator and remove buttons " + JSON.stringify(ao)
   );
   ok(ao.amtCalc === "Calculator", "the amount's calculator keeps its name");
+  await page.evaluate(() => closeSheet());
+  await settle();
+
+  // ---- 7c. the lend form's card of two rows: a group named "Transfer charge and extra", each row's field, calculator
+  // and ✕ named after it, the two buttons saying what they add; one row left: the card takes its name; Borrow's Charges
+  await page.evaluate(() => loanForm("lend"));
+  await settle();
+  const adds = await page.evaluate(() =>
+    [...document.querySelectorAll("#sheet .aoadd")].map(b => [b.dataset.v, b.textContent.trim()])
+  );
+  ok(
+    JSON.stringify(adds) ===
+      JSON.stringify([
+        ["xcharge", "Transfer charge"],
+        ["extra", "Add an extra"],
+      ]),
+    "lend: + Transfer charge and + Add an extra " + JSON.stringify(adds)
+  );
+  await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await page.click('#sheet [data-act="addon-add"][data-v="extra"]');
+  await settle();
+  const rowNames = () =>
+    page.evaluate(() => {
+      const card = $("#sheet .aocard");
+      return {
+        role: card.getAttribute("role"),
+        group: card.getAttribute("aria-label"),
+        rows: [...card.querySelectorAll(".aorow:not([hidden])")].map(r => {
+          const inp = r.querySelector("input");
+          return [
+            ($("#" + inp.getAttribute("aria-labelledby")) || {}).textContent,
+            r.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+            r.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+          ];
+        }),
+        focus: document.activeElement && document.activeElement.id,
+      };
+    });
+  let rn = await rowNames();
+  ok(
+    rn.role === "group" &&
+      rn.group === "Transfer charge and extra" &&
+      JSON.stringify(rn.rows) ===
+        JSON.stringify([
+          ["Transfer charge", "Calculator for the transfer charge", "Remove the transfer charge"],
+          ["Extra", "Calculator for the extra", "Remove the extra"],
+        ]) &&
+      rn.focus === "f-extra",
+    "the card of two rows is the group “Transfer charge and extra”, each row named, the focus in the new field " +
+      JSON.stringify(rn)
+  );
+  await page.click('#sheet [data-act="addon-remove"][data-v="extra"]');
+  await settle();
+  rn = await rowNames();
+  ok(
+    rn.group === "Transfer charge" &&
+      rn.rows.length === 1 &&
+      (await page.evaluate(() => document.activeElement.dataset.v)) === "extra",
+    "✕ on the extra: the card is “Transfer charge”, the focus back on + Add an extra " + JSON.stringify(rn)
+  );
+  await page.evaluate(() => (closeSheet(), loanForm("borrow")));
+  await settle();
+  await page.click('#sheet [data-act="addon-add"][data-v="charges"]');
+  await settle();
+  rn = await rowNames();
+  ok(
+    rn.group === "Charges" &&
+      JSON.stringify(rn.rows) === JSON.stringify([["Charges", "Calculator for the charges", "Remove the charges"]]),
+    "borrow: the Charges card, its field, calculator and ✕ named " + JSON.stringify(rn)
+  );
   await page.evaluate(() => closeSheet());
   await settle();
 
