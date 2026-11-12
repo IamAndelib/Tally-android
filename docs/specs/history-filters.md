@@ -128,7 +128,8 @@ Received (as everywhere in Tally, docs/specs/charges.md "Counting").
 - **An add-on** belongs to the kind of its entry and is shown inside that entry's row (not as a row). The Transfers
   filter says `Transferred $X` and `Charges $Z`, the Lent filter `Extras $Z` (a Charges line for a written-off
   lend's transfer charge), the Borrowed filter `Charges $Z`, each only when not 0. A purchase's charge follows its
-  category.
+  category. So does a tip (an extra received on a payback): it follows its payment, so a category filter on Received
+  matches the payment's own category, not the tip's.
 - **Gone targets**: a filter whose account, category or person no longer exists (a backup restored) is dropped.
 - **Nothing matches** (a period changed, the last matching entry deleted): "Nothing matches these filters" with
   **Clear all** under it, both in the middle of the window, within the thumb's reach; the Clear all beside the
