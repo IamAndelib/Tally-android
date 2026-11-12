@@ -823,6 +823,9 @@ function txLine(t) {
   HLW = null;
   const opened = isOpen ? txOpenView(t) : "";
   HLW = hw;
+  /* an archived entry that search lists (Settings → History): its second line starts with the archive box and the word
+     "Archived", so it is said, not only seen (docs/specs/history-archive.md, C) */
+  if (HARCH && t.archived) sub = '<span class="tarch">' + icArchive() + TH("archive.mark") + "</span> \u00b7 " + sub;
   return (
     '<button class="tx en' +
     (on ? " on" : "") +
@@ -993,7 +996,7 @@ function txOpenView(t) {
     t.id +
     '">' +
     h +
-    /* an archived entry (the Archived screen) is unarchived or deleted, not edited */
+    /* an archived entry (the Archived screen, or search) is unarchived or deleted, not edited */
     '<div class="acts"><button class="btn tonal" data-act="' +
     (t.archived ? "unarchive" : "tx-open") +
     '" data-v="' +
@@ -1058,7 +1061,7 @@ function dayGroups(list, hist) {
     list.forEach(x => isSpend(x) && spend(x.date, (acc(x.account) || {}).currency, x.amount));
     loanParts().forEach(p => p.as === "spend" && spend(p.date, p.cur, p.amount));
   }
-  list = arch ? archRows(list) : histRows(list); // a fee is shown inside what it was charged on
+  list = arch ? archRows(list) : hist ? listRows(list) : histRows(list); // a fee is shown inside what it was charged on
   let h = "",
     cur = "";
   list.forEach(x => rows.set(x.date, (rows.get(x.date) || 0) + 1));
@@ -1285,6 +1288,20 @@ function settingsView() {
     remRow("check", "rem-check", T("remind.check"), T("remind.checkHint"), r.check, r.checkTime) +
     remRow("due", "rem-dues", T("remind.dues"), T("remind.duesHint"), r.dues, r.dueTime) +
     "</div>";
+  /* whether search finds archived entries too (docs/specs/history-archive.md, C) */
+  h +=
+    '<div class="sec">' +
+    TH("common.history") +
+    '</div><div class="list"><div class="setrow"><span class="mid"><div>' +
+    TH("settings.searchArch") +
+    '</div><div class="s">' +
+    TH("settings.searchArchHint") +
+    "</div></span>" +
+    '<button class="sw" role="switch" data-act="search-arch" aria-checked="' +
+    (S.settings.searchArch === true) +
+    '" aria-label="' +
+    TH("settings.searchArch") +
+    '"></button></div></div>';
   h +=
     '<div class="sec">' +
     TH("settings.outCats") +

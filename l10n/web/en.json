@@ -578,6 +578,8 @@
     "h24": "24-hour",
     "h12": "12-hour",
     "reminders": "Reminders",
+    "searchArch": "Archived entries in search",
+    "searchArchHint": "Search also finds entries you archived.",
     "outCats": "Spending categories",
     "outCatsHint": "Laid out exactly like your home screen. Tap to edit, hold and drag to move.",
     "addOutCat": "Add spending category",
@@ -848,7 +850,8 @@
     "unarchive": "Unarchive",
     "back": "Back in History",
     "none": "Nothing archived.",
-    "noneHint": "Entries you archive wait here, with every balance as it is."
+    "noneHint": "Entries you archive wait here, with every balance as it is.",
+    "mark": "Archived"
   },
   "remind": {
     "nudge": "Evening nudge",

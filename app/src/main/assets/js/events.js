@@ -159,6 +159,13 @@ document.addEventListener("click", ev => {
     case "haptics":
       toggleHaptics();
       break;
+    /* Settings → History: search finds archived entries too (stored only when on) */
+    case "search-arch":
+      if (S.settings.searchArch === true) delete S.settings.searchArch;
+      else S.settings.searchArch = true;
+      save();
+      render();
+      break;
     case "donut-mode":
       cycleDonut();
       break;
@@ -650,7 +657,8 @@ document.addEventListener("click", ev => {
     case "arch-back":
       archBack();
       break;
-    /* Unarchive (an opened row on the Archived screen): the entry, with its add-on, is back in History */
+    /* Unarchive (an opened row on the Archived screen, or in search): the entry, with its add-on, is back in History; a
+       search keeps listing it, now unmarked */
     case "unarchive":
       withUndo(T("archive.back"), () => {
         archiveEntries([v], false);

@@ -6,7 +6,7 @@
  * after typing pauses (`findInput()`, `findDraw()`), Back to where it was opened from (`findBack()`, `findUndo()`), and
  * the suggestions above the list (`findSugs()`: a payee, category, account, person, kind, month or year, an amount that
  * the typed words could mean, each with the entries it would leave; a tap sets it as a filter and takes its words out
- * of the field, `findPick()`). An archived entry is never found or suggested.
+ * of the field, `findPick()`). An archived entry is found and suggested only while Settings says so (`listRows()`).
  */
 "use strict";
 
@@ -365,7 +365,7 @@ function findEnd() {
   const last = recentTerms(recentLoad()[0] || ""),
     mine = srTerms(HF.q);
   /* only words that found something, and not ones a suggestion just kept */
-  if (histRows(HLIST).length && !(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
+  if (listRows(HLIST).length && !(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
   clearTimeout(FIND_T);
   V.find = false;
   if (FIND.keep) Object.assign(HP, FIND.keep.hp);
@@ -449,7 +449,7 @@ function findDraw() {
   histWatch();
   /* the count, said once typing has paused (this is that pause) and only when it changed */
   const live = $("#find-live"),
-    said = p.body && !p.idle ? T("history.count", { count: histRows(HLIST).length }) : "";
+    said = p.body && !p.idle ? T("history.count", { count: listRows(HLIST).length }) : "";
   if (live && said !== FIND_SAID) live.textContent = FIND_SAID = said;
 }
 function findClear() {
@@ -489,7 +489,7 @@ function findTypo() {
     const others = terms.filter((x, j) => j !== i && x).join(" "),
       seen = new Map(); // folded word -> {raw, n (entries with it)}
     histPick({ ...HF, q: others }).forEach(t => {
-      if (t.archived) return; // search leaves an archived entry out
+      if (t.archived && !findArch()) return; // search leaves an archived entry out, unless Settings says otherwise
       const own = new Set();
       srTexts(t).forEach(tx =>
         tx.split(SR_SEP).forEach(raw => {
@@ -507,7 +507,7 @@ function findTypo() {
       .sort((a, b) => b.n - a.n)
       .slice(0, 5)
       .forEach(c => {
-        const n = histRows(histPick({ ...HF, q: (others + " " + srFold(c.raw)).trim() })).length;
+        const n = listRows(histPick({ ...HF, q: (others + " " + srFold(c.raw)).trim() })).length;
         if (n && (!best || n > best.count)) best = { i, word: c.raw, count: n };
       });
     if (best) return { ...best, q: HF.q };
@@ -606,7 +606,7 @@ function sugHits(name, toks, whole) {
 /* the entries a choice would leave, as History counts them: rows, in that period */
 function sugCount(f, p) {
   const [s, e] = range(p);
-  return histRows(S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f))).length;
+  return listRows(S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f))).length;
 }
 const MONTH_DTF = {};
 /* the 12 months' names in the phone's own language, full and short ("Jun." loses its dot) */
@@ -646,7 +646,8 @@ function sugFind(toks) {
     cats = new Map(),
     accs = new Map(),
     whos = new Map();
-  const listed = S.txns.filter(t => !t.archived); // an archived entry is never suggested (search leaves it out)
+  const arch = findArch(),
+    listed = S.txns.filter(t => arch || !t.archived); // an archived entry is suggested only while search finds it
   listed.forEach(t => {
     if (t.feeOf && entry(t.feeOf)) return;
     if (t.cat) cats.set(t.cat, (cats.get(t.cat) || 0) + 1);

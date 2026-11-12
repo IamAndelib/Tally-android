@@ -2,7 +2,8 @@
  * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`: account, kind, then a
  * category, a person or a transfer's two sides), which entries they leave (`histList()`, `histMatch()`), which of those
  * are rows (`histRows()`: an add-on, a charge, a tip or a lend's transfer charge, is shown inside its entry, never as a
- * row, and an archived entry is not listed, though it counts in every total), the totals in words
+ * row, and an archived entry is not listed, though it counts in every total; search lists it too while Settings says
+ * so: `listRows()`), the totals in words
  * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
@@ -101,6 +102,11 @@ const entryRows = list => list.filter(t => !(t.feeOf && entry(t.feeOf)));
    whole list); the Archived screen shows only those (archRows) */
 const histRows = list => entryRows(list).filter(t => !t.archived);
 const archRows = list => entryRows(list).filter(t => t.archived);
+/* Settings → History → "Archived entries in search" (docs/specs/history-archive.md, C): search lists archived entries
+   too, marked (txLine), and its suggestions, counts and typo hint count them; History without a search, Home and
+   Summary still leave them out. listRows: the rows History lists now (search's, or its own) */
+const findArch = () => !!V.find && S.settings.searchArch === true;
+const listRows = list => (findArch() ? entryRows(list) : histRows(list));
 /* the totals of a list as lines, one per currency (by code) for each phrase of the kind shown, in the order they stack in a
    heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only).
    By the counting rule (docs/specs/charges.md, "History headings and filters"): a charge is spending (inside "spent")
@@ -280,9 +286,10 @@ function hfSide(d, side, id) {
   if (d.acc) o[other] = id ? d.acc : "";
   return o;
 }
-const hfRows = f => histRows(histList(f));
+/* in search, the Filters sheet counts what the list would show (archived matches too, when Settings says so) */
+const hfRows = f => listRows(histList(f));
 /* how many rows a choice would leave (no sorting: only the count is wanted) */
-const hfCount = f => histRows(histPick(f)).length;
+const hfCount = f => listRows(histPick(f)).length;
 /* how often each key comes up among the entries (most used first, then as listed) */
 function hfTally(list, key) {
   const m = new Map();
@@ -602,13 +609,14 @@ const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("h
    it up (histPin). Only the first rows are drawn (a notebook of years is thousands of rows); the rest follow as the end
    of the list comes near (histWatch). A chunk ends at the end of a day, and a month cut in two has its heading, with the
    whole month's words, only once: the days that continue it (`cont`) go into its section (histMore). The list holds the
-   archived entries too, for the words: a heading shows only over a row (histRows), with every entry in its totals.
+   archived entries too, for the words: a heading shows only over a row (listRows), with every entry in its totals.
    The Archived screen draws its list the same way (arch: its rows are the archived entries, its headings have no
    totals). */
 const HIST_CHUNK = 300;
 let HSHOW = { sig: "", n: HIST_CHUNK }, // what is drawn: the entries so far, for these filters and this period
   HLIST = [], // the entries it is drawn from (History's, or the Archived screen's)
-  HIO = null;
+  HIO = null,
+  HARCH = false; // while History's list is drawn, search lists archived entries: their rows are marked (txLine)
 const histSig = () => JSON.stringify([HF, HP.period, range(HP)]); // the dates shown, so midnight keeps the rows drawn
 const histMonth = t => t.date.slice(0, 7);
 /* the markup for list[i..] up to about `budget` entries: `cont`, the days of a month begun in an earlier chunk, and
@@ -620,8 +628,9 @@ function histMonths(list, i, budget, arch) {
     cont = "";
   const stop = i + budget,
     sec = '<div class="hsec' + (V.sel ? "" : " pin") + '">',
-    rowsOf = arch ? archRows : histRows;
+    rowsOf = arch ? archRows : listRows;
   HLW = V.find && HF.q.trim() ? hlTerms(HF.q) : null; // search mode marks the words in the rows
+  HARCH = !arch && findArch();
   try {
     while (i < list.length && i < stop) {
       const m = histMonth(list[i]);
@@ -658,6 +667,7 @@ function histMonths(list, i, budget, arch) {
     }
   } finally {
     HLW = null; // never left on for the rows drawn elsewhere
+    HARCH = false;
   }
   return { html: cont + h, cont, months: h, next: i };
 }
@@ -710,7 +720,7 @@ function histCenter(app) {
 function histParts() {
   const idle = V.find && !V.sel && !HF.q.trim() && histCount() === 0 && HP.period === "all",
     list = idle ? [] : histList(HF, ""), // nothing skipped; archived entries too, for the headings' totals
-    nRows = histRows(list).length;
+    nRows = listRows(list).length;
   if (HSHOW.sig !== histSig()) HSHOW = { sig: histSig(), n: HIST_CHUNK };
   HLIST = list;
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
@@ -823,7 +833,7 @@ function historyView() {
       "</header>";
   /* search mode keeps the bar and the list in two boxes of their own, so typing redraws them without the field; its
      status says the count of this draw (findDraw says it again after each pause) */
-  if (V.find) FIND_SAID = p.body && !p.idle ? T("history.count", { count: histRows(HLIST).length }) : "";
+  if (V.find) FIND_SAID = p.body && !p.idle ? T("history.count", { count: listRows(HLIST).length }) : "";
   /* the bar and the period / Filters row in one block that stays at the top while the entries scroll (histPin) */
   return V.find
     ? '<div class="hpin">' +

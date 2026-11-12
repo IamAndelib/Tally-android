@@ -460,6 +460,19 @@ const ok = (c, m) => {
       () => (archOpen(), rowToggle($('#app .tx[data-v="e"]'), "e"), $('#app .txo [data-act="tx-del"]').click()),
     ],
     ["Archived, empty", () => (archiveEntries(["e"], false), commit(), archOpen())],
+    /* archived entries in search (spec C): an archived match opened, Unarchive and Delete (search stays on: last) */
+    [
+      "Search, an archived match opened",
+      () => (
+        archiveEntries(["e"], true),
+        (S.settings.searchArch = true),
+        commit(),
+        openFind(),
+        ($("#find-q").value = HF.q = "5"),
+        findDraw(),
+        rowToggle($('#app .tx[data-v="e"]'), "e")
+      ),
+    ],
   ];
   /* the keypad opened on a field once the form has focused its first field (60ms after it opens: focusAmt), which
      would close it */
@@ -1064,6 +1077,74 @@ const ok = (c, m) => {
       (await page.evaluate(() => [V.screen, document.activeElement.dataset.act].join())) === "history,arch-open",
       "Back gives the focus to the archive icon"
     );
+    // archived entries in search (spec C): Settings' switch is a named switch, 48px; an archived match says
+    // "Archived" in words (its box is hidden from TalkBack), in its line's own colour: not colour alone
+    await page.evaluate(() => {
+      V.screen = "settings";
+      render();
+    });
+    await settle();
+    const sw = await page.evaluate(() => {
+      const b = $('#app [data-act="search-arch"]'),
+        r = b && b.getBoundingClientRect();
+      return (
+        b && {
+          role: b.getAttribute("role"),
+          name: b.getAttribute("aria-label"),
+          on: b.getAttribute("aria-checked"),
+          w: r.width,
+          h: r.height,
+        }
+      );
+    });
+    ok(
+      sw &&
+        sw.role === "switch" &&
+        sw.name === "Archived entries in search" &&
+        sw.on === "false" &&
+        sw.w >= 48 &&
+        sw.h >= 48,
+      "Settings → History: the switch is named “Archived entries in search”, a switch, 48px " + JSON.stringify(sw)
+    );
+    await page.click('#app [data-act="search-arch"]');
+    await settle();
+    ok(
+      (await page.evaluate(() => $('#app [data-act="search-arch"]').getAttribute("aria-checked"))) === "true" &&
+        (await page.evaluate(() => document.activeElement.dataset.act)) === "search-arch",
+      "tapped, it says it is on and keeps the focus"
+    );
+    const mk = await page.evaluate(id => {
+      const t = entry(id),
+        words = (t.payee || catName(cat(t.cat)) || "").split(/\s+/)[0];
+      openFind();
+      $("#find-q").value = HF.q = words;
+      findDraw();
+      const r = $('#app .tx[data-v="' + id + '"]'),
+        m = r && r.querySelector(".s .tarch"),
+        s = r && r.querySelector(".s");
+      const out = r && {
+        name: r.textContent,
+        word: m && m.textContent,
+        mute: !!m && [...m.querySelectorAll("svg")].every(x => x.getAttribute("aria-hidden") === "true"),
+        colour: !!m && getComputedStyle(m).color === getComputedStyle(s).color,
+        others: [...document.querySelectorAll("#app .tx[data-v] .tarch")].map(e => e.closest(".tx").dataset.v),
+      };
+      findEnd();
+      V.screen = "settings";
+      render();
+      return out;
+    }, id);
+    ok(
+      mk &&
+        /Archived/.test(mk.name) &&
+        mk.word === "Archived" &&
+        mk.mute &&
+        mk.colour &&
+        JSON.stringify(mk.others) === JSON.stringify([id]),
+      "an archived match says “Archived” in words, its box hidden, in its line's colour " + JSON.stringify(mk)
+    );
+    await page.click('#app [data-act="search-arch"]');
+    await settle();
     await page.evaluate(id => {
       archiveEntries([id], false);
       commit();

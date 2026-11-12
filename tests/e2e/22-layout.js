@@ -1529,6 +1529,48 @@ function inspect() {
       await findOpen("corner", "", "typing")();
       await histAt(() => document.activeElement.blur(), "mid")();
     });
+    /* archived entries in search (docs/specs/history-archive.md, C): Settings' History section with its switch, then
+       search listing an archived match, marked "Archived" on its second line, and that match opened (Unarchive,
+       Delete) */
+    await shot(
+      "settings-history",
+      ev(() => {
+        V.screen = "settings";
+        render();
+        $('#app [data-act="search-arch"]').scrollIntoView({ block: "center" });
+      })
+    );
+    await page.evaluate(() => {
+      S.settings.searchArch = true;
+      archiveEntries(
+        S.txns
+          .filter(x => x.type === "expense" && !x.feeOf && /Corner/.test(x.payee || ""))
+          .map(x => x.id)
+          .slice(1, 3),
+        true
+      );
+      save();
+    });
+    const archFind = open => async () => {
+      await findOpen("corner", "", "typing")();
+      const ok = await page.evaluate(open => {
+        document.activeElement.blur();
+        const m = document.querySelector("#app .tx[data-v] .tarch");
+        if (!m) return false;
+        const r = m.closest(".tx");
+        if (open) rowToggle(r, r.dataset.v);
+        (open ? document.querySelector("#app .txo") : r).scrollIntoView({ block: open ? "end" : "center" });
+        return !open || !!document.querySelector('#app .txo [data-act="unarchive"]');
+      }, open);
+      if (!ok) throw new Error("search state 'archived' does not show what it should");
+    };
+    await shot("search-archived", archFind(false));
+    await shot("search-archived-open", archFind(true));
+    await page.evaluate(() => {
+      delete S.settings.searchArch;
+      S.txns.forEach(t => delete t.archived);
+      save();
+    });
     await page.evaluate(() => recentSave([]));
     await shot("search-empty", findOpen("", "", "empty"));
     await seed(15);

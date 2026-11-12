@@ -578,6 +578,8 @@
     "h24": "24 saat",
     "h12": "12 saat",
     "reminders": "Hatırlatmalar",
+    "searchArch": "Aramada arşivdeki kayıtlar",
+    "searchArchHint": "Arama, arşivlediğin kayıtları da bulur.",
     "outCats": "Harcama kategorileri",
     "outCatsHint": "Ana ekrandaki düzenin aynısı. Düzenlemek için dokun, taşımak için basılı tutup sürükle.",
     "addOutCat": "Harcama kategorisi ekle",
@@ -848,7 +850,8 @@
     "unarchive": "Arşivden çıkar",
     "back": "Geçmişe geri döndü",
     "none": "Arşivde bir şey yok.",
-    "noneHint": "Arşivlediğin kayıtlar burada bekler; tüm bakiyeler olduğu gibi kalır."
+    "noneHint": "Arşivlediğin kayıtlar burada bekler; tüm bakiyeler olduğu gibi kalır.",
+    "mark": "Arşivde"
   },
   "remind": {
     "nudge": "Akşam hatırlatması",

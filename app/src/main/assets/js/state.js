@@ -12,7 +12,8 @@ function blank() {
        entry linked both ways to its entry (feeOf on it, feeId on the entry: a charge on a transfer, a loan payment or a
        purchase, a tip on a lending's payment, a lend's transfer charge), what only changes what is owed is a draw's
        onTop; a new notebook has no Fees category; an entry may be archived (`archived: true`: hidden from History,
-       nothing else, docs/specs/history-archive.md). An older Tally restoring a backup warns it's newer (restoreText)
+       nothing else, docs/specs/history-archive.md), and search may find archived entries (`settings.searchArch`,
+       set only when true). An older Tally restoring a backup warns it's newer (restoreText)
        and drops what it doesn't know: saved again there, the file comes back without onTop, a purchase's charge as a
        plain expense in its category, a lend's transfer charge as a second draw, with Fees and every entry shown; every
        balance (and what is owed, apart from onTop) stays right. */
@@ -113,7 +114,7 @@ function migrate(o) {
   /* only the settings Tally knows, each checked below */
   Object.keys(s.settings)
     .concat(["backupAsk", "customCols", "dragTip", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
-    .concat(["chipOrder", "lastCheck", "savedBackup"])
+    .concat(["chipOrder", "lastCheck", "savedBackup", "searchArch"])
     .forEach(k => {
       if (own(os, k)) s.settings[k] = os[k];
     });
@@ -145,6 +146,8 @@ function migrate(o) {
   if (!isDay(s.settings.backupAsk)) delete s.settings.backupAsk;
   if (!isDay(s.settings.lastCheck)) delete s.settings.lastCheck;
   if (s.settings.dragTip !== true) delete s.settings.dragTip;
+  /* Settings → History → Archived entries in search (docs/specs/history-archive.md, C): on only when exactly true */
+  if (s.settings.searchArch !== true) delete s.settings.searchArch;
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(num(s.settings.hapticLevel)) || 3));
   if (!DONUT_MODES.includes(s.settings.donut)) s.settings.donut = "both";
@@ -877,7 +880,8 @@ function deleteEntries(ids) {
 /* Archiving hides entries from History and changes nothing else (docs/specs/history-archive.md, B): on sets each one's
    mark (`archived: true`), off takes it away. An entry and its add-on (a charge, a tip, a lend's transfer charge) are
    archived and unarchived together. Amounts, accounts, dates, categories and links stay, so every balance, loan and
-   total does too; History's rows, search and the Filters sheet's counts leave archived entries out (histRows()). */
+   total does too; History's rows, search and the Filters sheet's counts leave archived entries out (histRows()),
+   unless Settings lets search find them (listRows()). */
 function archiveEntries(ids, on) {
   const all = new Set(ids);
   ids.forEach(id => {

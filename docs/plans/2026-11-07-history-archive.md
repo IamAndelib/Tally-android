@@ -56,10 +56,10 @@ suite 46 (data, migrate, totals unchanged, linked add-ons), 41.
 **Files:** `js/screens.js` (Settings: the "History" section and switch), `js/state.js` (the setting in `migrate()`),
 `js/history.js` / `js/search.js` (archived matches when the setting is on, their mark, the opened row's Unarchive and
 Delete), `css/app.css`, keys; tests: 46, 24, 22.
-- [ ] Failing checks: off by default; with it on, a search lists an archived match marked "Archived" in date order,
+- [x] Failing checks: off by default; with it on, a search lists an archived match marked "Archived" in date order,
   opened with Unarchive and Delete; suggestions count it; off again hides it; a junk value is sanitised; backups
   carry it; History, Home and Summary unchanged.
-- [ ] Implement, suites, 22, lint. Commit.
+- [x] Implement, suites, 22, lint. Commit.
 
 ### Task 3c: Settings' pinned header (spec D)
 **Files:** `js/screens.js` (each Settings section in its own block), `css/app.css`; tests: 22, 24.

@@ -3,7 +3,8 @@
 // entry and its linked charge or extra are archived and unarchived together. Every balance, loan and total stays
 // (History's headings, Home, Summary, the widget, the morning check, CSV); History's rows, search and the Filters
 // sheet's counts leave archived entries out, and a day or month heading shows only while it has a row to show. The
-// delete question: a warning line, then Delete, Archive instead and Cancel.
+// delete question: a warning line, then Delete, Archive instead and Cancel. Settings can let search find archived
+// entries (C, section 23).
 const { chromium, appUrl, launchOptions } = require("./harness");
 let fails = 0;
 const ok = (c, m) => {
@@ -1135,6 +1136,275 @@ const seed = () => ({
         !icons.old,
       "an account's Archive and Unarchive and the drop slots use the outlined archive and unarchive " +
         J({ ...icons, arch: undefined, unarch: undefined })
+    );
+  }
+
+  // ---- 23. archived entries in search (spec C): a Settings switch, off by default. On, search lists archived matches
+  // among the others in date order, each marked "Archived" in words; opened, one offers Unarchive and Delete; search's
+  // suggestions, counts and typo hint count them. History itself, Filters outside search, Home, Summary and every
+  // total stay as they are; migrate() keeps the setting only when exactly true, and backups carry it
+  {
+    /* three entries at Green Market: two archived, one between them in date order that isn't */
+    const green = (on, sa) => {
+      const o = seed();
+      o.txns.find(t => t.id === "old").archived = true;
+      o.txns.push(
+        x("gm2", 60, "2026-06-12", "expense", 8, "b", { cat: "groceries", payee: "Green Market" }),
+        x("gm3", 61, "2026-06-13", "expense", 9, "b", { cat: "groceries", payee: "Green Market", archived: true })
+      );
+      if (on) o.settings.searchArch = sa === undefined ? true : sa;
+      return o;
+    };
+    const find = q =>
+      page.evaluate(q => {
+        if (V.find) findEnd();
+        V.screen = "history";
+        V.open = "";
+        openFind();
+        const inp = $("#find-q");
+        inp.value = q;
+        findInput(q);
+        findDraw();
+        inp.blur();
+        const sug = [...document.querySelectorAll("#hbody .sug")].map(s => s.textContent);
+        return {
+          rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+          marked: [...document.querySelectorAll("#app .tx[data-v]")]
+            .filter(e => e.querySelector(".s .tarch"))
+            .map(e => e.dataset.v),
+          said: FIND_SAID,
+          sug,
+          fix: FIXW && FIXW.count,
+          months: [...document.querySelectorAll("#app .hmon")].map(e => e.getAttribute("aria-label")),
+        };
+      }, q);
+    const settingsRow = () =>
+      page.evaluate(() => {
+        if (V.find) findEnd();
+        V.screen = "settings";
+        render();
+        const secs = [...document.querySelectorAll("#app .sec")].map(e => e.textContent),
+          sw = $('#app [data-act="search-arch"]'),
+          row = sw && sw.closest(".setrow");
+        return {
+          secs,
+          role: sw && sw.getAttribute("role"),
+          on: sw && sw.getAttribute("aria-checked"),
+          name: sw && sw.getAttribute("aria-label"),
+          title: row && row.querySelector(".mid div").textContent,
+          hint: row && row.querySelector(".mid .s").textContent,
+        };
+      });
+    await load(green(false));
+    ok(!("searchArch" in (await page.evaluate(() => S.settings))), "the setting is off by default (not stored)");
+    const s0 = await settingsRow();
+    const at = n => s0.secs.indexOf(n);
+    ok(
+      at("History") === at("Reminders") + 1 && at("Spending categories") === at("History") + 1,
+      "Settings has a section “History” after Reminders, before Spending categories " + J(s0.secs)
+    );
+    ok(
+      s0.role === "switch" &&
+        s0.on === "false" &&
+        s0.name === "Archived entries in search" &&
+        s0.title === "Archived entries in search" &&
+        s0.hint === "Search also finds entries you archived.",
+      "its switch: “Archived entries in search”, its hint, off " + J(s0)
+    );
+    const off = await find("green");
+    ok(
+      J(off.rows) === J(["gm2"]) && !off.marked.length && off.said === "1 entry",
+      "off: search leaves archived matches out " + J(off)
+    );
+    ok(
+      off.sug.some(s => /Green Market/.test(s) && /1 entry/.test(s)),
+      "off: the suggestion counts only what is listed " + J(off.sug)
+    );
+    ok((await find("greem")).fix === 1, "off: the typo hint counts only what is listed");
+    const fOff = await figures();
+    const histOff = await page.evaluate(() => {
+      if (V.find) findEnd();
+      openHistory();
+      return {
+        rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+        all: hfCount(HF),
+        groceries: hfCount({ ...HF, cat: "groceries" }),
+      };
+    });
+    /* the switch, tapped: saved, and said */
+    await settingsRow();
+    await page.click('#app [data-act="search-arch"]');
+    await pause();
+    const s1 = await page.evaluate(() => ({
+      on: $('#app [data-act="search-arch"]').getAttribute("aria-checked"),
+      stored: S.settings.searchArch,
+      saved: JSON.parse(localStorage.getItem(LS)).settings.searchArch,
+    }));
+    ok(s1.on === "true" && s1.stored === true && s1.saved === true, "tapped, the switch is on and saved " + J(s1));
+    const on = await find("green");
+    ok(
+      J(on.rows) === J(["gm3", "gm2", "old"]),
+      "on: search lists the archived matches among the others, in date order " + J(on.rows)
+    );
+    ok(J(on.marked) === J(["gm3", "old"]), "on: each archived match is marked, the others aren't " + J(on.marked));
+    const mark = await page.evaluate(() => {
+      const r = $('#app .tx[data-v="old"]'),
+        s = r.querySelector(".s"),
+        m = s.querySelector(".tarch");
+      return {
+        first: s.firstElementChild === m,
+        text: m.textContent,
+        line: s.textContent,
+        icon: !!m.querySelector("svg.ic[aria-hidden=true]"),
+        oneLine: m.getClientRects().length === 1, // the box and the word together, on one line
+        same:
+          m.querySelector("path").getAttribute("d") ===
+          new DOMParser().parseFromString(icArchive(), "text/html").querySelector("path").getAttribute("d"),
+        name: r.textContent,
+      };
+    });
+    ok(
+      mark.first &&
+        mark.text === "Archived" &&
+        /^Archived · Groceries · Cash/.test(mark.line) &&
+        mark.icon &&
+        mark.same &&
+        mark.oneLine,
+      "the mark starts the second line: the archive box and the word “Archived” " + J(mark)
+    );
+    ok(on.said === "3 entries", "on: the count said includes them " + J(on.said));
+    ok(
+      on.sug.some(s => /Green Market/.test(s) && /3 entries/.test(s)),
+      "on: the suggestion counts them " + J(on.sug)
+    );
+    ok(
+      on.months[0] === off.months[0] && J(on.months.slice(1)) === J(["May 2026, $12.00 spent"]),
+      "the month headings' totals are the same either way; a month with only archived matches gets its heading " +
+        J([off.months, on.months])
+    );
+    ok((await find("greem")).fix === 3, "on: the typo hint counts them");
+    const fq = await page.evaluate(() => {
+      HF.q = "green";
+      return { all: hfCount(HF), groceries: hfCount({ ...HF, cat: "groceries" }) };
+    });
+    ok(fq.all === 3 && fq.groceries === 3, "in search, Filters counts what the list shows " + J(fq));
+    /* opened: Unarchive and Delete; Unarchive keeps it in the results, unmarked; Undo marks it again */
+    await find("green");
+    await openRow("old");
+    ok(
+      J(await opened()) === J(["unarchive:Unarchive", "tx-del:Delete"]),
+      "an archived match opened offers Unarchive and Delete " + J(await opened())
+    );
+    const live = await openRow("gm2").then(opened);
+    ok(J(live) === J(["tx-open:Edit", "tx-del:Delete"]), "a live match still offers Edit and Delete " + J(live));
+    await openRow("old");
+    await page.click('#app .txo [data-act="unarchive"]');
+    await pause();
+    const un = await page.evaluate(() => ({
+      find: V.find,
+      q: HF.q,
+      rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+      marked: [...document.querySelectorAll("#app .tx[data-v] .tarch")].map(e => e.closest(".tx").dataset.v),
+      arch: !!entry("old").archived,
+    }));
+    ok((await snackText()).startsWith("Back in History"), "Unarchive says “Back in History” " + (await snackText()));
+    ok(
+      un.find && un.q === "green" && J(un.rows) === J(["gm3", "gm2", "old"]) && J(un.marked) === J(["gm3"]) && !un.arch,
+      "unarchived, it stays in the results, unmarked " + J(un)
+    );
+    await undo();
+    ok((await marked()) === "gm3,old", "Undo archives it again " + (await marked()));
+    /* Delete: the question leaves out Archive instead; Undo brings the entry back */
+    const before = await snap();
+    await find("green");
+    await openRow("gm3");
+    await page.click('#app .txo [data-act="tx-del"]');
+    await pause();
+    const q = await shape();
+    ok(
+      J(q.btns) === J(["destroy:Delete", "out:Cancel"]) ||
+        J(q.btns.map(b => b.split(":")[1])) === J(["Delete", "Cancel"]),
+      "Delete from search: Delete and Cancel, no Archive instead " + J(q.btns)
+    );
+    await page.click("#pop .cd-destroy");
+    await pause();
+    const del = await page.evaluate(() => ({
+      gone: !entry("gm3"),
+      rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+    }));
+    ok(del.gone && J(del.rows) === J(["gm2", "old"]), "Delete takes it out of the notebook and the results " + J(del));
+    await undo();
+    ok(canon(JSON.parse(await snap())) === canon(JSON.parse(before)), "Undo puts it back exactly");
+    /* History without a search, Filters there, Home, Summary and every total: as with the switch off */
+    ok(J(await figures()) === J(fOff), "on: every balance, total, Home and Summary are the same");
+    const histOn = await page.evaluate(() => {
+      if (V.find) findEnd();
+      openHistory();
+      return {
+        rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+        all: hfCount(HF),
+        groceries: hfCount({ ...HF, cat: "groceries" }),
+      };
+    });
+    ok(J(histOn) === J(histOff), "on: History without a search and its Filters counts are as before " + J(histOn));
+    /* off again: hidden again */
+    await settingsRow();
+    await page.click('#app [data-act="search-arch"]');
+    await pause();
+    ok(!("searchArch" in (await page.evaluate(() => S.settings))), "off again: the setting is no longer stored");
+    const off2 = await find("green");
+    ok(J(off2.rows) === J(["gm2"]) && !off2.marked.length, "off again: search hides archived matches " + J(off2));
+    await page.evaluate(() => findEnd());
+    /* migrate(): only exactly true is kept */
+    const san = await page.evaluate(
+      vals =>
+        vals.map(v => {
+          const o = { v: 8, settings: { cur: "USD", searchArch: v }, accounts: [], txns: [] },
+            m = migrate(o);
+          return "searchArch" in m.settings ? m.settings.searchArch : "-";
+        }),
+      ["true", 1, { a: 1 }, null, false, "yes", true]
+    );
+    ok(
+      J(san) === J(["-", "-", "-", "-", "-", "-", true]),
+      "migrate() keeps the setting only when exactly true " + J(san)
+    );
+    const twice = await page.evaluate(() => {
+      const m = migrate({ v: 8, settings: { cur: "USD", searchArch: true }, accounts: [], txns: [] });
+      return [m.settings, migrate(JSON.parse(JSON.stringify(m))).settings];
+    });
+    ok(canon(twice[0]) === canon(twice[1]) && twice[1].searchArch === true, "migrate() a second time changes nothing");
+    /* a backup carries it: on restores on, off restores off */
+    await load(green(true));
+    const bk = await page.evaluate(() => {
+      const out = [];
+      for (const v of [true, false]) {
+        if (v) S.settings.searchArch = true;
+        else delete S.settings.searchArch;
+        const text = JSON.stringify(S);
+        S = migrate({ ...blank(), v: 8, settings: { cur: "USD", searchArch: !v } });
+        commit();
+        restorePlan(text).run();
+        out.push(S.settings.searchArch === true);
+      }
+      return out;
+    });
+    ok(J(bk) === J([true, false]), "a backup carries the setting, on or off " + J(bk));
+    /* Delete all data keeps it, as the other preferences */
+    const wiped = await page.evaluate(() => {
+      S.settings.searchArch = true;
+      wipeNow();
+      return S.settings.searchArch === true;
+    });
+    ok(wiped, "Delete all data keeps the setting, as the other preferences");
+    /* catalogue fixes: Chinese joins the count with no-break spaces (no word joiners); Indonesian Unarchive's message */
+    const cat = await page.evaluate(() => [
+      i18nCat("zh-Hans")["history.selected_other"],
+      i18nCat("id")["archive.back"],
+    ]);
+    ok(
+      cat[0] === "已选\u00a0{{count}}\u00a0项" && !/\u2060/.test(cat[0]) && cat[1] === "Dikembalikan ke Riwayat",
+      "zh's selected count uses no-break spaces; id's “Back in History” reads “Dikembalikan ke Riwayat” " + J(cat)
     );
   }
 

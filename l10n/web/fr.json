@@ -583,6 +583,8 @@
     "h24": "24 heures",
     "h12": "12 heures",
     "reminders": "Rappels",
+    "searchArch": "Opérations archivées dans la recherche",
+    "searchArchHint": "La recherche trouve aussi les opérations que vous avez archivées.",
     "outCats": "Catégories de dépenses",
     "outCatsHint": "Disposées comme sur votre écran d’accueil. Touchez pour modifier, maintenez et faites glisser pour déplacer.",
     "addOutCat": "Ajouter une catégorie de dépenses",
@@ -861,7 +863,8 @@
     "unarchive": "Désarchiver",
     "back": "De retour dans l’historique",
     "none": "Rien d’archivé.",
-    "noneHint": "Les opérations que vous archivez attendent ici, et chaque solde reste tel quel."
+    "noneHint": "Les opérations que vous archivez attendent ici, et chaque solde reste tel quel.",
+    "mark": "Archivée"
   },
   "remind": {
     "nudge": "Rappel du soir",

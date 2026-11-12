@@ -578,6 +578,8 @@
     "h24": "24 Stunden",
     "h12": "12 Stunden",
     "reminders": "Erinnerungen",
+    "searchArch": "Archivierte Einträge in der Suche",
+    "searchArchHint": "Die Suche findet auch Einträge, die du archiviert hast.",
     "outCats": "Ausgabenkategorien",
     "outCatsHint": "Genau wie auf deiner Startseite angeordnet. Tippen zum Bearbeiten, halten und ziehen zum Verschieben.",
     "addOutCat": "Ausgabenkategorie hinzufügen",
@@ -848,7 +850,8 @@
     "unarchive": "Archivierung aufheben",
     "back": "Wieder im Verlauf",
     "none": "Nichts archiviert.",
-    "noneHint": "Einträge, die du archivierst, warten hier, und jeder Kontostand bleibt, wie er ist."
+    "noneHint": "Einträge, die du archivierst, warten hier, und jeder Kontostand bleibt, wie er ist.",
+    "mark": "Archiviert"
   },
   "remind": {
     "nudge": "Abend-Erinnerung",

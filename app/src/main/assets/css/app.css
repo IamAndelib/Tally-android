@@ -2174,6 +2174,19 @@ mark.hl {
   margin-right: 2px;
   vertical-align: 1px;
 }
+/* an archived entry that search lists (Settings → History): the outlined archive box and the word, in the line's own
+   colour, kept together at the start of its second line (the word says it; the box only helps to spot it) */
+.tx .s .tarch {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tx .s .tarch .ic {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  margin-inline-end: 3px;
+}
 /* alone on its line (a loan card's payment rows): in a narrow row it ends in "…" rather than lose letters */
 .tx.exp .s .st {
   max-width: 100%;

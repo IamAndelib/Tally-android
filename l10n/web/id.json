@@ -573,6 +573,8 @@
     "h24": "24 jam",
     "h12": "12 jam",
     "reminders": "Pengingat",
+    "searchArch": "Transaksi yang diarsipkan di pencarian",
+    "searchArchHint": "Pencarian juga menemukan transaksi yang kamu arsipkan.",
     "outCats": "Kategori pengeluaran",
     "outCatsHint": "Tata letaknya persis seperti layar utama. Ketuk untuk mengubah, tahan dan geser untuk memindahkan.",
     "addOutCat": "Tambah kategori pengeluaran",
@@ -833,9 +835,10 @@
     "title": "Arsip",
     "open": "Transaksi yang diarsipkan",
     "unarchive": "Batalkan pengarsipan",
-    "back": "Kembali di Riwayat",
+    "back": "Dikembalikan ke Riwayat",
     "none": "Belum ada yang diarsipkan.",
-    "noneHint": "Transaksi yang kamu arsipkan menunggu di sini, dan semua saldo tetap seperti adanya."
+    "noneHint": "Transaksi yang kamu arsipkan menunggu di sini, dan semua saldo tetap seperti adanya.",
+    "mark": "Diarsipkan"
   },
   "remind": {
     "nudge": "Pengingat malam",

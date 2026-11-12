@@ -274,7 +274,7 @@ function wipeConfirm() {
   );
 }
 /* the wipe itself; keeps the preferences: main currency, week start, time format, theme, reminders, haptics, the
-   donut's middle and auto backup (which never overwrites its file with an empty notebook) */
+   donut's middle, archived entries in search and auto backup (which never overwrites its file with an empty notebook) */
 function wipeNow() {
   const keep = {
     cur: S.settings.cur,
@@ -287,6 +287,7 @@ function wipeNow() {
     donut: S.settings.donut,
     backup: S.settings.backup,
   };
+  if (S.settings.searchArch === true) keep.searchArch = true;
   S = blank();
   Object.assign(S.settings, keep);
   recentSave([]); // the recent searches live in the shell, not in S
