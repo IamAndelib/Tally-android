@@ -4223,8 +4223,9 @@ function variedV7() {
       await page.waitForTimeout(60);
     };
     /* the loan's sheet with a payment of amt typed into account accId (and an add-on typed on its card), then Record
-       payment */
-    const pay = async (id, amt, accId, addOn) => {
+       payment; `before` is the whole saved state just before the tap, for Undo to bring back exactly */
+    let before = "";
+    const pay = async (id, amt, accId, addOn, o = overBook()) => {
       await page.evaluate(o => {
         closeSheet2();
         closeSheet();
@@ -4233,7 +4234,7 @@ function variedV7() {
         RBC = LPC = null;
         commit();
         render();
-      }, overBook());
+      }, o);
       await page.evaluate(id => loanOpen(id), id);
       await page.waitForTimeout(120);
       await tap('#sheet [data-act="f-acc"][data-v="' + accId + '"]');
@@ -4242,7 +4243,13 @@ function variedV7() {
         await tap('#sheet [data-act="addon-add"][data-v="' + addOn[0] + '"]');
         await typeIn(addOn[0] === "extra" ? "#sheet #f-extra" : "#sheet #f-charge", String(addOn[1]));
       }
+      before = await page.evaluate(() => JSON.stringify(S));
       await tap('#sheet [data-act="loan-pay"]');
+    };
+    /* Undo after an answer: the whole saved state exactly as it was before the payment */
+    const undoExact = async tag => {
+      await tap('#snack [data-act="undo"]');
+      ok((await page.evaluate(() => JSON.stringify(S))) === before, tag + ": Undo brings back the whole saved state");
     };
     const dlg = () =>
       page.evaluate(() => {
@@ -4344,8 +4351,7 @@ function variedV7() {
       J(await smallOf(p.id)) === J(["+ " + tk(500) + " transfer charge"]),
       "… its row: + ৳500.00 transfer charge " + J(await smallOf(p.id))
     );
-    await tap('#snack [data-act="undo"]');
-    ok((await db()).txns.length === 5, "… one Undo takes both back");
+    await undoExact("Track as charge");
 
     // with a transfer charge typed on the card: the extra adds to it
     await pay("MY", 35500, "a", ["xcharge", 20]);
@@ -4361,6 +4367,7 @@ function variedV7() {
       (await snackText()).startsWith("Loan cleared · " + tk(520) + " as its charge"),
       "… “Loan cleared · ৳520.00 as its charge” " + (await snackText())
     );
+    await undoExact("Track as charge with one typed");
     // Track as lending, as before, the typed transfer charge kept on the payment
     await pay("MY", 35500, "a", ["xcharge", 20]);
     await answer("Track as lending");
@@ -4386,6 +4393,7 @@ function variedV7() {
       (await snackText()).startsWith("Loan cleared · Maya owes you " + tk(500)),
       "… “Loan cleared · Maya owes you ৳500.00” " + (await snackText())
     );
+    await undoExact("Track as lending with one typed");
 
     // Sam paid ৳150.00 more than he owed
     await pay("S", 5150, "k");
@@ -4441,6 +4449,7 @@ function variedV7() {
       J(await smallOf(p.id)) === J(["+ " + tk(150) + " extra"]),
       "… its row: + ৳150.00 extra " + J(await smallOf(p.id))
     );
+    await undoExact("Track as extra");
     // with a tip typed on the card: the extra adds to it
     await pay("S", 5150, "k", ["extra", 50]);
     await answer("Track as extra");
@@ -4455,6 +4464,7 @@ function variedV7() {
       (await snackText()).startsWith("Sam’s lending cleared · " + tk(200) + " as an extra"),
       "… “Sam’s lending cleared · ৳200.00 as an extra” " + (await snackText())
     );
+    await undoExact("Track as extra with one typed");
     // Track as loan, as before
     await pay("S", 5150, "k");
     await answer("Track as loan");
@@ -4474,6 +4484,7 @@ function variedV7() {
       (await snackText()).startsWith("Sam’s lending cleared · you owe Sam " + tk(150)),
       "… “Sam’s lending cleared · you owe Sam ৳150.00” " + (await snackText())
     );
+    await undoExact("Track as loan");
 
     // what is owed includes the amounts on top: Rafi's planned extra, Nima's charges
     await pay("R", 1250, "k");
@@ -4532,6 +4543,39 @@ function variedV7() {
       ok(
         s.txns.length === 5 && s.loans.length === 4 && same(s.bal, book0) && (await snackText()) === msg,
         label + (addOn ? " with one typed" : "") + ", refused: “" + msg + "”, nothing saved " + (await snackText())
+      );
+      /* the payment card as it was typed: the amount and the add-on still in their fields */
+      const card = await page.evaluate(() => ({
+        amt: ($("#sheet #f-amt") || {}).value,
+        charge: ($("#sheet #f-charge") || {}).value,
+        extra: ($("#sheet #f-extra") || {}).value,
+      }));
+      ok(
+        (card.amt || "").replace(/,/g, "") === String(amt) &&
+          (!addOn || card[addOn[0] === "extra" ? "extra" : "charge"] === String(addOn[1])),
+        "… the payment card keeps what was typed, the add-on included " + J(card)
+      );
+    }
+
+    // a fraction over, less than the currency shows: no question, the payment clears the loan
+    for (const [cur, owed, paid, accName] of [
+      ["BDT", 33.333, "33.337", "Bank"],
+      ["JPY", 333.498, "333.502", "Yen"],
+    ]) {
+      const o = overBook();
+      o.accounts.push(acct("y", "Yen", "cash", "JPY", 100000));
+      o.txns.push(
+        x("fD", 300, D.d1, "loan", owed, cur === "JPY" ? "y" : "a", { dir: "in", loan: "F", principal: true })
+      );
+      o.loans.push(loanOf("F", "borrow", "Fay", cur === "JPY" ? "y" : "a", D.d1));
+      await pay("F", paid, cur === "JPY" ? "y" : "a", null, o);
+      q = await dlg();
+      s = await db();
+      ok(
+        !q &&
+          s.txns.some(t => t.loan === "F" && !t.principal) &&
+          (await page.evaluate(() => !loanInfo(loan("F")).open)),
+        cur + ": paying " + paid + " on " + owed + " owed (" + accName + ") asks nothing and clears the loan " + J(q)
       );
     }
     await page.evaluate(() => (closeSheet(), closePop(), (V.screen = "home"), render()));

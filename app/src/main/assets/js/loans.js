@@ -983,8 +983,9 @@ function payLoan() {
   const ao = addOnAmounts($("#sheet .p"), i.cur);
   if (!ao) return;
   const add = (lend ? ao.extra : ao.xcharge) || 0;
-  /* compared as shown: paying the $66.67 shown on a $66.667 tab clears it, with no "$0.00 more" */
-  if (shown(amt, i.cur) > shown(i.left, i.cur)) {
+  /* asked only when the part over what is owed shows as more than 0 (what a save keeps, keptAmt()): paying the $66.67
+     shown on a $66.667 tab, or $33.337 on $33.333, simply clears it, with no "$0.00 more" */
+  if (keptAmt(rnd(amt - i.left), i.cur) > 0) {
     overpay(l, i, amt, F.account, v.date || today(), add);
     return;
   }
