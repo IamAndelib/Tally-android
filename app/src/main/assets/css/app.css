@@ -1435,6 +1435,9 @@ input {
   body:not(.land) .calc button {
     height: max(40px, min(56px, calc((100vh - 210px) / 4)));
   }
+  body:not(.land) .calc .kbdbtn {
+    height: 48px; /* the button back to the keyboard keeps its size while the keys get lower */
+  }
   body:not(.land) .calc button.op {
     font-size: 1.35rem;
   }
@@ -1504,6 +1507,7 @@ input {
   margin: -2px 0;
   border-radius: 14px;
   color: var(--on-primary-container);
+  background: none; /* the pill is its ::after; the keys' own background would show 2px above and below it */
   isolation: isolate;
 }
 .calc .kbdbtn::before,
