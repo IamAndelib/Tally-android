@@ -5,7 +5,8 @@
  * row), the totals in words
  * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
- * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
+ * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
+ * row and the month in view stay at the top while the entries scroll). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
  */
 const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "", q: "", pay: "", amt: "" });
 let HF = histBlank();
@@ -591,29 +592,37 @@ function histFocus(sel, at) {
   if (to) to.focus({ preventScroll: true });
 }
 const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("history.clearAll") + "</button>";
-/* the entries, month by month: a heading with the month's words, then its days (dayGroups). Only the first rows are
-   drawn (a notebook of years is thousands of rows); the rest follow as the end of the list comes near (histWatch). A
-   chunk ends at the end of a day, and a month cut in two has its heading, with the whole month's words, only once. */
+/* the entries, month by month: each month in a section of its own (.hsec), a heading with the month's words, then its
+   days (dayGroups); the heading stays pinned under the bar while its month scrolls, and the next month's heading pushes
+   it up (histPin). Only the first rows are drawn (a notebook of years is thousands of rows); the rest follow as the end
+   of the list comes near (histWatch). A chunk ends at the end of a day, and a month cut in two has its heading, with the
+   whole month's words, only once: the days that continue it (`cont`) go into its section (histMore). */
 const HIST_CHUNK = 300;
 let HSHOW = { sig: "", n: HIST_CHUNK }, // what is drawn: the entries so far, for these filters and this period
   HLIST = [], // the entries it is drawn from
   HIO = null;
 const histSig = () => JSON.stringify([HF, HP.period, range(HP)]); // the dates shown, so midnight keeps the rows drawn
 const histMonth = t => t.date.slice(0, 7);
-/* the markup for list[i..] up to about `budget` entries; `next` is where the following chunk starts */
+/* the markup for list[i..] up to about `budget` entries: `cont`, the days of a month begun in an earlier chunk, and
+   `html`, the months that begin in this one; `next` is where the following chunk starts. While selecting, the month
+   headings scroll with the entries (their totals are not about the selection): their sections don't pin. */
 function histMonths(list, i, budget) {
-  let h = "";
-  const stop = i + budget;
+  let h = "",
+    cont = "";
+  const stop = i + budget,
+    sec = '<div class="hsec' + (V.sel ? "" : " pin") + '">';
   HLW = V.find && HF.q.trim() ? hlTerms(HF.q) : null; // search mode marks the words in the rows
   try {
     while (i < list.length && i < stop) {
       const m = histMonth(list[i]);
       let j = i;
       while (j < list.length && histMonth(list[j]) === m) j++;
-      if (i === 0 || histMonth(list[i - 1]) !== m) {
+      const head = i === 0 || histMonth(list[i - 1]) !== m;
+      let part = "";
+      if (head) {
         const title = capFirst(monthLabel(m, true)),
           lines = histLines(list.slice(i, j), HF.kind, [m + "-01", monthEnd(m)]);
-        h +=
+        part +=
           '<div class="hmon" role="heading" aria-level="2" aria-label="' +
           esc(histHeadSay(title, lines)) +
           '"><span aria-hidden="true">' +
@@ -627,13 +636,15 @@ function histMonths(list, i, budget) {
         e = stop;
         while (e < j && list[e].date === list[e - 1].date) e++; // the day is whole
       }
-      h += dayGroups(list.slice(i, e), true);
+      part += dayGroups(list.slice(i, e), true);
+      if (head) h += sec + part + "</div>";
+      else cont += part; // only a chunk's first month can be one begun before
       i = e;
     }
   } finally {
     HLW = null; // never left on for the rows drawn elsewhere
   }
-  return { html: h, next: i };
+  return { html: cont + h, cont, months: h, next: i };
 }
 /* the rest of the list is drawn when the marker after the last row comes within a few screens */
 function histWatch() {
@@ -650,9 +661,18 @@ function histUnwatch() {
 function histMore() {
   const end = $("#app .hmore");
   if (!end || V.screen !== "history") return histUnwatch();
-  const r = histMonths(HLIST, +end.dataset.next, HIST_CHUNK);
-  end.insertAdjacentHTML("beforebegin", "<div>" + r.html + "</div>");
-  fitFigures(end.previousElementSibling);
+  const r = histMonths(HLIST, +end.dataset.next, HIST_CHUNK),
+    secs = document.querySelectorAll("#app .hsec"),
+    last = secs[secs.length - 1];
+  if (r.cont && last) {
+    last.insertAdjacentHTML("beforeend", "<div>" + r.cont + "</div>");
+    fitFigures(last.lastElementChild);
+  }
+  if (r.months) {
+    end.insertAdjacentHTML("beforebegin", "<div>" + r.months + "</div>");
+    fitFigures(end.previousElementSibling);
+  }
+  histPinSet();
   HSHOW.n = r.next;
   if (r.next >= HLIST.length) end.remove();
   else end.dataset.next = r.next;
@@ -772,14 +792,80 @@ function historyView() {
   /* search mode keeps the bar and the list in two boxes of their own, so typing redraws them without the field; its
      status says the count of this draw (findDraw says it again after each pause) */
   if (V.find) FIND_SAID = p.body && !p.idle ? T("history.count", { count: histRows(HLIST).length }) : "";
+  /* the bar and the period / Filters row in one block that stays at the top while the entries scroll (histPin) */
   return V.find
-    ? h +
+    ? '<div class="hpin">' +
+        h +
         '<div id="find-live" class="vh" role="status">' +
         esc(FIND_SAID) +
-        '</div><div id="hhead">' +
+        '</div><div id="hhead" class="hhd">' +
         p.head +
-        '</div><div id="hbody">' +
+        '</div></div><div id="hbody">' +
         p.body +
         "</div>"
-    : h + p.head + p.body;
+    : '<div class="hpin">' + h + '<div class="hhd">' + p.head + "</div></div>" + p.body;
+}
+/* The pinned block (docs/specs/history-archive.md, A): the bar and the period / Filters row stay at the top while the
+   entries scroll, and under them the heading of the month in view (.hsec.pin, CSS position: sticky). Its height, which
+   follows the text size and the chips' lines, is measured into --hpin, where the month headings stop; the room above a
+   row scrolled to (an opened row's part, the focus, a search match) is that plus the tallest month heading
+   (scroll-padding-top), so the row lands under the block, not behind it; where the two would cover over half the
+   window, the month headings scroll (#app.hfree). A phone held sideways (body.land) keeps only
+   the bar there: the Filters row scrolls away with the entries and comes back (.back) as soon as the list scrolls up. */
+const HPIN = { ro: null, ref: null, at: 0, raf: 0, on: false };
+function histPin() {
+  if (HPIN.ro) HPIN.ro.disconnect();
+  HPIN.ro = null;
+  const pin = V.screen === "history" && $("#app .hpin");
+  if (pin && typeof ResizeObserver !== "undefined") {
+    HPIN.ro = new ResizeObserver(histPinSet);
+    [...pin.children].forEach(e => HPIN.ro.observe(e));
+  }
+  HPIN.ref = null;
+  if (!HPIN.on) {
+    HPIN.on = true;
+    addEventListener("scroll", histScroll, { passive: true });
+  }
+  histPinSet();
+}
+function histPinSet() {
+  const root = document.documentElement,
+    pin = V.screen === "history" && $("#app .hpin");
+  if (!pin) {
+    $("#app").classList.remove("hfree");
+    root.style.removeProperty("--hpin");
+    root.style.scrollPaddingTop = "";
+    return;
+  }
+  const h = e => (e ? e.getBoundingClientRect().height : 0),
+    head = pin.querySelector(".hhd"),
+    top = document.body.classList.contains("land")
+      ? h(pin.querySelector(".appbar")) + (head && head.classList.contains("back") ? h(head) : 0)
+      : h(pin),
+    month = Math.max(0, ...[...document.querySelectorAll("#app .hsec.pin > .hmon")].map(h)),
+    /* where the bar, the Filters row and a month's heading together would cover over half the window (a short
+       window, a large text size, a heading in words wrapped over several lines), the headings scroll with their
+       entries */
+    free = top + month > innerHeight / 2;
+  $("#app").classList.toggle("hfree", free);
+  root.style.setProperty("--hpin", top + "px");
+  root.style.scrollPaddingTop = Math.ceil(top + (free ? 0 : month)) + "px";
+}
+/* sideways, the Filters row comes back on the way up and goes on the way down (once a frame, on a change of way). The
+   way is how the entries moved in the window, not scrollY: the page's own adjustments (scroll anchoring, as a day's
+   list comes into view with its real height) change scrollY while what is seen stays put */
+function histScroll() {
+  if (HPIN.raf) return;
+  HPIN.raf = requestAnimationFrame(() => {
+    HPIN.raf = 0;
+    const head = V.screen === "history" && document.body.classList.contains("land") && $("#app .hpin .hhd"),
+      ref = HPIN.ref,
+      d = ref && ref.isConnected ? ref.getBoundingClientRect().top - HPIN.at : 0; // > 0: the entries moved down
+    if (head && ref && ref.isConnected && Math.abs(d) < 2) return; // a finger's tremble, or a slow drag: it adds up
+    HPIN.ref = head ? document.elementFromPoint(innerWidth / 2, innerHeight * 0.7) : null; // under the pinned part
+    HPIN.at = HPIN.ref ? HPIN.ref.getBoundingClientRect().top : 0;
+    if (!head || Math.abs(d) < 2 || d > 0 === head.classList.contains("back")) return;
+    head.classList.toggle("back", d > 0);
+    histPinSet();
+  });
 }

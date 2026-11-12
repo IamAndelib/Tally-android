@@ -457,10 +457,11 @@ const ok = (c, m) => {
   const top = () =>
     p.evaluate(() => {
       const y = sel => Math.round(document.querySelector(sel).getBoundingClientRect().top + scrollY); // in the page: the view may follow its middle row
+      const win = sel => Math.round(document.querySelector(sel).getBoundingClientRect().top); // pinned: in the window
       const bar = document.querySelector(".hbar");
       return {
-        bar: y(".hfbtn"),
-        chip: y(".hchip"),
+        bar: win(".hfbtn"),
+        chip: win(".hchip"),
         row: y("#app .tx, #app [data-act='row-open']"),
         off: [...document.querySelectorAll(".hbar button")].every(b => b.disabled),
         dim: +getComputedStyle(bar).opacity,
@@ -670,6 +671,169 @@ const ok = (c, m) => {
   );
   await p.click('#snack [data-act="undo"]');
   ok((await p.evaluate(() => window.__rec)) === JSON.stringify(list5), "Undo puts it back in its place");
+
+  // ---- the pinned header while selecting, in search and on a phone held sideways (docs/specs/history-archive.md, A3–A5)
+  {
+    const pinned = async (vp, scale = 1) => {
+      const ctx = await browser.newContext({ viewport: vp, screen: vp, locale: "en-US" });
+      await ctx.addInitScript(s => {
+        window.Android = { getColors: () => null, setBars() {}, fontScale: () => s };
+      }, scale);
+      const page = await ctx.newPage();
+      page.on("pageerror", e => errors.push(e.message));
+      await page.goto(appUrl);
+      await page.evaluate(() => {
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 90000, archived: false });
+        let n = 0;
+        const day = (m, d) => "2026-" + m + "-" + String(d).padStart(2, "0");
+        [
+          ["06", 17],
+          ["05", 31],
+          ["04", 30],
+        ].forEach(([m, last]) => {
+          for (let d = last; d >= 1; d--)
+            for (let i = 0; i < 3; i++)
+              S.txns.push({
+                id: "q" + ++n,
+                ts: n,
+                date: day(m, d),
+                type: i === 2 ? "income" : "expense",
+                amount: 10 + i,
+                account: "a",
+                cat: i === 2 ? "salary" : "food",
+                payee: i ? "Green Market" : "Corner Café",
+              });
+        });
+        save();
+        openHistory({});
+      });
+      return { ctx, page };
+    };
+    const frame = p => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    /* halfway through June */
+    const midJune = p =>
+      p.evaluate(() => {
+        const t = m =>
+          [...document.querySelectorAll("#app .hmon")]
+            .find(h => h.getAttribute("aria-label").startsWith(m))
+            .getBoundingClientRect().top + scrollY;
+        scrollTo(0, Math.round((t("June") + t("May")) / 2));
+      });
+    const look = p =>
+      p.evaluate(() => {
+        const W = innerWidth,
+          box = e => (e ? e.getBoundingClientRect() : null),
+          at = (x, y) => document.elementFromPoint(x, y) || document.body,
+          bar = box($("#app .appbar")),
+          fb = box($("#app .hfbtn")),
+          seen = (r, sel) => !!r && r.bottom > 0 && !!at(r.left + r.width / 2, r.top + r.height / 2).closest(sel),
+          heads = [...document.querySelectorAll("#app .hmon")].map(h => [h, box(h)]),
+          /* the heading that stands right under the bar and the Filters row, if one does */
+          under = (fb && fb.bottom > 0 ? fb.bottom : bar.bottom) + 0,
+          hd = heads.find(([, r]) => r.top >= under - 1 && r.top < under + 14 && r.bottom > under),
+          hcl = hd ? [...hd[0].querySelectorAll(".hcl")].map(x => Math.round(box(x).top)) : [];
+        return {
+          y: scrollY,
+          bar: bar && Math.abs(bar.top) < 1 && seen(bar, ".appbar"),
+          barBottom: bar.bottom,
+          fb: !!fb && fb.top >= bar.bottom - 1 && fb.bottom > 0 && fb.top < innerHeight,
+          fbTop: fb ? fb.top : null,
+          fbBottom: fb ? fb.bottom : null,
+          rowUnderFb: !!fb && !!at(fb.left + fb.width / 2, fb.top + fb.height / 2).closest(".tx, .dayh, .hmon"),
+          head: hd ? hd[0].getAttribute("aria-label").split(",")[0] : "",
+          headTop: hd ? hd[1].top : null,
+          headBottom: hd ? hd[1].bottom : null,
+          headSeen: !!hd && seen(hd[1], ".hmon"),
+          oneLine: hcl.length > 1 && new Set(hcl).size === 1,
+          /* what is right under the pinned part: a row or day heading means no month heading is held there */
+          next: (() => {
+            const e = at(W / 2, (fb && fb.bottom > 0 ? fb.bottom : bar.bottom) + 6);
+            return e.closest(".hmon") ? "month" : e.closest(".tx, .dayh, .dl") ? "entries" : e.className;
+          })(),
+        };
+      });
+
+    /* selecting: the bar ("1 selected") and the dimmed Filters row stay; the month headings scroll with the entries */
+    let { ctx, page } = await pinned({ width: 393, height: 852 });
+    await page.evaluate(() => {
+      V.sel = new Set([histRows(HLIST)[5].id]);
+      render();
+    });
+    await page.waitForTimeout(300); // render() keeps the row in view in place for a moment (toAnchor)
+    await midJune(page);
+    await frame(page);
+    let L = await look(page);
+    ok(
+      L.y > 300 && L.bar && (await page.evaluate(() => $("#app .appbar h1").textContent)) === "1 selected",
+      "selecting: the bar with its count stays at the top: " + JSON.stringify(L)
+    );
+    ok(L.fb && !L.rowUnderFb, "selecting: the dimmed Filters row stays under it: " + JSON.stringify(L));
+    ok(!L.head && L.next === "entries", "selecting: no month heading is held at the top: " + JSON.stringify(L));
+    await ctx.close();
+
+    /* search: the field and the Filters row stay, and the month heading under them */
+    ({ ctx, page } = await pinned({ width: 393, height: 852 }));
+    await page.evaluate(() => {
+      openFind();
+      $("#find-q").value = "market";
+      findInput("market");
+      findDraw();
+      document.activeElement.blur();
+    });
+    await midJune(page);
+    await frame(page);
+    L = await look(page);
+    const field = await page.evaluate(() => {
+      const r = $("#find-q").getBoundingClientRect();
+      return document.elementFromPoint(r.left + 10, r.top + r.height / 2) === $("#find-q") && r.top >= 0;
+    });
+    ok(L.y > 300 && L.bar && field, "search: the field stays at the top: " + JSON.stringify(L));
+    ok(L.fb && !L.rowUnderFb, "search: the Filters row stays under it");
+    ok(L.head === "June 2026" && L.headSeen, "search: June's heading stays under them: " + JSON.stringify(L));
+    await ctx.close();
+
+    /* a phone held sideways (800 × 360, text 1.3×): the bar and a one-line month heading stay; the Filters row scrolls
+       away with the entries and comes back as soon as the list scrolls up */
+    ({ ctx, page } = await pinned({ width: 800, height: 360 }, 1.3));
+    ok(await page.evaluate(() => document.body.classList.contains("land")), "sideways: the sideways layout");
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.mouse.move(400, 250);
+    const atTop = await look(page);
+    await midJune(page);
+    await page.mouse.wheel(0, 200);
+    await page.waitForTimeout(250);
+    L = await look(page);
+    ok(L.bar, "sideways: the bar stays at the top: " + JSON.stringify(L));
+    ok(!L.fb, "sideways: the Filters row has scrolled away: " + JSON.stringify(L));
+    ok(
+      L.head === "June 2026" && L.headSeen && Math.abs(L.headTop - L.barBottom) < 2,
+      "sideways: June's heading stays right under the bar: " + JSON.stringify(L)
+    );
+    ok(L.oneLine, "sideways: the month heading on one line, its + and − side by side");
+    ok(
+      L.headBottom !== null && L.headBottom <= 360 * 0.4,
+      "sideways: the pinned part takes about a third of the height: " + L.headBottom
+    );
+    await page.mouse.wheel(0, -60);
+    await page.waitForTimeout(250);
+    L = await look(page);
+    ok(
+      L.bar && L.fb && !L.rowUnderFb && Math.abs(L.fbTop - atTop.fbTop) < 2,
+      "sideways: scrolling up brings the Filters row back under the bar: " + JSON.stringify([L, atTop.fbTop])
+    );
+    ok(
+      L.head === "June 2026" && L.headSeen && L.headTop >= L.fbBottom - 1,
+      "sideways: the month heading under it, uncovered: " + JSON.stringify(L)
+    );
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(250);
+    L = await look(page);
+    ok(L.bar && !L.fb && L.head === "June 2026", "sideways: scrolling down again takes it away: " + JSON.stringify(L));
+    await ctx.close();
+  }
 
   ok(errors.length === 0, "no page errors: " + errors.join(" | "));
   await browser.close();

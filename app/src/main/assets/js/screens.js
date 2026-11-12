@@ -122,6 +122,7 @@ function drawScreen() {
   } else app.innerHTML = homeView();
   fitFigures(app);
   histCenter(app);
+  histPin();
   if (document.fonts.status === "loading")
     document.fonts.ready.then(() => {
       fitFigures(app);

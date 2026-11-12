@@ -317,6 +317,11 @@ function inspect() {
     )
       out.push("the scrolling chip row does not fade");
   // 3. controls overlapping, 4. tap targets too small
+  /* what History holds at the top while the entries scroll under it: its bar, the Filters row (sideways only once it
+     has come back) and the month headings (docs/specs/history-archive.md, A) */
+  const pinned = e =>
+    !!e.closest(".hpin, .hsec.pin > .hmon") &&
+    !(document.body.classList.contains("land") && e.closest(".hhd:not(.back)"));
   const ctl = all.filter(
     e =>
       e.matches("button, input, select, textarea, a[href], [role=switch]") &&
@@ -340,6 +345,8 @@ function inspect() {
       if (!!a.closest(".hfs-foot") !== !!b.closest(".hfs-foot")) continue;
       // so do the period arrows over the label's padding (on top of it, each keeping its 48px)
       if (a.closest(".pnav") && b.closest(".pnav")) continue;
+      // and History's pinned block over the entries that scroll under it
+      if (pinned(a) !== pinned(b)) continue;
       const x = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left),
         y = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (x > 2 && y > 2) out.push("overlap " + name(a) + " / " + name(b));
@@ -373,6 +380,8 @@ function inspect() {
     // caret)
     // (under the bottom bar: reached by scrolling)
     if (hit && hit.closest("#nav")) continue;
+    // (under History's pinned block, scrolled: reached by scrolling back)
+    if (scrollY > 0 && hit && pinned(hit) && !pinned(e)) continue;
     if (hit && hit !== e && !e.contains(hit) && !hit.closest('[data-act="calc-pos"]'))
       out.push("can't be tapped " + name(e) + " (under " + name(hit) + ")");
   }
@@ -499,6 +508,36 @@ function inspect() {
     else if (/-webkit-box/.test(getComputedStyle(e).display) && e.scrollHeight > e.clientHeight + 2)
       out.push("lines cut " + name(e) + " " + t);
     if (e.style.fontSize) out.push("words set smaller " + name(e) + " " + t);
+  }
+  // 13. History's pinned block (docs/specs/history-archive.md, A), scrolled: the bar at the top, the Filters row under
+  //     it (sideways only once it has come back), then the heading of the month in view right under them, unless the
+  //     next month's is pushing it up; together under half the window's height
+  const pin = layer.id === "app" && document.querySelector("#app .hpin");
+  if (pin && scrollY > 0) {
+    const bar = pin.querySelector(".appbar").getBoundingClientRect(),
+      hhd = pin.querySelector(".hhd"),
+      land = document.body.classList.contains("land"),
+      held = hhd && hhd.querySelector(".hbar") && (!land || hhd.classList.contains("back")),
+      hb = held ? hhd.querySelector(".hbar").getBoundingClientRect() : null,
+      bottom = land ? (held ? hhd.getBoundingClientRect().bottom : bar.bottom) : pin.getBoundingClientRect().bottom;
+    if (Math.abs(bar.top) > 0.5) out.push("pinned bar not at the top " + bar.top);
+    if (hb && (hb.top < bar.bottom - 0.5 || hb.top > bar.bottom + 6))
+      out.push("pinned Filters row not under the bar " + hb.top);
+    for (const sec of document.querySelectorAll("#app .hsec.pin")) {
+      const r = sec.getBoundingClientRect();
+      if (r.top >= bottom || r.bottom <= bottom) continue; // not the month in view
+      const hm = sec.querySelector(".hmon"),
+        h = hm.getBoundingClientRect();
+      if (getComputedStyle(hm).position !== "sticky") {
+        // (the headings scroll where the block and one would cover over half the window: say so if they needn't)
+        if (bottom + h.height <= vh / 2) out.push("month headings not pinned though there is room");
+        continue;
+      }
+      if (Math.abs(h.top - bottom) > 1 && Math.abs(h.bottom - r.bottom) > 1)
+        out.push("month heading not pinned under the block: " + Math.round(h.top) + " vs " + Math.round(bottom));
+      if (Math.abs(h.top - bottom) <= 1 && h.bottom > vh / 2)
+        out.push("pinned part over half the window: " + Math.round(h.bottom) + " of " + vh);
+    }
   }
   // 6. a sheet or dialog fits the screen (its content scrolls inside)
   const box = layer.querySelector(".p, .dlg, [role=dialog]");
@@ -685,6 +724,33 @@ function inspect() {
         render();
       })
     );
+    /* History scrolled (docs/specs/history-archive.md, A): halfway through the first month, its bar, Filters row and
+       month heading pinned; the next month's heading pushing it up; scrolled back up a little (sideways, the Filters
+       row comes back) */
+    const histAt = (setup, how) => async () => {
+      await page.evaluate(setup);
+      await page.evaluate(async how => {
+        const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const ms = [...document.querySelectorAll("#app .hmon")].map(m => m.getBoundingClientRect().top + scrollY);
+        const pinned = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hpin")) || 0;
+        if (how === "hand") scrollTo(0, ms[1] - pinned() - 30);
+        else scrollTo(0, ms[0] + ((ms[1] || document.body.scrollHeight) - ms[0]) / 2);
+        await frame();
+        if (how === "up") {
+          scrollBy(0, -40);
+          await frame();
+          scrollBy(0, -40);
+          await frame();
+        }
+      }, how);
+    };
+    const histOpen = () => {
+      V.screen = "history";
+      render();
+    };
+    await shot("history-pinned", histAt(histOpen, "mid"));
+    await shot("history-pinned-hand", histAt(histOpen, "hand"));
+    await shot("history-pinned-up", histAt(histOpen, "up"));
     /* History filtered (chips), and the Filters sheet for Spent, Lent and Transfers with an account */
     await shot(
       "history-filtered",
@@ -1336,6 +1402,16 @@ function inspect() {
         render();
       })
     );
+    /* selecting, scrolled: the bar and the dimmed Filters row stay, the month headings scroll */
+    await shot(
+      "history-select-pinned",
+      histAt(() => {
+        V.screen = "history";
+        render();
+        V.sel = new Set([S.txns[3].id]);
+        render();
+      }, "mid")
+    );
     /* selecting in a filtered History: the same row and chips, dimmed */
     await shot(
       "history-select-filtered",
@@ -1401,6 +1477,11 @@ function inspect() {
     await shot("search-nothing-near", findOpen("cofee", "", "near"));
     await shot("search-nothing", findOpen("qzxv", "", "nothing"));
     await shot("search-note", findOpen("coins", "", "note"));
+    /* search, scrolled: the field, the Filters row and the month heading pinned */
+    await shot("search-pinned", async () => {
+      await findOpen("corner", "", "typing")();
+      await histAt(() => document.activeElement.blur(), "mid")();
+    });
     await page.evaluate(() => recentSave([]));
     await shot("search-empty", findOpen("", "", "empty"));
     await seed(15);

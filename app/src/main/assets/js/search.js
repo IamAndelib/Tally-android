@@ -445,6 +445,7 @@ function findDraw() {
   scrollTo(0, 0);
   fitFigures($("#app"));
   histCenter($("#app"));
+  histPinSet(); // the month headings drawn anew: the room kept above a row scrolled to
   histWatch();
   /* the count, said once typing has paused (this is that pause) and only when it changed */
   const live = $("#find-live"),

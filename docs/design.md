@@ -198,6 +198,10 @@ links that would need the internet.
 - **Grouped by day under month headings**, newest first. The month and day headings carry a stacked column: "+"
   received (green) over "−" spent (red), one line per currency, the notebook's own first. The Transfers filter says
   "Transferred" and "Charges" in words instead, and the Lent filter adds "Extras".
+- **The header stays while the entries scroll:** the app bar (or the search field), the period / Filters row and the
+  heading of the month in view, with a thin line under it, until the next month's heading pushes it up. While
+  selecting only the bar and the dimmed Filters row stay. A phone held sideways keeps the bar and the month on one
+  line; the Filters row scrolls away and comes back as soon as the list scrolls up. A row scrolled to lands under them.
 - **Hold to select** several rows; while selecting, the period and Filters row stays where it is, dimmed and not
   tappable, so nothing moves; the app bar becomes "N selected", and with every row selected the app bar's select-all
   icon button becomes a deselect icon labelled "Clear selection".

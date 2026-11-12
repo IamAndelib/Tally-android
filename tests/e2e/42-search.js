@@ -1766,7 +1766,7 @@ const ok = (c, m) => {
       left.y > 3000 && left.open && left.n > 300,
       "History is scrolled, a row open and a second chunk drawn: " + JSON.stringify(left)
     );
-    await p6.evaluate(() => openFind()); // the bar is not in reach while scrolled: opened from elsewhere
+    await p6.evaluate(() => openFind()); // opened from elsewhere (not History's bar)
     await p6.keyboard.type("store 3");
     await p6.waitForTimeout(250);
     await p6.evaluate(() => scrollTo(0, 400));
@@ -1795,7 +1795,9 @@ const ok = (c, m) => {
     await p6.click('#app [data-act="find-back"]');
     r6 = await p6.evaluate(() => V.open);
     ok(r6 === "", "Back: an opened entry that is gone stays closed: " + r6);
-    // opened from the top (the bar is there), results scrolled, Back: History is at the top again
+    // opened from the top, results scrolled, Back: History is at the top again (once the place put back by the last Back
+    // has settled: toAnchor holds it for a moment)
+    await p6.waitForTimeout(300);
     await p6.evaluate(() => scrollTo(0, 0));
     await p6.click('#app [data-act="search-open"]');
     await p6.keyboard.type("store 3");

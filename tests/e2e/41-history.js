@@ -2201,6 +2201,293 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- the pinned header (docs/specs/history-archive.md, A): the app bar, the period / Filters row and the heading of
+  // the month in view stay at the top while the entries scroll; the next month's heading pushes the old one up
+  {
+    const { ctx, page } = await open();
+    /* June (to the 17th), May and April with three entries a day, then March with thirteen a day: History's first
+       chunk of rows ends inside March, and the rest of March is drawn as the end comes near */
+    await page.evaluate(() => {
+      const cats = ["food", "groceries", "transport"];
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 90000, archived: false });
+      let n = 0;
+      const add = (date, k) => {
+        for (let i = 0; i < k; i++)
+          S.txns.push({
+            id: "p" + ++n,
+            ts: n,
+            date,
+            type: i === 1 && date.endsWith("5") ? "income" : "expense",
+            amount: 10 + i,
+            account: "a",
+            cat: i === 1 && date.endsWith("5") ? "salary" : cats[i % 3],
+            payee: "Shop " + n,
+          });
+      };
+      for (let d = 17; d >= 1; d--) add("2026-06-" + String(d).padStart(2, "0"), 3);
+      for (let d = 31; d >= 1; d--) add("2026-05-" + String(d).padStart(2, "0"), 3);
+      for (let d = 30; d >= 1; d--) add("2026-04-" + String(d).padStart(2, "0"), 3);
+      for (let d = 31; d >= 1; d--) add("2026-03-" + String(d).padStart(2, "0"), 13);
+      save();
+      openHistory({});
+    });
+    const frame = () => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    /* what the window shows at the top: the bar, the Filters row, the month heading under them and its line */
+    const look = () =>
+      page.evaluate(() => {
+        const W = innerWidth,
+          box = e => e.getBoundingClientRect(),
+          at = (x, y) => document.elementFromPoint(x, y),
+          bar = box($("#app .appbar")),
+          fb = box($("#app .hfbtn")),
+          heads = [...document.querySelectorAll("#app .hmon")],
+          below = Math.max(bar.bottom, fb.bottom),
+          head = heads.find(h => box(h).bottom > below + 1 && box(h).top < below + 40),
+          hb = head && box(head),
+          probe = document.createElement("div");
+        probe.style.color = "var(--outline-variant)";
+        document.body.appendChild(probe);
+        const outline = getComputedStyle(probe).color;
+        probe.remove();
+        /* nothing of the entries shows above the heading's bottom: every point down the middle is the bar, the row
+           or the heading */
+        let rowAbove = false;
+        if (hb)
+          for (let y = 2; y < hb.bottom - 1; y += 4) {
+            const e = at(W / 2, y);
+            if (e && e.closest(".tx, .dayh, .dl")) rowAbove = true;
+          }
+        return {
+          y: scrollY,
+          barTop: bar.top,
+          barHit: !!(at(W / 2, bar.top + bar.height / 2) || { closest: () => 0 }).closest(".appbar"),
+          fbTop: fb.top,
+          fbHit: (at(fb.left + fb.width / 2, fb.top + fb.height / 2) || {}).closest
+            ? !!at(fb.left + fb.width / 2, fb.top + fb.height / 2).closest(".hfbtn")
+            : false,
+          head: head ? head.getAttribute("aria-label").split(",")[0] : "",
+          headTop: hb ? hb.top : -1,
+          headBottom: hb ? hb.bottom : -1,
+          headHit: !!hb && !!(at(W / 2, hb.top + hb.height / 2) || { closest: () => 0 }).closest(".hmon"),
+          line: head ? [getComputedStyle(head).borderBottomWidth, getComputedStyle(head).borderBottomColor] : [],
+          outline,
+          rowAbove,
+          below,
+        };
+      });
+    const monTop = m =>
+      page.evaluate(m => {
+        const h = [...document.querySelectorAll("#app .hmon")].find(x => x.getAttribute("aria-label").startsWith(m));
+        return h.getBoundingClientRect().top + scrollY;
+      }, m);
+    await frame();
+    const top0 = await look();
+    /* halfway through June */
+    const jun = await monTop("June 2026"),
+      may = await monTop("May 2026");
+    await page.evaluate(y => scrollTo(0, y), Math.round(jun + (may - jun) / 2));
+    await frame();
+    let L = await look();
+    ok(L.y > 300, "scrolled halfway through June: " + L.y);
+    ok(Math.abs(L.barTop) < 1 && L.barHit, "the app bar stays at the top: " + JSON.stringify(L));
+    ok(
+      L.fbHit && L.fbTop >= 0 && Math.abs(L.fbTop - top0.fbTop) < 1,
+      "the period / Filters row stays under it: " + JSON.stringify([L.fbTop, top0.fbTop])
+    );
+    ok(
+      L.head === "June 2026" && L.headHit && L.headTop >= L.below - 1 && L.headTop <= L.below + 12,
+      "June's heading stays under the Filters row: " + JSON.stringify(L)
+    );
+    ok(!L.rowAbove, "no entry shows above the month heading's bottom");
+    ok(
+      L.line[0] === "1px" && L.line[1] === L.outline,
+      "a thin line in the outline-variant colour under it: " + JSON.stringify([L.line, L.outline])
+    );
+    const pinnedTop = L.headTop;
+    /* the hand-over: May's heading reaches June's and pushes it up */
+    const mayNow = await page.evaluate(() => {
+      const h = [...document.querySelectorAll("#app .hmon")].find(x => x.getAttribute("aria-label").startsWith("May"));
+      return h.getBoundingClientRect().top;
+    });
+    await page.evaluate(d => scrollBy(0, d), Math.round(mayNow - L.headBottom + 15));
+    await frame();
+    const hand = await page.evaluate(() => {
+      const r = m =>
+        [...document.querySelectorAll("#app .hmon")]
+          .find(x => x.getAttribute("aria-label").startsWith(m))
+          .getBoundingClientRect();
+      return { jun: r("June"), may: r("May") };
+    });
+    ok(
+      hand.jun.top < pinnedTop - 5 && hand.jun.bottom <= hand.may.top + 0.5 && hand.may.top - hand.jun.bottom < 10,
+      "May's heading pushes June's up: " + JSON.stringify(hand)
+    );
+    await page.evaluate(() => scrollBy(0, 400));
+    await frame();
+    L = await look();
+    ok(
+      L.head === "May 2026" && L.headHit && Math.abs(L.headTop - pinnedTop) < 1,
+      "then May's heading takes its place: " + JSON.stringify(L)
+    );
+    ok(Math.abs(L.barTop) < 1 && L.fbHit && !L.rowAbove, "the bar and the Filters row still above it");
+    /* day headings scroll as before: none is held at the top */
+    ok(
+      await page.evaluate(
+        () =>
+          ![...document.querySelectorAll("#app .dayh")].some(
+            d => getComputedStyle(d).position === "sticky" || getComputedStyle(d).position === "fixed"
+          )
+      ),
+      "day headings scroll with the entries"
+    );
+    /* TalkBack reads the page in the same order: the bar, the Filters row, then each month's heading (still a heading,
+       level 2, with its words) followed by its days and rows, before the next month's heading */
+    const order = await page.evaluate(() => {
+      const before = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const heads = [...document.querySelectorAll("#app .hmon")],
+        rows = [...document.querySelectorAll("#app .tx")],
+        h1 = $("#app .appbar h1"),
+        fb = $("#app .hfbtn");
+      const monthOf = el => {
+        let m = null;
+        heads.forEach(h => before(h, el) && (m = h));
+        return m && m.getAttribute("aria-label").split(",")[0];
+      };
+      return {
+        top: before(h1, fb) && before(fb, heads[0]),
+        roles: heads.every(h => h.getAttribute("role") === "heading" && h.getAttribute("aria-level") === "2"),
+        words: heads[0].getAttribute("aria-label"),
+        rowsInMonth: rows.every(r => {
+          const t = entry(r.dataset.v);
+          return t && monthOf(r) === capFirst(monthLabel(t.date.slice(0, 7), true));
+        }),
+        ariaHidden: !!document.querySelector("#app .hmon[aria-hidden], #app .hpin[aria-hidden]"),
+      };
+    });
+    ok(
+      order.top && order.roles && order.rowsInMonth && !order.ariaHidden,
+      "TalkBack order unchanged: " + JSON.stringify(order)
+    );
+    ok(/^June 2026, .*received.*spent/.test(order.words), "the month heading keeps its words: " + order.words);
+    /* jumping to a row (an opened row's part, a search match, the browser following the focus) leaves it below the
+       pinned block, not under it */
+    const hidden = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll("#app .tx")],
+        head = [...document.querySelectorAll("#app .hmon")].find(h => h.getAttribute("aria-label").startsWith("May")),
+        hb = head.getBoundingClientRect(),
+        r = rows.find(x => x.getBoundingClientRect().top > hb.bottom + 80);
+      scrollBy(0, r.getBoundingClientRect().top - hb.bottom + 30); // its top 30px under the pinned heading
+      return r.dataset.v;
+    });
+    await frame();
+    const jump = await page.evaluate(id => {
+      const r = $('#app .tx[data-v="' + id + '"]'),
+        before = r.getBoundingClientRect().top;
+      r.scrollIntoView({ block: "nearest" });
+      const hb = [...document.querySelectorAll("#app .hmon")]
+        .find(h => h.getAttribute("aria-label").startsWith("May"))
+        .getBoundingClientRect();
+      return { before, after: r.getBoundingClientRect().top, head: hb.bottom };
+    }, hidden);
+    ok(
+      jump.before < jump.head && jump.after >= jump.head - 1 && jump.after < jump.head + 40,
+      "a row scrolled to lands just under the pinned month heading: " + JSON.stringify(jump)
+    );
+    /* the keyboard's focus on a row under the pinned block brings it out from under it */
+    await page.evaluate(id => {
+      const r = $('#app .tx[data-v="' + id + '"]');
+      scrollBy(0, r.getBoundingClientRect().top - 40);
+    }, hidden);
+    await frame();
+    const fk = await page.evaluate(id => {
+      const r = $('#app .tx[data-v="' + id + '"]');
+      r.focus();
+      return new Promise(res =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            const hb = [...document.querySelectorAll("#app .hmon")]
+              .filter(h => h.getBoundingClientRect().top < 300)
+              .map(h => h.getBoundingClientRect().bottom);
+            res({ top: r.getBoundingClientRect().top, head: Math.max(...hb), focus: document.activeElement === r });
+          })
+        )
+      );
+    }, hidden);
+    ok(
+      fk.focus && fk.top >= fk.head - 1,
+      "a row given the focus under the pinned block comes out from under it: " + JSON.stringify(fk)
+    );
+    /* a month drawn in two chunks: the rest of March goes into March's own section, so its heading stays pinned over
+       all of its days */
+    const chunk = await page.evaluate(async () => {
+      const wait = () => new Promise(r => setTimeout(r, 60));
+      for (let k = 0; k < 40 && $("#app .hmore"); k++) {
+        scrollTo(0, document.body.scrollHeight);
+        await wait();
+      }
+      const mar = [...document.querySelectorAll("#app .hmon")].filter(h =>
+        h.getAttribute("aria-label").startsWith("March")
+      );
+      const rows = [...document.querySelectorAll("#app .tx")].filter(r =>
+        entry(r.dataset.v).date.startsWith("2026-03")
+      );
+      return {
+        done: !$("#app .hmore"),
+        heads: mar.length,
+        rows: rows.length,
+        inside:
+          mar[0].parentElement.querySelectorAll(".hmon").length === 1 &&
+          rows.every(r => mar[0].parentElement.contains(r)),
+        last: rows[rows.length - 1].dataset.v,
+      };
+    });
+    ok(
+      chunk.done && chunk.heads === 1 && chunk.rows === 403,
+      "all of March drawn, its heading once: " + JSON.stringify(chunk)
+    );
+    ok(chunk.inside, "the rows of March's second chunk are in March's section");
+    await page.evaluate(id => {
+      const r = $('#app .tx[data-v="' + id + '"]');
+      scrollBy(0, r.getBoundingClientRect().top - innerHeight / 2);
+    }, chunk.last);
+    await frame();
+    L = await look();
+    ok(
+      L.head === "March 2026" && L.headHit && Math.abs(L.headTop - pinnedTop) < 1,
+      "March's heading is pinned over its last day too: " + JSON.stringify(L)
+    );
+    /* a window so short that the block and a month's heading would cover over half of it: the headings scroll */
+    await page.setViewportSize({ width: 300, height: 340 }); // upright: not the sideways layout
+    const short = await page.evaluate(() => {
+      render();
+      const h = $("#app .hmon");
+      return {
+        pos: getComputedStyle(h).position,
+        pad: getComputedStyle(document.documentElement).scrollPaddingTop,
+        pin: Math.ceil($("#app .hpin").getBoundingClientRect().height) + "px",
+      };
+    });
+    ok(
+      short.pos !== "sticky" && short.pad === short.pin,
+      "a short window: the month headings scroll, only the block is pinned: " + JSON.stringify(short)
+    );
+    await page.setViewportSize({ width: 393, height: 852 });
+    ok(
+      await page.evaluate(() => (render(), getComputedStyle($("#app .hmon")).position === "sticky")),
+      "…and pin again in a taller one"
+    );
+    /* other screens have nothing pinned and no room kept at the top */
+    await page.click('#app [data-act="home"]');
+    ok(
+      (await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingTop)) === "auto",
+      "Home keeps no room at the top for a pinned block"
+    );
+    await ctx.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

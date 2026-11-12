@@ -3746,14 +3746,81 @@ body.land.calcopen #snack .snack {
 .hmore {
   height: 1px; /* the marker after the last row drawn (histWatch) */
 }
+/* History's pinned block (histPin): the bar and the period / Filters row stay at the top while the entries scroll under
+   them; it reaches the window's edges (main's 16px padding), so nothing shows beside it */
+.hpin {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  background: var(--surface);
+}
+/* a month's heading, at the top of its section (.hsec): pinned under the block while its month scrolls (not while
+   selecting), until the next month's heading pushes it up. It reaches the edges too, with a thin line under it; the
+   same box when it scrolls, so nothing moves when selecting starts or ends */
 .hmon {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
   gap: 2px 12px;
-  margin: 16px 4px 0;
+  margin: 8px -16px 0;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--outline-variant);
+  background: var(--surface);
   font-weight: 600;
+}
+.hsec.pin > .hmon {
+  position: sticky;
+  top: var(--hpin, 0px);
+  z-index: 2;
+}
+/* (not where the block and a heading would cover over half the window: histPinSet) */
+#app.hfree .hsec.pin > .hmon {
+  position: static;
+}
+/* a phone held sideways: only the bar stays (the block's own box is gone, so the bar sticks to the page), with the
+   month on one line under it; the Filters row scrolls away with the entries and slides back under the bar as soon as
+   the list scrolls up (.back) */
+body.land .hpin {
+  display: contents;
+}
+body.land .hpin > .appbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--surface);
+  box-shadow:
+    -8px 0 var(--surface),
+    8px 0 var(--surface); /* out to the window's edges, as the block reaches them upright */
+}
+body.land .hhd {
+  display: flow-root; /* the Filters row's margin stays inside, where it is when it comes back */
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  background: var(--surface);
+}
+body.land .hhd.back {
+  position: sticky;
+  top: 64px; /* under the bar (.appbar's height) */
+  z-index: 3;
+  animation: hback 0.15s ease-out;
+}
+@keyframes hback {
+  from {
+    transform: translateY(-100%);
+  }
+}
+body.land .hmon {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+body.land .hmon .hcol {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: 14px;
 }
 /* the stacked column at the right of a month or day heading (histColumn): + green over − red, one line per currency, or
    words (Transfers). Figures stay on one line and shrink in fitFigures(); words wrap. */

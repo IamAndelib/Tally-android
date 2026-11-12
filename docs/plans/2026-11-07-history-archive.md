@@ -25,12 +25,12 @@ released, so the `archived` mark joins version 8; no new version number).
 **Files:** `js/history.js` (each month in its own section; chunks that continue a month go inside it), `css/app.css`
 (the pinned block, the month heading's line, `scroll-padding-top`), `js/screens.js` if the app bar moves into the
 block; tests: 41, 44, 22.
-- [ ] Failing checks: scrolled halfway through a month, the app bar, the period / Filters row and that month's heading
+- [x] Failing checks: scrolled halfway through a month, the app bar, the period / Filters row and that month's heading
   are at the top of the window; at the next month the new heading takes its place; selecting pins only the bar and the
   dimmed Filters row (month headings scroll); search keeps the field and Filters pinned; sideways (`body.land`) pins
   the bar and a one-line month, the Filters row returning on scroll up; jumping to a row (edit, Undo, a search match)
   leaves it below the pinned block; TalkBack order unchanged.
-- [ ] Implement, suites, 22 (phones, sideways, tablets, two panes, large text), lint. Commit.
+- [x] Implement, suites, 22 (phones, sideways, tablets, two panes, large text), lint. Commit.
 
 ### Task 2: Archived entries: data and the delete question
 **Files:** `js/state.js` (`archived` in `migrate()`; `archiveEntries(ids, on)`), `js/sheets.js` (`deleteAsk`: the
