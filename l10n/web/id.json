@@ -342,6 +342,12 @@
   "addOn": {
     "both": "Biaya transfer dan tambahan"
   },
+  "csv": {
+    "xchargeNote": "Biaya transfer",
+    "chargeNote": "Biaya",
+    "chargesNote": "Biaya",
+    "extraNote": "Tambahan"
+  },
   "prev": {
     "loanX": "utang {{amount}} + biaya transfer {{charge}}",
     "loanCharges": "utang {{amount}} + biaya {{charges}}",

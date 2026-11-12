@@ -12,12 +12,27 @@ function exportCsv() {
       .replace(/^\s*[=+\-@\t\r]/, "'$&")
       .replace(/"/g, '""') +
     '"';
-  const kind = t =>
-    t.type === "loan"
-      ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir
-      : t.feeOf
-        ? ((entry(t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
-        : t.type;
+  /* an entry's type column: a payment keeps "lend-in"/"loan-out", its whole amount; an add-on gets its own (a charge on a
+     transfer or a loan payment stays "transfer-fee"/"loan-fee") */
+  const kind = t => {
+    if (t.feeOf) {
+      const h = entry(t.feeOf) || {};
+      if (t.type === "income") return "loan-extra"; // a tip on top of a payback
+      if (t.type === "loan") return "lend-fee"; // a lend's transfer charge
+      return h.type === "loan" ? "loan-fee" : h.type === "expense" ? "expense-fee" : "transfer-fee";
+    }
+    return t.type === "loan" ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir : t.type;
+  };
+  /* what an add-on's note says when the user wrote none */
+  const wordOf = {
+    "loan-fee": "loan.feeNote",
+    "transfer-fee": "transfer.feeNote",
+    "expense-fee": "csv.chargeNote",
+    "lend-fee": "csv.xchargeNote",
+    "loan-extra": "csv.extraNote",
+    "lend-extra": "csv.extraNote",
+    "borrow-fee": "csv.chargesNote",
+  };
   const lines = [
     [
       "date",
@@ -38,6 +53,21 @@ function exportCsv() {
     const a = acc(t.account),
       to = acc(t.to),
       l = t.type === "loan" && loan(t.loan);
+    const row = (type, amount, note) =>
+      [
+        t.date,
+        type,
+        rnd(amount),
+        a ? a.currency : "",
+        q(a ? a.name : ""),
+        q(""),
+        "",
+        q(""),
+        q(note),
+        "",
+        q(l ? l.person : ""),
+        q(""),
+      ].join(",");
     lines.push(
       [
         t.date,
@@ -47,19 +77,24 @@ function exportCsv() {
         q(a ? a.name : ""),
         q(to ? to.name : ""),
         t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
-        q((t.type === "expense" && !t.feeOf) || t.type === "income" ? catName(cat(t.cat)) : ""),
         q(
-          t.type === "adjust"
-            ? noteShown(t, "fix.title")
-            : t.feeOf
-              ? noteShown(t, kind(t) === "loan-fee" ? "loan.feeNote" : "transfer.feeNote")
-              : t.note
+          (t.type === "expense" && !t.feeOf) || (t.type === "income" && !t.feeOf) || kind(t) === "expense-fee"
+            ? catName(cat(t.cat))
+            : ""
         ),
+        q(t.type === "adjust" ? noteShown(t, "fix.title") : t.feeOf ? noteShown(t, wordOf[kind(t)]) : t.note),
         to ? to.currency : "",
         q(l ? l.person : ""),
         q(t.payee || ""),
       ].join(",")
     );
+    /* a draw's amount on top moves no money: a line of its own after the draw */
+    if (t.type === "loan" && t.principal && t.onTop > 0 && !t.feeOf)
+      lines.push(
+        l && l.kind === "lend"
+          ? row("lend-extra", t.onTop, T("csv.extraNote"))
+          : row("borrow-fee", t.onTop, T("csv.chargesNote"))
+      );
   });
   /* the byte-order mark tells spreadsheets (Excel) the file is UTF-8, so names in any script read right */
   saveOut("tally-entries-" + today() + ".csv", "text/csv", "\ufeff" + lines.join("\n"));

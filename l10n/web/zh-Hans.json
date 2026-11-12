@@ -342,6 +342,12 @@
   "addOn": {
     "both": "转账费用和额外款"
   },
+  "csv": {
+    "xchargeNote": "转账费用",
+    "chargeNote": "费用",
+    "chargesNote": "费用",
+    "extraNote": "额外款"
+  },
   "prev": {
     "loanX": "借入{{amount}} + 转账费用{{charge}}",
     "loanCharges": "借入{{amount}} + 费用{{charges}}",

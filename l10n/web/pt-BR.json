@@ -344,6 +344,12 @@
   "addOn": {
     "both": "Taxa de transferência e extra"
   },
+  "csv": {
+    "xchargeNote": "Taxa de transferência",
+    "chargeNote": "Taxa",
+    "chargesNote": "Taxas",
+    "extraNote": "Extra"
+  },
   "prev": {
     "loanX": "dívida {{amount}} + taxa de transferência {{charge}}",
     "loanCharges": "dívida {{amount}} + taxas {{charges}}",

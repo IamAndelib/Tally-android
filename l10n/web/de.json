@@ -343,6 +343,12 @@
   "addOn": {
     "both": "Überweisungsgebühr und Extra"
   },
+  "csv": {
+    "xchargeNote": "Überweisungsgebühr",
+    "chargeNote": "Gebühr",
+    "chargesNote": "Gebühren",
+    "extraNote": "Extra"
+  },
   "prev": {
     "loanX": "Schuld {{amount}} + Überweisungsgebühr {{charge}}",
     "loanCharges": "Schuld {{amount}} + Gebühren {{charges}}",

@@ -4583,6 +4583,180 @@ function variedV7() {
     ok(false, "Paid more than owed: " + e.message.split("\n")[0]);
   }
 
+  // ---- 28. CSV export (docs/specs/charges.md, "CSV export"; D10): one line per add-on after its entry, an amount on
+  // top a line of its own after its draw; "transfer-fee" and "loan-fee", the header, the columns and every value of an
+  // older notebook exactly as before
+  try {
+    /* what the export saves for notebook o, as lines (the saver of the shell is replaced for the call) */
+    const exportOf = o =>
+      page.evaluate(o => {
+        const keep = S,
+          save = window.saveOut;
+        let text = "";
+        try {
+          S = migrate(JSON.parse(JSON.stringify(o)));
+          window.saveOut = (n, m, t) => (text = t);
+          exportCsv();
+        } finally {
+          S = keep;
+          window.saveOut = save;
+        }
+        return text.split("\n");
+      }, o);
+    /* exportCsv() as 1.4.x wrote it, to compare the values of an older notebook with */
+    const oldExportOf = o =>
+      page.evaluate(o => {
+        const keep = S;
+        try {
+          S = migrate(JSON.parse(JSON.stringify(o)));
+          const q = s =>
+            '"' +
+            String(s ?? "")
+              .replace(/^\s*[=+\-@\t\r]/, "'$&")
+              .replace(/"/g, '""') +
+            '"';
+          const kind = t =>
+            t.type === "loan"
+              ? (loan(t.loan) && loan(t.loan).kind === "lend" ? "lend" : "loan") + "-" + t.dir
+              : t.feeOf
+                ? ((entry(t.feeOf) || {}).type === "loan" ? "loan" : "transfer") + "-fee"
+                : t.type;
+          const lines = [
+            "date,type,amount,currency,account,to_account,to_amount,category,note,to_currency,person,payee",
+          ];
+          [...S.txns].sort(byOldest).forEach(t => {
+            const a = acc(t.account),
+              to = acc(t.to),
+              l = t.type === "loan" && loan(t.loan);
+            lines.push(
+              [
+                t.date,
+                kind(t),
+                rnd(t.amount),
+                a ? a.currency : "",
+                q(a ? a.name : ""),
+                q(to ? to.name : ""),
+                t.type === "transfer" ? rnd(t.toAmount != null ? t.toAmount : t.amount) : "",
+                q((t.type === "expense" && !t.feeOf) || t.type === "income" ? catName(cat(t.cat)) : ""),
+                q(
+                  t.type === "adjust"
+                    ? noteShown(t, "fix.title")
+                    : t.feeOf
+                      ? noteShown(t, kind(t) === "loan-fee" ? "loan.feeNote" : "transfer.feeNote")
+                      : t.note
+                ),
+                to ? to.currency : "",
+                q(l ? l.person : ""),
+                q(t.payee || ""),
+              ].join(",")
+            );
+          });
+          return lines;
+        } finally {
+          S = keep;
+        }
+      }, o);
+    const header = "date,type,amount,currency,account,to_account,to_amount,category,note,to_currency,person,payee";
+    const oldLines = await oldExportOf(v7),
+      nowLines = await exportOf(v7);
+    ok(nowLines[0] === "﻿" + header, "the header and the column order are unchanged " + nowLines[0]);
+    ok(
+      same(nowLines.slice(1), oldLines.slice(1)) && nowLines.length === v7.txns.length + 1,
+      "an older notebook (data version 7) exports exactly the values it did before " +
+        J(nowLines.filter((l, i) => l !== (i ? oldLines[i] : "﻿" + header)))
+    );
+    ok(
+      nowLines.some(l => l.includes(",transfer-fee,10,")) &&
+        nowLines.some(l => l.includes(",loan-fee,20,")) &&
+        nowLines.some(l => l.includes(",loan-fee,15,")),
+      "its fees stay transfer-fee and loan-fee"
+    );
+
+    const book = {
+      v: 8,
+      settings,
+      accounts: [acct("a", "Bank", "bank", "BDT", 100000), acct("k", "Bkash", "wallet", "BDT", 20000)],
+      types: [],
+      cats: cats8,
+      txns: [
+        x("p1", 10, D.d1, "expense", 500, "a", { cat: "shopping", note: "Shoes", feeId: "p1c" }),
+        x("p1c", 11, D.d1, "expense", 20, "a", { cat: "shopping", feeOf: "p1" }),
+        x("t1", 20, D.d1, "transfer", 1000, "a", { to: "k", feeId: "t1f" }),
+        x("t1f", 21, D.d1, "expense", 5, "a", { cat: "fees", feeOf: "t1", note: "Bank fee" }),
+        x("rD", 30, D.d2, "loan", 1000, "k", { dir: "out", loan: "R", principal: true, onTop: 150, feeId: "rDc" }),
+        x("rDc", 31, D.d2, "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+        x("rP", 40, D.d3, "loan", 600, "k", { dir: "in", loan: "R", feeId: "rPt" }),
+        x("rPt", 41, D.d3, "income", 30, "k", { cat: "otherin", feeOf: "rP" }),
+        x("nD", 50, D.d2, "loan", 2000, "a", { dir: "in", loan: "N", principal: true, onTop: 120 }),
+        x("nP", 60, D.d3, "loan", 700, "a", { dir: "out", loan: "N", feeId: "nPf" }),
+        x("nPf", 61, D.d3, "expense", 8, "a", { cat: "fees", feeOf: "nP" }),
+      ],
+      loans: [loanOf("R", "lend", "Rafi", "k", D.d2), loanOf("N", "borrow", "Nima", "a", D.d2)],
+      assets: [],
+    };
+    const L = (await exportOf(book)).slice(1);
+    const at = i => L[i] || "";
+    ok(L.length === 13, "one line per entry, one per add-on, one per amount on top (13) " + L.length);
+    ok(
+      at(0).startsWith(`${D.d1},expense,500,BDT,"Bank"`) && at(0).includes(',"Shopping",'),
+      "a purchase keeps its line " + at(0)
+    );
+    ok(
+      at(1) === `${D.d1},expense-fee,20,BDT,"Bank","",,"Shopping","Charge",,"",""`,
+      "its charge follows: expense-fee, the purchase's category, the word Charge " + at(1)
+    );
+    ok(at(2).startsWith(`${D.d1},transfer,1000,`), "a transfer keeps its line " + at(2));
+    ok(
+      at(3) === `${D.d1},transfer-fee,5,BDT,"Bank","",,"","Bank fee",,"",""`,
+      "its fee stays transfer-fee, with its own note and no category " + at(3)
+    );
+    ok(
+      at(4).startsWith(`${D.d2},lend-out,1000,BDT,"Bkash"`) && at(4).endsWith(',"Rafi",""'),
+      "a lend keeps its line " + at(4)
+    );
+    ok(
+      at(5) === `${D.d2},lend-extra,150,BDT,"Bkash","",,"","Extra",,"Rafi",""`,
+      "a lend's extra is a line of its own after its draw " + at(5)
+    );
+    ok(
+      at(6) === `${D.d2},lend-fee,100,BDT,"Bkash","",,"","Transfer charge",,"Rafi",""`,
+      "a lend's transfer charge is lend-fee, never a lend-out " + at(6)
+    );
+    ok(
+      at(8) === `${D.d2},borrow-fee,120,BDT,"Bank","",,"","Charges",,"Nima",""`,
+      "a borrow's charges are borrow-fee " + J([at(7), at(8)])
+    );
+    ok(
+      L.some(l => l.startsWith(`${D.d2},loan-in,2000,BDT,"Bank"`)),
+      "a borrow keeps its line and its whole amount"
+    );
+    ok(
+      L.some(l => l.startsWith(`${D.d3},lend-in,600,BDT,"Bkash"`)) &&
+        L.some(l => l === `${D.d3},loan-extra,30,BDT,"Bkash","",,"","Extra",,"",""`),
+      "a payback keeps its type and whole amount; its tip is loan-extra, no category " + J(L.slice(9))
+    );
+    ok(
+      L.some(l => l.startsWith(`${D.d3},loan-out,700,BDT,"Bank"`)) &&
+        L.some(l => l === `${D.d3},loan-fee,8,BDT,"Bank","",,"","Payment fee",,"",""`),
+      "a payment's charge stays loan-fee " + J(L.slice(9))
+    );
+    ok(
+      L.every(l => l.split(",").length >= 12),
+      "every line keeps the 12 columns"
+    );
+    /* the add-ons follow their entry: each add-on's line comes right after its host's, the amount on top after the draw */
+    const kinds = L.map(l => l.split(",")[1]);
+    ok(
+      kinds.indexOf("expense-fee") === kinds.indexOf("expense") + 1 &&
+        kinds.indexOf("lend-extra") === kinds.indexOf("lend-out") + 1 &&
+        kinds.indexOf("lend-fee") === kinds.indexOf("lend-out") + 2 &&
+        kinds.indexOf("loan-extra") === kinds.indexOf("lend-in") + 1,
+      "each add-on follows its entry " + kinds.join(" ")
+    );
+  } catch (e) {
+    ok(false, "CSV export: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

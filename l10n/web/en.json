@@ -343,6 +343,12 @@
   "addOn": {
     "both": "Transfer charge and extra"
   },
+  "csv": {
+    "xchargeNote": "Transfer charge",
+    "chargeNote": "Charge",
+    "chargesNote": "Charges",
+    "extraNote": "Extra"
+  },
   "prev": {
     "loanX": "loan {{amount}} + transfer charge {{charge}}",
     "loanCharges": "loan {{amount}} + charges {{charges}}",

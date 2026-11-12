@@ -345,6 +345,12 @@
   "addOn": {
     "both": "Комиссия за перевод и доплата"
   },
+  "csv": {
+    "xchargeNote": "Комиссия за перевод",
+    "chargeNote": "Комиссия",
+    "chargesNote": "Комиссии",
+    "extraNote": "Доплата"
+  },
   "prev": {
     "loanX": "долг {{amount}} + комиссия за перевод {{charge}}",
     "loanCharges": "долг {{amount}} + комиссии {{charges}}",

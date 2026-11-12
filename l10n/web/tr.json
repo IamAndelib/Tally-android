@@ -343,6 +343,12 @@
   "addOn": {
     "both": "Transfer masrafı ve ekstra"
   },
+  "csv": {
+    "xchargeNote": "Transfer masrafı",
+    "chargeNote": "Masraf",
+    "chargesNote": "Masraflar",
+    "extraNote": "Ekstra"
+  },
   "prev": {
     "loanX": "borç {{amount}} + transfer masrafı {{charge}}",
     "loanCharges": "borç {{amount}} + masraflar {{charges}}",

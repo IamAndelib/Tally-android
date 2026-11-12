@@ -344,6 +344,12 @@
   "addOn": {
     "both": "Frais de virement et supplément"
   },
+  "csv": {
+    "xchargeNote": "Frais de virement",
+    "chargeNote": "Frais",
+    "chargesNote": "Frais",
+    "extraNote": "Supplément"
+  },
   "prev": {
     "loanX": "emprunt {{amount}} + frais de virement {{charge}}",
     "loanCharges": "emprunt {{amount}} + frais {{charges}}",

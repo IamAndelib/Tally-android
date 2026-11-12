@@ -344,6 +344,12 @@
   "addOn": {
     "both": "Cargo por transferencia y extra"
   },
+  "csv": {
+    "xchargeNote": "Cargo por transferencia",
+    "chargeNote": "Cargo",
+    "chargesNote": "Cargos",
+    "extraNote": "Extra"
+  },
   "prev": {
     "loanX": "deuda {{amount}} + cargo por transferencia {{charge}}",
     "loanCharges": "deuda {{amount}} + cargos {{charges}}",
