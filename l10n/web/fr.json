@@ -465,17 +465,16 @@
     "over": {
       "lendToLoan": "Prêt à {{who}} soldé · vous devez {{amount}} à {{who}}",
       "loanToLend": "Emprunt soldé · {{who}} vous doit {{amount}}",
-      "extraNote": "Surplus de {{who}}",
-      "lendCleared": "Prêt à {{who}} soldé",
-      "asFeeMsg": "Emprunt soldé · {{amount}} comptés en frais",
+      "asExtraMsg": "Prêt à {{who}} soldé · {{amount}} comptés en supplément",
+      "asChargeMsg": "Emprunt soldé · {{amount}} comptés en frais",
       "theyPaid": "{{who}} a payé {{amount}} de plus",
       "youPaid": "Vous avez payé {{amount}} de plus",
-      "askLendOr": "Que sont ces {{amount}} en plus ? Un emprunt auprès de {{who}} (vous les devez maintenant), ou une rentrée, par exemple des frais pris en charge par {{who}}.",
-      "askBorrowOr": "Que sont ces {{amount}} en plus ? Un prêt à {{who}} ({{who}} vous les doit), ou des frais sur ce remboursement, comme des frais d’envoi ou des intérêts.",
+      "askLendOr": "{{who}} vous devait {{owed}}. Ces {{amount}} en plus sont-ils un supplément, compté comme revenu, ou un emprunt auprès de {{who}}, que vous devez rendre ?",
+      "askBorrowOr": "Vous deviez {{owed}} à {{who}}. Ces {{amount}} en plus sont-ils des frais sur ce remboursement, comptés comme dépense, ou un prêt à {{who}}, qui vous les doit ?",
       "asLoan": "Compter comme emprunt",
       "asLend": "Compter comme prêt",
-      "asIncome": "Compter comme rentrée",
-      "asFee": "Compter comme frais"
+      "asExtra": "Compter comme supplément",
+      "asCharge": "Compter comme frais"
     },
     "clear": {
       "titleLend": "Solder le prêt à {{who}} ?",

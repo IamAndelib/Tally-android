@@ -459,17 +459,16 @@
     "over": {
       "lendToLoan": "Piutang ke {{who}} lunas · kamu berutang {{amount}} pada {{who}}",
       "loanToLend": "Utang lunas · {{who}} berutang {{amount}} padamu",
-      "extraNote": "Kelebihan dari {{who}}",
-      "lendCleared": "Piutang ke {{who}} lunas",
-      "asFeeMsg": "Utang lunas · {{amount}} sebagai biayanya",
+      "asExtraMsg": "Piutang ke {{who}} lunas · {{amount}} sebagai tambahan",
+      "asChargeMsg": "Utang lunas · {{amount}} sebagai biayanya",
       "theyPaid": "{{who}} membayar {{amount}} lebih",
       "youPaid": "Kamu membayar {{amount}} lebih",
-      "askLendOr": "Kelebihan {{amount}} ini apa? Pinjaman dari {{who}} (sekarang kamu berutang padanya), atau pemasukan, misalnya biaya yang dia tanggung.",
-      "askBorrowOr": "Kelebihan {{amount}} ini apa? Pinjaman untuk {{who}} (sekarang dia berutang padamu), atau biaya untuk pembayaran ini, misalnya biaya kirim atau bunga.",
+      "askLendOr": "{{who}} berutang {{owed}} padamu. Apakah kelebihan {{amount}} ini tambahan, dihitung sebagai pemasukan, atau utang dari {{who}} yang harus kamu bayar kembali?",
+      "askBorrowOr": "Kamu berutang {{owed}} pada {{who}}. Apakah kelebihan {{amount}} ini biaya untuk pembayaran ini, dihitung sebagai pengeluaran, atau piutang ke {{who}} yang harus dia bayar padamu?",
       "asLoan": "Catat sebagai utang",
       "asLend": "Catat sebagai piutang",
-      "asIncome": "Catat sebagai pemasukan",
-      "asFee": "Catat sebagai biaya"
+      "asExtra": "Catat sebagai tambahan",
+      "asCharge": "Catat sebagai biaya"
     },
     "clear": {
       "titleLend": "Tutup piutang ke {{who}}?",

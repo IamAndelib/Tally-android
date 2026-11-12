@@ -21,7 +21,7 @@
 //     archived isn't a new notebook; focus stays on the control after a redraw; screen readers hear values (donut
 //     totals, ring %, currency, dialog text, chart bars pressed); the ring redraws on a theme switch; a one-day range
 //     says Yesterday; chart labels follow the phone; the currency switch stays with "No stats"
-//  K. loan amounts compared as shown, the loan form's currency, "Track as a fee" names the whole fee, no account in a
+//  K. loan amounts compared as shown, the loan form's currency, "Track as charge" names the whole charge, no account in a
 //     loan's currency is said, signs placed one way in every History row
 //  L. screens on small, short and right-to-left setups: amounts never cut; right-to-left names keep the app's sentences
 //     in order; long names end in "…" in chips and wrap in sheet titles; the add-colour ring; a 48px currency switch;
@@ -1157,11 +1157,11 @@ const ok = (c, m) => {
   await page.fill("#f-charge", "2");
   await page.click('#sheet [data-act="loan-pay"]');
   await settle();
-  await page.click('#pop [data-act="ask-alt"]'); // Track as a fee
+  await page.click("#pop .cd-main"); // Track as charge
   await settle();
   ok(
-    (await page.textContent("#snack")).includes("$12.00 as its fee"),
-    "Track as a fee names the whole fee: " + (await page.textContent("#snack"))
+    (await page.textContent("#snack")).includes("$12.00 as its charge"),
+    "Track as charge names the whole charge: " + (await page.textContent("#snack"))
   );
   await page.evaluate(() => closeSheet());
   await seed({

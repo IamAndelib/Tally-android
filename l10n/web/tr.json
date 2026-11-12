@@ -462,17 +462,16 @@
     "over": {
       "lendToLoan": "Alacak kapandı · {{who}}: artık {{amount}} borcun var",
       "loanToLend": "Borç kapandı · {{who}} artık sana {{amount}} borçlu",
-      "extraNote": "Fazla ödeme · {{who}}",
-      "lendCleared": "Alacak kapandı · {{who}}",
-      "asFeeMsg": "Borç kapandı · {{amount}} masraf olarak",
+      "asExtraMsg": "Alacak kapandı · {{who}}: {{amount}} ekstra olarak",
+      "asChargeMsg": "Borç kapandı · {{amount}} masraf olarak",
       "theyPaid": "{{who}} {{amount}} fazla ödedi",
       "youPaid": "{{amount}} fazla ödedin",
-      "askLendOr": "Fazladan gelen {{amount}} ne? Bir borç olabilir ({{who}} sana borç verdi, artık sen borçlusun) ya da gelir, örneğin onun karşıladığı bir masraf.",
-      "askBorrowOr": "Fazladan giden {{amount}} ne? Bir alacak olabilir (artık {{who}} sana borçlu) ya da bu ödemenin masrafı, örneğin gönderim ücreti veya faiz.",
+      "askLendOr": "{{who}} sana {{owed}} borçluydu. Fazladan gelen {{amount}} bir ekstra mı (gelir sayılır), yoksa {{who}} kişisinden aldığın ve geri ödeyeceğin bir borç mu?",
+      "askBorrowOr": "{{who}} kişisine {{owed}} borcun vardı. Fazladan giden {{amount}} bu ödemenin masrafı mı (harcama sayılır), yoksa {{who}} kişisine verdiğin ve sana geri ödeyeceği bir alacak mı?",
       "asLoan": "Borç olarak kaydet",
       "asLend": "Alacak olarak kaydet",
-      "asIncome": "Gelir olarak kaydet",
-      "asFee": "Masraf olarak kaydet"
+      "asExtra": "Ekstra olarak kaydet",
+      "asCharge": "Masraf olarak kaydet"
     },
     "clear": {
       "titleLend": "{{who}}: alacak kapatılsın mı?",

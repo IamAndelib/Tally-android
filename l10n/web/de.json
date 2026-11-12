@@ -462,17 +462,16 @@
     "over": {
       "lendToLoan": "Darlehen an {{who}} beglichen · du schuldest {{who}} {{amount}}",
       "loanToLend": "Schuld beglichen · {{who}} schuldet dir {{amount}}",
-      "extraNote": "Mehrbetrag von {{who}}",
-      "lendCleared": "Darlehen an {{who}} beglichen",
-      "asFeeMsg": "Schuld beglichen · {{amount}} als Gebühr",
+      "asExtraMsg": "Darlehen an {{who}} beglichen · {{amount}} als Extra",
+      "asChargeMsg": "Schuld beglichen · {{amount}} als Gebühr",
       "theyPaid": "{{who}} hat {{amount}} mehr gezahlt",
       "youPaid": "Du hast {{amount}} mehr gezahlt",
-      "askLendOr": "Was sind die zusätzlichen {{amount}}? Eine Schuld bei {{who}} (du schuldest das Geld jetzt) oder eine Einnahme, etwa eine Gebühr, die {{who}} übernommen hat.",
-      "askBorrowOr": "Was sind die zusätzlichen {{amount}}? Ein Darlehen an {{who}} ({{who}} schuldet dir das Geld) oder eine Gebühr auf diese Zahlung, etwa Versandkosten oder Zinsen.",
+      "askLendOr": "{{who}} hat dir {{owed}} geschuldet. Sind die zusätzlichen {{amount}} ein Extra obendrauf, als Einnahme gezählt, oder eine Schuld bei {{who}}, die du zurückzahlst?",
+      "askBorrowOr": "Du hast {{who}} {{owed}} geschuldet. Sind die zusätzlichen {{amount}} eine Gebühr auf diese Zahlung, als Ausgabe gezählt, oder ein Darlehen an {{who}}, das {{who}} dir schuldet?",
       "asLoan": "Als Schuld erfassen",
       "asLend": "Als Darlehen erfassen",
-      "asIncome": "Als Einnahme erfassen",
-      "asFee": "Als Gebühr erfassen"
+      "asExtra": "Als Extra erfassen",
+      "asCharge": "Als Gebühr erfassen"
     },
     "clear": {
       "titleLend": "Darlehen an {{who}} abschließen?",

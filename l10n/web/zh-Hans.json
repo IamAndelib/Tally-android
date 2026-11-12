@@ -459,17 +459,16 @@
     "over": {
       "lendToLoan": "借给{{who}}的钱已结清 · 你欠{{who}}{{amount}}",
       "loanToLend": "借入已结清 · {{who}}欠你{{amount}}",
-      "extraNote": "{{who}}多还的钱",
-      "lendCleared": "借给{{who}}的钱已结清",
-      "asFeeMsg": "借入已结清 · {{amount}}记为手续费",
+      "asExtraMsg": "借给{{who}}的钱已结清 · {{amount}}记为额外款",
+      "asChargeMsg": "借入已结清 · {{amount}}记为费用",
       "theyPaid": "{{who}}多还了{{amount}}",
       "youPaid": "你多还了{{amount}}",
-      "askLendOr": "多出的{{amount}}算什么？算作向{{who}}的借入（你现在欠对方），或者算作收入，比如对方承担的手续费。",
-      "askBorrowOr": "多出的{{amount}}算什么？算作借给{{who}}的钱（对方欠你），或者算作这笔还款的手续费，比如转账费或利息。",
+      "askLendOr": "{{who}}欠你{{owed}}。多出的{{amount}}是额外款（计为收入），还是向{{who}}借入、你要还的钱？",
+      "askBorrowOr": "你欠{{who}}{{owed}}。多出的{{amount}}是这笔还款的费用（计为支出），还是借给{{who}}、对方要还你的钱？",
       "asLoan": "记为借入",
       "asLend": "记为借出",
-      "asIncome": "记为收入",
-      "asFee": "记为手续费"
+      "asExtra": "记为额外款",
+      "asCharge": "记为费用"
     },
     "clear": {
       "titleLend": "结清借给{{who}}的钱？",

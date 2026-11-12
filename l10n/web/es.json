@@ -465,17 +465,16 @@
     "over": {
       "lendToLoan": "Préstamo a {{who}} saldado · le debes {{amount}} a {{who}}",
       "loanToLend": "Deuda saldada · {{who}} te debe {{amount}}",
-      "extraNote": "Extra de {{who}}",
-      "lendCleared": "Préstamo a {{who}} saldado",
-      "asFeeMsg": "Deuda saldada · {{amount}} como su comisión",
+      "asExtraMsg": "Préstamo a {{who}} saldado · {{amount}} como extra",
+      "asChargeMsg": "Deuda saldada · {{amount}} como su cargo",
       "theyPaid": "{{who}} pagó {{amount}} de más",
       "youPaid": "Pagaste {{amount}} de más",
-      "askLendOr": "¿Qué son esos {{amount}} de más? Una deuda con {{who}} (ahora se los debes), o un ingreso, como una comisión que te cubrió.",
-      "askBorrowOr": "¿Qué son esos {{amount}} de más? Un préstamo a {{who}} (ahora te los debe), o una comisión de este pago, como un gasto de envío o intereses.",
+      "askLendOr": "{{who}} te debía {{owed}}. ¿Esos {{amount}} de más son un extra, contado como ingreso, o una deuda con {{who}} que tienes que devolver?",
+      "askBorrowOr": "Le debías {{owed}} a {{who}}. ¿Esos {{amount}} de más son un cargo de este pago, contado como gasto, o un préstamo a {{who}} que ahora te debe?",
       "asLoan": "Anotar como deuda",
       "asLend": "Anotar como préstamo",
-      "asIncome": "Anotar como ingreso",
-      "asFee": "Anotar como comisión"
+      "asExtra": "Anotar como extra",
+      "asCharge": "Anotar como cargo"
     },
     "clear": {
       "titleLend": "¿Saldar el préstamo a {{who}}?",

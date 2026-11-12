@@ -1,9 +1,8 @@
 // Add category / Add account from the entry form: the dashed tile ends the categories (spending and money in) and the
 // dashed chip ends the accounts; each opens Settings' own form, and the entry form comes back with everything typed
 // (amount as shown, note, payee, picked date, account, category) and the new one picked, or as it was when the form is
-// closed unsaved (✕, Back, a tap outside). The 24-category limit holds; no Add account where only one currency will do;
-// an entry opened from the entries list still goes back to it; "today" still moves at midnight. The category name box
-// gives an example for its kind.
+// closed unsaved (✕, Back, a tap outside). The 24-category limit holds; an entry opened from the entries list still
+// goes back to it; "today" still moves at midnight. The category name box gives an example for its kind.
 const { chromium, appUrl, launchOptions } = require("./harness");
 let fails = 0;
 const ok = (c, m) => {
@@ -175,12 +174,6 @@ const ok = (c, m) => {
     await page.waitForTimeout(50);
     ok(r.amt === "1.234,5" && r.account === "Wallet", "German numbers kept as shown: " + r.amt);
     ok(!!(await page.$("#sheet #ent-list")), "closing the entry still goes back to the entries list");
-    const p = await page.evaluate(() => {
-      closeSheet();
-      txSheet(null, "income", null, { amount: 5, cur: "USD", account: "a", date: today(), note: "x" });
-      return !!$('#sheet [data-act="f-acc-new"]');
-    });
-    ok(!p, "no Add account where only one currency will do");
     const m = await page.evaluate(() => {
       closeSheet();
       txSheet(null, "expense", "food");

@@ -4171,6 +4171,374 @@ function variedV7() {
     ok(false, "The Spent form's charge: " + e.message.split("\n")[0]);
   }
 
+  // ---- 27. paid more than owed (docs/specs/charges.md, "Paid more than owed"; C-overpaid, D2-extras, D11-words): the
+  // likely answer filled, the other tonal, Go back outlined; what is owed includes the amounts on top; the extra as the
+  // clearing payment's transfer charge or tip (plus one typed), or a loan the other way as before; the account always
+  // gets or gives the full amount; a refused add-on saves nothing
+  try {
+    const overBook = () => ({
+      v: 8,
+      settings,
+      accounts: [acct("a", "Bank", "bank", "BDT", 100000), acct("k", "Bkash", "wallet", "BDT", 20000)],
+      types: [],
+      cats: cats8,
+      txns: [
+        // Maya: you borrowed ৳35,000.00; Nima: ৳1,000.00 with ৳100.00 of charges on top
+        x("mD", 100, D.d1, "loan", 35000, "a", { dir: "in", loan: "MY", principal: true }),
+        x("nD", 110, D.d1, "loan", 1000, "a", { dir: "in", loan: "NM", principal: true, onTop: 100 }),
+        // Sam: you lent ৳5,000.00; Rafi: ৳1,000.00 + ৳100.00 transfer charge + ৳150.00 extra
+        x("sD", 200, D.d1, "loan", 5000, "k", { dir: "out", loan: "S", principal: true }),
+        x("rD", 210, D.d1, "loan", 1000, "k", { dir: "out", loan: "R", principal: true, onTop: 150, feeId: "rDc" }),
+        x("rDc", 211, D.d1, "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+      ],
+      loans: [
+        loanOf("MY", "borrow", "Maya", "a", D.d1),
+        loanOf("NM", "borrow", "Nima", "a", D.d1),
+        loanOf("S", "lend", "Sam", "k", D.d1),
+        loanOf("R", "lend", "Rafi", "k", D.d1),
+      ],
+      assets: [],
+    });
+    const cl = s =>
+      String(s || "")
+        .replace(/⁠/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const tap = async sel => {
+      await page.click(sel);
+      await page.waitForTimeout(320);
+    };
+    const tk = await page
+      .evaluate(() => money(1234.5, "BDT"))
+      .then(
+        t => (n, sign) =>
+          (sign === "-" ? "−" : sign === "+" ? "+" : "") +
+          cl(t).replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }))
+      );
+    const txt = sel => page.evaluate(s => (document.querySelector(s) || {}).textContent || "", sel).then(cl);
+    const snackText = () => txt("#snack");
+    const db = () => page.evaluate(() => JSON.parse(JSON.stringify({ txns: S.txns, loans: S.loans, bal: balances() })));
+    const typeIn = async (sel, v) => {
+      await page.fill(sel, v);
+      await page.waitForTimeout(60);
+    };
+    /* the loan's sheet with a payment of amt typed into account accId (and an add-on typed on its card), then Record
+       payment */
+    const pay = async (id, amt, accId, addOn) => {
+      await page.evaluate(o => {
+        closeSheet2();
+        closeSheet();
+        closePop();
+        S = migrate(o);
+        RBC = LPC = null;
+        commit();
+        render();
+      }, overBook());
+      await page.evaluate(id => loanOpen(id), id);
+      await page.waitForTimeout(120);
+      await tap('#sheet [data-act="f-acc"][data-v="' + accId + '"]');
+      await typeIn("#sheet #f-amt", String(amt));
+      if (addOn) {
+        await tap('#sheet [data-act="addon-add"][data-v="' + addOn[0] + '"]');
+        await typeIn(addOn[0] === "extra" ? "#sheet #f-extra" : "#sheet #f-charge", String(addOn[1]));
+      }
+      await tap('#sheet [data-act="loan-pay"]');
+    };
+    const dlg = () =>
+      page.evaluate(() => {
+        const d = document.querySelector("#pop .dialog"),
+          c = s => (s ? s.textContent.replace(/\s+/g, " ").trim() : "");
+        if (!d) return null;
+        return {
+          role: d.getAttribute("role"),
+          title: c(d.querySelector(".dlg-t")).replace(/⁠/g, ""),
+          text: c(d.querySelector(".dlg-x")).replace(/⁠/g, ""),
+          btns: [...d.querySelectorAll(".cd-btns button")].map(b => [c(b), b.className.replace(/^btn /, "")]),
+          focusIn: d.contains(document.activeElement),
+        };
+      });
+    const answer = async label => {
+      const i = await page.evaluate(
+        l => [...document.querySelectorAll("#pop .cd-btns button")].findIndex(b => b.textContent.trim() === l),
+        label
+      );
+      if (i < 0) throw new Error("no answer " + label);
+      await tap('#pop [data-act="cd"][data-v="' + i + '"]');
+    };
+    const smallOf = id =>
+      page.evaluate(id => {
+        const d = document.createElement("div");
+        d.innerHTML = txLine(entry(id));
+        return [...d.querySelectorAll("small")].map(s => s.textContent.replace(/⁠/g, "").replace(/\s+/g, " ").trim());
+      }, id);
+    const book0 = refBalances(overBook());
+
+    // you paid back Maya ৳500.00 more than you owed
+    await pay("MY", 35500, "a");
+    let q = await dlg();
+    ok(
+      q &&
+        q.role === "alertdialog" &&
+        q.title === "You paid " + tk(500) + " more" &&
+        q.text ===
+          "You owed Maya " +
+            tk(35000) +
+            ". Is the extra " +
+            tk(500) +
+            " a charge on this payment, counted as spending, or a lending to Maya that they owe you?",
+      "Maya: “You paid ৳500.00 more” and the approved text " + J(q)
+    );
+    ok(
+      q &&
+        J(q.btns) ===
+          J([
+            ["Track as charge", "cd-main"],
+            ["Track as lending", "cd-alt"],
+            ["Go back", "cd-out"],
+          ]) &&
+        q.focusIn,
+      "… Track as charge (filled), Track as lending (tonal), Go back (outlined), the focus in the dialog " + J(q)
+    );
+    await answer("Go back");
+    let s = await db();
+    ok(
+      !(await dlg()) && s.txns.length === 5 && (await page.inputValue("#sheet #f-amt")).replace(/,/g, "") === "35500",
+      "Go back: nothing saved, the payment as typed"
+    );
+    await tap('#sheet [data-act="loan-pay"]');
+    await page.evaluate(() => window.tallyBack());
+    await page.waitForTimeout(200);
+    s = await db();
+    ok(
+      !(await dlg()) && s.txns.length === 5 && (await page.isVisible("#sheet #f-amt")),
+      "Back closes the dialog: nothing saved, the payment card still open"
+    );
+    await tap('#sheet [data-act="loan-pay"]');
+    await answer("Track as charge");
+    s = await db();
+    let p = s.txns.find(t => t.loan === "MY" && !t.principal),
+      f = p && s.txns.find(t => t.id === p.feeId);
+    ok(
+      p &&
+        p.amount === 35000 &&
+        p.account === "a" &&
+        f &&
+        f.amount === 500 &&
+        f.feeOf === p.id &&
+        f.account === "a" &&
+        f.date === p.date &&
+        s.txns.length === 7 &&
+        !s.loans.some(l => l.person === "Maya" && l.kind === "lend"),
+      "Track as charge: the ৳35,000.00 that clears the loan, the ৳500.00 its transfer charge, no lending " + J([p, f])
+    );
+    ok(s.bal.a === book0.a - 35500, "… Bank gave the full ৳35,500.00 " + s.bal.a);
+    ok(
+      await page.evaluate(() => !loanInfo(loan("MY")).open && spendCat(S.txns.find(t => t.feeOf)) === CHARGES),
+      "… the loan is cleared, the charge is spending in Charges"
+    );
+    ok(
+      (await snackText()).startsWith("Loan cleared · " + tk(500) + " as its charge"),
+      "… “Loan cleared · ৳500.00 as its charge” " + (await snackText())
+    );
+    ok(
+      J(await smallOf(p.id)) === J(["+ " + tk(500) + " transfer charge"]),
+      "… its row: + ৳500.00 transfer charge " + J(await smallOf(p.id))
+    );
+    await tap('#snack [data-act="undo"]');
+    ok((await db()).txns.length === 5, "… one Undo takes both back");
+
+    // with a transfer charge typed on the card: the extra adds to it
+    await pay("MY", 35500, "a", ["xcharge", 20]);
+    await answer("Track as charge");
+    s = await db();
+    p = s.txns.find(t => t.loan === "MY" && !t.principal);
+    f = p && s.txns.find(t => t.id === p.feeId);
+    ok(
+      p && p.amount === 35000 && f && f.amount === 520 && s.bal.a === book0.a - 35520,
+      "Track as charge with ৳20.00 typed: one ৳520.00 transfer charge, Bank −৳35,520.00 " + J([p, f, s.bal.a])
+    );
+    ok(
+      (await snackText()).startsWith("Loan cleared · " + tk(520) + " as its charge"),
+      "… “Loan cleared · ৳520.00 as its charge” " + (await snackText())
+    );
+    // Track as lending, as before, the typed transfer charge kept on the payment
+    await pay("MY", 35500, "a", ["xcharge", 20]);
+    await answer("Track as lending");
+    s = await db();
+    p = s.txns.find(t => t.loan === "MY" && !t.principal);
+    f = p && s.txns.find(t => t.id === p.feeId);
+    let nl = s.loans.find(l => l.person === "Maya" && l.kind === "lend"),
+      nd = nl && s.txns.find(t => t.loan === nl.id && t.principal);
+    ok(
+      p &&
+        p.amount === 35000 &&
+        f &&
+        f.amount === 20 &&
+        nd &&
+        nd.amount === 500 &&
+        nd.account === "a" &&
+        nd.dir === "out" &&
+        s.bal.a === book0.a - 35520,
+      "Track as lending: ৳35,000.00 + ৳20.00 transfer charge clears the loan, a ৳500.00 lending to Maya, Bank −৳35,520.00 " +
+        J([p, f, nd, s.bal.a])
+    );
+    ok(
+      (await snackText()).startsWith("Loan cleared · Maya owes you " + tk(500)),
+      "… “Loan cleared · Maya owes you ৳500.00” " + (await snackText())
+    );
+
+    // Sam paid ৳150.00 more than he owed
+    await pay("S", 5150, "k");
+    q = await dlg();
+    ok(
+      q &&
+        q.title === "Sam paid " + tk(150) + " more" &&
+        q.text ===
+          "Sam owed you " +
+            tk(5000) +
+            ". Is the extra " +
+            tk(150) +
+            " money on top, counted as income, or a loan from Sam that you owe back?",
+      "Sam: “Sam paid ৳150.00 more” and the approved text " + J(q)
+    );
+    ok(
+      q &&
+        J(q.btns) ===
+          J([
+            ["Track as extra", "cd-main"],
+            ["Track as loan", "cd-alt"],
+            ["Go back", "cd-out"],
+          ]),
+      "… Track as extra (filled), Track as loan (tonal), Go back (outlined) " + J(q && q.btns)
+    );
+    await answer("Track as extra");
+    s = await db();
+    p = s.txns.find(t => t.loan === "S" && !t.principal);
+    f = p && s.txns.find(t => t.id === p.feeId);
+    ok(
+      p &&
+        p.amount === 5000 &&
+        p.account === "k" &&
+        f &&
+        f.type === "income" &&
+        f.amount === 150 &&
+        f.feeOf === p.id &&
+        f.account === "k" &&
+        s.txns.length === 7 &&
+        !s.loans.some(l => l.person === "Sam" && l.kind === "borrow"),
+      "Track as extra: the ৳5,000.00 that clears the lending, the ৳150.00 its extra on top, no loan " + J([p, f])
+    );
+    ok(
+      s.bal.k === book0.k + 5150 && !(await page.isVisible("#sheet #f-amt")) && !(await page.isVisible("#sheet h2")),
+      "… Bkash got the full ৳5,150.00, and no form opens " + s.bal.k
+    );
+    ok(await page.evaluate(() => !loanInfo(loan("S")).open), "… the lending is cleared");
+    ok(
+      (await snackText()).startsWith("Sam’s lending cleared · " + tk(150) + " as an extra"),
+      "… “Sam’s lending cleared · ৳150.00 as an extra” " + (await snackText())
+    );
+    ok(
+      J(await smallOf(p.id)) === J(["+ " + tk(150) + " extra"]),
+      "… its row: + ৳150.00 extra " + J(await smallOf(p.id))
+    );
+    // with a tip typed on the card: the extra adds to it
+    await pay("S", 5150, "k", ["extra", 50]);
+    await answer("Track as extra");
+    s = await db();
+    p = s.txns.find(t => t.loan === "S" && !t.principal);
+    f = p && s.txns.find(t => t.id === p.feeId);
+    ok(
+      p && p.amount === 5000 && f && f.amount === 200 && s.bal.k === book0.k + 5200,
+      "Track as extra with ৳50.00 typed: one ৳200.00 extra, Bkash +৳5,200.00 " + J([p, f, s.bal.k])
+    );
+    ok(
+      (await snackText()).startsWith("Sam’s lending cleared · " + tk(200) + " as an extra"),
+      "… “Sam’s lending cleared · ৳200.00 as an extra” " + (await snackText())
+    );
+    // Track as loan, as before
+    await pay("S", 5150, "k");
+    await answer("Track as loan");
+    s = await db();
+    nl = s.loans.find(l => l.person === "Sam" && l.kind === "borrow");
+    nd = nl && s.txns.find(t => t.loan === nl.id && t.principal);
+    ok(
+      s.txns.some(t => t.loan === "S" && !t.principal && t.amount === 5000 && !t.feeId) &&
+        nd &&
+        nd.amount === 150 &&
+        nd.dir === "in" &&
+        nd.account === "k" &&
+        s.bal.k === book0.k + 5150,
+      "Track as loan: ৳5,000.00 clears the lending, a ৳150.00 loan from Sam, Bkash +৳5,150.00 " + J([nd, s.bal.k])
+    );
+    ok(
+      (await snackText()).startsWith("Sam’s lending cleared · you owe Sam " + tk(150)),
+      "… “Sam’s lending cleared · you owe Sam ৳150.00” " + (await snackText())
+    );
+
+    // what is owed includes the amounts on top: Rafi's planned extra, Nima's charges
+    await pay("R", 1250, "k");
+    s = await db();
+    ok(
+      !(await dlg()) && s.txns.some(t => t.loan === "R" && !t.principal && t.amount === 1250),
+      "Rafi owes ৳1,250.00 (with his extra): paying it asks nothing"
+    );
+    await pay("R", 1300, "k");
+    q = await dlg();
+    ok(
+      q &&
+        q.title === "Rafi paid " + tk(50) + " more" &&
+        q.text.startsWith("Rafi owed you " + tk(1250) + ". Is the extra " + tk(50) + " "),
+      "… paying ৳1,300.00 asks only for the ৳50.00 past everything owed " + J(q)
+    );
+    await answer("Track as extra");
+    s = await db();
+    p = s.txns.find(t => t.loan === "R" && !t.principal);
+    f = p && s.txns.find(t => t.id === p.feeId);
+    ok(
+      p && p.amount === 1250 && f && f.amount === 50 && s.bal.k === book0.k + 1300,
+      "… Track as extra: ৳1,250.00 clears it, ৳50.00 on top, Bkash +৳1,300.00 " + J([p, f, s.bal.k])
+    );
+    ok(
+      await page.evaluate(() => {
+        const i = loanInfo(loan("R"));
+        return !i.open && i.left === 0;
+      }),
+      "… the lending is cleared"
+    );
+    await pay("NM", 1100, "a");
+    ok(!(await dlg()), "Nima's loan is owed ৳1,100.00 with its charges: paying it asks nothing");
+    await pay("NM", 1150, "a");
+    q = await dlg();
+    ok(
+      q && q.title === "You paid " + tk(50) + " more" && q.text.startsWith("You owed Nima " + tk(1100) + ". "),
+      "… paying ৳1,150.00 asks for ৳50.00 " + J(q)
+    );
+
+    // an add-on refused by setAddOn(): a message, and nothing saved half-way
+    for (const [id, amt, accId, addOn, label, msg] of [
+      ["MY", 35500, "a", null, "Track as charge", "That charge isn't a number"],
+      ["MY", 35500, "a", ["xcharge", 20], "Track as lending", "That charge isn't a number"],
+      ["S", 5150, "k", null, "Track as extra", "That extra isn't a number"],
+      ["S", 5150, "k", ["extra", 50], "Track as loan", "That extra isn't a number"],
+    ]) {
+      await pay(id, amt, accId, addOn);
+      await page.evaluate(() => {
+        window.__setAddOn = setAddOn;
+        setAddOn = () => false;
+      });
+      await answer(label);
+      await page.evaluate(() => (setAddOn = window.__setAddOn));
+      s = await db();
+      ok(
+        s.txns.length === 5 && s.loans.length === 4 && same(s.bal, book0) && (await snackText()) === msg,
+        label + (addOn ? " with one typed" : "") + ", refused: “" + msg + "”, nothing saved " + (await snackText())
+      );
+    }
+    await page.evaluate(() => (closeSheet(), closePop(), (V.screen = "home"), render()));
+  } catch (e) {
+    ok(false, "Paid more than owed: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

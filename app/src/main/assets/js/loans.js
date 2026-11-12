@@ -1001,9 +1001,11 @@ function payLoan() {
   }
   saveChecked(mutate, date, payMsg(l, i.cur, amt, payCovers(l, amt, date, null), add, done), { row: id });
 }
-/* someone paid back more than they owed (or you did): the payment clears this one, and the extra is either a loan the
-   other way, or (they paid you more) income, on the income form so the category is the user's choice, or (you paid
-   them more: a sending charge, interest) that payment's fee. Tally never files it under a category by itself. */
+/* Someone paid back more than they owed, or you did (docs/specs/charges.md, "Paid more than owed"): what is owed is
+   i.left, the amounts on top included. The payment of i.left clears this loan with the card's add-on (add), and the
+   extra is either on that payment, added to its add-on (a lending's extra on top, counted as income; a loan's
+   transfer charge, counted as spending), or a new loan the other way. Either way the account gets or gives the full
+   amount. A refused add-on saves nothing (tryChange). */
 function overpay(l, i, amt, account, date, add) {
   const lend = l.kind === "lend",
     who = loanWho(l),
@@ -1013,15 +1015,20 @@ function overpay(l, i, amt, account, date, add) {
     nid = newId(),
     qid = newId(),
     ts = Date.now();
-  /* the payment that clears this loan, with its add-on (and the extra as its charge, when that's the choice) */
-  const clear = more => {
-    if (i.left > 0) addPayment(l, pid, ts, i.left, account, date, rnd(add + (more || 0)));
+  /* the payment that clears this loan, with its add-on (and the extra on it, when that's the answer); false when the
+     add-on is refused */
+  const clear = more => !(i.left > 0) || addPayment(l, pid, ts, i.left, account, date, rnd(add + (more || 0)));
+  const book = (mutate, msg, row) => {
+    if (!tryChange(mutate)) {
+      snack(T(lend ? "extra.notNumber" : "charge.notNumber")); // never saved without the add-on it was given
+      return;
+    }
+    saveChecked(mutate, date, msg, { row });
   };
-  const book = (mutate, msg, row) => saveChecked(mutate, date, msg, { row });
   const asLoan = () =>
     book(
       () => {
-        clear();
+        if (!clear()) return false;
         S.loans.push({
           id: nid,
           ts,
@@ -1048,25 +1055,22 @@ function overpay(l, i, amt, account, date, add) {
       T(lend ? "loan.over.lendToLoan" : "loan.over.loanToLend", { who, amount: money(extra, cur) }),
       nid
     );
-  const asIncome = () =>
-    txSheet(null, "income", null, {
-      amount: extra,
-      cur,
-      account,
-      date,
-      note: T("loan.over.extraNote", { who }),
-      also: clear,
-      msg: T("loan.over.lendCleared", { who }) + " · ",
-      back: l.id,
-    });
-  const asFee = () => book(() => clear(extra), T("loan.over.asFeeMsg", { amount: money(rnd(add + extra), cur) }), l.id);
-  const v = { who, amount: money(extra, cur) };
-  askDialog(
+  /* the message names the whole add-on, the one typed included, as saved */
+  const onIt = () =>
+    book(
+      () => clear(extra),
+      T(lend ? "loan.over.asExtraMsg" : "loan.over.asChargeMsg", { who, amount: money(rnd(add + extra), cur) }),
+      l.id
+    );
+  const v = { who, amount: money(extra, cur), owed: money(i.left, cur) };
+  choiceDialog(
     T(lend ? "loan.over.theyPaid" : "loan.over.youPaid", v),
     T(lend ? "loan.over.askLendOr" : "loan.over.askBorrowOr", v),
-    T(lend ? "loan.over.asLoan" : "loan.over.asLend"),
-    asLoan,
-    { alt: [T(lend ? "loan.over.asIncome" : "loan.over.asFee"), lend ? asIncome : asFee], cancel: T("common.goBack") }
+    [
+      { role: "main", label: T(lend ? "loan.over.asExtra" : "loan.over.asCharge"), run: onIt },
+      { role: "alt", label: T(lend ? "loan.over.asLoan" : "loan.over.asLend"), run: asLoan },
+      { role: "out", label: T("common.goBack") },
+    ]
   );
 }
 /* dropped on Cleared: ask how it was cleared, because one way moves money */

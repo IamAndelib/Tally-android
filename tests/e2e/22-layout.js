@@ -981,6 +981,22 @@ function inspect() {
       "choice-delete-loan",
       ev(() => deleteAsk([S.txns.find(t => t.type === "loan").id], () => {}))
     );
+    /* paid more than owed (docs/specs/charges.md, "Paid more than owed"), over the loan's sheet: the lending's wording
+       (a long name, twice in its text) and the loan's */
+    const overpaid = id => async () => {
+      const bad = await page.evaluate(id => {
+        loanOpen(id);
+        $("#f-amt").value = groupDigits(String(rnd(loanInfo(loan(id)).left + 150)));
+        payLoan();
+        const d = $("#pop .dialog");
+        return d && $("#cd-x").textContent && d.querySelectorAll(".cd-main, .cd-alt, .cd-out").length === 3
+          ? ""
+          : "no dialog with its text and three answers";
+      }, id);
+      if (bad) throw new Error("overpaid " + id + ": " + bad);
+    };
+    await shot("choice-overpaid-lend", overpaid("L1"));
+    await shot("choice-overpaid-loan", overpaid("L2"));
     /* the transfer charge's card: open and filled, the keypad on it (its bar named, a result after the name), and the
        keypad on the amount while it is open (the card idle) */
     const card = async keys => {

@@ -462,17 +462,16 @@
     "over": {
       "lendToLoan": "{{who}}’s lending cleared · you owe {{who}} {{amount}}",
       "loanToLend": "Loan cleared · {{who}} owes you {{amount}}",
-      "extraNote": "Extra from {{who}}",
-      "lendCleared": "{{who}}’s lending cleared",
-      "asFeeMsg": "Loan cleared · {{amount}} as its fee",
+      "asExtraMsg": "{{who}}’s lending cleared · {{amount}} as an extra",
+      "asChargeMsg": "Loan cleared · {{amount}} as its charge",
       "theyPaid": "{{who}} paid {{amount}} more",
       "youPaid": "You paid {{amount}} more",
-      "askLendOr": "What is the extra {{amount}}? A loan from {{who}} (you now owe it), or income, such as a fee they covered.",
-      "askBorrowOr": "What is the extra {{amount}}? A lending to {{who}} (they owe you), or a fee on this payment, such as a sending charge or interest.",
+      "askLendOr": "{{who}} owed you {{owed}}. Is the extra {{amount}} money on top, counted as income, or a loan from {{who}} that you owe back?",
+      "askBorrowOr": "You owed {{who}} {{owed}}. Is the extra {{amount}} a charge on this payment, counted as spending, or a lending to {{who}} that they owe you?",
       "asLoan": "Track as loan",
       "asLend": "Track as lending",
-      "asIncome": "Track as income",
-      "asFee": "Track as a fee"
+      "asExtra": "Track as extra",
+      "asCharge": "Track as charge"
     },
     "clear": {
       "titleLend": "Clear {{who}}’s lending?",

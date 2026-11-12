@@ -215,8 +215,8 @@ const ok = (c, m) => {
   await settle();
   await page.fill("#f-amt", "5000");
   await sact("loan-pay");
-  ok(await page.isVisible('#pop [data-act="ask-ok"]'), "overpaying asks whether to track the extra");
-  await page.click('#pop [data-act="pd-close"]');
+  ok(await page.isVisible('#pop [data-act="cd"]'), "overpaying asks whether to track the extra");
+  await page.click("#pop .cd-out"); // Go back
   ok(await page.isVisible('#sheet [data-act="loan-pay"]'), "Go back keeps the payment sheet");
   await page.fill("#f-amt", "3000");
   await sact("loan-pay");
