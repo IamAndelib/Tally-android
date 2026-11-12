@@ -274,7 +274,7 @@ function homeView() {
       '<div class="sec">' +
       esc(periodLabel()) +
       "</div>" +
-      (list.length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>");
+      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>"); // archived ones count in the day totals, never as rows
   }
   const top = h;
   h = "";

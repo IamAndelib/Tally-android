@@ -636,13 +636,13 @@ document.addEventListener("click", ev => {
     }
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
-      const ids = [...V.sel],
-        no = loanBlock(ids);
-      if (no) {
-        snack(no);
-        return;
-      }
+      const ids = [...V.sel];
       deleteAsk(ids, arch => {
+        const no = !arch && loanBlock(ids); // archiving never changes a loan: only Delete can be refused
+        if (no) {
+          snack(no);
+          return;
+        }
         let n = 0; // the rows that went (a deleted loan's payments go with it), counted as listed: an add-on is in its entry
         withUndo(
           () => (arch ? T("entries.archived") : T("history.deleted", { count: n })),

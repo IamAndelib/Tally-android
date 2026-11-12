@@ -111,10 +111,13 @@ const ok = (c, m) => {
   });
   await page.click('[data-act="sel-del"]');
   await settle();
+  await page.click("#pop .cd-destroy"); // the question comes first: Archive instead is always offered
+  await settle();
   ok(
     (await state()).txns.some(x => x.id === "d2") && (await state()).txns.some(x => x.id === "x1"),
     "multi-select delete is refused as a whole when it would undo a payment"
   );
+  ok((await snackText()).includes("already paid back"), "…and says why: " + (await snackText()));
   // the payment's date can't be before the first draw
   await page.evaluate(() => {
     V.screen = "home";

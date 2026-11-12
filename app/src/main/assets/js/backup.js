@@ -153,9 +153,9 @@ function restorePlan(t) {
     },
   };
 }
-/* What a Restore confirmation says: the data is replaced, what the backup holds (accounts, entries as History counts
-   them: an add-on is in its entry, histRows(), and when it was saved if known), then the plan's notes (items left out,
-   a newer version) */
+/* What a Restore confirmation says: the data is replaced, what the backup holds (accounts, every entry, archived ones
+   too, with an add-on counted inside its entry, and when it was saved if known), then the plan's notes (items left
+   out, a newer version) */
 function restoreBody(plan, when) {
   const ids = new Set(plan.n.txns.map(t => t.id)),
     what = {

@@ -144,7 +144,11 @@ const seed = () => ({
       render();
       const c = $("#app").cloneNode(true);
       c.querySelectorAll(".tx").forEach(e => e.remove());
-      out.home = c.textContent.replace(/\d+ entr(y|ies)/g, "#");
+      /* the balance bar's "N entries" counts rows (as the list it opens), so archiving changes it: checked on its own */
+      const n = c.querySelector(".balbar .l");
+      out.homeCount = n ? n.textContent : "";
+      if (n) n.remove();
+      out.home = c.textContent;
       summarySheet();
       out.summary = $("#sheet").textContent;
       closeSheet();
@@ -156,7 +160,7 @@ const seed = () => ({
       }
     });
   const sameFigures = (a, b, tag) => {
-    const off = Object.keys(a).filter(k => J(a[k]) !== J(b[k]));
+    const off = Object.keys(a).filter(k => k !== "homeCount" && J(a[k]) !== J(b[k]));
     ok(!off.length, tag + ": every balance, loan figure and total is the same " + J(off));
   };
   const rows = () => page.evaluate(() => [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v));
@@ -275,7 +279,12 @@ const seed = () => ({
     await pause();
     ok((await marked()) === "sp,spc", "the purchase and its charge are archived together: " + (await marked()));
     ok((await bare()) === b0, "nothing but the mark changes: amounts, accounts, dates, categories and links");
-    sameFigures(f0, await figures(), "a purchase archived");
+    const f1 = await figures();
+    sameFigures(f0, f1, "a purchase archived");
+    ok(
+      f0.homeCount === "2 entries" && f1.homeCount === "1 entry",
+      "Home's count is of rows, so it leaves the archived entry out: " + f0.homeCount + " → " + f1.homeCount
+    );
     const r = await rows();
     ok(!r.includes("sp") && r.includes("bus"), "its row leaves History, the others stay " + J(r));
     const said = await snackText();
@@ -504,6 +513,169 @@ const seed = () => ({
       commit();
     });
     ok((await marked()) === "p1,p1t", "shown again: the entry and its charge lose the mark " + (await marked()));
+  }
+
+  // ---- 10. empty states: the entries sheet and Home's two-pane list say "Nothing written down yet." when every entry
+  // of the period is archived; so does the entries sheet right after its last row is archived from it
+  {
+    await load();
+    await page.evaluate(() => {
+      archiveEntries(["sp"], true);
+      commit();
+      V.screen = "home";
+      render();
+      entriesSheet();
+    });
+    await pause();
+    ok(
+      (await page.evaluate(() => [...document.querySelectorAll("#sheet .tx[data-v]")].map(e => e.dataset.v).join())) ===
+        "bus" && !(await page.$("#sheet .empty")),
+      "the entries sheet lists the day's one row left"
+    );
+    await page.evaluate(() => rowToggle(document.querySelector('#sheet .tx[data-v="bus"]'), "bus"));
+    await page.click('#sheet .txo [data-act="tx-del"]');
+    await pause();
+    await page.click("#pop .cd-alt");
+    await pause();
+    ok(
+      (await marked()) === "bus,sp,spc" &&
+        !(await page.$("#sheet .tx[data-v]")) &&
+        (await page.textContent("#sheet .empty").catch(() => "")) === "Nothing written down yet.",
+      "archiving the last row from the entries sheet leaves its empty state"
+    );
+    await page.evaluate(() => {
+      closeSheet();
+      entriesSheet();
+    });
+    await pause();
+    ok(
+      (await page.textContent("#sheet .empty").catch(() => "")) === "Nothing written down yet.",
+      "the entries sheet with only archived entries shows its empty state"
+    );
+    await page.evaluate(() => closeSheet());
+    await page.setViewportSize({ width: 1000, height: 852 });
+    await page.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+    await pause();
+    const wide = await page.evaluate(() => ({
+      panes: !!document.querySelector("#app .panes"),
+      rows: [...document.querySelectorAll("#app .tx[data-v]")].filter(e => entry(e.dataset.v)).length, // entries, not loans
+      empty: (document.querySelector("#app .empty") || {}).textContent,
+    }));
+    ok(
+      wide.panes && !wide.rows && wide.empty === "Nothing written down yet.",
+      "Home's two-pane list at 1000px with only archived entries shows its empty state " + J(wide)
+    );
+    await page.setViewportSize({ width: 393, height: 852 });
+    await pause();
+  }
+
+  // ---- 11. an archived payback's tip edited from the loan sheet: both stay archived (setAddOn keeps the mark)
+  {
+    await load();
+    await page.evaluate(() => {
+      archiveEntries(["p1"], true);
+      commit();
+      V.screen = "home";
+      render();
+      loanOpen("L");
+      loanDrawEdit("p1");
+    });
+    await pause();
+    const had = await page.evaluate(() => !!document.querySelector("#sheet2 #ed-extra"));
+    ok(had, "the payback's form has its tip");
+    await page.evaluate(() => {
+      $("#sheet2 #ed-extra").value = groupDigits("6");
+      saveLoanDraw();
+    });
+    await pause();
+    const t = await page.evaluate(() => ({
+      tip: entry("p1t") && entry("p1t").amount,
+      marks: S.txns
+        .filter(t => t.archived)
+        .map(t => t.id)
+        .sort()
+        .join(),
+    }));
+    ok(t.tip === 6 && t.marks === "p1,p1t", "the tip is saved, and the payback and its tip stay archived " + J(t));
+    /* a new add-on on an archived entry is archived with it */
+    await page.evaluate(() => {
+      closeSheet2();
+      closeSheet();
+      archiveEntries(["bus"], true);
+      setAddOn(entry("bus"), "charge", 2);
+      commit();
+    });
+    const nb = await page.evaluate(() => {
+      const a = entry(entry("bus").feeId);
+      return a && a.archived === true;
+    });
+    ok(nb, "a charge added to an archived purchase is archived with it");
+  }
+
+  // ---- 12. a draw that can't be deleted (what the other draws owe would be less than was paid back) can still be
+  // archived from its row; Delete still says why it is refused
+  {
+    const o = seed();
+    o.loans.push({ id: "M", kind: "lend", person: "Ann", account: "a", date: "2026-04-01", status: "open" });
+    o.txns.push(
+      x("m1", 60, "2026-04-01", "loan", 100, "a", { dir: "out", loan: "M", principal: true }),
+      x("m2", 61, "2026-04-05", "loan", 50, "a", { dir: "out", loan: "M", principal: true }),
+      x("mp", 62, "2026-04-20", "loan", 120, "a", { dir: "in", loan: "M" })
+    );
+    await load(o);
+    const s0 = await snap(),
+      f0 = await figures();
+    ok(!!(await page.evaluate(() => loanBlock(["m2"]))), "deleting the draw is refused (loanBlock)");
+    await askRow("m2");
+    const sh = await shape();
+    ok(sh.btns.includes("cd-alt:Archive instead"), "its row still asks, with Archive instead " + J(sh.btns));
+    await page.click("#pop .cd-alt");
+    await pause();
+    ok((await marked()) === "m2", "Archive instead archives it");
+    sameFigures(f0, await figures(), "a refused draw archived");
+    await undo();
+    ok((await snap()) === s0, "Undo restores the exact state");
+    await askRow("m2");
+    await page.click("#pop .cd-destroy");
+    await pause();
+    ok(
+      (await page.evaluate(() => !!entry("m2"))) && (await snackText()).includes("already paid back"),
+      "Delete is still refused, and says why: " + (await snackText())
+    );
+    ok((await snap()) === s0, "…and nothing changed");
+    /* the same through a selection */
+    await page.evaluate(() => {
+      V.screen = "history";
+      V.sel = new Set(["m2", "bus"]);
+      render();
+    });
+    await page.click('[data-act="sel-del"]');
+    await pause();
+    await page.click("#pop .cd-alt");
+    await pause();
+    ok((await marked()) === "bus,m2", "a selection holding it can be archived");
+    await undo();
+    ok((await snap()) === s0, "Undo restores the exact state");
+  }
+
+  // ---- 13. a selection keeps only what History lists: an archived entry never stays selected
+  {
+    await load();
+    const sel = await page.evaluate(() => {
+      archiveEntries(["sp"], true);
+      commit();
+      V.screen = "history";
+      V.sel = new Set(["sp", "bus"]);
+      render();
+      const r = [...V.sel].join();
+      V.sel = null;
+      render();
+      return r;
+    });
+    ok(sel === "bus", "an archived entry drops out of the selection: " + sel);
   }
 
   ok(errors.length === 0, "no page errors " + J(errors));

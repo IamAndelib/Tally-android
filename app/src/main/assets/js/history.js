@@ -707,7 +707,7 @@ function histParts() {
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
      entry out of sight */
   if (V.sel) {
-    const listed = new Set(list.map(t => t.id));
+    const listed = new Set(histRows(list).map(t => t.id));
     V.sel = new Set([...V.sel].filter(id => listed.has(id)));
   }
   const chips = histChips(),

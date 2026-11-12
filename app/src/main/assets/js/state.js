@@ -608,6 +608,7 @@ function setAddOn(t, kind, amount) {
   Object.assign(a, { date: t.date, type: shape.type, amount: n, account: t.account, note: "" }, shape, kept, {
     feeOf: t.id,
   });
+  if (t.archived) a.archived = true; // archived and shown again with its entry (archiveEntries)
   if (!old) S.txns.push(a);
   t.feeId = a.id;
   return true;

@@ -1113,7 +1113,7 @@ function entriesSheet() {
   openSheet(
     periodLabel(),
     '<div id="ent-list"></div>' +
-      (list.length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>") +
+      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>") + // archived ones count in the day totals, never as rows
       '<div class="gap"></div><button class="btn text" data-act="go" data-v="history">' +
       TH("entries.fullHistory") +
       "</button>"
@@ -1279,15 +1279,11 @@ function deleteAsk(ids, go, o = {}) {
   );
 }
 /* Delete in an opened row: the entry goes with its fee (and a loan's only draw takes its loan), with an Undo, as in
-   History's selection; the entries sheet is drawn again where it was */
+   History's selection, unless loanBlock() refuses it (Archive instead is always offered); the entries sheet is drawn
+   again where it was */
 function rowDelete(id) {
   const t = entry(id);
   if (!t) return;
-  const no = loanBlock([id]);
-  if (no) {
-    snack(no);
-    return;
-  }
   /* the entries sheet drawn again, where it was scrolled to: after the delete, and after its Undo, which closes the
      layers first (events.js), so it opens the sheet again only if it was open when Undo was tapped (not when it was
      closed meanwhile) and the screen is the same */
@@ -1301,6 +1297,11 @@ function rowDelete(id) {
       if (q) q.scrollTop = scroll;
     };
   deleteAsk([id], arch => {
+    const no = !arch && loanBlock([id]); // archiving never changes a loan: only Delete can be refused
+    if (no) {
+      snack(no);
+      return;
+    }
     let n = 0; // the rows that went, as History counts them (histRows): more than this one when a loan's payments go too
     withUndo(
       () => (arch ? T("entries.archived") : n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
