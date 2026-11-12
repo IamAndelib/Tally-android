@@ -52,6 +52,22 @@ suite 46 (data, migrate, totals unchanged, linked add-ons), 41.
   only; the empty state's two lines; Back returns to History; TalkBack "Archived entries", "Archive selected".
 - [x] Implement, suites, 22 for the new screen and states, lint. Commit.
 
+### Task 3b: Archived entries in search (spec C)
+**Files:** `js/screens.js` (Settings: the "History" section and switch), `js/state.js` (the setting in `migrate()`),
+`js/history.js` / `js/search.js` (archived matches when the setting is on, their mark, the opened row's Unarchive and
+Delete), `css/app.css`, keys; tests: 46, 24, 22.
+- [ ] Failing checks: off by default; with it on, a search lists an archived match marked "Archived" in date order,
+  opened with Unarchive and Delete; suggestions count it; off again hides it; a junk value is sanitised; backups
+  carry it; History, Home and Summary unchanged.
+- [ ] Implement, suites, 22, lint. Commit.
+
+### Task 3c: Settings' pinned header (spec D)
+**Files:** `js/screens.js` (each Settings section in its own block), `css/app.css`; tests: 22, 24.
+- [ ] Failing checks: scrolled into a section, the bar and that section's heading are at the top; the next heading
+  takes its place; sideways and on tablets the same; focus moved to a control (keyboard, TalkBack) stays below the
+  pinned block; TalkBack order unchanged.
+- [ ] Implement, suites, 22, lint. Commit.
+
 ### Task 4: Docs
-README (History), CONTRIBUTING (data model: `archived`), `docs/design.md`, CHANGELOG, the spec's status, the release
+README (History, Settings), CONTRIBUTING (data model: `archived`, the search setting), `docs/design.md`, CHANGELOG, the spec's status, the release
 plan's item 11 e ticked.
