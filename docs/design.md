@@ -193,7 +193,8 @@ links that would need the internet.
 - **A loan or lending row says each thing once:** person | what's left, then the account (dot and name) and "Due"
   date | status chip (Active, Partly paid). The part-paid due amount lives on the sheet's due card, not on the row.
 - **Tap opens the row in place** (one at a time) to show only what the row couldn't: "Added at 7:03 AM", figure boxes
-  (Left after, Paid in all, Was / Now, the loan's bar), then Edit and Delete, centred (Edit opens a loan's own sheet).
+  (Left after, a part beside its charge or extra, Was / Now, the loan's bar), then Edit and Delete, centred (Edit opens
+  a loan's own sheet).
 - **Grouped by day under month headings**, newest first. The month and day headings carry a stacked column: "+"
   received (green) over "−" spent (red), one line per currency, the notebook's own first. The Transfers filter says
   "Transferred" and "Charges" in words instead, and the Lent filter adds "Extras".

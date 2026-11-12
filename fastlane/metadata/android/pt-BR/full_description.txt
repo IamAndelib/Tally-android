@@ -18,9 +18,9 @@ AJUSTE UM SALDO EM SEGUNDOS
 Se uma conta não confere com o que você realmente tem, digite o valor real e o Tally registra a diferença.
 
 DÍVIDAS E EMPRÉSTIMOS
-Acompanhe o dinheiro que você pegou emprestado ou emprestou: vários valores por pessoa, vencimentos, pagamentos
-parciais (com uma taxa, ou um extra por cima), lembretes e valores dados como perdidos. Veja seu patrimônio líquido nas abas Ativos e
-Passivos.
+Acompanhe o dinheiro que você pegou emprestado ou emprestou: vários valores por pessoa, vencimentos, pagamentos parciais
+(com uma taxa, ou um extra por cima), lembretes e valores dados como perdidos. Veja seu patrimônio líquido nas abas
+Ativos e Passivos.
 
 OLHE PARA TRÁS
 Histórico de qualquer dia, intervalo de datas ou mês, com o saldo de cada conta depois de cada lançamento. Toque no

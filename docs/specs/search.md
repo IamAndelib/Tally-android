@@ -45,7 +45,7 @@ While the field has text, a short list sits above the entries under one **Sugges
 under an **Entries** heading), at most three per group, in the order below. Each row has its name as a title and a
 second line with its group (named in the singular: Category, Account, Kind; a person reads "Lent to" or "Borrowed from",
 or "Person" when they have both kinds) and how many entries it would leave: "Paid to · 19 entries" (rows, by History's
-fee rule, with the period, the filters and the other words as they are). One that would leave none, or is already set,
+add-on rule, with the period, the filters and the other words as they are). One that would leave none, or is already set,
 isn't shown. A name that is exactly the typed words comes first in its group, whatever its use, so the cut to three
 never drops it. A month's or a kind's name matches from three letters (the whole name when it is shorter).
 

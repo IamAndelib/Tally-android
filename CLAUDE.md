@@ -55,10 +55,10 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers, the money loans and lendings
-move, and balance fixes never count as spending or income; a charge you pay with an entry is spending (in a purchase's
-own category or the grey Charges part; a lend's transfer charge only once written off, a borrow's charges once paid
-back), and an extra you receive on top of what you lent is income.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers, the money loans and
+lendings move, and balance fixes never count as spending or income; a charge you pay with an entry is spending (in a
+purchase's own category or the grey Charges part; a lend's transfer charge only once written off, a borrow's charges
+once paid back), and an extra you receive on top of what you lent is income.
 
 ## Details that are easy to break
 

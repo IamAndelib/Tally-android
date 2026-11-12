@@ -11,7 +11,8 @@ Bank accounts, mobile wallets, cash, credit cards and savings, each in its own c
 currencies.
 
 TRANSFERS THAT NEVER COUNT AS SPENDING
-Move money between your own accounts, even between currencies, and add a charge, such as an ATM or cash-out fee, which counts as spending.
+Move money between your own accounts, even between currencies, and add a charge, such as an ATM or cash-out fee, which
+counts as spending.
 
 FIX A BALANCE IN SECONDS
 If an account doesn't match what you really have, type the real amount and Tally records the difference.

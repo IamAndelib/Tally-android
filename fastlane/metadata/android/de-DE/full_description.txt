@@ -18,8 +18,8 @@ Wenn ein Konto nicht zu dem passt, was du wirklich hast, gib den echten Betrag e
 
 GELIEHEN UND VERLIEHEN
 Behalte im Blick, was du dir geliehen oder an andere verliehen hast: mehrere Beträge pro Person, Fälligkeiten,
-Teilzahlungen (mit einer Gebühr oder einem Extra obendrauf), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst du in den Tabs Vermögen
-und Schulden.
+Teilzahlungen (mit einer Gebühr oder einem Extra obendrauf), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst
+du in den Tabs Vermögen und Schulden.
 
 ZURÜCKBLICKEN
 Verlauf für jeden Tag, Zeitraum oder Monat, mit dem Stand jedes Kontos nach jedem Eintrag. Tippe auf den Ring, um

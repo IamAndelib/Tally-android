@@ -58,7 +58,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
   instead of a row of its own, and searching counts entries the same way. Transfers, the money loans and lendings
   move, and balance fixes still never count.
 - **Past fees now count.** Fees already recorded on transfers and loan payments count as spending, so earlier days and
-  months show more spent by the fees already recorded. No balance changes.
+  months show more spent. No balance changes.
 - A new notebook starts without the Fees category; an existing one keeps it.
 - An opened entry shows its parts instead of "Paid in all".
 - Paid more than you owed, or paid more than was owed to you? Tally asks: **Track as charge** or **Track as extra** on
