@@ -1,5 +1,5 @@
 // The calculator and the system keyboard never show together: focusing any field that isn't the calculator's own
-// closes the calculator, "Add a fee" and "+ Transfer charge" included (it used to focus the fee with the keypad still up, so Android's keyboard
+// closes the calculator, "+ Transfer charge" and "+ Add an extra" included (it used to focus the fee with the keypad still up, so Android's keyboard
 // stacked over it). The fee field has its own calculator, which opens for the fee and closes the amount's. A tap on a
 // field above the keypad must not close the form: the keypad closing shrinks the sheet under the finger, so the tap can
 // end on the backdrop, which closes its layer only when the tap began on it. The transfer's "+ Transfer charge" card works
@@ -77,7 +77,7 @@ const ok = (c, m) => {
   await page.reload();
   await settle();
 
-  const snap = (fid = "f-fee") =>
+  const snap = (fid = "f-extra") =>
     page.evaluate(fid => {
       const f = document.getElementById(fid);
       const vis = id => {
@@ -94,14 +94,17 @@ const ok = (c, m) => {
       };
     }, fid);
 
-  // one run of the checks on a form that has "Add a fee"
+  // one run of the checks on a form with an add-on button ("+ Transfer charge", "+ Add an extra")
   async function feeChecks(name, addSel, fid) {
     await click('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
     let s = await snap(fid);
     ok(s.open && s.panelAmt, name + ": the amount's calculator is open");
     await click(addSel);
     s = await snap(fid);
-    ok(!s.open && !s.panelAmt && !s.panelFee, name + ": Add a fee closes the calculator (no keypad over the keyboard)");
+    ok(
+      !s.open && !s.panelAmt && !s.panelFee,
+      name + ": the add-on button closes the calculator (no keypad over the keyboard)"
+    );
     ok(s.feeFocus && s.feeMode === "decimal" && !s.feeRO, name + ": the fee is focused, with the system keyboard");
     ok(
       !!(await page.$('#sheet [data-act="calc-toggle"][data-v="' + fid + '"]')),
@@ -240,7 +243,7 @@ const ok = (c, m) => {
   await page.evaluate(() => loanOpen("L"));
   await settle();
   await page.fill("#f-amt", "100");
-  await feeChecks("loan payment", '#sheet [data-act="add-fee"]', "f-fee");
+  await feeChecks("lending payment", '#sheet [data-act="addon-add"][data-v="extra"]', "f-extra");
   await page.evaluate(() => closeSheet());
   await settle();
 

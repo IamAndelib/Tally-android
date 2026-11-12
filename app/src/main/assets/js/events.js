@@ -104,6 +104,7 @@ document.addEventListener("click", ev => {
     case "ed-acc":
       F.editAcc = v;
       setPressed("ed-acc", v);
+      formPreview();
       break;
     case "loanpay-del":
       deleteLoanEntry(v);
@@ -386,13 +387,6 @@ document.addEventListener("click", ev => {
       trSync();
       break;
     }
-    case "add-fee":
-      F.showFee = true;
-      $("#fee-wrap").hidden = false;
-      el.hidden = true;
-      if (CALC) calcClose(CALC.id, calcToggleBtn(CALC.id)); // no keypad over the system keyboard
-      $("#f-fee").focus();
-      break;
     case "addon-add":
       addOnAdd(el.closest(".p") || document, v);
       break;
@@ -766,6 +760,8 @@ document.addEventListener("input", ev => {
   const id = ev.target.id;
   if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
   if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-charge"].includes(id)) trPreview();
+  else if (F && F.kind === "loan" && ["f-amt", "f-charge", "f-extra", "ed-amt", "ed-charge", "ed-extra"].includes(id))
+    loanPreviews();
   else if (id === "f-actual") fixPreview();
   else if (id === "cur-q") curList(ev.target.value);
   else if (id === "ic-q") icList(ev.target.value);

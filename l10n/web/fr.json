@@ -314,10 +314,6 @@
     "both": "Dépenses + rentrées",
     "none": "Aucun chiffre"
   },
-  "fee": {
-    "label": "Frais ({{cur}}) · hors dépenses",
-    "notNumber": "Ces frais ne sont pas un nombre"
-  },
   "xcharge": {
     "label": "Frais de virement",
     "calc": "Calculatrice des frais de virement",
@@ -341,10 +337,21 @@
     "add": "Ajouter un supplément",
     "label": "Supplément",
     "calc": "Calculatrice du supplément",
-    "remove": "Retirer le supplément"
+    "remove": "Retirer le supplément",
+    "notNumber": "Ce supplément n’est pas un nombre",
+    "negative": "Un supplément ne peut pas être négatif"
   },
   "addOn": {
     "both": "Frais de virement et supplément"
+  },
+  "prev": {
+    "loanX": "emprunt {{amount}} + frais de virement {{charge}}",
+    "loanCharges": "emprunt {{amount}} + frais {{charges}}",
+    "loanChargesX": "emprunt {{amount}} + frais {{charges}} + frais de virement {{charge}}",
+    "lendExtra": "prêt {{amount}} + supplément {{extra}}",
+    "lendOff": "prêt {{amount}} − frais {{charge}}",
+    "owes": "{{who}} doit {{amount}}",
+    "youOweWho": "vous devez {{amount}} à {{who}}"
   },
   "loan": {
     "noDueYet": "Pas encore d’échéance",
@@ -390,7 +397,6 @@
     "paidBackQ": "Vous avez remboursé ?",
     "partOk": "Même une partie, c’est bien.",
     "noPayAccount": "Aucun compte en {{cur}} pour l’enregistrer : ajoutez-en un, ou réaffichez un compte archivé.",
-    "addFee": "Ajouter des frais (envoi, retrait)",
     "record": "Noter le remboursement",
     "drawLent": "Prêté depuis {{account}} le {{date}}",
     "drawBorrowed": "Emprunté sur {{account}} le {{date}}",
@@ -399,7 +405,13 @@
     "paidOff": "remboursé",
     "intoAcc": "sur {{account}}",
     "fromAcc": "depuis {{account}}",
-    "feeAmt": "{{amount}} de frais",
+    "xchargeAmt": "{{amount}} de frais de virement",
+    "chargeAmt": "{{amount}} de frais",
+    "chargesAmt": "{{amount}} de frais",
+    "extraAmt": "{{amount}} de supplément",
+    "extraIncl": "dont {{amount}} de supplément",
+    "chargesIncl": "dont {{amount}} de frais",
+    "tipAmt": "+{{amount}} de supplément",
     "clearedLend": "prêt soldé",
     "clearedBorrow": "emprunt soldé",
     "leftAfter": "reste {{amount}} après celui-ci",
@@ -427,7 +439,6 @@
     "whoLend": "À qui avez-vous prêté ?",
     "whoBorrow": "Qui vous a prêté l’argent ?",
     "feeNote": "Frais de remboursement",
-    "feeNegative": "Les frais ne peuvent pas être négatifs",
     "noAccountIn": "Aucun compte en {{cur}}",
     "noAccountRecord": "Aucun compte en {{cur}} pour l’enregistrer",
     "msg": {
@@ -437,7 +448,12 @@
       "writtenOff": "Abandonné",
       "forgiven": "Dette effacée",
       "gotBack": "Récupéré : {{amount}}",
+      "gotBackTip": "Récupéré : {{amount}} + {{extra}} de supplément",
+      "gotBackIncl": "Récupéré : {{amount}}, dont {{extra}} de supplément",
       "paidBack": "Remboursé : {{amount}}",
+      "paidBackX": "Remboursé : {{amount}} + {{charge}} de frais de virement",
+      "paidBackIncl": "Remboursé : {{amount}}, dont {{charges}} de frais",
+      "paidBackInclX": "Remboursé : {{amount}}, dont {{charges}} de frais + {{charge}} de frais de virement",
       "allCleared": "tout est soldé",
       "owesAgain": "{{who}} vous doit de nouveau {{amount}}",
       "oweAgain": "Vous devez de nouveau {{amount}} à {{who}}"

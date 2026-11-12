@@ -26,7 +26,7 @@
 //  L. screens on small, short and right-to-left setups: amounts never cut; right-to-left names keep the app's sentences
 //     in order; long names end in "…" in chips and wrap in sheet titles; the add-colour ring; a 48px currency switch;
 //     the pickers fit a short window and scroll by swipe; the range band joins up; short weekday names where long ones
-//     don't fit; focus rings drawn whole; "Partly paid" ends in "…"; "cash‑out" doesn't break
+//     don't fit; focus rings drawn whole; "Partly paid" ends in "…"
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("28-hunt-fixes");
 let fails = 0;
@@ -1153,8 +1153,8 @@ const ok = (c, m) => {
   await page.evaluate(() => loanOpen("B"));
   await settle();
   await page.fill("#f-amt", "110");
-  await page.click('#sheet [data-act="add-fee"]');
-  await page.fill("#f-fee", "2");
+  await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await page.fill("#f-charge", "2");
   await page.click('#sheet [data-act="loan-pay"]');
   await settle();
   await page.click('#pop [data-act="ask-alt"]'); // Track as a fee
@@ -1498,10 +1498,6 @@ const ok = (c, m) => {
     loanOpen("L1");
   });
   await narrow.waitForTimeout(150);
-  ok(
-    await narrow.evaluate(() => !!$("#fee-btn") && $("#fee-btn").textContent.includes("cash‑out")),
-    '"cash‑out" on the loan payment\'s fee button never breaks at its hyphen'
-  );
   ok(
     await narrow.evaluate(() => {
       const st = $("#sheet .tx.exp .s .st");

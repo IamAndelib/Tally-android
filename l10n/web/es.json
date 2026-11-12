@@ -314,10 +314,6 @@
     "both": "Gastos + ingresos",
     "none": "Sin cifras"
   },
-  "fee": {
-    "label": "Comisión cobrada ({{cur}}) · no cuenta como gasto",
-    "notNumber": "Esa comisión no es un número"
-  },
   "xcharge": {
     "label": "Cargo por transferencia",
     "calc": "Calculadora del cargo por transferencia",
@@ -341,10 +337,21 @@
     "add": "Añadir un extra",
     "label": "Extra",
     "calc": "Calculadora del extra",
-    "remove": "Quitar el extra"
+    "remove": "Quitar el extra",
+    "notNumber": "Ese extra no es un número",
+    "negative": "Un extra no puede ser negativo"
   },
   "addOn": {
     "both": "Cargo por transferencia y extra"
+  },
+  "prev": {
+    "loanX": "deuda {{amount}} + cargo por transferencia {{charge}}",
+    "loanCharges": "deuda {{amount}} + cargos {{charges}}",
+    "loanChargesX": "deuda {{amount}} + cargos {{charges}} + cargo por transferencia {{charge}}",
+    "lendExtra": "préstamo {{amount}} + extra {{extra}}",
+    "lendOff": "préstamo {{amount}} − cargo {{charge}}",
+    "owes": "{{who}} debe {{amount}}",
+    "youOweWho": "debes a {{who}} {{amount}}"
   },
   "loan": {
     "noDueYet": "Aún sin fecha de pago",
@@ -390,7 +397,6 @@
     "paidBackQ": "¿Devolviste una parte?",
     "partOk": "Una parte también vale.",
     "noPayAccount": "No hay ninguna cuenta en {{cur}} para anotarlo: añade una, o vuelve a mostrar una archivada.",
-    "addFee": "Añadir comisión (envío, retiro)",
     "record": "Anotar pago",
     "drawLent": "Prestado desde {{account}} el {{date}}",
     "drawBorrowed": "Recibido en {{account}} el {{date}}",
@@ -399,7 +405,13 @@
     "paidOff": "saldado",
     "intoAcc": "en {{account}}",
     "fromAcc": "desde {{account}}",
-    "feeAmt": "{{amount}} de comisión",
+    "xchargeAmt": "{{amount}} de cargo por transferencia",
+    "chargeAmt": "{{amount}} de cargo",
+    "chargesAmt": "{{amount}} de cargos",
+    "extraAmt": "{{amount}} de extra",
+    "extraIncl": "incl. {{amount}} de extra",
+    "chargesIncl": "incl. {{amount}} de cargos",
+    "tipAmt": "+{{amount}} de extra",
     "clearedLend": "esto saldó el préstamo",
     "clearedBorrow": "esto saldó la deuda",
     "leftAfter": "{{amount}} pendiente después",
@@ -427,7 +439,6 @@
     "whoLend": "¿A quién le prestaste?",
     "whoBorrow": "¿Quién te prestó el dinero?",
     "feeNote": "Comisión del pago",
-    "feeNegative": "La comisión no puede ser negativa",
     "noAccountIn": "No hay ninguna cuenta en {{cur}}",
     "noAccountRecord": "No hay ninguna cuenta en {{cur}} para anotarlo",
     "msg": {
@@ -437,7 +448,12 @@
       "writtenOff": "Dado por perdido",
       "forgiven": "Marcada como perdonada",
       "gotBack": "Cobraste {{amount}}",
+      "gotBackTip": "Cobraste {{amount}} + {{extra}} de extra",
+      "gotBackIncl": "Cobraste {{amount}}, incl. {{extra}} de extra",
       "paidBack": "Devolviste {{amount}}",
+      "paidBackX": "Devolviste {{amount}} + {{charge}} de cargo por transferencia",
+      "paidBackIncl": "Devolviste {{amount}}, incl. {{charges}} de cargos",
+      "paidBackInclX": "Devolviste {{amount}}, incl. {{charges}} de cargos + {{charge}} de cargo por transferencia",
       "allCleared": "todo saldado",
       "owesAgain": "{{who}} vuelve a deberte {{amount}}",
       "oweAgain": "Vuelves a deberle {{amount}} a {{who}}"

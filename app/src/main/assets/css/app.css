@@ -1555,7 +1555,17 @@ input {
 }
 .aoadds .aoadd {
   width: auto;
+  max-width: 100%;
   padding: 0 12px;
+  text-align: start;
+}
+/* its label wraps, hyphenated in the page's language, a word longer than the card ("Überweisungsgebühr" in the loan
+   sheet's card at 320 px, 1.3×) breaking only as a last resort: never cut, never smaller */
+.aoadd .aoat {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 .aocard {
   margin-top: 12px;
@@ -2017,15 +2027,22 @@ mark.hl {
   background: var(--primary);
   border-radius: 4px;
 }
-/* a draw's own parts inside its loan's box (lend-refine): small outlined boxes, a label over a bold figure, that wrap
-   and grow with the text */
-.txo .lparts {
+/* a draw's own parts inside its loan's box, and a tab's under the loan sheet's figure (lend-refine): small outlined
+   boxes, a label over a bold figure, that wrap and grow with the text */
+.txo .lparts,
+.hero .lparts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
 }
-.txo .lpart {
+.hero .lparts {
+  justify-content: center;
+  margin-bottom: 6px;
+  text-align: start;
+}
+.txo .lpart,
+.hero .lpart {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -2035,12 +2052,14 @@ mark.hl {
   border: 1px solid var(--outline);
   border-radius: 8px;
 }
-.txo .lpc {
+.txo .lpc,
+.hero .lpc {
   font-size: 0.75rem;
   color: var(--on-surface-variant);
   overflow-wrap: break-word;
 }
-.txo .lpv {
+.txo .lpv,
+.hero .lpv {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--on-surface);

@@ -444,6 +444,7 @@ function pickAccount(id) {
   setPressed("f-acc", id);
   const c = $("#amt-cur");
   if (c) c.textContent = acc(id).currency;
+  formPreview();
   if (F.kind !== "loanf") return;
   if (F.merge) {
     const ml = loan(F.merge);
@@ -463,7 +464,6 @@ function readVals() {
     payee: g("f-payee"),
     date: g("f-date"),
     toAmount: g("f-toamt"),
-    fee: g("f-fee"),
     charge: g("f-charge"),
     extra: g("f-extra"),
   };
@@ -486,17 +486,20 @@ const ADDON = {
 const addOnName = kinds => (kinds.length > 1 ? T("addOn.both") : kinds.length ? T(ADDON[kinds[0]].label) : "");
 /* where a form's preview sits while no card is open: a line under the last field that changes it */
 const addOnLine = () => '<div class="aoline"></div>';
-/* The tonal card with one or two rows ({kind, value, open}): each a small label over a medium figure with the currency
-   code before it (cur, the account's; addOnCur() follows the account), its calculator and ✕ at the end and a thin line
-   under it, then the preview; under the card, the "+" button of each row that is closed (each comes back with ✕);
-   then the rows' keypads. A form opened for an entry that has its add-on opens with the row open. */
-function addOnCard(rows, cur) {
+/* The tonal card with one or two rows ({kind, value, open, once}): each a small label over a medium figure with the
+   currency code before it (cur, the account's; addOnCur() follows the account), its calculator and ✕ at the end and a
+   thin line under it, then the preview; under the card, the "+" button of each row that is closed (each comes back
+   with ✕, but a row marked once: an older paid fee, which no form adds any more); then the rows' keypads. A form
+   opened for an entry that has its add-on opens with the row open. o: {pre} the fields' id prefix ("f": "f-charge";
+   "ed" in a second sheet, whose ids must differ from the sheet under it), {one} an entry takes one add-on: while a
+   row is open, no other row's button shows. */
+function addOnCard(rows, cur, o = {}) {
   let card = "",
     adds = "",
     pads = "";
   rows.forEach(r => {
     const k = ADDON[r.kind],
-      id = "f-" + k.f,
+      id = (o.pre || "f") + "-" + k.f,
       lid = "aol-" + id;
     card +=
       '<div class="aorow" data-k="' +
@@ -532,21 +535,24 @@ function addOnCard(rows, cur) {
       '<button type="button" class="btn text aoadd" data-act="addon-add" data-v="' +
       r.kind +
       '"' +
-      (r.open ? " hidden" : "") +
+      (r.once ? " data-once" : "") +
+      (r.open || r.once || (o.one && rows.some(x => x.open)) ? " hidden" : "") +
       ">" +
       ic("add") +
+      '<span class="aoat">' +
       TH(k.add) +
-      "</button>";
+      "</span></button>";
     pads += calcPanelHtml(id);
   });
   const open = rows.filter(r => r.open).map(r => r.kind);
   return (
     '<div class="aocard" role="group"' +
+    (o.one ? " data-one" : "") +
     (open.length ? ' aria-label="' + esc(addOnName(open)) + '"' : " hidden") +
     ">" +
     card +
     '<div class="aoprev"></div></div><div class="aoadds"' +
-    (open.length === rows.length ? " hidden" : "") +
+    (rows.every(r => r.open || r.once || (o.one && open.length)) ? " hidden" : "") +
     ">" +
     adds +
     "</div>" +
@@ -562,16 +568,38 @@ const addOnTexts = sc =>
       r.querySelector("input").value.trim(),
     ])
   );
+/* what the open rows of the card in sc hold, {xcharge: 10}: each a number ≥ 0 (0 when empty or shown as 0 in cur, which
+   saves as nothing), or null when one can't be read or is below 0 (said why: the charge's words for a transfer charge,
+   a charge and charges, the extra's for an extra) */
+function addOnAmounts(sc, cur) {
+  const out = {},
+    texts = addOnTexts(sc);
+  for (const k in texts) {
+    const n = texts[k] ? evalAmt(texts[k]) : 0,
+      ex = k === "extra";
+    if (n == null || n < 0) {
+      snack(n == null ? T(ex ? "extra.notNumber" : "charge.notNumber") : T(ex ? "extra.negative" : "charge.negative"));
+      return null;
+    }
+    out[k] = shown(n, cur) > 0 ? n : 0;
+  }
+  return out;
+}
 /* the currency code before every figure in the card follows the account */
 const addOnCur = (sc, cur) => sc.querySelectorAll(".aocard .aocur").forEach(e => (e.textContent = cur));
-/* opens or closes one row: the card shows while a row is open, a closed row's button comes back under it */
+/* opens or closes one row: the card shows while a row is open, a closed row's button comes back under it (never a row
+   marked once; none while a row is open, on a card for one add-on) */
 function addOnShow(sc, kind, on) {
   const row = addOnRow(sc, kind),
     card = row.closest(".aocard"),
     adds = sc.querySelector(".aoadds");
   row.hidden = !on;
-  sc.querySelector('.aoadd[data-v="' + kind + '"]').hidden = on;
   const open = [...card.querySelectorAll(".aorow")].filter(r => !r.hidden).map(r => r.dataset.k);
+  [...adds.children].forEach(
+    b =>
+      (b.hidden =
+        open.includes(b.dataset.v) || b.hasAttribute("data-once") || (card.hasAttribute("data-one") && open.length > 0))
+  );
   card.hidden = !open.length;
   if (open.length) card.setAttribute("aria-label", addOnName(open));
   else card.removeAttribute("aria-label");
@@ -592,7 +620,9 @@ function addOnRemove(sc, kind) {
   if (CALC && CALC.inp === inp) calcClose(CALC.id, calcToggleBtn(CALC.id));
   inp.value = "";
   addOnShow(sc, kind, false);
-  sc.querySelector('.aoadd[data-v="' + kind + '"]').focus();
+  const back =
+    sc.querySelector('.aoadd[data-v="' + kind + '"]:not([hidden])') || sc.querySelector(".aoadd:not([hidden])");
+  if (back) back.focus();
   if (CALC) calcMirrorSync(CALC.id);
   calcLooks();
 }
@@ -608,21 +638,8 @@ function addOnPreview(sc, html) {
 /* the open form's preview, worked out again */
 function formPreview() {
   if (F && F.kind === "tr") trPreview();
+  else if (F && F.kind === "loan") loanPreviews();
 }
-/* the optional fee of a loan payment: a field behind "Add a fee" (its label can be set later) */
-const feeField = (open, value, label, add) =>
-  '<div class="field" id="fee-wrap"' +
-  (open ? "" : " hidden") +
-  '><span id="fee-lbl">' +
-  esc(label) +
-  "</span>" +
-  amtField("f-fee", "", value, { labelledBy: "fee-lbl" }) +
-  '</div><button class="btn text" id="fee-btn" data-act="add-fee" style="width:auto;margin-top:6px;padding:0 12px"' +
-  (open ? " hidden" : "") +
-  ">" +
-  ic("add") +
-  esc(add) +
-  "</button>";
 /* transfer between own accounts, with optional fee */
 function trSheet(id) {
   const act = activeAccounts();
@@ -1161,17 +1178,9 @@ function saveTr() {
     }
   }
   /* the transfer charge: an empty card, or one that shows as 0, saves none */
-  const feeText = addOnTexts($("#sheet")).xcharge || "";
-  let fee = feeText ? evalAmt(feeText) : 0;
-  if (fee == null) {
-    snack(T("charge.notNumber"));
-    return;
-  }
-  if (fee < 0) {
-    snack(T("charge.negative"));
-    return;
-  }
-  if (!(shown(fee, fa.currency) > 0)) fee = 0;
+  const ao = addOnAmounts($("#sheet"), fa.currency);
+  if (!ao) return;
+  const fee = ao.xcharge || 0;
   if (!v.date) {
     snack(T("common.pickDate"));
     return;
@@ -1192,8 +1201,12 @@ function saveTr() {
     Object.assign(t, { type: "transfer", amount: amt, account: from, to, date, note });
     if (diff) t.toAmount = got;
     else delete t.toAmount;
-    setAddOn(t, "charge", fee); // its transfer charge: from From, on its day, just after it; none when 0
+    return setAddOn(t, "charge", fee); // its transfer charge: from From, on its day, just after it; none when 0
   };
+  if (!tryChange(mutate)) {
+    snack(T("charge.notNumber")); // never saved without the charge it was given
+    return;
+  }
   saveChecked(
     mutate,
     date,

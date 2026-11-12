@@ -156,6 +156,22 @@ function loanInfo(l) {
     open: st !== "cleared" && st !== "writeoff",
   };
 }
+/* under the loan sheet's figure, the tab's own parts as chips (docs/specs/charges.md, "The loan sheet"): Lent or
+   Borrowed, its transfer charges, its extras or charges on top, each only when it isn't 0; none for a loan without
+   add-ons (every loan recorded before data version 8) */
+function loanChips(l, i) {
+  const lend = l.kind === "lend",
+    fees = rnd(Object.values(i.fee).reduce((s, f) => s + f.amount, 0));
+  if (!(fees > 0) && !(i.top > 0)) return "";
+  return partChips(
+    [
+      [lend ? "tx.lent" : "tx.borrowed", rnd(i.draws.reduce((s, t) => s + t.amount, 0))],
+      ["tx.xcharge", fees],
+      [lend ? "tx.extra" : "tx.charges", i.top],
+    ].filter(p => p[1] > 0),
+    i.cur
+  );
+}
 /* "Due · $150.00": the amount only when part of the tab is due then (the date is in the field below) */
 function dueHead(l, i) {
   if (!i.nextDue) return T("loan.noDueYet");
@@ -370,6 +386,7 @@ function loanOpen(id, focusPay) {
     '</div><div class="v">' +
     esc(money(i.open || i.st === "writeoff" ? i.left : i.total, i.cur)) +
     "</div>" +
+    loanChips(l, i) +
     '<div class="t">' +
     (i.open || i.st === "writeoff"
       ? i.left === i.total
@@ -425,13 +442,15 @@ function loanOpen(id, focusPay) {
       '<div style="margin-top:12px">' +
       dateField("f-date", today(), { min: i.draws.length ? i.draws[0].date : "", max: today(), now: true }) +
       "</div>" +
-      feeField(false, "", T("fee.label", { cur: i.cur }), T("loan.addFee")) +
+      addOnLine() +
+      loanAddOnCard(l, null, i.cur, "f") +
       '<div class="gap"></div><button class="btn" data-act="loan-pay">' +
       ic("check") +
       TH("loan.record") +
       "</button></div>";
   }
-  const hist = S.txns.filter(t => t.type === "loan" && t.loan === l.id).sort(byNewest);
+  /* a lend's transfer charge is part of its draw: on the draw's line, never a line of its own */
+  const hist = S.txns.filter(t => t.type === "loan" && t.loan === l.id && !isAddOn(t)).sort(byNewest);
   h +=
     '<div class="sec">' +
     TH("common.history") +
@@ -443,10 +462,16 @@ function loanOpen(id, focusPay) {
         const r = runBal()[t.id] || {},
           canDel = !t.principal || i.draws.length > 1,
           name = { html: accTag(a) },
+          amt = n => ({ amount: money(n, i.cur) }),
+          top = t.principal ? 0 : topPaidOf(t.id),
+          /* what a line adds (docs/specs/charges.md, "The loan sheet"): a draw's transfer charge and what it owes on
+             top; what a payment carries (its transfer charge, a tip, an older paid fee) or covered on top */
           more = (
             t.principal
               ? [
                   TH(lend ? "loan.drawLent" : "loan.drawBorrowed", { account: name, date: dayLabel(t.date) }),
+                  f && f.type === "loan" && TH("loan.xchargeAmt", amt(f.amount)),
+                  t.onTop > 0 && TH(lend ? "loan.extraAmt" : "loan.chargesAmt", amt(t.onTop)),
                   t.due && TH("loan.dueOn", { date: dayLabel(t.due) }),
                   i.open &&
                     (i.rem[t.id] > 0 ? TH("loan.leftAmt", { amount: money(i.rem[t.id], i.cur) }) : TH("loan.paidOff")),
@@ -455,7 +480,9 @@ function loanOpen(id, focusPay) {
               : [
                   esc(dayLabel(t.date)),
                   TH(lend ? "loan.intoAcc" : "loan.fromAcc", { account: name }),
-                  f && TH("loan.feeAmt", { amount: money(f.amount, i.cur) }),
+                  f && f.type === "expense" && TH(lend ? "loan.chargeAmt" : "loan.xchargeAmt", amt(f.amount)),
+                  top > 0 && TH(lend ? "loan.extraIncl" : "loan.chargesIncl", amt(top)),
+                  f && f.type === "income" && TH("loan.tipAmt", amt(f.amount)),
                   r.ls === "cleared"
                     ? TH(lend ? "loan.clearedLend" : "loan.clearedBorrow")
                     : TH("loan.leftAfter", { amount: money(r.left || 0, i.cur) }),
@@ -516,6 +543,7 @@ function loanOpen(id, focusPay) {
       '</button><div class="gap"></div>';
   h += '<button class="btn danger" data-act="loan-del">' + TH(lend ? "loan.delLend" : "loan.delBorrow") + "</button>";
   openSheet(loanWho(l), h);
+  loanPreviews();
   if (focusPay)
     setTimeout(() => {
       const el = $("#f-amt");
@@ -553,19 +581,34 @@ function loanDrawEdit(txnId) {
       "</span>" +
       dateField("ed-due", t.due || "", { min: t.date, opt: true, none: T("loan.noDue") }) +
       "</div>";
+  /* the form's buttons and cards, open for the add-ons it has (docs/specs/charges.md, "The loan sheet") */
+  h += addOnLine() + loanAddOnCard(l, t, i.cur, "ed");
   h +=
     '<div class="gap"></div><button class="btn" data-act="loandraw-save">' +
     ic("check") +
     TH("common.save") +
     "</button>";
   openSheet2(T(t.principal ? (lend ? "loan.editLend" : "loan.editBorrow") : "loan.editPayment"), h);
+  loanPreviews();
+}
+/* entry t's add-on of a kind set to n (setAddOn()); one already of that amount only follows the entry's account and
+   day, so what an older version wrote on it (its note, its category) stays as it was */
+function keepAddOn(t, kind, n) {
+  const a = addOnOf(t),
+    same = a && (a.type === "income") === (kind === "extra") && n > 0 && rnd(n) === a.amount;
+  if (kind === "top" || !same) return setAddOn(t, kind, n);
+  a.account = t.account;
+  a.date = t.date;
+  return true;
 }
 function saveLoanDraw() {
   if (!F || !F.editTxn) return;
   const l = loan(F.id);
   if (!l) return;
+  const i = loanInfo(l),
+    lend = l.kind === "lend";
   const amt = evalAmt(($("#ed-amt") || {}).value);
-  if (!(shown(amt, loanInfo(l).cur) > 0)) {
+  if (!(shown(amt, i.cur) > 0)) {
     snack(T("common.enterAmount"));
     return;
   }
@@ -587,42 +630,55 @@ function saveLoanDraw() {
     snack(T("loan.dueBefore"));
     return;
   }
+  const ao = addOnAmounts($("#sheet2 .p"), i.cur);
+  if (!ao) return;
   const txnId = F.editTxn,
     t0 = entry(txnId);
   if (!t0) return;
-  /* never (more) paid back than was lent/borrowed: the extra would silently drop out of the loan; and no payment
-     before the first draw */
-  const i = loanInfo(l),
-    firstPay = i.pays.map(t => t.date).sort()[0];
+  /* no payment before the first draw */
+  const firstPay = i.pays.map(t => t.date).sort()[0];
   if (t0.principal && firstPay && firstPay < i.draws.map(t => (t.id === txnId ? date2 : t.date)).sort()[0]) {
     snack(T("loan.payBefore", { date: dayLabel(firstPay) }));
     return;
   }
-  const total = rnd(i.total + (t0.principal ? amt - t0.amount : 0)),
-    paid = rnd(i.paid + (t0.principal ? 0 : amt - t0.amount));
-  if (paid - total > Math.max(0, i.paid - i.total) + 0.0005) {
-    snack(
-      t0.principal
-        ? T("loan.alreadyPaid", { amount: money(i.paid, i.cur) })
-        : T("loan.onlyLeft", { amount: money(rnd(i.left + t0.amount), i.cur) })
-    );
-    return;
-  }
+  /* the entry, then its add-ons as its form has them: a draw's transfer charge (a lend's) and what it owes on top; a
+     payment's transfer charge (a loan's), or a lending payment's tip (and an older paid fee, while it keeps one). Its
+     add-on goes with it: same account, same day. False when an add-on is refused. */
   const mutate = () => {
     const t = entry(txnId);
-    if (!t) return;
+    if (!t) return false;
     t.amount = amt;
     t.account = acc2;
     t.date = date2;
     if (setDue) t.due = due2;
-    /* a payment's fee goes with it: same account, same day */
-    const fee = t.feeId && entry(t.feeId);
-    if (fee) {
-      fee.account = acc2;
-      fee.date = date2;
-    }
+    const ok = t.principal
+      ? lend
+        ? keepAddOn(t, "charge", ao.xcharge || 0) && keepAddOn(t, "top", ao.extra || 0)
+        : keepAddOn(t, "top", ao.charges || 0)
+      : lend
+        ? keepAddOn(t, "charge", ao.charge || 0) && keepAddOn(t, "extra", ao.extra || 0)
+        : keepAddOn(t, "charge", ao.xcharge || 0);
     relinkLoan(l.id);
+    return ok;
   };
+  /* never more paid back than is owed, the amounts on top counted: the rest would silently drop out of the loan */
+  let after = null;
+  const ok = tryChange(() => {
+    if (mutate() === false) return false;
+    after = loanInfo(loan(l.id));
+  });
+  if (!ok) {
+    snack(T(t0.principal || !lend ? "charge.notNumber" : "extra.notNumber"));
+    return;
+  }
+  if (after.paid - after.total > Math.max(0, i.paid - i.total) + 0.0005) {
+    snack(
+      t0.principal
+        ? T("loan.alreadyPaid", { amount: money(i.paid, i.cur) })
+        : T("loan.onlyLeft", { amount: money(rnd(i.unpaid + t0.amount), i.cur) })
+    );
+    return;
+  }
   guardOverdraw(mutate, date2, () => {
     closeSheet2();
     closeSheet();
@@ -717,10 +773,11 @@ function deleteLoan() {
     S.loans = S.loans.filter(l => l.id !== id); // even one left without a draw (a hand-made backup)
   });
 }
-/* a payment on loan l, plus its fee when there is one: an expense linked both ways, like a transfer's (off the same
-   account, shown with the payment, never spending). Fresh objects on every call, since a change runs twice (overdraw
-   check, then for real). */
-function payTxns(l, pid, ts, amount, account, date, fee) {
+/* Records a payment on loan l with its add-on (add: a loan's transfer charge, a lending's extra, a tip on top), as an
+   entry linked both ways through setAddOn(): off or into the same account, on the same day. Fresh objects on every
+   call, since a change runs more than once (tried, the overdraw check, then for real). False when the add-on is
+   refused (the change is then not saved). */
+function addPayment(l, pid, ts, amount, account, date, add) {
   const p = {
     id: pid,
     ts,
@@ -732,32 +789,128 @@ function payTxns(l, pid, ts, amount, account, date, fee) {
     date,
     note: "",
   };
-  if (!(fee > 0)) return [p];
-  const f = {
-    id: pid + "f",
-    ts: ts + 1,
-    type: "expense",
-    amount: rnd(fee),
-    account,
-    cat: "fees",
-    date,
-    note: "",
-  };
-  f.feeOf = p.id;
-  p.feeId = f.id;
-  return [p, f];
+  S.txns.push(p);
+  return !(add > 0) || setAddOn(p, l.kind === "lend" ? "extra" : "charge", rnd(add));
 }
-/* the payment card's fee, if one was added: a number ≥ 0, or null (already said why) */
-function readFee(v) {
-  const text = F.showFee ? String(v.fee || "").trim() : "",
-    fee = text ? evalAmt(text) : 0;
-  if (fee == null || fee < 0) {
-    snack(T(fee == null ? "fee.notNumber" : "loan.feeNegative"));
-    return null;
+/* what a payment of amt on day `date` would cover of loan l's amounts on top (a lending's extra, a loan's charges), by
+   the share-out loanInfo() makes; replacing payment id when that one is being edited */
+function payCovers(l, amt, date, id) {
+  const keep = S.txns,
+    p = id
+      ? { ...entry(id), amount: amt, date }
+      : { id: "?", ts: Date.now(), type: "loan", dir: l.kind === "lend" ? "in" : "out", loan: l.id, amount: amt, date };
+  S.txns = keep.filter(t => t.id !== id).concat(p);
+  try {
+    return loanInfo(l).topPaid[p.id] || 0;
+  } finally {
+    S.txns = keep;
   }
-  return fee;
 }
-const plusFee = (fee, cur) => (fee > 0 ? " + " + T("loan.feeAmt", { amount: money(fee, cur) }) : "");
+/* The message after a payment of amt (docs/specs/charges.md, "Saving"): with what it covered on top (top) and its add-on
+   (add: a transfer charge, or a tip, which adds to the extra's figure), and " · all cleared" when it clears the loan */
+function payMsg(l, cur, amt, top, add, done) {
+  const M = n => money(n, cur);
+  let m;
+  if (l.kind === "lend")
+    m =
+      add > 0 && top > 0
+        ? T("loan.msg.gotBackIncl", { amount: M(rnd(amt + add)), extra: M(rnd(top + add)) })
+        : add > 0
+          ? T("loan.msg.gotBackTip", { amount: M(amt), extra: M(add) })
+          : top > 0
+            ? T("loan.msg.gotBackIncl", { amount: M(amt), extra: M(top) })
+            : T("loan.msg.gotBack", { amount: M(amt) });
+  else
+    m =
+      add > 0 && top > 0
+        ? T("loan.msg.paidBackInclX", { amount: M(amt), charges: M(top), charge: M(add) })
+        : add > 0
+          ? T("loan.msg.paidBackX", { amount: M(amt), charge: M(add) })
+          : top > 0
+            ? T("loan.msg.paidBackIncl", { amount: M(amt), charges: M(top) })
+            : T("loan.msg.paidBack", { amount: M(amt) });
+  return m + (done ? " · " + T("loan.msg.allCleared") : "");
+}
+/* The card's kinds on a loan's forms (docs/specs/charges.md, "Which form offers what"), for a new payment on loan l (t
+   null) or entry t being edited: a loan's payment "+ Transfer charge"; a lending's payment "+ Add an extra" (a tip),
+   or while it keeps one, the Charge card of a paid fee an older version recorded ("+ Add an extra" once it is
+   removed); a lend's draw "+ Transfer charge" and "+ Add an extra" (owed on top); a borrow's draw "+ Add charges". */
+function loanAddOnCard(l, t, cur, pre) {
+  const lend = l.kind === "lend",
+    a = t ? addOnOf(t) : null,
+    row = (kind, n, more) => ({ kind, open: n > 0, value: n > 0 ? amtPre(n, cur) : "", ...more });
+  if (t && t.principal)
+    return addOnCard(
+      lend ? [row("xcharge", a ? a.amount : 0), row("extra", t.onTop)] : [row("charges", t.onTop)],
+      cur,
+      { pre }
+    );
+  if (!lend) return addOnCard([row("xcharge", a ? a.amount : 0)], cur, { pre });
+  const fee = a && a.type === "expense" ? a : null,
+    tip = a && a.type === "income" ? a : null;
+  return addOnCard(
+    (fee ? [row("charge", fee.amount, { once: true })] : []).concat(row("extra", tip ? tip.amount : 0)),
+    cur,
+    { pre, one: true }
+  );
+}
+/* The previews on the loan sheet's card and on its Edit (docs/specs/charges.md, "Previews"), each one line with the
+   figures in bold: a payment's only when it carries an add-on or covers part of an amount on top ("● Bank −৳5,200.00 ·
+   loan ৳5,000.00 + transfer charge ৳200.00", "● Bkash +৳1,250.00 · lending ৳1,100.00 + extra ৳150.00"); a draw's as
+   its form's ("● Bkash −৳1,100.00 · Rafi owes ৳1,250.00"). Empty until the amount is a number; a card that isn't yet
+   one adds nothing. */
+function loanPreviews() {
+  const l = F && F.kind === "loan" && loan(F.id);
+  if (!l) return;
+  const one = $("#sheet .p"),
+    two = $("#sheet2 .p"),
+    t = F.editTxn && entry(F.editTxn);
+  if (one && one.querySelector("#f-amt")) addOnPreview(one, loanPreview(l, one, "f", F.account, null));
+  if (two && t && two.querySelector("#ed-amt")) addOnPreview(two, loanPreview(l, two, "ed", F.editAcc, t));
+}
+function loanPreview(l, sc, pre, accId, t) {
+  const a = acc(accId),
+    amt = evalAmt(sc.querySelector("#" + pre + "-amt").value);
+  if (!a || !(amt > 0)) return "";
+  const ao = {},
+    lend = l.kind === "lend",
+    cur = a.currency,
+    b = x => "<b>" + esc(x) + "</b>",
+    M = n => ({ html: b(money(n, cur)) }),
+    line = (n, part) => accTag(a) + " " + b(signed(n, cur)) + " · " + part;
+  Object.entries(addOnTexts(sc)).forEach(([k, v]) => {
+    const n = evalAmt(v);
+    ao[k] = n > 0 ? n : 0;
+  });
+  if (t && t.principal) {
+    const x = (lend && ao.xcharge) || 0,
+      owes = rnd(amt + x + (lend ? ao.extra || 0 : ao.charges || 0)),
+      who = loanWho(l);
+    return lend
+      ? line(-(amt + x), TH("prev.owes", { who, amount: M(owes) }))
+      : line(amt, TH("prev.youOweWho", { who, amount: M(owes) }));
+  }
+  const d = sc.querySelector("#" + pre + "-date"),
+    top = payCovers(l, amt, (d && d.dataset.v) || today(), t ? t.id : null);
+  if (lend) {
+    const fee = ao.charge || 0,
+      tip = ao.extra || 0;
+    if (fee > 0) return line(amt - fee, TH("prev.lendOff", { amount: M(amt), charge: M(fee) }));
+    return top + tip > 0
+      ? line(amt + tip, TH("prev.lendExtra", { amount: M(rnd(amt - top)), extra: M(rnd(top + tip)) }))
+      : "";
+  }
+  const x = ao.xcharge || 0;
+  if (!(top > 0) && !(x > 0)) return "";
+  return line(
+    -(amt + x),
+    top > 0 && x > 0
+      ? TH("prev.loanChargesX", { amount: M(rnd(amt - top)), charges: M(top), charge: M(x) })
+      : top > 0
+        ? TH("prev.loanCharges", { amount: M(rnd(amt - top)), charges: M(top) })
+        : TH("prev.loanX", { amount: M(amt), charge: M(x) })
+  );
+}
 function payLoan() {
   const l = loan(F.id);
   if (!l) return;
@@ -775,11 +928,13 @@ function payLoan() {
     );
     return;
   }
-  const fee = readFee(v);
-  if (fee == null) return;
+  /* the card: a loan's transfer charge, or a lending's extra (a tip on top) */
+  const ao = addOnAmounts($("#sheet .p"), i.cur);
+  if (!ao) return;
+  const add = (lend ? ao.extra : ao.xcharge) || 0;
   /* compared as shown: paying the $66.67 shown on a $66.667 tab clears it, with no "$0.00 more" */
   if (shown(amt, i.cur) > shown(i.left, i.cur)) {
-    overpay(l, i, amt, F.account, v.date || today(), fee);
+    overpay(l, i, amt, F.account, v.date || today(), add);
     return;
   }
   const id = l.id,
@@ -788,22 +943,17 @@ function payLoan() {
     done = shown(amt, i.cur) >= shown(i.left, i.cur),
     pid = newId(),
     ts = Date.now();
-  const mutate = () => {
-    S.txns.push(...payTxns(l, pid, ts, amt, account, date, fee));
-  };
-  saveChecked(
-    mutate,
-    date,
-    T(lend ? "loan.msg.gotBack" : "loan.msg.paidBack", { amount: money(amt, i.cur) }) +
-      plusFee(fee, i.cur) +
-      (done ? " · " + T("loan.msg.allCleared") : ""),
-    { row: id }
-  );
+  const mutate = () => addPayment(l, pid, ts, amt, account, date, add);
+  if (!tryChange(mutate)) {
+    snack(T(lend ? "extra.notNumber" : "charge.notNumber")); // never saved without the add-on it was given
+    return;
+  }
+  saveChecked(mutate, date, payMsg(l, i.cur, amt, payCovers(l, amt, date, null), add, done), { row: id });
 }
 /* someone paid back more than they owed (or you did): the payment clears this one, and the extra is either a loan the
    other way, or (they paid you more) income, on the income form so the category is the user's choice, or (you paid
    them more: a sending charge, interest) that payment's fee. Tally never files it under a category by itself. */
-function overpay(l, i, amt, account, date, fee) {
+function overpay(l, i, amt, account, date, add) {
   const lend = l.kind === "lend",
     who = loanWho(l),
     extra = rnd(amt - i.left),
@@ -812,9 +962,9 @@ function overpay(l, i, amt, account, date, fee) {
     nid = newId(),
     qid = newId(),
     ts = Date.now();
-  /* the payment that clears this loan (with the extra as its fee, when that's the choice) */
+  /* the payment that clears this loan, with its add-on (and the extra as its charge, when that's the choice) */
   const clear = more => {
-    if (i.left > 0) S.txns.push(...payTxns(l, pid, ts, i.left, account, date, rnd(fee + (more || 0))));
+    if (i.left > 0) addPayment(l, pid, ts, i.left, account, date, rnd(add + (more || 0)));
   };
   const book = (mutate, msg, row) => saveChecked(mutate, date, msg, { row });
   const asLoan = () =>
@@ -858,7 +1008,7 @@ function overpay(l, i, amt, account, date, fee) {
       msg: T("loan.over.lendCleared", { who }) + " · ",
       back: l.id,
     });
-  const asFee = () => book(() => clear(extra), T("loan.over.asFeeMsg", { amount: money(rnd(fee + extra), cur) }), l.id);
+  const asFee = () => book(() => clear(extra), T("loan.over.asFeeMsg", { amount: money(rnd(add + extra), cur) }), l.id);
   const v = { who, amount: money(extra, cur) };
   askDialog(
     T(lend ? "loan.over.theyPaid" : "loan.over.youPaid", v),
@@ -884,18 +1034,13 @@ function clearLoan(id) {
       snack(T("loan.noAccountRecord", { cur: i.cur }));
       return;
     }
+    /* everything left, the amounts on top included, with a payment's message */
     const mutate = () => {
-      S.txns.push(...payTxns(l, pid, ts, i.left, account, today(), 0));
+      addPayment(l, pid, ts, i.left, account, today(), 0);
     };
     guardOverdraw(mutate, today(), () => {
       V.showCleared = true;
-      withUndo(
-        T(lend ? "loan.msg.gotBack" : "loan.msg.paidBack", { amount: money(i.left, i.cur) }) +
-          " · " +
-          T("loan.msg.allCleared"),
-        mutate,
-        { row: id }
-      );
+      withUndo(payMsg(l, i.cur, i.left, payCovers(l, i.left, today(), null), 0, true), mutate, { row: id });
     });
   };
   const off = () => {

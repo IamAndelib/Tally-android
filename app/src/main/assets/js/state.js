@@ -784,6 +784,20 @@ const saveChecked = (mutate, date, msg, fx) =>
     closeSheet();
     withUndo(msg, mutate, fx);
   });
+/* whether change() would go through (it returns false when it can't): tried on copies of the entries and loans, as
+   guardOverdraw() tries one, so nothing is changed */
+function tryChange(change) {
+  const txs = S.txns,
+    L = S.loans;
+  S.txns = txs.map(t => ({ ...t }));
+  S.loans = L.map(l => ({ ...l }));
+  try {
+    return change() !== false;
+  } finally {
+    S.txns = txs;
+    S.loans = L;
+  }
+}
 /* Money sources (not credit cards) shouldn't go below zero. Try the change on a copy first; if it would take an account
    below zero (now, or at the end of that day) and lower than it already was, ask before saving. */
 function guardOverdraw(mutate, date, proceed) {

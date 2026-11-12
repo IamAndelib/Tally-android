@@ -313,10 +313,6 @@
     "both": "Ausgaben + Einnahmen",
     "none": "Keine Zahlen"
   },
-  "fee": {
-    "label": "Gebühr ({{cur}}) · zählt nicht als Ausgabe",
-    "notNumber": "Die Gebühr ist keine Zahl"
-  },
   "xcharge": {
     "label": "Überweisungsgebühr",
     "calc": "Rechner für die Überweisungsgebühr",
@@ -340,10 +336,21 @@
     "add": "Extra hinzufügen",
     "label": "Extra",
     "calc": "Rechner für das Extra",
-    "remove": "Extra entfernen"
+    "remove": "Extra entfernen",
+    "notNumber": "Das Extra ist keine Zahl",
+    "negative": "Ein Extra kann nicht negativ sein"
   },
   "addOn": {
     "both": "Überweisungsgebühr und Extra"
+  },
+  "prev": {
+    "loanX": "Schuld {{amount}} + Überweisungsgebühr {{charge}}",
+    "loanCharges": "Schuld {{amount}} + Gebühren {{charges}}",
+    "loanChargesX": "Schuld {{amount}} + Gebühren {{charges}} + Überweisungsgebühr {{charge}}",
+    "lendExtra": "Darlehen {{amount}} + Extra {{extra}}",
+    "lendOff": "Darlehen {{amount}} − Gebühr {{charge}}",
+    "owes": "{{who}} schuldet {{amount}}",
+    "youOweWho": "du schuldest {{who}} {{amount}}"
   },
   "loan": {
     "noDueYet": "Noch keine Frist",
@@ -387,7 +394,6 @@
     "paidBackQ": "Etwas zurückgezahlt?",
     "partOk": "Ein Teil geht auch.",
     "noPayAccount": "Kein Konto in {{cur}} zum Erfassen: Leg eins an oder zeig ein archiviertes wieder.",
-    "addFee": "Gebühr hinzufügen (Versand, Auszahlung)",
     "record": "Zahlung erfassen",
     "drawLent": "Von {{account}} verliehen am {{date}}",
     "drawBorrowed": "Auf {{account}} geliehen am {{date}}",
@@ -396,7 +402,13 @@
     "paidOff": "abbezahlt",
     "intoAcc": "auf {{account}}",
     "fromAcc": "von {{account}}",
-    "feeAmt": "{{amount}} Gebühr",
+    "xchargeAmt": "{{amount}} Überweisungsgebühr",
+    "chargeAmt": "{{amount}} Gebühr",
+    "chargesAmt": "{{amount}} Gebühren",
+    "extraAmt": "{{amount}} Extra",
+    "extraIncl": "inkl. {{amount}} Extra",
+    "chargesIncl": "inkl. {{amount}} Gebühren",
+    "tipAmt": "+{{amount}} Extra",
     "clearedLend": "damit ist das Darlehen beglichen",
     "clearedBorrow": "damit ist die Schuld beglichen",
     "leftAfter": "danach {{amount}} offen",
@@ -424,7 +436,6 @@
     "whoLend": "An wen hast du Geld verliehen?",
     "whoBorrow": "Wer hat dir das Geld geliehen?",
     "feeNote": "Zahlungsgebühr",
-    "feeNegative": "Eine Gebühr kann nicht negativ sein",
     "noAccountIn": "Kein Konto in {{cur}}",
     "noAccountRecord": "Kein Konto in {{cur}} zum Erfassen",
     "msg": {
@@ -434,7 +445,12 @@
       "writtenOff": "Abgeschrieben",
       "forgiven": "Als erlassen markiert",
       "gotBack": "{{amount}} zurückbekommen",
+      "gotBackTip": "{{amount}} zurückbekommen + {{extra}} Extra",
+      "gotBackIncl": "{{amount}} zurückbekommen, inkl. {{extra}} Extra",
       "paidBack": "{{amount}} zurückgezahlt",
+      "paidBackX": "{{amount}} zurückgezahlt + {{charge}} Überweisungsgebühr",
+      "paidBackIncl": "{{amount}} zurückgezahlt, inkl. {{charges}} Gebühren",
+      "paidBackInclX": "{{amount}} zurückgezahlt, inkl. {{charges}} Gebühren + {{charge}} Überweisungsgebühr",
       "allCleared": "alles beglichen",
       "owesAgain": "{{who}} schuldet dir wieder {{amount}}",
       "oweAgain": "Du schuldest {{who}} wieder {{amount}}"

@@ -313,10 +313,6 @@
     "both": "Spending + income",
     "none": "No stats"
   },
-  "fee": {
-    "label": "Fee charged ({{cur}}) · not counted as spending",
-    "notNumber": "That fee isn't a number"
-  },
   "xcharge": {
     "label": "Transfer charge",
     "calc": "Calculator for the transfer charge",
@@ -340,10 +336,21 @@
     "add": "Add an extra",
     "label": "Extra",
     "calc": "Calculator for the extra",
-    "remove": "Remove the extra"
+    "remove": "Remove the extra",
+    "notNumber": "That extra isn't a number",
+    "negative": "An extra can't be negative"
   },
   "addOn": {
     "both": "Transfer charge and extra"
+  },
+  "prev": {
+    "loanX": "loan {{amount}} + transfer charge {{charge}}",
+    "loanCharges": "loan {{amount}} + charges {{charges}}",
+    "loanChargesX": "loan {{amount}} + charges {{charges}} + transfer charge {{charge}}",
+    "lendExtra": "lending {{amount}} + extra {{extra}}",
+    "lendOff": "lending {{amount}} − charge {{charge}}",
+    "owes": "{{who}} owes {{amount}}",
+    "youOweWho": "you owe {{who}} {{amount}}"
   },
   "loan": {
     "noDueYet": "No due date yet",
@@ -387,7 +394,6 @@
     "paidBackQ": "Paid some back?",
     "partOk": "Part of it is fine too.",
     "noPayAccount": "No account in {{cur}} to record it: add one, or show an archived one again.",
-    "addFee": "Add a fee (sending, cash‑out)",
     "record": "Record payment",
     "drawLent": "Lent from {{account}} on {{date}}",
     "drawBorrowed": "Borrowed into {{account}} on {{date}}",
@@ -396,7 +402,13 @@
     "paidOff": "paid off",
     "intoAcc": "into {{account}}",
     "fromAcc": "from {{account}}",
-    "feeAmt": "{{amount}} fee",
+    "xchargeAmt": "{{amount}} transfer charge",
+    "chargeAmt": "{{amount}} charge",
+    "chargesAmt": "{{amount}} charges",
+    "extraAmt": "{{amount}} extra",
+    "extraIncl": "incl. {{amount}} extra",
+    "chargesIncl": "incl. {{amount}} charges",
+    "tipAmt": "+{{amount}} extra",
     "clearedLend": "this cleared the lending",
     "clearedBorrow": "this cleared the loan",
     "leftAfter": "{{amount}} left after this",
@@ -424,7 +436,6 @@
     "whoLend": "Who did you lend to?",
     "whoBorrow": "Who lent you the money?",
     "feeNote": "Payment fee",
-    "feeNegative": "A fee can't be negative",
     "noAccountIn": "No account in {{cur}}",
     "noAccountRecord": "No account in {{cur}} to record it",
     "msg": {
@@ -434,7 +445,12 @@
       "writtenOff": "Written off",
       "forgiven": "Marked as forgiven",
       "gotBack": "Got back {{amount}}",
+      "gotBackTip": "Got back {{amount}} + {{extra}} extra",
+      "gotBackIncl": "Got back {{amount}}, incl. {{extra}} extra",
       "paidBack": "Paid back {{amount}}",
+      "paidBackX": "Paid back {{amount}} + {{charge}} transfer charge",
+      "paidBackIncl": "Paid back {{amount}}, incl. {{charges}} charges",
+      "paidBackInclX": "Paid back {{amount}}, incl. {{charges}} charges + {{charge}} transfer charge",
       "allCleared": "all cleared",
       "owesAgain": "{{who}} owes you {{amount}} again",
       "oweAgain": "You owe {{who}} {{amount}} again"

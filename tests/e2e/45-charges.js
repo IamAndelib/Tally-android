@@ -2771,6 +2771,526 @@ function variedV7() {
     ok(false, "A row whose title would be cut: " + e.message.split("\n")[0]);
   }
 
+  // ---- 24. the loan sheet (docs/specs/charges.md, "The loan sheet", "Previews", "Saving"; lend-after, lend-payback,
+  // lend-refine): the payment card's transfer charge or extra, its preview and the line under the date when it covers
+  // charges or an extra, the messages, an older paid fee on its edit, a draw's edit with its cards, the figure's chips,
+  // the history lines, and every add-on going and coming with its entry
+  try {
+    const sheetBook = () => ({
+      v: 8,
+      settings,
+      accounts: [
+        acct("a", "Bank", "bank", "BDT", 50000),
+        acct("k", "Bkash", "wallet", "BDT", 20000),
+        acct("c", "Cash", "cash", "BDT", 10000),
+      ],
+      types: [],
+      cats: cats8,
+      txns: [
+        // Maya: borrowed ৳60,000.00; Sam: borrowed ৳1,000.00 with ৳100.00 of charges
+        x("mD", 100, D.d1, "loan", 60000, "a", { dir: "in", loan: "MY", principal: true }),
+        x("sD", 110, D.d1, "loan", 1000, "a", { dir: "in", loan: "S", principal: true, onTop: 100 }),
+        // Rafi and Nila: lent ৳1,000.00 + ৳100.00 transfer charge + ৳150.00 extra; Nila paid back ৳1,200.00
+        x("rD", 200, D.d1, "loan", 1000, "k", { dir: "out", loan: "R", principal: true, onTop: 150, feeId: "rDc" }),
+        x("rDc", 201, D.d1, "loan", 100, "k", { dir: "out", loan: "R", principal: true, feeOf: "rD" }),
+        x("nD", 210, D.d1, "loan", 1000, "k", { dir: "out", loan: "N", principal: true, onTop: 150, feeId: "nDc" }),
+        x("nDc", 211, D.d1, "loan", 100, "k", { dir: "out", loan: "N", principal: true, feeOf: "nD" }),
+        x("nP", 220, D.d2, "loan", 1200, "k", { dir: "in", loan: "N" }),
+        // Tom: lent ৳3,000.00; Ona: lent ৳5,000.00, paid back ৳3,000.00 with an older paid fee of ৳10.00
+        x("tD", 300, D.d1, "loan", 3000, "k", { dir: "out", loan: "TM", principal: true }),
+        x("oD", 310, D.d1, "loan", 5000, "c", { dir: "out", loan: "ON", principal: true }),
+        x("oP", 320, D.d2, "loan", 3000, "c", { dir: "in", loan: "ON", feeId: "oPf" }),
+        x("oPf", 321, D.d2, "expense", 10, "c", { cat: "fees", feeOf: "oP" }),
+      ],
+      loans: [
+        loanOf("MY", "borrow", "Maya", "a", D.d1),
+        loanOf("S", "borrow", "Sam", "a", D.d1),
+        loanOf("R", "lend", "Rafi", "k", D.d1),
+        loanOf("N", "lend", "Nila", "k", D.d1),
+        loanOf("TM", "lend", "Tom", "k", D.d1),
+        loanOf("ON", "lend", "Ona", "c", D.d1),
+      ],
+      assets: [],
+    });
+    const cl = s =>
+      String(s || "")
+        .replace(/\u2060/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const tap = async sel => {
+      await page.click(sel);
+      await page.waitForTimeout(320);
+    };
+    const fresh = () =>
+      page.evaluate(o => {
+        closeSheet2();
+        closeSheet();
+        closePop();
+        S = migrate(o);
+        RBC = LPC = null;
+        commit();
+        render();
+      }, sheetBook());
+    const tk = await page
+      .evaluate(() => money(1234.5, "BDT"))
+      .then(
+        t => (n, sign) =>
+          (sign === "-" ? "−" : sign === "+" ? "+" : "") +
+          cl(t).replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }))
+      );
+    const open = async id => {
+      await page.evaluate(id => loanOpen(id), id);
+      await page.waitForTimeout(120);
+    };
+    const txt = sel => page.evaluate(s => (document.querySelector(s) || {}).textContent || "", sel).then(cl);
+    const raw = sel => page.evaluate(s => (document.querySelector(s) || {}).textContent || "", sel);
+    /* a figure exactly as the page writes it, its own spaces kept: an amount and its word must hold on one line */
+    const mr = n => page.evaluate(n => money(n, "BDT"), n);
+    const snackText = () => txt("#snack");
+    const db = () => page.evaluate(() => JSON.parse(JSON.stringify({ txns: S.txns, loans: S.loans, bal: balances() })));
+    const info = id =>
+      page.evaluate(id => {
+        const i = loanInfo(loan(id));
+        return { total: i.total, paid: i.paid, left: i.left, st: i.st };
+      }, id);
+    const typeIn = async (sel, v) => {
+      await page.fill(sel, v);
+      await page.waitForTimeout(60);
+    };
+    const visible = sel => page.isVisible(sel);
+
+    // the sheet's figure and its chips
+    await fresh();
+    await open("R");
+    ok(
+      (await txt("#sheet .hero .v")) === tk(1250),
+      "Rafi's sheet: the figure ৳1,250.00 " + (await txt("#sheet .hero .v"))
+    );
+    const chips = await page.evaluate(() =>
+      [...document.querySelectorAll("#sheet .hero .lpart")].map(c =>
+        [...c.children].map(s =>
+          s.textContent
+            .replace(/\u2060/g, "")
+            .replace(/\s+/g, " ")
+            .trim()
+        )
+      )
+    );
+    ok(
+      J(chips) ===
+        J([
+          ["Lent", tk(1000)],
+          ["Transfer charge", tk(100)],
+          ["Extra", tk(150)],
+        ]),
+      "… with the chips Lent ৳1,000.00 · Transfer charge ৳100.00 · Extra ৳150.00 under it " + J(chips)
+    );
+    ok(
+      (await page.$$eval("#sheet .list .tx.exp", e => e.length)) === 1,
+      "… one history line for the draw: its transfer charge is part of it, never a line of its own"
+    );
+    const drawLine = await raw("#sheet .list .tx.exp .more");
+    ok(
+      drawLine.includes((await mr(100)) + "\u00a0transfer charge") &&
+        drawLine.includes((await mr(150)) + "\u00a0extra"),
+      "… the draw's line: “৳100.00 transfer charge · ৳150.00 extra”, each amount and its word on one line " +
+        J(drawLine)
+    );
+    // the lending's card: prefilled with everything owed, no transfer charge, + Add an extra
+    ok(
+      (await page.inputValue("#sheet #f-amt")) === "1,250.00" &&
+        !(await page.$('#sheet [data-act="addon-add"][data-v="xcharge"]')) &&
+        (await visible('#sheet [data-act="addon-add"][data-v="extra"]')),
+      "“Got money back?” prefilled with ৳1,250.00, + Add an extra, no transfer charge " +
+        (await page.inputValue("#sheet #f-amt"))
+    );
+    ok(
+      (await txt("#sheet .aoline")) === "Bkash " + tk(1250, "+") + " · lending " + tk(1100) + " + extra " + tk(150),
+      "the line under the date: ● Bkash +৳1,250.00 · lending ৳1,100.00 + extra ৳150.00 " + (await txt("#sheet .aoline"))
+    );
+    await typeIn("#sheet #f-amt", "500");
+    ok((await txt("#sheet .aoline")) === "", "a part payback that covers none of the extra: no line");
+    await typeIn("#sheet #f-amt", "1,250");
+    const kR = (await db()).bal.k;
+    await tap('#sheet [data-act="loan-pay"]');
+    ok(
+      (await snackText()).startsWith("Got back " + tk(1250) + ", incl. " + tk(150) + " extra · all cleared"),
+      "message: Got back ৳1,250.00, incl. ৳150.00 extra · all cleared " + (await snackText())
+    );
+    let d = await db();
+    let rp = d.txns.find(t => t.loan === "R" && !t.principal);
+    ok(
+      rp && rp.amount === 1250 && !rp.feeId && d.bal.k === kR + 1250,
+      "a payment of ৳1,250.00 into Bkash, nothing linked " + J(rp)
+    );
+    await open("R");
+    const payLine = await raw("#sheet .list .tx.exp .more");
+    ok(payLine.includes("incl. " + (await mr(150)) + "\u00a0extra"), "its line: “incl. ৳150.00 extra” " + J(payLine));
+
+    // a tip on top of a payback; a negative tip or one that isn't a number is refused
+    await open("TM");
+    await typeIn("#sheet #f-amt", "3000");
+    ok((await txt("#sheet .aoline")) === "", "Tom: nothing on top, no line");
+    await tap('#sheet [data-act="addon-add"][data-v="extra"]');
+    ok(
+      (await visible("#sheet #f-extra")) &&
+        (await page.evaluate(() => document.activeElement && document.activeElement.id)) === "f-extra" &&
+        !(await visible('#sheet [data-act="addon-add"][data-v="extra"]')),
+      "+ Add an extra opens the Extra card with its field focused, the button gone"
+    );
+    await typeIn("#sheet #f-extra", "-5");
+    await tap('#sheet [data-act="loan-pay"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("An extra can't be negative") && !d.txns.some(t => t.loan === "TM" && !t.principal),
+      "a negative extra is refused " + (await snackText())
+    );
+    await typeIn("#sheet #f-extra", "12+");
+    await tap('#sheet [data-act="loan-pay"]');
+    ok((await snackText()).includes("That extra isn't a number"), "one that isn't a number too " + (await snackText()));
+    await typeIn("#sheet #f-extra", "150");
+    ok(
+      (await txt("#sheet .aocard .aoprev")) ===
+        "Bkash " + tk(3150, "+") + " · lending " + tk(3000) + " + extra " + tk(150) &&
+        (await txt("#sheet .aoline")) === "",
+      "in the card: ● Bkash +৳3,150.00 · lending ৳3,000.00 + extra ৳150.00 " + (await txt("#sheet .aocard .aoprev"))
+    );
+    const k0 = (await db()).bal.k;
+    await tap('#sheet [data-act="loan-pay"]');
+    ok(
+      (await snackText()).startsWith("Got back " + tk(3000) + " + " + tk(150) + " extra · all cleared"),
+      "message: Got back ৳3,000.00 + ৳150.00 extra · all cleared " + (await snackText())
+    );
+    d = await db();
+    const tp = d.txns.find(t => t.loan === "TM" && !t.principal),
+      tip = tp && d.txns.find(t => t.id === tp.feeId);
+    ok(
+      tp &&
+        tp.amount === 3000 &&
+        tip &&
+        tip.type === "income" &&
+        tip.amount === 150 &&
+        tip.cat === "otherin" &&
+        tip.feeOf === tp.id &&
+        tip.account === "k" &&
+        tip.date === tp.date &&
+        d.bal.k === k0 + 3150,
+      "a payment and its tip, an income linked both ways; Bkash +৳3,150.00 " + J([tp, tip])
+    );
+    await open("TM");
+    ok(
+      (await raw("#sheet .list .tx.exp .more")).includes("+" + (await mr(150)) + "\u00a0extra"),
+      "its line: “+৳150.00 extra”"
+    );
+    // editing the payment: the tip changes and moves with its account and day
+    await page.evaluate(id => loanDrawEdit(id), tp.id);
+    await page.waitForTimeout(120);
+    ok(
+      (await page.inputValue("#sheet2 #ed-extra")) === "150.00" &&
+        !(await visible('#sheet2 [data-act="addon-add"][data-v="extra"]')),
+      "its edit opens with the Extra card " + (await page.inputValue("#sheet2 #ed-extra").catch(() => "none"))
+    );
+    await typeIn("#sheet2 #ed-extra", "100");
+    const dayBefore = await page.evaluate(() => {
+      const el = $("#ed-date"),
+        v = addDays(el.dataset.v, -1);
+      setDateField(el, v);
+      return v;
+    });
+    await tap('#sheet2 [data-act="ed-acc"][data-v="a"]');
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    const tip2 = d.txns.find(t => t.id === tip.id) || d.txns.find(t => t.feeOf === tp.id);
+    ok(
+      tip2 &&
+        tip2.amount === 100 &&
+        tip2.account === "a" &&
+        tip2.date === dayBefore &&
+        d.txns.find(t => t.id === tp.id).account === "a",
+      "editing the payment changes its tip and moves it with the account and day " + J(tip2)
+    );
+    // deleting the payment takes its tip along; Undo brings both back; reopening does the same
+    await open("TM");
+    await tap('#sheet .list .txh[data-act="row-exp"]');
+    await tap(`#sheet [data-act="loanpay-del"][data-v="${tp.id}"]`);
+    d = await db();
+    ok(!d.txns.some(t => t.id === tp.id || t.feeOf === tp.id), "deleting the payment deletes its tip");
+    await tap('[data-act="undo"]');
+    d = await db();
+    ok(
+      d.txns.some(t => t.feeOf === tp.id),
+      "Undo brings both back"
+    );
+    await open("TM");
+    await tap('#sheet [data-act="loan-reopen"]');
+    d = await db();
+    ok(
+      !d.txns.some(t => t.id === tp.id || t.feeOf === tp.id) && (await info("TM")).left === 3000,
+      "reopening the cleared lending (undo last payment) takes the tip too"
+    );
+    await tap('[data-act="undo"]');
+
+    // paying back a loan with a transfer charge
+    await open("MY");
+    ok(
+      (await visible('#sheet [data-act="addon-add"][data-v="xcharge"]')) &&
+        !(await page.$('#sheet [data-act="addon-add"][data-v="extra"]')) &&
+        !(await page.$('#sheet [data-act="add-fee"]')),
+      "“Paid some back?”: + Transfer charge, no extra, no old fee button"
+    );
+    await typeIn("#sheet #f-amt", "5000");
+    ok((await txt("#sheet .aoline")) === "", "nothing added or covered: no preview");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "200");
+    ok(
+      (await txt("#sheet .aocard .aoprev")) ===
+        "Bank " + tk(5200, "-") + " · loan " + tk(5000) + " + transfer charge " + tk(200),
+      "in the card: ● Bank −৳5,200.00 · loan ৳5,000.00 + transfer charge ৳200.00 " +
+        (await txt("#sheet .aocard .aoprev"))
+    );
+    const bA = (await db()).bal.a;
+    await tap('#sheet [data-act="loan-pay"]');
+    ok(
+      (await snackText()).startsWith("Paid back " + tk(5000) + " + " + tk(200) + " transfer charge") &&
+        !(await snackText()).includes("cleared"),
+      "message: Paid back ৳5,000.00 + ৳200.00 transfer charge " + (await snackText())
+    );
+    d = await db();
+    const mp = d.txns.find(t => t.loan === "MY" && !t.principal),
+      mc = mp && d.txns.find(t => t.id === mp.feeId);
+    ok(
+      mc &&
+        mc.type === "expense" &&
+        mc.amount === 200 &&
+        mc.feeOf === mp.id &&
+        mc.account === "a" &&
+        d.bal.a === bA - 5200,
+      "a payment and its transfer charge, Bank −৳5,200.00 " + J([mp, mc])
+    );
+    await open("MY");
+    ok(
+      (await txt("#sheet .hero .v")) === tk(55000) && !(await page.$("#sheet .hero .lpart")),
+      "a loan without add-ons: no chips under its figure"
+    );
+    ok(
+      (await raw("#sheet .list .tx.exp .more")).includes((await mr(200)) + "\u00a0transfer charge"),
+      "its line: “৳200.00 transfer charge”"
+    );
+    // its edit: the card open; ✕ removes the charge
+    await page.evaluate(id => loanDrawEdit(id), mp.id);
+    await page.waitForTimeout(120);
+    ok((await page.inputValue("#sheet2 #ed-charge")) === "200.00", "the payment's edit opens with its transfer charge");
+    await tap('#sheet2 [data-act="addon-remove"][data-v="xcharge"]');
+    ok(await visible('#sheet2 [data-act="addon-add"][data-v="xcharge"]'), "✕ brings + Transfer charge back");
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    ok(!d.txns.some(t => t.feeOf === mp.id) && !d.txns.find(t => t.id === mp.id).feeId, "… and saving removes it");
+
+    // paying back the borrow, covering its charges
+    await open("S");
+    const sChips = await page.evaluate(() =>
+      [...document.querySelectorAll("#sheet .hero .lpart")].map(c =>
+        [...c.children].map(e => e.textContent).join(" | ")
+      )
+    );
+    ok(
+      J(sChips.map(cl)) === J(["Borrowed | " + tk(1000), "Charges | " + tk(100)]),
+      "Sam's chips: Borrowed · Charges " + J(sChips)
+    );
+    ok(
+      (await page.inputValue("#sheet #f-amt")) === "1,100.00" &&
+        (await txt("#sheet .aoline")) === "Bank " + tk(1100, "-") + " · loan " + tk(1000) + " + charges " + tk(100),
+      "prefilled ৳1,100.00, the line: ● Bank −৳1,100.00 · loan ৳1,000.00 + charges ৳100.00 " +
+        (await txt("#sheet .aoline"))
+    );
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "20");
+    ok(
+      (await txt("#sheet .aocard .aoprev")) ===
+        "Bank " + tk(1120, "-") + " · loan " + tk(1000) + " + charges " + tk(100) + " + transfer charge " + tk(20),
+      "with a transfer charge too: … + transfer charge ৳20.00 " + (await txt("#sheet .aocard .aoprev"))
+    );
+    await tap('#sheet [data-act="addon-remove"][data-v="xcharge"]');
+    await tap('#sheet [data-act="loan-pay"]');
+    ok(
+      (await snackText()).startsWith("Paid back " + tk(1100) + ", incl. " + tk(100) + " charges · all cleared"),
+      "message: Paid back ৳1,100.00, incl. ৳100.00 charges " + (await snackText())
+    );
+    await open("S");
+    ok(
+      (await raw("#sheet .list .tx.exp .more")).includes("incl. " + (await mr(100)) + "\u00a0charges"),
+      "its line: “incl. ৳100.00 charges”"
+    );
+
+    // an older paid fee: kept, shown as its charge card on the payment's edit, editable and removable
+    await open("ON");
+    ok(
+      (await raw("#sheet .list .tx.exp .more")).includes((await mr(10)) + "\u00a0charge"),
+      "Ona's older paid fee on its line"
+    );
+    await page.evaluate(() => loanDrawEdit("oP"));
+    await page.waitForTimeout(120);
+    ok(
+      (await page.inputValue("#sheet2 #ed-charge")) === "10.00" &&
+        (await txt("#sheet2 .aocard .aol")) === "Charge" &&
+        !(await visible('#sheet2 [data-act="addon-add"][data-v="extra"]')) &&
+        (await txt("#sheet2 .aocard .aoprev")) ===
+          "Cash " + tk(2990, "+") + " · lending " + tk(3000) + " − charge " + tk(10),
+      "its edit: the Charge card, ● Cash +৳2,990.00 · lending ৳3,000.00 − charge ৳10.00, no + Add an extra " +
+        (await txt("#sheet2 .aocard .aoprev"))
+    );
+    await typeIn("#sheet2 #ed-charge", "12");
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    ok(
+      d.txns.find(t => t.id === "oPf").amount === 12 && d.txns.find(t => t.id === "oP").feeId === "oPf",
+      "the paid fee is editable: ৳12.00"
+    );
+    await open("ON");
+    await page.evaluate(() => loanDrawEdit("oP"));
+    await page.waitForTimeout(120);
+    await tap('#sheet2 [data-act="addon-remove"][data-v="charge"]');
+    ok(
+      (await visible('#sheet2 [data-act="addon-add"][data-v="extra"]')) &&
+        !(await visible('#sheet2 [data-act="addon-add"][data-v="charge"]')),
+      "✕ removes it, and + Add an extra comes instead (never + Charge again)"
+    );
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    ok(!d.txns.some(t => t.id === "oPf") && !d.txns.find(t => t.id === "oP").feeId, "… saved without it");
+
+    // a draw's edit: its cards, its transfer charge and onTop changed; never more paid back than owed
+    await open("R");
+    await page.evaluate(() => loanDrawEdit("rD"));
+    await page.waitForTimeout(120);
+    ok(
+      (await page.inputValue("#sheet2 #ed-charge")) === "100.00" &&
+        (await page.inputValue("#sheet2 #ed-extra")) === "150.00" &&
+        (await page.getAttribute("#sheet2 .aocard", "aria-label")) === "Transfer charge and extra",
+      "Rafi's draw: one card, Transfer charge and Extra"
+    );
+    ok(
+      (await txt("#sheet2 .aocard .aoprev")) === "Bkash " + tk(1100, "-") + " · Rafi owes " + tk(1250),
+      "… its preview, as the lend form's: ● Bkash −৳1,100.00 · Rafi owes ৳1,250.00 " +
+        (await txt("#sheet2 .aocard .aoprev"))
+    );
+    await typeIn("#sheet2 #ed-charge", "120");
+    await typeIn("#sheet2 #ed-extra", "200");
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    ok(
+      d.txns.find(t => t.id === "rDc").amount === 120 &&
+        d.txns.find(t => t.id === "rD").onTop === 200 &&
+        (await info("R")).total === 1320,
+      "editing the draw changes its transfer charge and its extra: owed ৳1,320.00 " + J(await info("R"))
+    );
+    await open("N");
+    await page.evaluate(() => loanDrawEdit("nD"));
+    await page.waitForTimeout(120);
+    await tap('#sheet2 [data-act="addon-remove"][data-v="extra"]');
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("Already paid back " + tk(1200)) && d.txns.find(t => t.id === "nD").onTop === 150,
+      "Nila paid back ৳1,200.00: the extra can't go (৳1,100.00 would be less) " + (await snackText())
+    );
+    await page.evaluate(() => closeSheet2());
+    await page.evaluate(() => loanDrawEdit("nD"));
+    await page.waitForTimeout(120);
+    await tap('#sheet2 [data-act="addon-remove"][data-v="xcharge"]');
+    await tap('#sheet2 [data-act="loandraw-save"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("Already paid back") && d.txns.some(t => t.id === "nDc"),
+      "… nor the transfer charge (৳1,150.00) " + (await snackText())
+    );
+    await page.evaluate(() => closeSheet2());
+    await open("MY");
+    await page.evaluate(() => loanDrawEdit("mD"));
+    await page.waitForTimeout(120);
+    ok(
+      (await visible('#sheet2 [data-act="addon-add"][data-v="charges"]')) &&
+        (await txt('#sheet2 [data-act="addon-add"][data-v="charges"]')) === "Add charges",
+      "a borrow's draw: + Add charges"
+    );
+    await page.evaluate(() => closeSheet2());
+    await open("S");
+    await page.evaluate(() => loanDrawEdit("sD"));
+    await page.waitForTimeout(120);
+    ok(
+      (await page.inputValue("#sheet2 #ed-charge")) === "100.00" &&
+        (await txt("#sheet2 .aocard .aol")) === "Charges" &&
+        (await txt("#sheet2 .aocard .aoprev")) === "Bank " + tk(1000, "+") + " · you owe Sam " + tk(1100),
+      "Sam's draw: the Charges card, ● Bank +৳1,000.00 · you owe Sam ৳1,100.00 " +
+        (await txt("#sheet2 .aocard .aoprev"))
+    );
+    await page.evaluate(() => closeSheet2());
+    // deleting the loan takes every add-on along
+    await open("R");
+    await tap('#sheet [data-act="loan-del"]');
+    if (await visible('#pop [data-act="ask-ok"]')) await tap('#pop [data-act="ask-ok"]');
+    d = await db();
+    ok(
+      !d.loans.some(l => l.id === "R") && !d.txns.some(t => t.loan === "R" || t.id === "rDc"),
+      "deleting Rafi's lending deletes its transfer charge"
+    );
+    ok(!d.txns.some(t => t.feeOf && !d.txns.some(y => y.id === t.feeOf)), "no add-on left without its entry");
+
+    // Got it all / Paid it all: everything left, with the payment's message
+    await fresh();
+    await page.evaluate(() => clearLoan("R"));
+    await page.waitForTimeout(120);
+    await tap('#pop [data-act="ask-ok"]');
+    d = await db();
+    ok(
+      (await snackText()).startsWith("Got back " + tk(1250) + ", incl. " + tk(150) + " extra · all cleared") &&
+        d.txns.some(t => t.loan === "R" && !t.principal && t.amount === 1250),
+      "Got it all back: ৳1,250.00, incl. ৳150.00 extra · all cleared " + (await snackText())
+    );
+    await page.evaluate(() => clearLoan("S"));
+    await page.waitForTimeout(120);
+    await tap('#pop [data-act="ask-ok"]');
+    ok(
+      (await snackText()).startsWith("Paid back " + tk(1100) + ", incl. " + tk(100) + " charges · all cleared"),
+      "Paid it all back: ৳1,100.00, incl. ৳100.00 charges · all cleared " + (await snackText())
+    );
+
+    // a charge setAddOn() refuses is never dropped silently: nothing is saved, and it says so
+    await fresh();
+    await open("MY");
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "20");
+    await page.evaluate(() => {
+      window.__setAddOn = setAddOn;
+      setAddOn = () => false;
+    });
+    await tap('#sheet [data-act="loan-pay"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("That charge isn't a number") && !d.txns.some(t => t.loan === "MY" && !t.principal),
+      "a payment whose charge is refused is not saved " + (await snackText())
+    );
+    await page.evaluate(() => closeSheet());
+    await page.evaluate(() => trSheet());
+    await page.waitForTimeout(120);
+    await typeIn("#sheet #f-amt", "100");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "5");
+    await tap('#sheet [data-act="tr-save"]');
+    d = await db();
+    ok(
+      (await snackText()).includes("That charge isn't a number") && !d.txns.some(t => t.type === "transfer"),
+      "nor a transfer whose charge is refused " + (await snackText())
+    );
+    await page.evaluate(() => {
+      setAddOn = window.__setAddOn;
+      closeSheet();
+    });
+  } catch (e) {
+    ok(false, "The loan sheet: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

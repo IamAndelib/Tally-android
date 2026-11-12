@@ -315,10 +315,6 @@
     "both": "Расходы и доходы",
     "none": "Без итогов"
   },
-  "fee": {
-    "label": "Комиссия ({{cur}}) · не считается расходом",
-    "notNumber": "Комиссия должна быть числом"
-  },
   "xcharge": {
     "label": "Комиссия за перевод",
     "calc": "Калькулятор для комиссии за перевод",
@@ -342,10 +338,21 @@
     "add": "Добавить доплату",
     "label": "Доплата",
     "calc": "Калькулятор для доплаты",
-    "remove": "Убрать доплату"
+    "remove": "Убрать доплату",
+    "notNumber": "Доплата должна быть числом",
+    "negative": "Доплата не может быть отрицательной"
   },
   "addOn": {
     "both": "Комиссия за перевод и доплата"
+  },
+  "prev": {
+    "loanX": "долг {{amount}} + комиссия за перевод {{charge}}",
+    "loanCharges": "долг {{amount}} + комиссии {{charges}}",
+    "loanChargesX": "долг {{amount}} + комиссии {{charges}} + комиссия за перевод {{charge}}",
+    "lendExtra": "долг {{amount}} + доплата {{extra}}",
+    "lendOff": "долг {{amount}} − комиссия {{charge}}",
+    "owes": "{{who}}: долг {{amount}}",
+    "youOweWho": "вы должны: {{who}}, {{amount}}"
   },
   "loan": {
     "noDueYet": "Срок пока не указан",
@@ -393,7 +400,6 @@
     "paidBackQ": "Вы вернули часть?",
     "partOk": "Можно и частично.",
     "noPayAccount": "Нет счёта в {{cur}}, чтобы записать платёж: добавьте его или верните счёт из архива.",
-    "addFee": "Добавить комиссию (перевод, снятие)",
     "record": "Записать платёж",
     "drawLent": "Дали в долг со счёта {{account}}, {{date}}",
     "drawBorrowed": "Взяли в долг на счёт {{account}}, {{date}}",
@@ -402,7 +408,13 @@
     "paidOff": "погашено",
     "intoAcc": "на счёт {{account}}",
     "fromAcc": "со счёта {{account}}",
-    "feeAmt": "комиссия {{amount}}",
+    "xchargeAmt": "комиссия за перевод {{amount}}",
+    "chargeAmt": "комиссия {{amount}}",
+    "chargesAmt": "комиссии {{amount}}",
+    "extraAmt": "доплата {{amount}}",
+    "extraIncl": "вкл. доплату {{amount}}",
+    "chargesIncl": "вкл. комиссии {{amount}}",
+    "tipAmt": "+доплата {{amount}}",
     "clearedLend": "долг возвращён полностью",
     "clearedBorrow": "долг погашен полностью",
     "leftAfter": "после этого осталось {{amount}}",
@@ -430,7 +442,6 @@
     "whoLend": "Кому вы дали в долг?",
     "whoBorrow": "Кто дал вам в долг?",
     "feeNote": "Комиссия за платёж",
-    "feeNegative": "Комиссия не может быть отрицательной",
     "noAccountIn": "Нет счёта в {{cur}}",
     "noAccountRecord": "Нет счёта в {{cur}}, чтобы записать платёж",
     "msg": {
@@ -440,7 +451,12 @@
       "writtenOff": "Списано",
       "forgiven": "Отмечен как прощённый",
       "gotBack": "Вам вернули {{amount}}",
+      "gotBackTip": "Вам вернули {{amount}} + доплата {{extra}}",
+      "gotBackIncl": "Вам вернули {{amount}}, вкл. доплату {{extra}}",
       "paidBack": "Вы вернули {{amount}}",
+      "paidBackX": "Вы вернули {{amount}} + комиссия за перевод {{charge}}",
+      "paidBackIncl": "Вы вернули {{amount}}, вкл. комиссии {{charges}}",
+      "paidBackInclX": "Вы вернули {{amount}}, вкл. комиссии {{charges}} + комиссия за перевод {{charge}}",
       "allCleared": "долг закрыт",
       "owesAgain": "{{who}}: вам снова должны {{amount}}",
       "oweAgain": "{{who}}: вы снова должны {{amount}}"

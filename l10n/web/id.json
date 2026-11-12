@@ -312,10 +312,6 @@
     "both": "Pengeluaran + pemasukan",
     "none": "Tanpa statistik"
   },
-  "fee": {
-    "label": "Biaya ({{cur}}) · tidak dihitung sebagai pengeluaran",
-    "notNumber": "Biaya itu bukan angka"
-  },
   "xcharge": {
     "label": "Biaya transfer",
     "calc": "Kalkulator untuk biaya transfer",
@@ -339,10 +335,21 @@
     "add": "Tambah jumlah tambahan",
     "label": "Tambahan",
     "calc": "Kalkulator untuk tambahan",
-    "remove": "Hapus tambahan"
+    "remove": "Hapus tambahan",
+    "notNumber": "Tambahan itu bukan angka",
+    "negative": "Tambahan tidak boleh negatif"
   },
   "addOn": {
     "both": "Biaya transfer dan tambahan"
+  },
+  "prev": {
+    "loanX": "utang {{amount}} + biaya transfer {{charge}}",
+    "loanCharges": "utang {{amount}} + biaya {{charges}}",
+    "loanChargesX": "utang {{amount}} + biaya {{charges}} + biaya transfer {{charge}}",
+    "lendExtra": "piutang {{amount}} + tambahan {{extra}}",
+    "lendOff": "piutang {{amount}} − biaya {{charge}}",
+    "owes": "{{who}} berutang {{amount}}",
+    "youOweWho": "utang ke {{who}} {{amount}}"
   },
   "loan": {
     "noDueYet": "Belum ada jatuh tempo",
@@ -384,7 +391,6 @@
     "paidBackQ": "Sudah bayar sebagian?",
     "partOk": "Sebagian juga tidak apa-apa.",
     "noPayAccount": "Tidak ada akun dalam {{cur}} untuk mencatatnya: tambahkan satu, atau tampilkan lagi akun yang diarsipkan.",
-    "addFee": "Tambah biaya (kirim, tarik tunai)",
     "record": "Catat pembayaran",
     "drawLent": "Dipinjamkan dari {{account}} pada {{date}}",
     "drawBorrowed": "Dipinjam, masuk ke {{account}} pada {{date}}",
@@ -393,7 +399,13 @@
     "paidOff": "lunas",
     "intoAcc": "ke {{account}}",
     "fromAcc": "dari {{account}}",
-    "feeAmt": "biaya {{amount}}",
+    "xchargeAmt": "biaya transfer {{amount}}",
+    "chargeAmt": "biaya {{amount}}",
+    "chargesAmt": "biaya {{amount}}",
+    "extraAmt": "tambahan {{amount}}",
+    "extraIncl": "termasuk tambahan {{amount}}",
+    "chargesIncl": "termasuk biaya {{amount}}",
+    "tipAmt": "+tambahan {{amount}}",
     "clearedLend": "piutang ini jadi lunas",
     "clearedBorrow": "utang ini jadi lunas",
     "leftAfter": "sisa {{amount}} setelah ini",
@@ -421,7 +433,6 @@
     "whoLend": "Kamu pinjamkan ke siapa?",
     "whoBorrow": "Kamu pinjam dari siapa?",
     "feeNote": "Biaya pembayaran",
-    "feeNegative": "Biaya tidak boleh negatif",
     "noAccountIn": "Tidak ada akun dalam {{cur}}",
     "noAccountRecord": "Tidak ada akun dalam {{cur}} untuk mencatatnya",
     "msg": {
@@ -431,7 +442,12 @@
       "writtenOff": "Diikhlaskan",
       "forgiven": "Ditandai dibebaskan",
       "gotBack": "{{amount}} diterima kembali",
+      "gotBackTip": "{{amount}} diterima kembali + tambahan {{extra}}",
+      "gotBackIncl": "{{amount}} diterima kembali, termasuk tambahan {{extra}}",
       "paidBack": "{{amount}} dibayar",
+      "paidBackX": "{{amount}} dibayar + biaya transfer {{charge}}",
+      "paidBackIncl": "{{amount}} dibayar, termasuk biaya {{charges}}",
+      "paidBackInclX": "{{amount}} dibayar, termasuk biaya {{charges}} + biaya transfer {{charge}}",
       "allCleared": "semua lunas",
       "owesAgain": "{{who}} kembali berutang {{amount}} padamu",
       "oweAgain": "Kamu kembali berutang {{amount}} pada {{who}}"

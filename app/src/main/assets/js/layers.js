@@ -329,6 +329,7 @@ function dpSet(v) {
   closePop();
   if (!el) return;
   setDateField(el, v);
+  formPreview(); // a payment's day changes what it covers
   if (id === "f-due2" && F && F.kind === "loan") {
     /* the loan card's day: every draw still owed that's due by then (or by the day it showed, if later) moves to it,
        as a reminder's +1 day does; without any due day, the draw it's about. The sheet is drawn again. */

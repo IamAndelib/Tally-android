@@ -844,6 +844,20 @@ function txLine(t) {
     opened
   );
 }
+/* a loan's parts as chips (lend-refine), [[label key, amount]]: each a small outlined box, its label over its figure */
+const partChips = (parts, cur) =>
+  '<div class="lparts">' +
+  parts
+    .map(
+      ([k, v]) =>
+        '<div class="lpart"><span class="lpc">' +
+        TH(k) +
+        '</span><span class="lpv">' +
+        esc(money(v, cur)) +
+        "</span></div>"
+    )
+    .join("") +
+  "</div>";
 /* What an opened row adds to what the row shows: when it was written down, the balance it left (after its add-on), what a
    transfer or a loan adds, and the actions. A box is a small label over a bold figure; an account is named only to tell
    two balances apart. Never a total beside one of its parts (docs/specs/charges.md, "History rows"): the first box may
@@ -923,20 +937,7 @@ function txOpenView(t) {
       const parts = [[lend ? "tx.lent" : "tx.borrowed", t.amount]];
       if (f && f.type === "loan") parts.push(["tx.xcharge", f.amount]);
       if (t.onTop) parts.push([lend ? "tx.extra" : "tx.charges", t.onTop]);
-      if (parts.length > 1)
-        inBox =
-          '<div class="lparts">' +
-          parts
-            .map(
-              ([k, v]) =>
-                '<div class="lpart"><span class="lpc">' +
-                TH(k) +
-                '</span><span class="lpv">' +
-                M(v, cur) +
-                "</span></div>"
-            )
-            .join("") +
-          "</div>";
+      if (parts.length > 1) inBox = partChips(parts, cur);
       if (t.due && i.rem[t.id] > 0) boxes.push(box(TH("tx.due"), esc(shortDay(t.due))));
     } else {
       if (i.open && i.moneyLeft > 0 && i.topLeft > 0)

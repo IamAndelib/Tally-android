@@ -312,10 +312,6 @@
     "both": "支出 + 收入",
     "none": "不显示统计"
   },
-  "fee": {
-    "label": "手续费（{{cur}}）· 不计入支出",
-    "notNumber": "手续费不是有效的数字"
-  },
   "xcharge": {
     "label": "转账费用",
     "calc": "转账费用计算器",
@@ -339,10 +335,21 @@
     "add": "添加额外款",
     "label": "额外款",
     "calc": "额外款计算器",
-    "remove": "移除额外款"
+    "remove": "移除额外款",
+    "notNumber": "额外款不是有效的数字",
+    "negative": "额外款不能为负"
   },
   "addOn": {
     "both": "转账费用和额外款"
+  },
+  "prev": {
+    "loanX": "借入{{amount}} + 转账费用{{charge}}",
+    "loanCharges": "借入{{amount}} + 费用{{charges}}",
+    "loanChargesX": "借入{{amount}} + 费用{{charges}} + 转账费用{{charge}}",
+    "lendExtra": "借出{{amount}} + 额外款{{extra}}",
+    "lendOff": "借出{{amount}} − 费用{{charge}}",
+    "owes": "{{who}}欠{{amount}}",
+    "youOweWho": "你欠{{who}}{{amount}}"
   },
   "loan": {
     "noDueYet": "还没有到期日",
@@ -384,7 +391,6 @@
     "paidBackQ": "还了一些？",
     "partOk": "只还一部分也可以。",
     "noPayAccount": "没有{{cur}}账户可以记录：请添加一个，或重新显示已归档的账户。",
-    "addFee": "添加手续费（转账费、提现）",
     "record": "记录还款",
     "drawLent": "{{date}}从{{account}}借出",
     "drawBorrowed": "{{date}}借入到{{account}}",
@@ -393,7 +399,13 @@
     "paidOff": "已还清",
     "intoAcc": "存入{{account}}",
     "fromAcc": "从{{account}}付款",
-    "feeAmt": "手续费{{amount}}",
+    "xchargeAmt": "转账费用{{amount}}",
+    "chargeAmt": "费用{{amount}}",
+    "chargesAmt": "费用{{amount}}",
+    "extraAmt": "额外款{{amount}}",
+    "extraIncl": "含额外款{{amount}}",
+    "chargesIncl": "含费用{{amount}}",
+    "tipAmt": "+额外款{{amount}}",
     "clearedLend": "借出已结清",
     "clearedBorrow": "借入已结清",
     "leftAfter": "还剩{{amount}}",
@@ -421,7 +433,6 @@
     "whoLend": "你借给了谁？",
     "whoBorrow": "谁借给你的？",
     "feeNote": "还款手续费",
-    "feeNegative": "手续费不能为负",
     "noAccountIn": "没有{{cur}}账户",
     "noAccountRecord": "没有{{cur}}账户可以记录",
     "msg": {
@@ -431,7 +442,12 @@
       "writtenOff": "已记为坏账",
       "forgiven": "已标记为免还",
       "gotBack": "已收回{{amount}}",
+      "gotBackTip": "已收回{{amount}} + 额外款{{extra}}",
+      "gotBackIncl": "已收回{{amount}}，含额外款{{extra}}",
       "paidBack": "已还款{{amount}}",
+      "paidBackX": "已还款{{amount}} + 转账费用{{charge}}",
+      "paidBackIncl": "已还款{{amount}}，含费用{{charges}}",
+      "paidBackInclX": "已还款{{amount}}，含费用{{charges}} + 转账费用{{charge}}",
       "allCleared": "已全部结清",
       "owesAgain": "{{who}}又欠你{{amount}}了",
       "oweAgain": "你又欠{{who}}{{amount}}了"

@@ -314,10 +314,6 @@
     "both": "Gastos + entradas",
     "none": "Nada"
   },
-  "fee": {
-    "label": "Taxa cobrada ({{cur}}) · não conta como gasto",
-    "notNumber": "Essa taxa não é um número"
-  },
   "xcharge": {
     "label": "Taxa de transferência",
     "calc": "Calculadora da taxa de transferência",
@@ -341,10 +337,21 @@
     "add": "Adicionar um extra",
     "label": "Extra",
     "calc": "Calculadora do extra",
-    "remove": "Remover o extra"
+    "remove": "Remover o extra",
+    "notNumber": "Esse extra não é um número",
+    "negative": "Um extra não pode ser negativo"
   },
   "addOn": {
     "both": "Taxa de transferência e extra"
+  },
+  "prev": {
+    "loanX": "dívida {{amount}} + taxa de transferência {{charge}}",
+    "loanCharges": "dívida {{amount}} + taxas {{charges}}",
+    "loanChargesX": "dívida {{amount}} + taxas {{charges}} + taxa de transferência {{charge}}",
+    "lendExtra": "empréstimo {{amount}} + extra {{extra}}",
+    "lendOff": "empréstimo {{amount}} − taxa {{charge}}",
+    "owes": "{{who}} deve {{amount}}",
+    "youOweWho": "você deve {{amount}} a {{who}}"
   },
   "loan": {
     "noDueYet": "Ainda sem vencimento",
@@ -390,7 +397,6 @@
     "paidBackQ": "Devolveu uma parte?",
     "partOk": "Uma parte também vale.",
     "noPayAccount": "Nenhuma conta em {{cur}} para registrar: adicione uma ou mostre de novo uma arquivada.",
-    "addFee": "Adicionar taxa (envio, saque)",
     "record": "Registrar pagamento",
     "drawLent": "Emprestado de {{account}} em {{date}}",
     "drawBorrowed": "Entrou em {{account}} em {{date}}",
@@ -399,7 +405,13 @@
     "paidOff": "quitado",
     "intoAcc": "para {{account}}",
     "fromAcc": "de {{account}}",
-    "feeAmt": "taxa de {{amount}}",
+    "xchargeAmt": "taxa de transferência de {{amount}}",
+    "chargeAmt": "taxa de {{amount}}",
+    "chargesAmt": "taxas de {{amount}}",
+    "extraAmt": "extra de {{amount}}",
+    "extraIncl": "incl. extra de {{amount}}",
+    "chargesIncl": "incl. taxas de {{amount}}",
+    "tipAmt": "+extra de {{amount}}",
     "clearedLend": "isto quitou o empréstimo",
     "clearedBorrow": "isto quitou a dívida",
     "leftAfter": "faltam {{amount}} depois disto",
@@ -427,7 +439,6 @@
     "whoLend": "Para quem você emprestou?",
     "whoBorrow": "Quem emprestou o dinheiro a você?",
     "feeNote": "Taxa do pagamento",
-    "feeNegative": "A taxa não pode ser negativa",
     "noAccountIn": "Nenhuma conta em {{cur}}",
     "noAccountRecord": "Nenhuma conta em {{cur}} para registrar",
     "msg": {
@@ -437,7 +448,12 @@
       "writtenOff": "Dado como perdido",
       "forgiven": "Marcada como perdoada",
       "gotBack": "{{amount}} recebido de volta",
+      "gotBackTip": "{{amount}} recebido de volta + extra de {{extra}}",
+      "gotBackIncl": "{{amount}} recebido de volta, incl. extra de {{extra}}",
       "paidBack": "{{amount}} devolvido",
+      "paidBackX": "{{amount}} devolvido + taxa de transferência de {{charge}}",
+      "paidBackIncl": "{{amount}} devolvido, incl. taxas de {{charges}}",
+      "paidBackInclX": "{{amount}} devolvido, incl. taxas de {{charges}} + taxa de transferência de {{charge}}",
       "allCleared": "tudo quitado",
       "owesAgain": "{{who}} deve {{amount}} a você de novo",
       "oweAgain": "Você deve {{amount}} a {{who}} de novo"

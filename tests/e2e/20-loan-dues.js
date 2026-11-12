@@ -266,6 +266,29 @@ const ok = (c, m) => {
   });
   ok((await rem()).dues.length === 0, "the due reminders switch turns the monthly ones off too");
 
+  // ---- what is due counts what a draw owes on top (a lend's extra): the reminder, the payment card's amount, its line
+  await page.evaluate(() => closePop());
+  await seed(
+    [lend("X", "Rafi", d.m3)],
+    [Object.assign(draw("x1", "X", 300, d.m3, d.m1), { onTop: 50 }), draw("x2", "X", 1000, d.t, d.p5)]
+  );
+  await page.reload();
+  await settle();
+  i = await info("X");
+  r = (await rem()).dues;
+  ok(
+    i.dueAmt === 350 && i.left === 1350 && (r.find(x => x.id === "X") || {}).amount === (await m(350)),
+    "300 + 50 extra due yesterday: 350 due, 1,350 in all, the reminder asks for 350 " + JSON.stringify([i, r])
+  );
+  await page.evaluate(() => loanOpen("X"));
+  await settle();
+  const xline = (await page.textContent("#sheet .aoline")).replace(/\u2060/g, "").trim();
+  ok(
+    (await page.inputValue("#f-amt")) === "350.00" &&
+      xline === "bKash +" + (await m(350)) + " · lending " + (await m(300)) + " + extra " + (await m(50)),
+    "the payment card: prefilled with the 350 due, the line naming the extra it covers " + JSON.stringify(xline)
+  );
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

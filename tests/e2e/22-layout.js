@@ -997,8 +997,63 @@ function inspect() {
     );
     await shot("loan-fee", async () => {
       await page.evaluate(() => loanOpen("L1"));
-      await page.click('#sheet [data-act="add-fee"]');
+      await page.click('#sheet [data-act="addon-add"]');
     });
+    /* the loan sheet with add-ons (docs/specs/charges.md, "The loan sheet"): the chips under its figure and its history
+       lines; the payment card with a tip (the preview in its card) and a loan's payment covering its charges with a
+       transfer charge; the Edit of a lend's draw (one card, two rows) and of a payment with its tip */
+    const loanLook = (id, step, want) => async () => {
+      await page.evaluate(
+        ([id, step]) => {
+          /* a lending with a transfer charge and an extra, part paid back with a tip on top, and a loan with charges on
+             top (made here: the History rows' loans above don't last until now) */
+          if (!loan("L7")) {
+            const d = today(),
+              e = (id, type, amount, account, more) =>
+                S.txns.push({ id, ts: 9900 + S.txns.length, date: d, type, amount, account, note: "", ...more });
+            S.loans.push(
+              { id: "L7", kind: "lend", person: "Maximiliane Hoffmann-Lindqvist", account: "c", date: d, note: "" },
+              { id: "L8", kind: "borrow", person: "Maya", account: "b", date: d, note: "" }
+            );
+            S.loans.slice(-2).forEach(l => (l.status = "open"));
+            e("c7d", "loan", 1000, "c", { dir: "out", loan: "L7", principal: true, onTop: 150, feeId: "c7c" });
+            e("c7c", "loan", 100, "c", { dir: "out", loan: "L7", principal: true, feeOf: "c7d" });
+            e("c7p", "loan", 500, "c", { dir: "in", loan: "L7", feeId: "c7t" });
+            e("c7t", "income", 25, "c", { cat: "otherin", feeOf: "c7p" });
+            e("c8d", "loan", 1000, "b", { dir: "in", loan: "L8", principal: true, onTop: 100 });
+            save();
+          }
+          loanOpen(id);
+          if (step === "tip" || step === "charge") {
+            $('#sheet [data-act="addon-add"][data-v="' + (step === "tip" ? "extra" : "xcharge") + '"]').click();
+            $(step === "tip" ? "#f-extra" : "#f-charge").value = step === "tip" ? "25" : "5";
+          } else if (step) loanDrawEdit(step);
+          formPreview();
+          if (document.activeElement) document.activeElement.blur();
+        },
+        [id, step]
+      );
+      const bad = await page.evaluate(want => {
+        const out = [],
+          top = $("#sheet2 .p") || $("#sheet .p"),
+          card = top.querySelector(".aocard:not([hidden])"),
+          line = top.querySelector(".aoline");
+        if (want.chips && $("#sheet .hero .lparts").children.length !== want.chips)
+          out.push("not " + want.chips + " chips");
+        if (want.rows && (!card || card.querySelectorAll(".aorow:not([hidden])").length !== want.rows))
+          out.push("no card with " + want.rows + " rows");
+        if (want.prev && !(card ? card.querySelector(".aoprev").textContent : line && line.textContent))
+          out.push("no preview");
+        if (card && line && line.textContent) out.push("the preview shown twice");
+        return out;
+      }, want);
+      if (bad.length) throw new Error("loan sheet " + id + ": " + bad.join("; "));
+    };
+    await shot("loan-chips", loanLook("L7", "", { chips: 3, prev: true }));
+    await shot("loan-pay-tip", loanLook("L7", "tip", { chips: 3, rows: 1, prev: true }));
+    await shot("loan-pay-charges", loanLook("L8", "charge", { chips: 2, rows: 1, prev: true }));
+    await shot("loan-edit-draw", loanLook("L7", "c7d", { rows: 2, prev: true }));
+    await shot("loan-edit-tip", loanLook("L7", "c7p", { rows: 1, prev: true }));
     await shot(
       "summary",
       ev(() => summarySheet())
@@ -1087,7 +1142,7 @@ function inspect() {
     );
     await shot("loan-fee", async () => {
       await page.evaluate(() => loanOpen("L1"));
-      await page.click('#sheet [data-act="add-fee"]');
+      await page.click('#sheet [data-act="addon-add"]');
     });
     await shot(
       "draw-edit",

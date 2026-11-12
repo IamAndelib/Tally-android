@@ -387,7 +387,7 @@ function sampleState(t) {
   );
   await shot("loan-fee", async () => {
     await page.evaluate(() => loanOpen("L1"));
-    await page.click('#sheet [data-act="add-fee"]');
+    await page.click('#sheet [data-act="addon-add"]');
   });
   await shot(
     "draw-edit",

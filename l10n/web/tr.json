@@ -313,10 +313,6 @@
     "both": "Harcama + gelir",
     "none": "İstatistik yok"
   },
-  "fee": {
-    "label": "Alınan masraf ({{cur}}) · harcamaya sayılmaz",
-    "notNumber": "Bu masraf bir sayı değil"
-  },
   "xcharge": {
     "label": "Transfer masrafı",
     "calc": "Transfer masrafı için hesap makinesi",
@@ -340,10 +336,21 @@
     "add": "Ekstra ekle",
     "label": "Ekstra",
     "calc": "Ekstra için hesap makinesi",
-    "remove": "Ekstrayı kaldır"
+    "remove": "Ekstrayı kaldır",
+    "notNumber": "Bu ekstra bir sayı değil",
+    "negative": "Ekstra eksi olamaz"
   },
   "addOn": {
     "both": "Transfer masrafı ve ekstra"
+  },
+  "prev": {
+    "loanX": "borç {{amount}} + transfer masrafı {{charge}}",
+    "loanCharges": "borç {{amount}} + masraflar {{charges}}",
+    "loanChargesX": "borç {{amount}} + masraflar {{charges}} + transfer masrafı {{charge}}",
+    "lendExtra": "alacak {{amount}} + ekstra {{extra}}",
+    "lendOff": "alacak {{amount}} − masraf {{charge}}",
+    "owes": "{{who}} {{amount}} borçlu",
+    "youOweWho": "{{who}} kişisine {{amount}} borçlusun"
   },
   "loan": {
     "noDueYet": "Henüz vade yok",
@@ -387,7 +394,6 @@
     "paidBackQ": "Bir kısmını ödedin mi?",
     "partOk": "Bir kısmı da olur.",
     "noPayAccount": "Kaydetmek için {{cur}} hesabı yok: bir tane ekle ya da arşivdekini tekrar göster.",
-    "addFee": "Masraf ekle (gönderim, para çekme)",
     "record": "Ödemeyi kaydet",
     "drawLent": "{{date}}: {{account}} hesabından verildi",
     "drawBorrowed": "{{date}}: {{account}} hesabına alındı",
@@ -396,7 +402,13 @@
     "paidOff": "ödendi",
     "intoAcc": "{{account}} hesabına",
     "fromAcc": "{{account}} hesabından",
-    "feeAmt": "{{amount}} masraf",
+    "xchargeAmt": "{{amount}} transfer masrafı",
+    "chargeAmt": "{{amount}} masraf",
+    "chargesAmt": "{{amount}} masraflar",
+    "extraAmt": "{{amount}} ekstra",
+    "extraIncl": "{{amount}} ekstra dahil",
+    "chargesIncl": "{{amount}} masraflar dahil",
+    "tipAmt": "+{{amount}} ekstra",
     "clearedLend": "bununla alacak kapandı",
     "clearedBorrow": "bununla borç kapandı",
     "leftAfter": "bundan sonra {{amount}} kaldı",
@@ -424,7 +436,6 @@
     "whoLend": "Kime borç verdin?",
     "whoBorrow": "Sana kim borç verdi?",
     "feeNote": "Ödeme masrafı",
-    "feeNegative": "Masraf eksi olamaz",
     "noAccountIn": "{{cur}} hesabı yok",
     "noAccountRecord": "Kaydetmek için {{cur}} hesabı yok",
     "msg": {
@@ -434,7 +445,12 @@
       "writtenOff": "Vazgeçildi",
       "forgiven": "Affedildi",
       "gotBack": "{{amount}} geri aldın",
+      "gotBackTip": "{{amount}} geri aldın + {{extra}} ekstra",
+      "gotBackIncl": "{{amount}} geri aldın, {{extra}} ekstra dahil",
       "paidBack": "{{amount}} geri ödedin",
+      "paidBackX": "{{amount}} geri ödedin + {{charge}} transfer masrafı",
+      "paidBackIncl": "{{amount}} geri ödedin, {{charges}} masraflar dahil",
+      "paidBackInclX": "{{amount}} geri ödedin, {{charges}} masraflar dahil + {{charge}} transfer masrafı",
       "allCleared": "hepsi kapandı",
       "owesAgain": "{{who}} yine sana {{amount}} borçlu",
       "oweAgain": "{{who}}: yine {{amount}} borcun var"
