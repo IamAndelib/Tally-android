@@ -35,7 +35,8 @@ locale, so texts only say “el {{date}}” and never assume a format.
 | net worth | patrimonio | |
 | category | categoría | |
 | payee (paid to / received from) | Pagado a / Recibido de | |
-| archive / archived | archivar / archivada | agrees with “cuenta” |
+| archive / archived / unarchive | archivar / archivada / desarchivar | agrees with “cuenta” |
+| Archived (the screen of archived entries) | Archivados | agrees with “movimientos” |
 | backup / auto backup / restore | copia / copia automática / restaurar | short for “copia de seguridad” |
 | evening nudge | aviso de la noche | |
 | balance check | revisión de saldos | |

@@ -514,7 +514,7 @@ const seed = () => ({
     });
     ok(r === "p1,p1t,sp,spc", "a restored backup keeps every mark: " + r);
     ok(canon(await page.evaluate(() => S.txns)) === canon(JSON.parse(s0).txns), "…and every entry as it was");
-    /* showing again takes the mark off the entry and its add-on */
+    /* unarchiving takes the mark off the entry and its add-on */
     await page.evaluate(() => {
       archiveEntries(["sp"], false);
       commit();
@@ -522,8 +522,9 @@ const seed = () => ({
     ok((await marked()) === "p1,p1t", "unarchived: the entry and its charge lose the mark " + (await marked()));
   }
 
-  // ---- 10. empty states: the entries sheet and Home's two-pane list say "Nothing written down yet." when every entry
-  // of the period is archived; so does the entries sheet right after its last row is archived from it
+  // ---- 10. empty states: the entries sheet and Home's two-pane list say "Every entry is archived." when every entry
+  // of the period is archived (Ruling J); so does the entries sheet right after its last row is archived from it. A
+  // period with no entries still says "Nothing written down yet." as before
   {
     await load();
     await page.evaluate(() => {
@@ -547,7 +548,7 @@ const seed = () => ({
     ok(
       (await marked()) === "bus,sp,spc" &&
         !(await page.$("#sheet .tx[data-v]")) &&
-        (await page.textContent("#sheet .empty").catch(() => "")) === "Nothing written down yet.",
+        (await page.textContent("#sheet .empty").catch(() => "")) === "Every entry is archived.",
       "archiving the last row from the entries sheet leaves its empty state"
     );
     await page.evaluate(() => {
@@ -556,9 +557,21 @@ const seed = () => ({
     });
     await pause();
     ok(
-      (await page.textContent("#sheet .empty").catch(() => "")) === "Nothing written down yet.",
+      (await page.textContent("#sheet .empty").catch(() => "")) === "Every entry is archived.",
       "the entries sheet with only archived entries shows its empty state"
     );
+    const none = await page.evaluate(() => {
+      closeSheet();
+      V.anchor = "2026-06-13"; // a day with no entries
+      render();
+      entriesSheet();
+      const e = (document.querySelector("#sheet .empty") || {}).textContent;
+      closeSheet();
+      V.anchor = today();
+      render();
+      return e;
+    });
+    ok(none === "Nothing written down yet.", "a day with no entries: “Nothing written down yet.” " + J(none));
     await page.evaluate(() => closeSheet());
     await page.setViewportSize({ width: 1000, height: 852 });
     await page.evaluate(() => {
@@ -572,8 +585,20 @@ const seed = () => ({
       empty: (document.querySelector("#app .empty") || {}).textContent,
     }));
     ok(
-      wide.panes && !wide.rows && wide.empty === "Nothing written down yet.",
+      wide.panes && !wide.rows && wide.empty === "Every entry is archived.",
       "Home's two-pane list at 1000px with only archived entries shows its empty state " + J(wide)
+    );
+    const wideNone = await page.evaluate(() => {
+      V.anchor = "2026-06-13";
+      render();
+      const e = (document.querySelector("#app .empty") || {}).textContent;
+      V.anchor = today();
+      render();
+      return e;
+    });
+    ok(
+      wideNone === "Nothing written down yet.",
+      "…and a day with no entries: “Nothing written down yet.” " + J(wideNone)
     );
     await page.setViewportSize({ width: 393, height: 852 });
     await pause();
@@ -905,6 +930,7 @@ const seed = () => ({
       V.sel = new Set();
       render();
     });
+    ok((await title()) === "0\u00a0selected", "the count and its word are joined, so the title wraps whole");
     ok(
       J(await bar()) ===
         J([
@@ -990,7 +1016,130 @@ const seed = () => ({
     await page.setViewportSize({ width: 393, height: 852 });
   }
 
+  // ---- 19. Delete counts the rows that go, archived or not, from an opened row and from a selection alike: the
+  // borrow's only draw takes its loan's payments, one of them archived
+  for (const how of ["row", "selection"]) {
+    const o = seed();
+    o.txns.push(x("bp2", 41, "2026-06-13", "loan", 20, "a", { dir: "out", loan: "B", archived: true }));
+    await load(o);
+    const s0 = await snap();
+    if (how === "row") await askRow("bd");
+    else {
+      await page.evaluate(() => {
+        V.sel = new Set(["bd"]);
+        render();
+      });
+      await page.click('[data-act="sel-del"]');
+      await pause();
+    }
+    await page.click("#pop .cd-destroy");
+    await pause();
+    ok(
+      (await page.evaluate(() => ["bd", "bp", "bp2"].every(id => !entry(id)) && !loan("B"))) &&
+        /^Deleted 3 entries/.test(await snackText()),
+      how + ": the draw, its payment and its archived payment go: “" + (await snackText()) + "”"
+    );
+    await undo();
+    ok((await snap()) === s0, how + ": Undo restores the exact state");
+  }
+
+  // ---- 20. Delete on the Archived screen goes through loanBlock(): the draw it refuses stays, and the message says why
+  {
+    const o = seed();
+    o.loans.push({ id: "M", kind: "lend", person: "Ann", account: "a", date: "2026-04-01", status: "open" });
+    o.txns.push(
+      x("m1", 60, "2026-04-01", "loan", 100, "a", { dir: "out", loan: "M", principal: true }),
+      x("m2", 61, "2026-04-05", "loan", 50, "a", { dir: "out", loan: "M", principal: true, archived: true }),
+      x("mp", 62, "2026-04-20", "loan", 120, "a", { dir: "in", loan: "M" })
+    );
+    await load(o);
+    const s0 = await snap();
+    await page.click('#app [data-act="arch-open"]');
+    await pause();
+    await openRow("m2");
+    await page.click('#app .txo [data-act="tx-del"]');
+    await pause();
+    ok(J((await shape()).btns) === J(["cd-destroy:Delete", "cd-out:Cancel"]), "Delete and Cancel");
+    await page.click("#pop .cd-destroy");
+    await pause();
+    ok(
+      (await snackText()).includes("already paid back") && (await snap()) === s0 && (await rows()).includes("m2"),
+      "the draw can't be deleted: “" + (await snackText()) + "”, nothing changes, its row stays"
+    );
+  }
+
+  // ---- 21. Back from the Archived screen puts History's row in view back where it was
+  {
+    const o = seed();
+    for (let i = 0; i < 40; i++)
+      o.txns.push(x("f" + i, 100 + i, "2026-06-1" + (i % 7), "expense", 1, "a", { cat: "food" }));
+    o.txns.find(t => t.id === "old").archived = true;
+    await load(o);
+    await page.setViewportSize({ width: 393, height: 500 });
+    await page.evaluate(async () => {
+      scrollTo(0, document.body.scrollHeight / 2);
+      await new Promise(r => setTimeout(r, 150));
+    });
+    await page.click('#app [data-act="arch-open"]');
+    await pause();
+    const a = await page.evaluate(() => ABACK.a); // the row in view as the screen opened (the tap may scroll first)
+    await page.click('#app [data-act="arch-back"]');
+    await pause();
+    const top = await page.evaluate(
+      v => document.querySelector('#app .tx[data-v="' + v + '"]').getBoundingClientRect().top,
+      a.v
+    );
+    ok(
+      (await page.evaluate(() => scrollY)) > 500 && Math.abs(top - a.top) <= 1,
+      "the row in view is back in place: " + J([a, top])
+    );
+    await page.setViewportSize({ width: 393, height: 852 });
+  }
+
+  // ---- 22. one action, one icon (Ruling I): an account's Archive and Unarchive and the Assets drop slots use the
+  // entries' outlined archive box
+  {
+    await load();
+    const icons = await page.evaluate(() => {
+      const path = h => {
+        const d = document.createElement("div");
+        d.innerHTML = h;
+        return d.querySelector("path").getAttribute("d");
+      };
+      const of = sel => {
+        const e = document.querySelector(sel);
+        return e && e.querySelector("path") ? e.querySelector("path").getAttribute("d") : null;
+      };
+      const out = { arch: path(icArchive()), unarch: path(icUnarchive()), old: "archive" in P };
+      V.screen = "assets";
+      render();
+      out.dropAcc = of('.dropbox[data-zone="acc"]');
+      out.dropArch = of('.dropbox[data-zone="arch"]');
+      accOpen("b");
+      out.accArch = of('#sheet [data-act="acc-arch"]');
+      closeSheet();
+      S.accounts.find(a => a.id === "b").archived = true;
+      accOpen("b");
+      out.accUnarch = of('#sheet [data-act="acc-unarch"]');
+      closeSheet();
+      S.accounts.find(a => a.id === "b").archived = false;
+      V.screen = "history";
+      render();
+      return out;
+    });
+    ok(
+      icons.accArch === icons.arch &&
+        icons.dropArch === icons.arch &&
+        icons.accUnarch === icons.unarch &&
+        icons.dropAcc === icons.unarch &&
+        !icons.old,
+      "an account's Archive and Unarchive and the drop slots use the outlined archive and unarchive " +
+        J({ ...icons, arch: undefined, unarch: undefined })
+    );
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
+
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");
   process.exitCode = fails ? 1 : 0;

@@ -38,7 +38,8 @@ the suffix instead (*{{account}} hesabından*, *{{cur}} hesabı*, *{{date}} tari
 | net worth | net varlık |
 | category | kategori |
 | payee (paid to / received from) | Ödenen / Gönderen |
-| archive / archived | arşivle / arşivde, arşivlendi |
+| archive / archived / unarchive | arşivle / arşivde, arşivlendi / arşivden çıkar |
+| Archived (the screen of archived entries) | Arşiv |
 | backup / auto backup / restore | yedek / otomatik yedek / geri yükle |
 | evening nudge | akşam hatırlatması |
 | balance check | bakiye kontrolü |

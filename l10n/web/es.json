@@ -782,9 +782,9 @@
   },
   "history": {
     "stopSel": "Dejar de seleccionar",
-    "selected_one": "{{count}} seleccionado",
+    "selected_one": "{{count}} seleccionado",
     "selected_many": "{{count}} seleccionados",
-    "selected_other": "{{count}} seleccionados",
+    "selected_other": "{{count}} seleccionados",
     "selAll": "Seleccionar todo",
     "clearSel": "Borrar selección",
     "delSel": "Eliminar selección",

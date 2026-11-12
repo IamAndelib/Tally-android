@@ -666,14 +666,16 @@ document.addEventListener("click", ev => {
           snack(no);
           return;
         }
-        let n = 0; // the rows that went (a deleted loan's payments go with it), counted as listed: an add-on is in its entry
+        /* the rows that went (a deleted loan's payments go with it), archived or not: an add-on is in its entry (as
+           Delete in an opened row counts them) */
+        let n = 0;
         withUndo(
           () => (arch ? T("entries.archived") : T("history.deleted", { count: n })),
           () => {
-            n = histRows(S.txns).length;
+            n = entryRows(S.txns).length;
             if (arch) archiveEntries(ids, true);
             else deleteEntries(ids);
-            n -= histRows(S.txns).length;
+            n -= entryRows(S.txns).length;
             V.sel = null;
           }
         );

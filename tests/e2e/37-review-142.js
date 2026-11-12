@@ -155,7 +155,7 @@ const ok = (c, m) => {
     });
     ok(r.payee, "a payee longer than the box takes isn't cut by an edit of the amount");
     ok(
-      r.afterUndo === "t1" && r.header === "1 selected",
+      r.afterUndo === "t1" && r.header === "1\u00a0selected",
       "after Undo only the listed entry stays selected: " + r.header
     );
     ok(

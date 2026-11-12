@@ -36,7 +36,8 @@ quotes are « … » with no-break spaces inside, and a no-break space (U+00A0) 
 | net worth | patrimoine net |
 | category | catégorie |
 | payee (paid to / received from) | Payé à / Reçu de |
-| archive / archived | archiver / archivé (unarchive: réafficher) |
+| archive / archived / unarchive | archiver / archivé / désarchiver |
+| Archived (the screen of archived entries) | Archivées (opérations) |
 | backup / auto backup / restore | sauvegarde / sauvegarde auto / restaurer |
 | evening nudge | rappel du soir |
 | balance check | point sur les soldes |

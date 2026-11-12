@@ -39,7 +39,8 @@ Tally обращается к пользователю на «вы», со ст�
 | net worth | капитал |
 | category | категория |
 | payee (paid to / received from) | Кому / От кого |
-| archive / archived | архив, отправить в архив / в архиве |
+| archive / archived / unarchive | архив, отправить в архив / в архиве / вернуть из архива |
+| Archived (the screen of archived entries) | Архив |
 | backup / auto backup / restore | резервная копия, копия / автокопирование / восстановить |
 | evening nudge | вечернее напоминание |
 | balance check | сверка балансов |

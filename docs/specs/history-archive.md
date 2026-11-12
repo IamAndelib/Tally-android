@@ -44,7 +44,7 @@ Approved by the maintainer on 2026-11-07 from the mock-ups (real app, light and 
    happened). While entries exist but every one is archived, History says "Every entry is archived."
 8. **Data:** a stored mark on the entry, `archived: true`, kept and sanitised by `migrate()` with a test; backups carry
    it. An older version ignores the mark and shows the entry again with every balance unchanged, which is safe. An
-   archived entry's linked charge or extra is archived and shown again with it.
+   archived entry's linked charge or extra is archived and unarchived with it.
 
 ## C · Archived entries in search (approved 2026-11-12, mock-up `arch-search/search.png`)
 

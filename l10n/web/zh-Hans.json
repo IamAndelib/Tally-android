@@ -764,7 +764,7 @@
   },
   "history": {
     "stopSel": "退出选择",
-    "selected_other": "已选{{count}}项",
+    "selected_other": "已选⁠{{count}}⁠项",
     "selAll": "全选",
     "clearSel": "清除选择",
     "delSel": "删除所选",

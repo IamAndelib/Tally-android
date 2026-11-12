@@ -34,7 +34,8 @@ Sentences stay short and plain; formal or accounting words (*liabilitas*, *dihap
 | net worth | kekayaan bersih | |
 | category | kategori | |
 | payee (paid to / received from) | Dibayar ke / Diterima dari | |
-| archive / archived | arsipkan / diarsipkan | |
+| archive / archived / unarchive | arsipkan / diarsipkan / batalkan pengarsipan | |
+| Archived (the screen of archived entries) | Arsip | |
 | backup / auto backup / restore | cadangan / cadangan otomatis / pulihkan | verb: *cadangkan* |
 | evening nudge | pengingat malam | |
 | balance check | cek saldo | |

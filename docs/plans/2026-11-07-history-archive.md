@@ -15,7 +15,7 @@ released, so the `archived` mark joins version 8; no new version number).
   balances unchanged).
 - **Totals agree:** archived entries still count everywhere (History's headings, Home, Summary, widget, morning check,
   CSV); only History's lists, search and suggestions leave them out.
-- An entry and its linked charge or extra (`feeOf` / `feeId`) are archived and shown again together.
+- An entry and its linked charge or extra (`feeOf` / `feeId`) are archived and unarchived together.
 - WebView 87: `position: sticky` is fine; no `:has()`, `:is()`, `color-mix()`, `structuredClone`.
 - rem fonts, min-height, words wrap; every text via `T()` / `TH()` in all nine languages; 48 dp targets; TalkBack
   names for the new buttons; layers, focus and Back as CLAUDE.md says.
@@ -45,9 +45,9 @@ suite 46 (data, migrate, totals unchanged, linked add-ons), 41.
 
 ### Task 3: The Archived screen
 **Files:** `js/history.js` / `js/screens.js` (the icon left of search while anything is archived; the screen titled
-"Archived" with History's rows and headings without totals; opened row: Show again and Delete; the empty state;
+"Archived" with History's rows and headings without totals; opened row: Unarchive and Delete; the empty state;
 "Archive selected" beside "Delete selected"), `js/events.js`, keys; tests: 46, 24, 22.
-- [x] Failing checks: the icon appears with the first archived entry and goes with the last; "Show again" brings the
+- [x] Failing checks: the icon appears with the first archived entry and goes with the last; "Unarchive" brings the
   entry back with "Back in History" and Undo; Delete there asks "Delete this entry?" with the warning, Delete and Cancel
   only; the empty state's two lines; Back returns to History; TalkBack "Archived entries", "Archive selected".
 - [x] Implement, suites, 22 for the new screen and states, lint. Commit.

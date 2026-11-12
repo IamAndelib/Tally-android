@@ -342,7 +342,7 @@ const ok = (c, m) => {
   );
   await act("sel-toggle", food.id);
   await act("sel-toggle", gift.id);
-  ok((await page.textContent(".appbar h1")).startsWith("3 selected"), "3 selected");
+  ok((await page.textContent(".appbar h1")).startsWith("3\u00a0selected"), "3 selected");
   await page.screenshot({ path: OUT + "/history-select.png" });
   await act("sel-del");
   await page.click("#pop .cd-destroy"); // Delete

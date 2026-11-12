@@ -522,7 +522,7 @@
   "home": {
     "nothingYet": "Rien de noté pour l’instant.",
     "allArchived": "Tous les comptes sont archivés",
-    "allArchivedHint": "Réaffichez-en un depuis Avoirs, ou ajoutez-en un nouveau.",
+    "allArchivedHint": "Désarchivez-en un depuis Avoirs, ou ajoutez-en un nouveau.",
     "showArchived": "Afficher les comptes archivés",
     "addAccount": "Ajouter un compte",
     "accounts": "Comptes",
@@ -782,9 +782,9 @@
   },
   "history": {
     "stopSel": "Arrêter la sélection",
-    "selected_one": "{{count}} sélectionnée",
+    "selected_one": "{{count}} sélectionnée",
     "selected_many": "{{count}} sélectionnées",
-    "selected_other": "{{count}} sélectionnées",
+    "selected_other": "{{count}} sélectionnées",
     "selAll": "Tout sélectionner",
     "clearSel": "Effacer la sélection",
     "delSel": "Supprimer la sélection",

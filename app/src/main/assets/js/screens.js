@@ -64,7 +64,8 @@ function rowAnchor(box, scroller) {
   return row ? { v: row.dataset.v, top: row.getBoundingClientRect().top - r.top } : null;
 }
 function toAnchor(a, box, scroller) {
-  const drawn = box.firstElementChild; // what was drawn: once it is drawn anew (another screen), the row is let go
+  /* once the box is drawn anew (another screen, or the next render, which keeps its own row), the row is let go */
+  const drawn = box.firstElementChild;
   const fix = () => {
     if (box.firstElementChild !== drawn) return stop();
     const row = box.querySelector('.tx[data-v="' + CSS.escape(a.v) + '"]'),
@@ -276,12 +277,7 @@ function homeView() {
   if (!wide) h += side;
   else {
     const list = periodTxns().sort(byNewest);
-    side +=
-      '<div class="sec">' +
-      esc(periodLabel()) +
-      "</div>" +
-      // archived ones count in the day totals, never as rows
-      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>");
+    side += '<div class="sec">' + esc(periodLabel()) + "</div>" + dayList(list);
   }
   const top = h;
   h = "";
@@ -583,9 +579,10 @@ function accRow(a, b) {
     "</span></button>"
   );
 }
-/* drag targets: a list with data-zone, or (when that list is empty or collapsed) a drop box that only shows while dragging */
+/* drag targets: a list with data-zone, or (when that list is empty or collapsed) a drop box that only shows while
+   dragging; icon: its icon's markup */
 const dropBox = (z, label, icon) =>
-  '<div class="dropbox" data-zone="' + z + '">' + (icon ? ic(icon) : "") + esc(label) + "</div>";
+  '<div class="dropbox" data-zone="' + z + '">' + (icon || "") + esc(label) + "</div>";
 const zoneList = (z, rows) => '<div class="list" data-src="' + z + '">' + rows + "</div>";
 const dragTip = () =>
   S.settings.dragTip ? "" : '<p class="hint" style="margin:8px 4px 0">' + TH("assets.dragTip") + "</p>";
@@ -602,7 +599,7 @@ function assetsView() {
     (accs.length
       ? zoneList("acc", accs.map(a => accRow(a, b)).join(""))
       : '<div class="empty">' + TH("assets.noAccounts") + "</div>") +
-    dropBox("acc", T("assets.dropShow"), "reset") +
+    dropBox("acc", T("assets.dropShow"), icUnarchive()) +
     '<button class="btn text" data-act="acc-form" style="margin-top:4px">' +
     ic("add") +
     TH("account.add") +
@@ -613,7 +610,7 @@ function assetsView() {
       TH(V.showArchived ? "assets.hideArchived" : "assets.showArchived", { count: arch.length }) +
       "</button>";
   h +=
-    dropBox("arch", T("assets.dropArchive")) +
+    dropBox("arch", T("assets.dropArchive"), icArchive()) +
     (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b)).join("")) + dragTip() : "");
   const left = h; // two panes: net worth and accounts | what you're owed and other assets
   h = loanSection("lend", T("assets.owedToYou"), T("assets.owedHint"), T("assets.lendBtn"));
@@ -660,14 +657,14 @@ function loanSection(kind, title, none, add) {
     (open.length
       ? zoneList(kind + "-open", open.map(([l, i]) => loanRow(l, i)).join(""))
       : '<p class="hint" style="margin:0 4px">' + esc(none) + "</p>") +
-    dropBox(kind + "-open", T("loans.dropActive"), "reset") +
+    dropBox(kind + "-open", T("loans.dropActive"), ic("reset")) +
     '<button class="btn text" data-act="loan-new" data-v="' +
     kind +
     '" style="margin-top:4px">' +
     ic("add") +
     esc(add) +
     "</button>" +
-    dropBox(kind + "-done", T("loans.dropCleared"), "check");
+    dropBox(kind + "-done", T("loans.dropCleared"), ic("check"));
   if (done.length) {
     h +=
       '<button class="btn text" data-act="toggle-cleared">' +
@@ -1036,6 +1033,12 @@ function loanPill(t) {
   if (!r || !r.ls) return "";
   return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
+/* a period's rows by day (Home's two panes, the entries sheet), or why there are none: nothing written down, or every
+   entry archived (archived entries count in the day totals, never as rows) */
+const dayList = list =>
+  histRows(list).length
+    ? dayGroups(list)
+    : '<div class="empty">' + TH(list.some(t => t.archived) ? "history.none.archived" : "home.nothingYet") + "</div>";
 /* the rows of a list by day, under day headings: History's (hist), each with its words; the Archived screen's (hist
    "arch"), the archived entries' rows under headings without totals; elsewhere, each day's spending */
 function dayGroups(list, hist) {

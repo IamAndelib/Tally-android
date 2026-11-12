@@ -837,8 +837,8 @@ function accOpen(id) {
   h +=
     '<div class="gap"></div><div class="row">' +
     (a.archived
-      ? '<button class="btn tonal" data-act="acc-unarch">' + ic("reset") + TH("archive.unarchive") + "</button>"
-      : '<button class="btn tonal" data-act="acc-arch">' + ic("archive") + TH("account.archive") + "</button>") +
+      ? '<button class="btn tonal" data-act="acc-unarch">' + icUnarchive() + TH("archive.unarchive") + "</button>"
+      : '<button class="btn tonal" data-act="acc-arch">' + icArchive() + TH("account.archive") + "</button>") +
     '<button class="btn tonal" data-act="hist-acc" data-v="' +
     a.id +
     '">' +
@@ -1113,8 +1113,7 @@ function entriesSheet() {
   openSheet(
     periodLabel(),
     '<div id="ent-list"></div>' +
-      // archived ones count in the day totals, never as rows
-      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>") +
+      dayList(list) +
       '<div class="gap"></div><button class="btn text" data-act="go" data-v="history">' +
       TH("entries.fullHistory") +
       "</button>"

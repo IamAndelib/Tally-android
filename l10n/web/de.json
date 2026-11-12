@@ -773,8 +773,8 @@
   },
   "history": {
     "stopSel": "Auswahl beenden",
-    "selected_one": "{{count}} ausgewählt",
-    "selected_other": "{{count}} ausgewählt",
+    "selected_one": "{{count}} ausgewählt",
+    "selected_other": "{{count}} ausgewählt",
     "selAll": "Alle auswählen",
     "clearSel": "Auswahl aufheben",
     "delSel": "Auswahl löschen",

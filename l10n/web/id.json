@@ -514,7 +514,7 @@
   "home": {
     "nothingYet": "Belum ada yang dicatat.",
     "allArchived": "Semua akun diarsipkan",
-    "allArchivedHint": "Tampilkan lagi salah satunya dari Aset, atau tambah yang baru.",
+    "allArchivedHint": "Batalkan pengarsipan salah satunya dari Aset, atau tambah yang baru.",
     "showArchived": "Tampilkan akun yang diarsipkan",
     "addAccount": "Tambah akun",
     "accounts": "Akun",
@@ -764,7 +764,7 @@
   },
   "history": {
     "stopSel": "Berhenti memilih",
-    "selected_other": "{{count}} dipilih",
+    "selected_other": "{{count}} dipilih",
     "selAll": "Pilih semua",
     "clearSel": "Hapus pilihan",
     "delSel": "Hapus yang dipilih",
@@ -833,7 +833,7 @@
     "title": "Arsip",
     "open": "Transaksi yang diarsipkan",
     "unarchive": "Batalkan pengarsipan",
-    "back": "Ditampilkan lagi di Riwayat",
+    "back": "Kembali di Riwayat",
     "none": "Belum ada yang diarsipkan.",
     "noneHint": "Transaksi yang kamu arsipkan menunggu di sini, dan semua saldo tetap seperti adanya."
   },
