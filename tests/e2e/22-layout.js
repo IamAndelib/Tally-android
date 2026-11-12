@@ -364,15 +364,16 @@ function inspect() {
       sc = sc.parentElement;
     }
     const pad = [...document.querySelectorAll(".calc")].find(vis); // the open one (a form with a card has several)
-    if (pad && cy > pad.getBoundingClientRect().top) clipped = true;
+    if (pad && cy > pad.getBoundingClientRect().top - 1) clipped = true; // (a middle on its edge: half under it)
     const foot = document.querySelector(".hfs-foot");
     if (foot && vis(foot) && !e.closest(".hfs-foot") && cy > foot.getBoundingClientRect().top) clipped = true;
     if (clipped) continue;
     const hit = document.elementFromPoint(cx, cy);
-    // (the calculator's caret mirror lies over the amount on purpose: a tap there places the caret)
+    // (the calculator's caret mirror, its blinking caret too, lies over the amount on purpose: a tap there places the
+    // caret)
     // (under the bottom bar: reached by scrolling)
     if (hit && hit.closest("#nav")) continue;
-    if (hit && hit !== e && !e.contains(hit) && !(hit.dataset && hit.dataset.act === "calc-pos"))
+    if (hit && hit !== e && !e.contains(hit) && !hit.closest('[data-act="calc-pos"]'))
       out.push("can't be tapped " + name(e) + " (under " + name(hit) + ")");
   }
   // 5. ring icons and labels never overlap each other (only checked on the screen itself)
@@ -884,7 +885,8 @@ function inspect() {
       await page.click('#sheet [data-act="calc-toggle"]');
     });
     /* Spent with its charge's card (docs/specs/charges.md, "The card"): open and filled on the longest account's name,
-       so the preview wraps; and the keypad on the charge (its bar named, a result after the name) */
+       so the preview wraps; the keypad on the charge (its bar named, a result after the name), and on the amount while
+       the card is open */
     const spendCharge = keypad => async () => {
       await page.evaluate(() => txSheet(null, "expense", "groceries"));
       await page.waitForTimeout(100); // the form focuses its amount 60ms after it opens (focusAmt)
@@ -896,7 +898,7 @@ function inspect() {
         txPreview();
         document.activeElement.blur();
         if (keypad) {
-          calcToggle("f-charge", calcToggleBtn("f-charge"));
+          calcToggle(keypad, calcToggleBtn(keypad));
           ["+", "5"].forEach(calcKey);
         }
       }, keypad);
@@ -906,17 +908,15 @@ function inspect() {
           res = CALC && $("#cr-" + CALC.id);
         if (!c || !c.offsetParent || !c.querySelector(".aoprev").textContent) out.push("no card with its preview");
         if ($("#sheet .aoline")) out.push("Spent has no preview line outside its card");
-        if (
-          keypad &&
-          (!res || CALC.id !== "f-charge" || !res.querySelector(".calcname") || !res.querySelector(".calceq"))
-        )
+        if (keypad && (!res || CALC.id !== keypad || !res.querySelector(".calcname") || !res.querySelector(".calceq")))
           out.push("the keypad's bar doesn't name its field and result");
         return out;
       }, keypad);
       if (bad.length) throw new Error("spend charge card: " + bad.join("; "));
     };
     await shot("spend-charge", spendCharge(false));
-    await shot("spend-charge-keypad", spendCharge(true));
+    await shot("spend-charge-keypad", spendCharge("f-charge"));
+    await shot("spend-charge-amount", spendCharge("f-amt"));
     await shot(
       "transfer",
       ev(() => trSheet())
@@ -1112,8 +1112,12 @@ function inspect() {
     await shot("lend-form-both-keypad", loanFormLook("lend", ["xcharge", "extra"], "f-extra"));
     await shot("lend-form-both-keypad-charge", loanFormLook("lend", ["xcharge", "extra"], "f-charge"));
     await shot("lend-form-both-keypad-back", loanFormLook("lend", ["xcharge", "extra"], "f-charge", 20));
+    await shot("lend-form-both-amount", loanFormLook("lend", ["xcharge", "extra"], "f-amt"));
     await shot("lend-form-extra", loanFormLook("lend", ["extra"]));
+    await shot("lend-form-extra-keypad", loanFormLook("lend", ["extra"], "f-extra"));
     await shot("borrow-form-charges", loanFormLook("borrow", ["charges"]));
+    await shot("borrow-form-charges-keypad", loanFormLook("borrow", ["charges"], "f-charge"));
+    await shot("borrow-form-charges-amount", loanFormLook("borrow", ["charges"], "f-amt"));
     await shot(
       "loan",
       ev(() => loanOpen("L1"))
@@ -1124,8 +1128,9 @@ function inspect() {
     });
     /* the loan sheet with add-ons (docs/specs/charges.md, "The loan sheet"): the chips under its figure and its history
        lines; the payment card with a tip (the preview in its card) and a loan's payment covering its charges with a
-       transfer charge; the Edit of a lend's draw (one card, two rows) and of a payment with its tip */
-    const loanLook = (id, step, want) => async () => {
+       transfer charge; the Edit of a lend's draw (one card, two rows), of a borrow's (its charges) and of a payment with
+       its tip; each card also with the keypad on one of its rows and on the amount */
+    const loanLook = (id, step, want, keypad) => async () => {
       await page.evaluate(
         ([id, step]) => {
           /* a lending with a transfer charge and an extra, part paid back with a tip on top, and a loan with charges on
@@ -1156,27 +1161,52 @@ function inspect() {
         },
         [id, step]
       );
-      const bad = await page.evaluate(want => {
-        const out = [],
-          top = $("#sheet2 .p") || $("#sheet .p"),
-          card = top.querySelector(".aocard:not([hidden])"),
-          line = top.querySelector(".aoline");
-        if (want.chips && $("#sheet .hero .lparts").children.length !== want.chips)
-          out.push("not " + want.chips + " chips");
-        if (want.rows && (!card || card.querySelectorAll(".aorow:not([hidden])").length !== want.rows))
-          out.push("no card with " + want.rows + " rows");
-        if (want.prev && !(card ? card.querySelector(".aoprev").textContent : line && line.textContent))
-          out.push("no preview");
-        if (card && line && line.textContent) out.push("the preview shown twice");
-        return out;
-      }, want);
+      if (keypad) {
+        await page.waitForTimeout(100); // the loan sheet focuses its amount 60ms after it opens (focusAmt)
+        await page.evaluate(keypad => {
+          calcToggle(keypad, calcToggleBtn(keypad));
+          ["+", "5"].forEach(calcKey);
+        }, keypad);
+      }
+      const bad = await page.evaluate(
+        ([want, keypad]) => {
+          const out = [],
+            top = $("#sheet2 .p") || $("#sheet .p"),
+            card = top.querySelector(".aocard:not([hidden])"),
+            line = top.querySelector(".aoline"),
+            res = CALC && $("#cr-" + CALC.id);
+          if (
+            keypad &&
+            (!res || CALC.id !== keypad || !res.querySelector(".calcname") || !res.querySelector(".calceq"))
+          )
+            out.push("the keypad isn't open on " + keypad + " with its bar named and its result");
+          if (want.chips && $("#sheet .hero .lparts").children.length !== want.chips)
+            out.push("not " + want.chips + " chips");
+          if (want.rows && (!card || card.querySelectorAll(".aorow:not([hidden])").length !== want.rows))
+            out.push("no card with " + want.rows + " rows");
+          if (want.prev && !(card ? card.querySelector(".aoprev").textContent : line && line.textContent))
+            out.push("no preview");
+          if (card && line && line.textContent) out.push("the preview shown twice");
+          return out;
+        },
+        [want, keypad]
+      );
       if (bad.length) throw new Error("loan sheet " + id + ": " + bad.join("; "));
     };
     await shot("loan-chips", loanLook("L7", "", { chips: 3, prev: true }));
     await shot("loan-pay-tip", loanLook("L7", "tip", { chips: 3, rows: 1, prev: true }));
+    await shot("loan-pay-tip-keypad", loanLook("L7", "tip", { rows: 1, prev: true }, "f-extra"));
+    await shot("loan-pay-tip-amount", loanLook("L7", "tip", { rows: 1, prev: true }, "f-amt"));
     await shot("loan-pay-charges", loanLook("L8", "charge", { chips: 2, rows: 1, prev: true }));
+    await shot("loan-pay-charges-keypad", loanLook("L8", "charge", { rows: 1, prev: true }, "f-charge"));
     await shot("loan-edit-draw", loanLook("L7", "c7d", { rows: 2, prev: true }));
+    await shot("loan-edit-draw-keypad", loanLook("L7", "c7d", { rows: 2, prev: true }, "ed-extra"));
+    await shot("loan-edit-draw-keypad-charge", loanLook("L7", "c7d", { rows: 2, prev: true }, "ed-charge"));
+    await shot("loan-edit-draw-amount", loanLook("L7", "c7d", { rows: 2, prev: true }, "ed-amt"));
+    await shot("loan-edit-borrow", loanLook("L8", "c8d", { rows: 1, prev: true }));
+    await shot("loan-edit-borrow-keypad", loanLook("L8", "c8d", { rows: 1, prev: true }, "ed-charge"));
     await shot("loan-edit-tip", loanLook("L7", "c7p", { rows: 1, prev: true }));
+    await shot("loan-edit-tip-keypad", loanLook("L7", "c7p", { rows: 1, prev: true }, "ed-extra"));
     await shot(
       "summary",
       ev(() => summarySheet())
