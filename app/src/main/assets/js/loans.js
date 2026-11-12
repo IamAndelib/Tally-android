@@ -294,16 +294,13 @@ function personSuggest(q) {
 }
 /* What the lend or borrow form (sc, its sheet) would make owed: {amt, x, top, owed} (a lend's transfer charge x and
    extra top, a borrow's charges top; owed: the tab's after it, so an open tab it adds to counts too), or null until the
-   amount is a number. A row that is empty or not yet a number adds nothing. */
+   amount is a figure a save keeps (keptAmt()). A row that is empty, not yet a number or shown as 0 adds nothing. */
 function loanFormOwed(sc) {
-  const amt = evalAmt((sc.querySelector("#f-amt") || {}).value || ""),
-    n = {};
+  const cur = (acc(F.account) || {}).currency,
+    amt = keptAmt(evalAmt((sc.querySelector("#f-amt") || {}).value || ""), cur);
   if (!(amt > 0)) return null;
-  Object.entries(addOnTexts(sc)).forEach(([k, v]) => {
-    const m = evalAmt(v);
-    n[k] = m > 0 ? m : 0;
-  });
-  const lend = F.lk === "lend",
+  const n = addOnKept(sc, cur),
+    lend = F.lk === "lend",
     x = lend ? n.xcharge || 0 : 0,
     top = (lend ? n.extra : n.charges) || 0,
     ml = F.merge && loan(F.merge);
@@ -928,18 +925,14 @@ function loanPreviews() {
 }
 function loanPreview(l, sc, pre, accId, t) {
   const a = acc(accId),
-    amt = evalAmt(sc.querySelector("#" + pre + "-amt").value);
+    amt = a ? keptAmt(evalAmt(sc.querySelector("#" + pre + "-amt").value), a.currency) : 0;
   if (!a || !(amt > 0)) return "";
-  const ao = {},
-    lend = l.kind === "lend",
+  const lend = l.kind === "lend",
     cur = a.currency,
+    ao = addOnKept(sc, cur),
     b = x => "<b>" + esc(x) + "</b>",
     M = n => ({ html: b(money(n, cur)) }),
     line = (n, part) => accTag(a) + " " + b(signed(n, cur)) + " · " + part;
-  Object.entries(addOnTexts(sc)).forEach(([k, v]) => {
-    const n = evalAmt(v);
-    ao[k] = n > 0 ? n : 0;
-  });
   if (t && t.principal) {
     const x = (lend && ao.xcharge) || 0,
       owes = rnd(amt + x + (lend ? ao.extra || 0 : ao.charges || 0)),

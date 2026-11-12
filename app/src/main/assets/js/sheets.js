@@ -388,17 +388,17 @@ function txSheet(id, type, catId, pre, draft) {
   if (!id && F.cat) focusAmt();
 }
 /* Spent's preview, at the bottom of its charge's card, the figures in bold: "● Credit card −৳1,150.00 · ৳1,000.00 +
-   charge ৳150.00"; none until the amount is a number and the charge more than 0 */
+   charge ৳150.00"; none until the amount and the charge are figures a save keeps (keptAmt()) */
 function txPreview() {
   const sc = $("#sheet .p");
   if (!sc || !F || F.kind !== "tx" || F.type === "income") return;
-  const a = acc(F.account);
-  addOnCur(sc, a ? a.currency : "");
-  const amt = evalAmt(readVals().amount),
-    fee = evalAmt(addOnTexts(sc).charge || "");
+  const a = acc(F.account),
+    cur = a ? a.currency : "";
+  addOnCur(sc, cur);
+  const amt = keptAmt(evalAmt(readVals().amount), cur),
+    fee = addOnKept(sc, cur).charge || 0;
   if (!a || !(amt > 0) || !(fee > 0)) return addOnPreview(sc, "");
-  const cur = a.currency,
-    b = x => "<b>" + esc(x) + "</b>";
+  const b = x => "<b>" + esc(x) + "</b>";
   addOnPreview(
     sc,
     accTag(a) +
@@ -618,10 +618,17 @@ function addOnAmounts(sc, cur) {
       snack(n == null ? T(ex ? "extra.notNumber" : "charge.notNumber") : T(ex ? "extra.negative" : "charge.negative"));
       return null;
     }
-    out[k] = shown(n, cur) > 0 ? n : 0;
+    out[k] = keptAmt(n, cur);
   }
   return out;
 }
+/* What a save keeps of amount n in currency cur: n, or 0 when it isn't a number or shows as 0 or less there (the forms'
+   check, shown(n, cur) > 0: ¥0.4 saves as nothing), so a preview never counts what won't be saved */
+const keptAmt = (n, cur) => (n != null && shown(n, cur) > 0 ? n : 0);
+/* what each open row of the card in sc adds to its form's preview, {xcharge: 10}: what saving it keeps
+   (addOnAmounts()), 0 for a row that is empty, not yet a number, below 0 or shown as 0 in cur */
+const addOnKept = (sc, cur) =>
+  Object.fromEntries(Object.entries(addOnTexts(sc)).map(([k, v]) => [k, keptAmt(evalAmt(v), cur)]));
 /* the currency code before every figure in the card follows the account */
 const addOnCur = (sc, cur) => sc.querySelectorAll(".aocard .aocur").forEach(e => (e.textContent = cur));
 /* opens or closes one row: the card shows while a row is open, a closed row's button comes back under it (never a row
@@ -771,16 +778,16 @@ function trPreview() {
     fa = acc(F.from),
     ta = acc(F.to),
     v = readVals(),
-    amt = evalAmt(v.amount);
+    amt = fa ? keptAmt(evalAmt(v.amount), fa.currency) : 0;
   if (!fa || !ta || !(amt > 0)) return addOnPreview(sc, "");
-  const fee = evalAmt(addOnTexts(sc).xcharge || "") || 0,
-    got = fa.currency !== ta.currency ? evalAmt(v.toAmount) : amt,
+  const fee = addOnKept(sc, fa.currency).xcharge || 0,
+    got = fa.currency !== ta.currency ? keptAmt(evalAmt(v.toAmount), ta.currency) : amt,
     b = x => "<b>" + esc(x) + "</b>";
   addOnPreview(
     sc,
     accTag(fa) +
       " " +
-      b(signed(-(amt + Math.max(fee, 0)), fa.currency)) +
+      b(signed(-rnd(amt + fee), fa.currency)) +
       " · " +
       accTag(ta) +
       " " +

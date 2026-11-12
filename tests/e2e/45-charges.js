@@ -4079,6 +4079,83 @@ function variedV7() {
     d = await db();
     ok(d.txns.length === 0 && d.bal.cc === 0, "deleting the purchase deletes its charge " + J(d.txns));
 
+    /* a figure that shows as 0 in its currency saves as nothing, so no preview counts it: ¥0.4 (JPY has no decimals) on
+       Spent, a transfer, the payment cards and the lend form */
+    const yenBook = () => {
+      const o = spendBook();
+      o.accounts.push(acct("y", "Yen", "cash", "JPY", 100000), acct("y2", "Yen wallet", "wallet", "JPY", 0));
+      o.txns.push(
+        x("jD", 100, D.d1, "loan", 10000, "y", { dir: "in", loan: "J", principal: true }),
+        x("lD", 110, D.d1, "loan", 10000, "y", { dir: "out", loan: "L", principal: true })
+      );
+      o.loans.push(loanOf("J", "borrow", "Jun", "y", D.d1), loanOf("L", "lend", "Lin", "y", D.d1));
+      return o;
+    };
+    const yen = (n, sign) =>
+      page.evaluate(n => money(n, "JPY"), n).then(t => (sign === "-" ? "−" : sign === "+" ? "+" : "") + cl(t));
+    const yenFresh = open =>
+      page.evaluate(
+        ([o, open]) => {
+          closeSheet2();
+          closeSheet();
+          closePop();
+          S = migrate(o);
+          RBC = LPC = null;
+          commit();
+          render();
+          new Function(open)();
+        },
+        [yenBook(), open]
+      );
+    const both = async () => cl((await line()) + " " + (await prev()));
+    await yenFresh('txSheet(null, "expense", "food")');
+    await tap('#sheet [data-act="f-acc"][data-v="y"]');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+    await typeIn("#sheet #f-charge", "0.4");
+    ok((await both()) === "", "Spent: a ¥0.4 charge shows as ¥0: no preview " + (await both()));
+    await tap('#sheet [data-act="tx-save"]');
+    d = await db();
+    const yp = d.txns.filter(t => t.type === "expense");
+    ok(
+      yp.length === 1 && !yp[0].feeId && (await snackText()).startsWith((await yen(1000, "-")) + " · Eating out"),
+      "… and it saves without a charge: −¥1,000 · Eating out " + J(yp) + " " + (await snackText())
+    );
+    await yenFresh("trSheet()");
+    await page.evaluate(() => {
+      F.from = "y";
+      F.to = "y2";
+      trSync();
+    });
+    await typeIn("#sheet #f-amt", "1000.2");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "0.4");
+    ok(
+      (await both()) === "Yen " + (await yen(1000.2, "-")) + " · Yen wallet " + (await yen(1000.2, "+")),
+      "a transfer: a ¥0.4 transfer charge adds nothing to ● Yen −¥1,000 " + (await both())
+    );
+    await yenFresh('loanOpen("J")');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "0.4");
+    ok((await both()) === "", "paying back a loan: a ¥0.4 transfer charge, no preview " + (await both()));
+    await yenFresh('loanOpen("L")');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="extra"]');
+    await typeIn("#sheet #f-extra", "0.4");
+    ok((await both()) === "", "being paid back: a ¥0.4 extra, no preview " + (await both()));
+    await yenFresh('loanForm("lend")');
+    await tap('#sheet [data-act="f-acc"][data-v="y"]');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="xcharge"]');
+    await typeIn("#sheet #f-charge", "0.4");
+    await tap('#sheet [data-act="addon-add"][data-v="extra"]');
+    await typeIn("#sheet #f-extra", "0.4");
+    ok(
+      (await both()) === "Yen " + (await yen(1000, "-")) + " · Someone owes " + (await yen(1000)),
+      "the lend form: ¥0.4 transfer charge and extra, ● Yen −¥1,000 · Someone owes ¥1,000 " + (await both())
+    );
+
     // Received: no button, no card, no preview
     await fresh("income", "income");
     await typeIn("#sheet #f-amt", "1000");
