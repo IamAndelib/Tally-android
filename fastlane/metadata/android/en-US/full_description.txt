@@ -11,14 +11,14 @@ Bank accounts, mobile wallets, cash, credit cards and savings, each in its own c
 currencies.
 
 TRANSFERS THAT NEVER COUNT AS SPENDING
-Move money between your own accounts, even between currencies, and add an ATM or cash-out fee when there is one.
+Move money between your own accounts, even between currencies, and add a charge, such as an ATM or cash-out fee, which counts as spending.
 
 FIX A BALANCE IN SECONDS
 If an account doesn't match what you really have, type the real amount and Tally records the difference.
 
 LOANS AND LENDINGS
 Keep track of money you borrowed or lent: several amounts per person, due dates, partial payments (with any
-fees), reminders and write-offs. See your net worth on the Assets and Liabilities tabs.
+charge, or an extra on top), reminders and write-offs. See your net worth on the Assets and Liabilities tabs.
 
 LOOK BACK
 History for any day, date range or month, with each account's balance after every entry. Tap the donut for your last

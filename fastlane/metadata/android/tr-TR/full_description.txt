@@ -11,15 +11,15 @@ Banka hesapları, mobil cüzdanlar, nakit, kredi kartları ve birikimler, her bi
 tüm para birimleri desteklenir.
 
 HARCAMAYA HİÇ SAYILMAYAN TRANSFERLER
-Kendi hesapların arasında, farklı para birimleri arasında bile para aktar; varsa ATM ya da para çekme masrafını da
-ekle.
+Kendi hesapların arasında, farklı para birimleri arasında bile para aktar; masraf ekle, örneğin ATM ya da para çekme
+masrafı; harcamaya sayılır.
 
 BAKİYEYİ SANİYELER İÇİNDE DÜZELT
 Bir hesap elindekiyle tutmuyorsa gerçek tutarı yaz, Tally farkı kaydetsin.
 
 BORÇLAR VE ALACAKLAR
-Aldığın ve verdiğin borçları takip et: kişi başına birden çok tutar, vadeler, kısmi ödemeler (masraflarıyla
-birlikte), hatırlatmalar ve vazgeçilen alacaklar. Net varlığını Varlıklar ve Borçlar sekmelerinde gör.
+Aldığın ve verdiğin borçları takip et: kişi başına birden çok tutar, vadeler, kısmi ödemeler (masrafla
+ya da üstüne ekstrayla), hatırlatmalar ve vazgeçilen alacaklar. Net varlığını Varlıklar ve Borçlar sekmelerinde gör.
 
 GERİYE BAK
 Herhangi bir gün, tarih aralığı ya da ay için geçmiş; her kayıttan sonra her hesabın bakiyesiyle. Son 7 günü,

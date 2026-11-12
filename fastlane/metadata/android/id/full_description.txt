@@ -11,7 +11,8 @@ Rekening bank, dompet digital, uang tunai, kartu kredit, dan tabungan, masing-ma
 mata uang apa pun di dunia.
 
 TRANSFER YANG TIDAK PERNAH DIHITUNG SEBAGAI PENGELUARAN
-Pindahkan uang antarakunmu sendiri, bahkan antar mata uang, dan tambahkan biaya ATM atau tarik tunai kalau ada.
+Pindahkan uang antarakunmu sendiri, bahkan antar mata uang, dan tambahkan biaya,
+misalnya biaya ATM atau tarik tunai, yang dihitung sebagai pengeluaran.
 
 KOREKSI SALDO DALAM HITUNGAN DETIK
 Kalau saldo akun tidak cocok dengan yang benar-benar kamu punya, ketik jumlah sebenarnya dan Tally mencatat
@@ -19,7 +20,7 @@ selisihnya.
 
 UTANG DAN PIUTANG
 Catat uang yang kamu pinjam atau pinjamkan: beberapa jumlah per orang, jatuh tempo, pembayaran sebagian (beserta
-biayanya), pengingat, dan pinjaman yang diikhlaskan. Lihat kekayaan bersihmu di tab Aset dan Utang.
+biaya, atau tambahan di atasnya), pengingat, dan pinjaman yang diikhlaskan. Lihat kekayaan bersihmu di tab Aset dan Utang.
 
 LIHAT KE BELAKANG
 Riwayat untuk hari, rentang tanggal, atau bulan apa pun, dengan saldo tiap akun setelah setiap transaksi. Ketuk

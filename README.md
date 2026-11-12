@@ -40,12 +40,14 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   the amount, save. New entries default to the day you're looking at.
 - **Paid to / Received from:** who you paid or who paid you, beside the category, with names you used before offered
   as you type. A new category or account can be added right from the entry form.
+- **Add a charge on spending**: VAT, a service charge or a card fee on top of the price. It comes off the same account,
+  counts as spending in the purchase's own category, and sits inside the entry in History.
 - **Every account, every currency.** Bank, mobile wallet, cash, credit card, savings — or your own account types. Each
   account keeps its own currency, any of the world's currencies.
 - **Morning check.** Once a day Tally lists your balances and asks if they still match.
 - **Transfers** between your own accounts never count as spending. Moving money between currencies asks for the amount
-  that arrived; an ATM or cash-out fee can be added: it comes off the paying account and shows with the transfer in
-  History, without counting as spending.
+  that arrived; a transfer charge (an ATM or cash-out fee) can be added: it comes off the From account, shows with the
+  transfer in History and counts as spending, in Charges.
 - **Balance fixes.** When an account doesn't match reality, type what it really holds and Tally records the difference.
 - **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), grouping numbers as you type, with a cursor you can
   move.
@@ -54,9 +56,10 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 **Loans and net worth**
 
 - **Loans and lendings** per person: money you borrowed or lent, in several draws with their own due dates, partial
-  payments (counted against the draw due soonest, so each draw shows what's left of it), a sending or cash-out fee on
-  a payment (off the account, shown with the payment, never spending), "paid more than owed" (the extra as a new loan,
-  as income you file yourself, or as the payment's fee), write-off / forgive, and reopen.
+  payments (counted against the draw due soonest, so each draw shows what's left of it), a transfer charge on a
+  payment or a lend (owed back on a lend), interest as an extra on a lend, charges on a borrow, a tip on a payback,
+  "paid more than owed" (Tally asks: a charge or an extra, or a new loan or lending the other way), write-off /
+  forgive, and reopen. What is owed includes them.
 - **Assets and Liabilities** tabs with net worth per currency, other assets (a laptop, gold, …), cleared loans and
   archived accounts. Hold and drag a row to reorder its list (Home's balance chips too), or onto another section to
   archive it, mark it cleared or reopen it.
@@ -66,7 +69,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 - **Home and History** for any day, date range, month or year. History starts on all time; narrow it with the period
   chip and the Filters sheet: account, kind of money movement, category, person, or the accounts a transfer went
   between, each option showing how many entries it leaves. Entries are two lines with the account marked by a dot of
-  its colour; a transfer's fee sits inside it. Months and days carry what was received over what was spent. Tap an
+  its colour; a charge or extra sits inside its entry. Months and days carry what was received over what was spent. Tap an
   entry to open it in place; hold one to select several and delete them together. Deleting asks whether the account's
   balance changes or stays as it is.
 - **Search** inside History, from any tab: type a word, a number or a month and pick a suggestion (who was paid, who
@@ -102,7 +105,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - Everything stays on the phone. No account, no ads, no analytics, **no network requests**.
 - **Backup and restore** (a JSON file you keep anywhere) and **CSV export** of every entry, with its payee, for a
-  spreadsheet or an accounting app.
+  spreadsheet or an accounting app; a charge or an extra is its own line after its entry.
 - **Daily auto backup** into one file, "Tally backup.json", in a folder you pick; it stays there even if Tally is
   uninstalled.
 - **Undo** for every change.

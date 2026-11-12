@@ -39,15 +39,30 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - **Delete asks whether the balance changes or stays:** "Delete and update the balance" or "Delete, keep the balance"
   (the account's opening balance absorbs the amount, no extra entry), asked once for a whole selection. Loan and
   lending entries are only offered the first answer, because a loan's amounts come from its entries.
-- The fee on a transfer or a loan payment has its own calculator.
+- **Charges and extras.** Each has its own calculator and a preview of what it adds up to:
+  - a **transfer charge** (an ATM or cash-out fee) on a transfer, on a loan payment and on a lend, and **Add a charge**
+    on spending, such as VAT or a service charge;
+  - **charges** on a borrow (a fee and interest) and an **extra** on a lend (interest), and an extra on a payback (a
+    tip), in a tonal card under the amount;
+  - what is owed includes them: a lend's transfer charge and extra, a borrow's charges.
+  - CSV export names them: `expense-fee`, `lend-fee`, `lend-extra`, `borrow-fee` and `loan-extra`, one line after
+    their entry, in the same columns as before.
 
 ### Changed
 
 - Entries read in two lines, the same in History and Home: what it was and how much, then its category and
   account. A tap opens the entry in place (the time it was added, the balance left, a loan's progress, any note on a
   loan or balance fix) with Edit and Delete inside.
-- A transfer's or loan payment's fee sits inside its entry (`+ $2.00 fee`) instead of a row of its own, and
-  searching counts entries the same way.
+- **Charges count as spending.** A purchase's charge counts in its category, every other charge in a grey **Charges**
+  part on Home's ring and in Summary. An extra you get on top is income. A charge or extra sits inside its entry
+  instead of a row of its own, and searching counts entries the same way. Transfers, the money loans and lendings
+  move, and balance fixes still never count.
+- **Past fees now count.** Fees already recorded on transfers and loan payments count as spending, so earlier days and
+  months show more spent by the fees already recorded. No balance changes.
+- A new notebook starts without the Fees category; an existing one keeps it.
+- An opened entry shows its parts instead of "Paid in all".
+- Paid more than you owed, or paid more than was owed to you? Tally asks: **Track as charge** or **Track as extra** on
+  that payment, or a new loan or lending the other way. The income form no longer opens from here.
 - The questions that decide what happens to a notebook are stacked, full-width answers that say what each does: a backup
   folder that already holds a backup (Restore / Overwrite / Cancel), a backup that can't be read (Choose another folder
   / Overwrite / Cancel), restoring a file (Restore / Choose another file / Cancel) and **Delete all data** (Save backup
@@ -70,8 +85,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
   true minus; an empty notebook's History keeps only Search until the first entry, and the welcome screen only Settings.
 - While entries are selected, the period and Filters row stays in place, dimmed and not tappable, so nothing jumps; the
   filter chips continue on the Filters line, with Clear all last.
-- History's month and day headings count a transfer's or payment's fee inside what was spent, and an opened entry ends
-  with Edit and Delete only (Edit opens a loan's own sheet).
+- An opened entry ends with Edit and Delete only (Edit opens a loan's own sheet).
 - A dragged Home chip swaps places as soon as its own edge passes the middle of the next one.
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
 - Credit cards without a colour of their own are purple, so they no longer look like bank accounts.

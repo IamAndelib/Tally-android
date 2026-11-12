@@ -11,15 +11,15 @@ Comptes bancaires, portefeuilles mobiles, espèces, cartes de crédit et épargn
 les devises du monde.
 
 DES VIREMENTS QUI NE COMPTENT JAMAIS COMME DÉPENSES
-Déplacez de l’argent entre vos propres comptes, même d’une devise à l’autre, et ajoutez des frais de distributeur ou
-de retrait s’il y en a.
+Déplacez de l’argent entre vos propres comptes, même d’une devise à l’autre, et ajoutez des frais, par exemple de distributeur ou de
+retrait, qui comptent comme une dépense.
 
 CORRIGEZ UN SOLDE EN QUELQUES SECONDES
 Si un compte ne correspond pas à ce que vous avez vraiment, saisissez le vrai montant et Tally enregistre l’écart.
 
 EMPRUNTS ET PRÊTS
 Suivez l’argent que vous avez emprunté ou prêté : plusieurs montants par personne, échéances, remboursements partiels
-(avec leurs frais), rappels et abandons de créance. Voyez votre patrimoine net dans les onglets Avoirs et Dettes.
+(avec des frais, ou un supplément en plus), rappels et abandons de créance. Voyez votre patrimoine net dans les onglets Avoirs et Dettes.
 
 UN COUP D’ŒIL EN ARRIÈRE
 L’historique de n’importe quel jour, période ou mois, avec le solde de chaque compte après chaque opération. Touchez

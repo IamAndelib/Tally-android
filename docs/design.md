@@ -55,9 +55,9 @@ reach, and the Clear all at the top is then left out (one is enough).
 **8. The person decides; Tally never guesses about money.**
 Tally never files an entry under a category by itself, never changes a balance silently, and never moves money
 without saying so. Where a choice changes money, the person is asked, in words that say what each answer does.
-*Example:* when someone pays back more than they owed, Tally asks what the extra is; "income" opens the income form
-so the person picks the category (`overpay()` in `loans.js`). Deleting an entry asks whether the account's balance
-changes ("Change the account balance") or stays ("Keep the current balance").
+*Example:* when someone pays back more than they owed, Tally asks what the extra is: a charge or an extra on that
+payment, or a new loan or lending the other way (`overpay()` in `loans.js`). Deleting an entry asks whether the
+account's balance changes ("Change the account balance") or stays ("Keep the current balance").
 
 **9. Every change can be undone, and nothing is lost.**
 Every change to entries goes through Undo. Accounts with entries are archived, never deleted. Unreadable saved data is
@@ -91,6 +91,8 @@ links that would need the internet.
 - **Home, top to bottom:** app bar (period, search, history, settings) → balance chips (swipe sideways) → the
   category ring around the day's donut → the balance bar → − / Transfer / + → Borrow money / Lend money. The ring is
   the main input; it is as big as the pane allows (`RINGW`). The chip row fades at an edge where more chips wait.
+- **Charges on Home:** when the period has charges that are not part of a purchase, the ring gets one grey slice and a
+  corner label (a grey dot, "Charges", its amount); the label moves above the ring when a tile would touch it.
 - **The balance bar is stacked:** "4 entries ›" on the left; on the right "Total in USD" over the figure, or, with
   several currencies, one "Total" and a line each (the code in one column, the figures right-aligned in the other; the
   notebook's own currency first, then by code).
@@ -173,8 +175,10 @@ links that would need the internet.
   - *dropdown chips* end in ▾ (category in the entry form, period chip, From/To).
 - **Buttons, by weight:** one filled button per sheet or dialog (Save, Transfer, Record payment, Show N entries);
   tonal for secondary actions that are still common (Archive, History, Allow); text buttons for light actions
-  (Add a fee, Open full history); outlined red for destructive actions at the end of a sheet
+  (Add a charge, Add an extra, Open full history); outlined red for destructive actions at the end of a sheet
   (Delete loan, Delete all data).
+- **A charge or extra is a soft card inside the form** (label, figure with its currency code, a calculator button and
+  ✕, then a one-line preview of what it adds up to), opened by a text button under the amount.
 - **Main button last and full width**, at the bottom of the sheet, with an icon only when it adds meaning (✓ Save).
 - **Verbs on buttons**, saying what happens: "Record payment", "Update balance", "Show 96 entries". Not "OK" or "Yes"
   where a verb fits.
@@ -184,14 +188,15 @@ links that would need the internet.
 
 - **An entry row has two lines** (2026-11-05): line 1 what it was | how much; line 2 the category and the account as a
   dot of its colour and its name (`Groceries · ● Credit card`), a transfer `● Everyday → ● Cash`.
-- **A fee lives inside what it was charged on** ("+ $2.50 fee" under the amount), never as a row of its own.
+- **An add-on lives inside its entry** ("+ $2.50 transfer charge" or "+ $5.00 extra" under the amount), never as a row
+  of its own. An opened row and the loan chips show a part beside its total, never a total beside one of its parts.
 - **A loan or lending row says each thing once:** person | what's left, then the account (dot and name) and "Due"
   date | status chip (Active, Partly paid). The part-paid due amount lives on the sheet's due card, not on the row.
 - **Tap opens the row in place** (one at a time) to show only what the row couldn't: "Added at 7:03 AM", figure boxes
   (Left after, Paid in all, Was / Now, the loan's bar), then Edit and Delete, centred (Edit opens a loan's own sheet).
 - **Grouped by day under month headings**, newest first. The month and day headings carry a stacked column: "+"
   received (green) over "−" spent (red), one line per currency, the notebook's own first. The Transfers filter says
-  "Transferred" and "Fees" in words instead.
+  "Transferred" and "Charges" in words instead, and the Lent filter adds "Extras".
 - **Hold to select** several rows; while selecting, the period and Filters row stays where it is, dimmed and not
   tappable, so nothing moves; the app bar becomes "N selected", and with every row selected the app bar's select-all
   icon button becomes a deselect icon labelled "Clear selection".
@@ -287,7 +292,8 @@ links that would need the internet.
 - **No network, analytics, ads, accounts or sign-up**, ever. No remote content.
 - **No charts to study.** Summary shows bars (or, in its Months tab, a pie) and a category list with one comparison;
   nothing more.
-- **Transfers, loan movements, fees and balance fixes never count as spending or income.**
+- **Transfers, loan movements and balance fixes never count as spending or income;** a charge paid with them is
+  spending, an extra received on top is income.
 - **No automatic categorising**, no guessed payees filed under a category, no silent rounding of balances.
 - **No swipes that change data or hidden gestures for core actions** (History has no sideways swipe at all).
 - **No truncation of words**, no shrinking of labels, no tooltips to reveal cut text.

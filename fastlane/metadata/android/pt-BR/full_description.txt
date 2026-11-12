@@ -11,15 +11,15 @@ Contas bancárias, carteiras digitais, dinheiro vivo, cartões de crédito e pou
 moeda do mundo.
 
 TRANSFERÊNCIAS QUE NUNCA CONTAM COMO GASTO
-Passe dinheiro entre suas próprias contas, até entre moedas diferentes, e adicione a taxa de saque ou de caixa
-eletrônico quando houver.
+Passe dinheiro entre suas próprias contas, até entre moedas diferentes, e adicione uma taxa, como a de saque ou de caixa
+eletrônico, que conta como gasto.
 
 AJUSTE UM SALDO EM SEGUNDOS
 Se uma conta não confere com o que você realmente tem, digite o valor real e o Tally registra a diferença.
 
 DÍVIDAS E EMPRÉSTIMOS
 Acompanhe o dinheiro que você pegou emprestado ou emprestou: vários valores por pessoa, vencimentos, pagamentos
-parciais (com as taxas), lembretes e valores dados como perdidos. Veja seu patrimônio líquido nas abas Ativos e
+parciais (com uma taxa, ou um extra por cima), lembretes e valores dados como perdidos. Veja seu patrimônio líquido nas abas Ativos e
 Passivos.
 
 OLHE PARA TRÁS

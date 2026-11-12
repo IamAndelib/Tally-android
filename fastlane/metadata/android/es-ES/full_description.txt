@@ -11,15 +11,15 @@ Cuentas bancarias, billeteras móviles, efectivo, tarjetas de crédito y ahorros
 las monedas del mundo.
 
 TRANSFERENCIAS QUE NUNCA CUENTAN COMO GASTO
-Mueve dinero entre tus propias cuentas, incluso entre monedas, y añade la comisión del cajero o del retiro cuando la
-haya.
+Mueve dinero entre tus propias cuentas, incluso entre monedas, y añade un cargo, como la comisión del cajero o del retiro, que cuenta como
+gasto.
 
 AJUSTA UN SALDO EN SEGUNDOS
 Si una cuenta no coincide con lo que tienes de verdad, escribe la cantidad real y Tally anota la diferencia.
 
 PRÉSTAMOS Y DEUDAS
 Lleva la cuenta del dinero que te prestaron o que prestaste: varias cantidades por persona, fechas de pago, pagos
-parciales (con sus comisiones), recordatorios y préstamos dados por perdidos. Consulta tu patrimonio en las pestañas
+parciales (con un cargo, o un extra encima), recordatorios y préstamos dados por perdidos. Consulta tu patrimonio en las pestañas
 Activos y Pasivos.
 
 MIRA ATRÁS

@@ -36,8 +36,9 @@ Simpler rows, the same in History, Home's day list and search results:
 - **Two lines.** Line 1: what it was (payee and note, or the category, or "Lent to Sam", "Transfer") and the amount.
   Line 2: the category (when the title isn't it) and the account with its colour dot (`Groceries · ● Credit card`);
   a transfer: `● Everyday → ● Cash`. No running balance on the row.
-- **A fee joins what it was charged on**: under the amount, `+ $2.00 fee`; a cross-currency transfer `→ €600.00`. A
-  fee has no row of its own anywhere entries are listed (it stays its own entry in the data, linked by `feeOf`).
+- **An add-on joins its entry**: under the amount, `+ $2.00 transfer charge`, `incl. $2.00 charge` or `+ $5.00 extra`;
+  a cross-currency transfer `→ €600.00`. It has no row of its own anywhere entries are listed (it stays its own entry
+  in the data, linked by `feeOf`). Every row and box is in docs/specs/charges.md ("History rows").
 - **Tap opens the row in place** (one open at a time; tap again closes; `aria-expanded`). Editing is the Edit button
   inside. In selection mode a tap selects, as today.
 
@@ -47,10 +48,10 @@ balances apart):
 1. **When added**: a clock icon, "Added at **6:14 PM**", at the normal text size; when written down on a later day
    than its date, "Added **Jun 16** at **9:03 AM**" (the date itself, never "Yesterday"). Time per Settings' clock.
 2. **Figure boxes** (soft boxes, a small label over a bold figure, a little room inside):
-   - every entry: **Left after** · the balance · `in ● Everyday` (after the entry and its fee);
-   - a transfer: one such box for each account, and **Paid in all** (amount + fee) when there's a fee;
+   - every entry: **Left after** · the balance · `in ● Everyday` (after the entry and its add-on);
+   - a transfer: one such box for each account, and the amount sent beside its **Transfer charge** when there is one;
    - a loan or lending entry: first a bar box, `You owe Maya $350.00` / `Sam owes you $50.00` (or **Cleared**), a bar
-     of what's paid back and `$250.00 of $600.00 paid`; then **Paid in all** or **Reached you** when there's a fee,
+     of what's paid back and `$250.00 of $600.00 paid`; then the parts of the payment (what was paid or got back, beside its charge or extra),
      **Due** for a draw with a due date still owed, and the Left after box;
    - a balance fix: **Was** and **Now**.
    A loan's or balance fix's **note** is not on the collapsed row (its line 2 is the account); the opened row shows it
@@ -112,15 +113,20 @@ Each month heading, per currency (several joined with "+"), in words:
 | Borrowed | `$X borrowed · $Y paid back` |
 | Balance fixes | `$X added · $Y taken off` |
 
-Transfers, loans, fixes and fees never count as spent or received (as everywhere in Tally).
+Transfers, the money loans move and fixes never count as spent or received. A charge is inside Spent, an extra inside
+Received (as everywhere in Tally, docs/specs/charges.md "Counting").
 
 ## Rules
 
-- **What a kind contains**: Spent = expenses that aren't fees; Received = income; Transfers = transfers and their fees;
-  Lent / Borrowed = a lending's or loan's draws and payments, and their payments' fees; Balance fixes = fixes. An
-  account matches when it's the entry's account or a transfer's destination.
-- **A fee** belongs to the kind of what it was charged on, is shown inside that entry's row (not as a row), and is
-  counted in neither spent nor the totals above but as its own `· $Z fees` when any.
+- **What a kind contains**: Spent = expenses (a purchase with its charge) plus the entries that carry spending inside
+  them (a transfer or loan payment with a charge, a written-off lend's draw); only that spending counts in its heading.
+  Received = income, and the lending payments that carry an extra (only the extra counts). Transfers = transfers and
+  their charges; Lent / Borrowed = a lending's or loan's draws and payments with their add-ons; Balance fixes = fixes.
+  An account matches when it's the entry's account or a transfer's destination.
+- **An add-on** belongs to the kind of its entry and is shown inside that entry's row (not as a row). The Transfers
+  filter says `Transferred $X` and `Charges $Z`, the Lent filter `Extras $Z` (a Charges line for a written-off
+  lend's transfer charge), the Borrowed filter `Charges $Z`, each only when not 0. A purchase's charge follows its
+  category.
 - **Gone targets**: a filter whose account, category or person no longer exists (a backup restored) is dropped.
 - **Nothing matches** (a period changed, the last matching entry deleted): "Nothing matches these filters" with
   **Clear all** under it, both in the middle of the window, within the thumb's reach; the Clear all beside the
@@ -153,8 +159,8 @@ Three more filters, set only from search mode ([search.md](search.md)); the Filt
 
 - The period chip: "Choose a period" and "Show all time" for its two parts; each filter chip's ✕: "Remove filter:
   Cash"; counts read with each option; a dimmed option is `aria-disabled`; the hidden status region (not shown on
-  screen) reads out the new count after Show or a removed chip. Search's counts use the same row rule as History: a
-  fee is folded into its entry and not counted.
+  screen) reads out the new count after Show or a removed chip. Search's counts use the same row rule as History: an
+  add-on is folded into its entry and not counted.
 - The sheet is a layer like the others (focus in, Back closes it, what's behind is hidden from screen readers).
   From 840px it is a centred dialog, as every sheet is there; held sideways it takes the full height.
 - New texts, in all nine languages: Filters, Transactions, Between, From, To, Lent to, Borrowed from, Everyone, Any

@@ -1,6 +1,6 @@
 # Charges and extras: fees, interest and tax inside their entry
 
-Status: approved 2026-11-07. The model and the looks come from the design round
+Status: built (approved 2026-11-07). The model and the looks come from the design round
 ([design-round.md](design-round.md): part C, "Changes after the confirmation page", which wins over part C, and the
 tonal card in "Changes after the build started"; images C-transfer, C-rows, C-home, C-summary, C-forms, C-overpaid and
 the tonal card B). The maintainer then settled every open point on 2026-11-07 in two more rounds of mock-ups: round 2
@@ -478,7 +478,7 @@ approved texts (D11-words, D2-extras). What is owed now includes the amounts on 
   Is the extra ৳150.00 money on top, counted as income, or a loan from Sam that you owe back?"; answers **Track as
   extra** (filled: the payment that clears the lending, with the extra added to its tip on top, plus any typed; no
   form to fill), **Track as loan** (tonal: a new loan, as today), **Go back** (outlined).
-- Messages: "Loan cleared · ৳500.00 as its charge"; "Sam’s lending cleared · ৳150.00 as an extra".
+- Messages: "Loan cleared · ৳500.00 as its charge"; "Sam’s lending cleared · ৳150.00 as an extra". The amount is the whole charge or extra on the payment, the one typed included.
 - The account always gets or gives the full amount, as today. The income form is no longer opened from here.
 - The cleared payment's row then reads as any payment with that add-on ("+ ৳500.00 transfer charge", "+ ৳150.00
   extra").
@@ -521,24 +521,24 @@ on top gets a line of its own after its draw (it moves no money; its type says s
 
 ## Texts
 
-English, in `l10n/web/en.json`; key names are proposals, the texts are approved.
+English, in `l10n/web/en.json`, as built. Every message is one whole sentence per key, with its `{{values}}`: the
+loan messages are one key per case, not pieces joined in code.
 
-New:
 - Buttons and cards: `charge.add` "Add a charge" · `charge.label` "Charge" · `xcharge.label` "Transfer charge" ·
   `charges.add` "Add charges" · `charges.label` "Charges" · `extra.add` "Add an extra" · `extra.label` "Extra" ·
   `addOn.both` "Transfer charge and extra" (TalkBack group)
 - TalkBack: `charge.calc` "Calculator for the charge" · `xcharge.calc` "Calculator for the transfer charge" ·
   `charges.calc` "Calculator for the charges" · `extra.calc` "Calculator for the extra" · `charge.remove` "Remove the
   charge" · `xcharge.remove` "Remove the transfer charge" · `charges.remove` "Remove the charges" · `extra.remove`
-  "Remove the extra" · `ring.summaryCharges` "Spending summary: spent {{spent}}, of which charges {{charges}}" (and its
-  form with received)
+  "Remove the extra" · `ring.summaryCharges` "Spending summary: spent {{spent}}, of which charges {{charges}}" ·
+  `ring.summaryChargesGot` (the same, then ", received {{got}}")
 - Checks: `charge.notNumber` "That charge isn't a number" · `charge.negative` "A charge can't be negative" ·
   `extra.notNumber` "That extra isn't a number" · `extra.negative` "An extra can't be negative"
 - Previews: `prev.owes` "{{who}} owes {{amount}}" · `prev.youOwe` "you owe {{amount}}" · `prev.youOweWho` "you owe
   {{who}} {{amount}}" · `prev.loanX` "loan {{amount}} + transfer charge {{charge}}" · `prev.loanCharges` "loan
-  {{amount}} + charges {{charges}}" · `prev.lendExtra` "lending {{amount}} + extra {{extra}}" · `prev.lendOff` "lending
-  {{amount}} − charge {{charge}}" · `prev.spend` "{{amount}} + charge {{charge}}" · `prev.plusX` "+ transfer charge
-  {{charge}}"
+  {{amount}} + charges {{charges}}" · `prev.loanChargesX` "loan {{amount}} + charges {{charges}} + transfer charge
+  {{charge}}" · `prev.lendExtra` "lending {{amount}} + extra {{extra}}" · `prev.lendOff` "lending {{amount}} − charge
+  {{charge}}" · `prev.spend` "{{amount}} + charge {{charge}}"
 - Rows and boxes: `tx.xchargeOn` "+ {{amount}} transfer charge" · `tx.chargeIncl` "incl. {{amount}} charge" ·
   `tx.chargesIncl` "incl. {{amount}} charges" · `tx.extraIncl` "incl. {{amount}} extra" · `tx.extraOn` "+ {{amount}}
   extra" · `tx.chargeOff` "− {{amount}} charge" · `tx.sent` "Sent" · `tx.paidBack` "Paid back" · `tx.gotBack` "Got
@@ -548,27 +548,33 @@ New:
   {{money}} of the money, then the {{charges}} charges"
 - Home, Summary, History: `ring.charges` "Charges" · `summary.charges` "Charges" · `summary.say` "{{name}},
   {{amount}}" · `summary.sayShare` "{{name}}, {{amount}}, {{share}}" · `summary.under` "less than {{pct}}" (TalkBack)
-  · `history.words.extras` "Extras {{amount}}"
-- Loans: `loan.xchargeAmt` "{{amount}} transfer charge" · `loan.extraAmt` "{{amount}} extra" · `loan.extraIncl` "incl.
-  {{amount}} extra" · `loan.chargesIncl` "incl. {{amount}} charges" · `loan.tipAmt` "+{{amount}} extra" ·
-  `loan.msg.plusX` "+ {{amount}} transfer charge" · `loan.msg.plusExtra` "+ {{amount}} extra" · `loan.msg.inclExtra`
-  "incl. {{amount}} extra" · `loan.msg.inclCharges` "incl. {{amount}} charges" · `loan.msg.lentOwes` "Lent {{amount}}
-  to {{who}} · {{who}} owes {{owed}}" · `loan.msg.borrowedOwe` "Borrowed {{amount}} from {{who}} · you owe {{owed}}" ·
-  `loan.over.asCharge` "Track as charge" · `loan.over.asExtra` "Track as extra" · `loan.over.asChargeMsg` "Loan
-  cleared · {{amount}} as its charge" · `loan.over.asExtraMsg` "{{who}}’s lending cleared · {{amount}} as an extra"
+  · `history.words.charges` "Charges {{amount}}" · `history.words.extras` "Extras {{amount}}"
+- The loan sheet: `loan.xchargeAmt` "{{amount}} transfer charge" · `loan.chargeAmt` "− {{amount}} charge" ·
+  `loan.chargesAmt` "{{amount}} charges" · `loan.extraAmt` "{{amount}} extra" · `loan.extraIncl` "incl. {{amount}}
+  extra" · `loan.chargesIncl` "incl. {{amount}} charges" · `loan.tipAmt` "+{{amount}} extra"
+- Messages after a save: `loan.msg.lent` "Lent {{amount}} to {{who}}" · `loan.msg.lentOwes` "Lent {{amount}} to {{who}} ·
+  {{who}} owes {{owed}}" · `loan.msg.borrowed` "Borrowed {{amount}} from {{who}}" · `loan.msg.borrowedOwe` "Borrowed
+  {{amount}} from {{who}} · you owe {{owed}}" · `loan.msg.gotBack` "Got back {{amount}}" · `loan.msg.gotBackTip` "Got
+  back {{amount}} + {{extra}} extra" · `loan.msg.gotBackIncl` "Got back {{amount}}, incl. {{extra}} extra" ·
+  `loan.msg.paidBack` "Paid back {{amount}}" · `loan.msg.paidBackX` "Paid back {{amount}} + {{charge}} transfer
+  charge" · `loan.msg.paidBackIncl` "Paid back {{amount}}, incl. {{charges}} charges" · `loan.msg.paidBackInclX` "Paid
+  back {{amount}}, incl. {{charges}} charges + {{charge}} transfer charge"
+- Paid more than owed: `loan.over.theyPaid` "{{who}} paid {{amount}} more" · `loan.over.youPaid` "You paid
+  {{amount}} more" · `loan.over.askBorrowOr` "You owed {{who}} {{owed}}. Is the extra {{amount}} a charge on this
+  payment, counted as spending, or a lending to {{who}} that they owe you?" · `loan.over.askLendOr` "{{who}} owed you
+  {{owed}}. Is the extra {{amount}} money on top, counted as income, or a loan from {{who}} that you owe back?" ·
+  `loan.over.asCharge` "Track as charge" · `loan.over.asExtra` "Track as extra" · `loan.over.asLend` "Track as
+  lending" · `loan.over.asLoan` "Track as loan" · `loan.over.asChargeMsg` "Loan cleared · {{amount}} as its charge" ·
+  `loan.over.asExtraMsg` "{{who}}’s lending cleared · {{amount}} as an extra" · `loan.over.loanToLend` "Loan cleared
+  · {{who}} owes you {{amount}}" · `loan.over.lendToLoan` "{{who}}’s lending cleared · you owe {{who}} {{amount}}"
 - CSV: `csv.xchargeNote` "Transfer charge" · `csv.chargeNote` "Charge" · `csv.chargesNote` "Charges" · `csv.extraNote`
   "Extra"
 
-Changed: `history.words.fees` → `history.words.charges` "Charges {{amount}}"; `loan.over.askBorrowOr` "You owed {{who}}
-{{owed}}. Is the extra {{amount}} a charge on this payment, counted as spending, or a lending to {{who}} that they owe
-you?"; `loan.over.askLendOr` "{{who}} owed you {{owed}}. Is the extra {{amount}} money on top, counted as income, or a
-loan from {{who}} that you owe back?"; the transfer preview loses its "→".
-
 Retired: `transfer.addFee`, `transfer.inclFee`, `transfer.feeNegative`, `fee.label`, `fee.notNumber`, `loan.addFee`,
 `loan.feeNegative`, `loan.feeAmt`, `tx.feeLine`, `tx.paidInAll`, `tx.reachedYou`, `loan.over.asFee`,
-`loan.over.asFeeMsg`, `loan.over.asIncome`, `loan.over.extraNote`, `loan.over.lendCleared`. Kept as they are:
-`transfer.feeNote` and `loan.feeNote`, because `autoNote()` recognises the notes 1.4.1 and earlier wrote by their
-values in every language.
+`loan.over.asFeeMsg`, `loan.over.asIncome`, `loan.over.extraNote`, `loan.over.lendCleared`, `history.words.fees` (now
+`history.words.charges`). The transfer preview has no "→". Kept as they are: `transfer.feeNote` and `loan.feeNote`,
+because `autoNote()` recognises the notes 1.4.1 and earlier wrote by their values in every language.
 
 ## Tests
 

@@ -111,10 +111,20 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
   `to`, and `toAmount` across currencies), `adjust` (a balance fix, signed) or
   `loan` (money moving for a loan: `dir`, `loan`, and `principal` + optional `due` for a draw). `ts` is when it was
   written (`Date.now()`, so not an amount: `migrate()` reads it with `stamp()`) and orders a day's entries, newest
-  first. A transfer's or loan payment's fee is an `expense` linked both ways (`feeOf` on the fee, `feeId` on the
-  transfer or payment) that is never counted as spending (`isSpend()`).
+  first. Three kinds of **add-on** are entries of their own, linked both ways to the entry they came with (`feeOf` on the
+  add-on, `feeId` on the host; at most one per entry): a charge (an `expense`, on a transfer, a loan payment or a
+  purchase), a tip on a payback (an `income`, on a lending's payment) and a lend's transfer charge (a `loan` entry on
+  its draw, owed back). What a draw owes on top (a lend's extra, a borrow's charges) is `onTop` on the draw: it moves
+  no money. `isSpend()` counts every `expense`, charges included, and `spendCat()` says where: the purchase's own
+  category, else the grey `CHARGES` part (not a category). Data version 8; see docs/specs/charges.md.
 - A **loan** is a person tab, `{id, kind: "borrow" | "lend", person, account, date, note, status}`. Its amounts, what's
-  left and its status are always derived from its entries by `loanInfo()`, never stored.
+  left and its status are always derived from its entries by `loanInfo()`, never stored. That covers what each draw owes
+  (with its transfer charge and `onTop`), how payments are shared out, `topPaid` (the part of a payment that covered an
+  amount on top), what a write-off lets go, and, in `loanParts()`, which parts count as income or spending and on
+  which day.
+- CSV (`exportCsv()` in `js/backup.js`): one line per entry in the same columns. A transfer's charge is
+  `transfer-fee`, a loan payment's `loan-fee`, a purchase's `expense-fee`, a lend's transfer charge `lend-fee`, a
+  tip `loan-extra`; an amount on top gets its own line after its draw: `lend-extra`, `borrow-fee`.
 - Balances are never stored either: `balances()` adds every entry to each account's opening balance.
 - A built-in category keeps its English default `name` until the user renames it; `catName()` shows such a name in
   Tally's language. Stored text is never translated.

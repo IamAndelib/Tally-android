@@ -36,7 +36,7 @@ Every typed word must be found in the entry (the same rule as today's search):
   with spaces: word starts only;
 - a number matches an amount: `45` means 45.00 to 45.99, `45.50` exactly that, read with the phone's separators
   (`evalAmt`, `NUMSEP`);
-- a fee's words and amount find its transfer or payment (a fee is never a row of its own);
+- an add-on's words and amount find its entry (a charge or extra is never a row of its own);
 - the words narrow History's list together with the period and every filter.
 
 ## Suggestions
@@ -64,8 +64,9 @@ never drops it. A month's or a kind's name matches from three letters (the whole
   One for a slot already set (a second payee, say) replaces it; a kind clears the category, person and sides that
   depended on it, as the Filters sheet does.
 - The amount is shown in the notebook's currency when every account has it, else as a plain number in the phone's
-  format; it compares each entry's own amount (a transfer: the amount sent or received), never its fee's, in the list
-  of a typed `>50` / `<50` as in the suggestion.
+  format; it compares the figure the entry's row shows (a transfer: the amount sent or received; a purchase: its price with
+  its charge), in the list of a typed `>50` / `<50` as in the suggestion. A number alone also finds the figures in the
+  opened row (docs/specs/charges.md, "Search").
 - A payee is one name whatever its capitals or accents (the newest spelling shown), as today.
 
 ## The list
@@ -113,7 +114,7 @@ never drops it. A month's or a kind's name matches from three letters (the whole
 - Search never changes saved data.
 - Fast on old phones: each entry's searchable words are folded once and kept until the next save; the list redraws
   after typing pauses briefly. With 10,000 entries a keystroke's redraw stays under 80 ms in headless Chromium.
-- Totals follow History: a fee is inside its entry, transfers, loans and balance fixes never count as spending,
+- Totals follow History: a charge or extra is inside its entry (as the figures its row shows), transfers, the money loans move and balance fixes never count as spending,
   currencies are never added together.
 
 ## Accessibility and text

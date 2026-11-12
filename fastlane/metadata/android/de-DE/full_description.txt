@@ -10,15 +10,15 @@ ALLE KONTEN, JEDE WÄHRUNG
 Bankkonten, E-Wallets, Bargeld, Kreditkarten und Sparkonten, jedes in seiner eigenen Währung: jede Währung der Welt.
 
 UMBUCHUNGEN ZÄHLEN NIE ALS AUSGABE
-Schieb Geld zwischen deinen eigenen Konten hin und her, auch zwischen Währungen, und trag eine Gebühr für
-Geldautomat oder Auszahlung ein, wenn eine anfällt.
+Schieb Geld zwischen deinen eigenen Konten hin und her, auch zwischen Währungen, und trag eine Gebühr ein, etwa für
+Geldautomat oder Auszahlung; sie zählt als Ausgabe.
 
 KONTOSTAND IN SEKUNDEN KORRIGIEREN
 Wenn ein Konto nicht zu dem passt, was du wirklich hast, gib den echten Betrag ein, und Tally bucht den Unterschied.
 
 GELIEHEN UND VERLIEHEN
 Behalte im Blick, was du dir geliehen oder an andere verliehen hast: mehrere Beträge pro Person, Fälligkeiten,
-Teilzahlungen (mit Gebühren), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst du in den Tabs Vermögen
+Teilzahlungen (mit einer Gebühr oder einem Extra obendrauf), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst du in den Tabs Vermögen
 und Schulden.
 
 ZURÜCKBLICKEN
