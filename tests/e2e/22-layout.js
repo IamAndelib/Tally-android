@@ -1002,11 +1002,13 @@ function inspect() {
     /* the lend and borrow forms with their cards (docs/specs/charges.md, "The card"): Lend's one card of two rows with
        one preview at its bottom (and the keypad on its extra), one row with the other's button back under it, and
        Borrow's charges; each with a long name, so the preview wraps */
-    const loanFormLook = (kind, kinds, keypad) => async () => {
+    /* cut: the keypad opens on the extra first, the form is scrolled until the first row's top is that far above the
+       form's top, then the keypad moves to `keypad` (as a tap on that row's calculator would) */
+    const loanFormLook = (kind, kinds, keypad, cut) => async () => {
       await page.evaluate(kind => loanForm(kind), kind);
       await page.waitForTimeout(100); // the form focuses the name 60ms after it opens, which would close a keypad
       await page.evaluate(
-        ([kinds, keypad]) => {
+        ([kinds, keypad, cut]) => {
           $("#f-person").value = "Maximiliane Hoffmann-Lindqvist";
           $("#f-amt").value = groupDigits("1000");
           kinds.forEach((k, i) => {
@@ -1015,13 +1017,26 @@ function inspect() {
           });
           formPreview();
           if (document.activeElement) document.activeElement.blur();
-          if (keypad) {
+          if (keypad && !cut) {
             calcToggle(keypad, calcToggleBtn(keypad));
             ["+", "5"].forEach(calcKey);
           }
         },
-        [kinds, keypad]
+        [kinds, keypad, cut]
       );
+      if (cut) {
+        await page.evaluate(() => calcToggle("f-extra", calcToggleBtn("f-extra")));
+        await page.waitForTimeout(80);
+        await page.evaluate(cut => {
+          const p = $("#sheet .p"),
+            row = $("#sheet .aorow");
+          p.scrollTop += row.getBoundingClientRect().top - p.getBoundingClientRect().top + cut;
+        }, cut);
+        await page.evaluate(keypad => {
+          calcToggle(keypad, calcToggleBtn(keypad));
+          ["+", "5"].forEach(calcKey);
+        }, keypad);
+      }
       const bad = await page.evaluate(
         ([n, keypad]) => {
           const out = [],
@@ -1046,6 +1061,7 @@ function inspect() {
     await shot("lend-form-both", loanFormLook("lend", ["xcharge", "extra"]));
     await shot("lend-form-both-keypad", loanFormLook("lend", ["xcharge", "extra"], "f-extra"));
     await shot("lend-form-both-keypad-charge", loanFormLook("lend", ["xcharge", "extra"], "f-charge"));
+    await shot("lend-form-both-keypad-back", loanFormLook("lend", ["xcharge", "extra"], "f-charge", 20));
     await shot("lend-form-extra", loanFormLook("lend", ["extra"]));
     await shot("borrow-form-charges", loanFormLook("borrow", ["charges"]));
     await shot(

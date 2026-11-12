@@ -255,8 +255,9 @@ function calcOpen(id, btn) {
   if (inp) setTimeout(() => calcKeepFieldVisible(inp, panel), 0);
 }
 /* the keypad docks over the bottom of the screen: give the sheet room below its content and scroll the amount
-   line (a card's field: the whole card, its preview at the bottom) up so it sits just above the keypad; a card taller
-   than the room (two rows, large text) scrolls no further than the top of the row being filled, which stays in view */
+   line (a card's field: the whole card, its preview at the bottom) so it sits whole between the form's top and the
+   keypad; a card taller than the room (two rows, large text) puts the row being filled whole at the form's top, scrolling
+   back to it when it is cut off above */
 function calcKeepFieldVisible(inp, panel) {
   const sheet = inp.closest(".p"),
     line = inp.closest(".aocard") || inp.closest(".amtwrap") || inp;
@@ -271,9 +272,11 @@ function calcKeepFieldVisible(inp, panel) {
     scroller = sheet || document.scrollingElement;
   const row = inp.closest(".aorow"),
     top = (sheet ? sheet.getBoundingClientRect().top : 0) + 8,
-    keep = row ? Math.max(0, row.getBoundingClientRect().top - top) : Infinity;
-  if (r.bottom > limit) scroller.scrollTop += Math.min(r.bottom - limit, keep);
-  else if (r.top < 8) scroller.scrollTop -= 8 - r.top;
+    low = r.bottom - limit, // how far the line's bottom is under the keypad (below 0: room to spare)
+    high = r.top - top, // how far its top is below the form's top (below 0: cut off above)
+    rowTop = (row ? row.getBoundingClientRect().top : r.top) - top,
+    by = low <= high ? (low > 0 ? low : high < 0 ? high : 0) : Math.min(low, rowTop);
+  if (by) scroller.scrollTop += by;
 }
 function calcClose(id, btn) {
   stopRepeat();
