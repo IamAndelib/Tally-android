@@ -1537,7 +1537,8 @@ function inspect() {
       ev(() => {
         V.screen = "settings";
         render();
-        $('#app [data-act="search-arch"]').scrollIntoView({ block: "center" });
+        const b = $('#app [data-act="search-arch"]').getBoundingClientRect();
+        scrollTo(0, b.top + scrollY - innerHeight / 2); // the page only (scrollIntoView may move the visual viewport)
       })
     );
     await page.evaluate(() => {
@@ -1554,18 +1555,42 @@ function inspect() {
     const archFind = open => async () => {
       await findOpen("corner", "", "typing")();
       const ok = await page.evaluate(open => {
+        clearTimeout(FIND_T); // the redraw typing would bring after its pause: already drawn (findOpen)
         document.activeElement.blur();
         const m = document.querySelector("#app .tx[data-v] .tarch");
         if (!m) return false;
         const r = m.closest(".tx");
         if (open) rowToggle(r, r.dataset.v);
-        (open ? document.querySelector("#app .txo") : r).scrollIntoView({ block: open ? "end" : "center" });
+        /* the page only: scrollIntoView may move the visual viewport too, under the pinned bar */
+        const b = (open ? document.querySelector("#app .txo") : r).getBoundingClientRect();
+        scrollTo(0, open ? b.bottom + scrollY - innerHeight : b.top + scrollY - innerHeight / 2);
         return !open || !!document.querySelector('#app .txo [data-act="unarchive"]');
       }, open);
       if (!ok) throw new Error("search state 'archived' does not show what it should");
     };
     await shot("search-archived", archFind(false));
     await shot("search-archived-open", archFind(true));
+    /* selecting in that search: the archived matches stay, faded and without a tick box (Ruling O) */
+    await shot("search-archived-select", async () => {
+      await findOpen("corner", "", "typing")();
+      const ok = await page.evaluate(() => {
+        clearTimeout(FIND_T); // the redraw typing would bring after its pause: already drawn (findOpen)
+        document.activeElement.blur();
+        const live = document.querySelector("#app .tx[data-act='row-open']:not(.txarch)");
+        if (!live) return false;
+        V.sel = new Set([live.dataset.v]);
+        render();
+        const r = document.querySelector("#app .tx.unsel");
+        return !!r && !r.querySelector(".em.pick");
+      });
+      if (!ok) throw new Error("search state 'archived, selecting' does not show what it should");
+      /* after the row kept in view by that redraw is let go (toAnchor, 250ms), the faded row in the middle */
+      await page.waitForTimeout(300);
+      await page.evaluate(() => {
+        const b = document.querySelector("#app .tx.unsel").getBoundingClientRect();
+        scrollTo(0, b.top + scrollY - innerHeight / 2); // the page only (scrollIntoView may move the visual viewport)
+      });
+    });
     await page.evaluate(() => {
       delete S.settings.searchArch;
       S.txns.forEach(t => delete t.archived);

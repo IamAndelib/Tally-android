@@ -107,6 +107,9 @@ const archRows = list => entryRows(list).filter(t => t.archived);
    Summary still leave them out. listRows: the rows History lists now (search's, or its own) */
 const findArch = () => !!V.find && S.settings.searchArch === true;
 const listRows = list => (findArch() ? entryRows(list) : histRows(list));
+/* the rows a selection can take: never an archived one (search may list it; it stays in sight, not selectable, so
+   Select all, the count, Archive selected and Delete selected are about the others only) */
+const selRows = histRows;
 /* the totals of a list as lines, one per currency (by code) for each phrase of the kind shown, in the order they stack in a
    heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only).
    By the counting rule (docs/specs/charges.md, "History headings and filters"): a charge is spending (inside "spent")
@@ -726,7 +729,7 @@ function histParts() {
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
      entry out of sight */
   if (V.sel) {
-    const listed = new Set(histRows(list).map(t => t.id));
+    const listed = new Set(selRows(list).map(t => t.id));
     V.sel = new Set([...V.sel].filter(id => listed.has(id)));
   }
   const chips = histChips(),
@@ -769,7 +772,7 @@ function histParts() {
   };
 }
 /* is every row listed in History selected (the select-all button then clears) */
-const histAllSelected = () => histRows(HLIST).every(t => V.sel.has(t.id));
+const histAllSelected = () => selRows(HLIST).every(t => V.sel.has(t.id));
 function historyView() {
   histDrop();
   const p = histParts();
@@ -823,7 +826,7 @@ function historyView() {
           "</button>"
         : "") +
       searchBtn() +
-      (histRows(HLIST).length
+      (selRows(HLIST).length
         ? '<button class="icon" data-act="sel-start" aria-label="' +
           TH("history.select") +
           '">' +

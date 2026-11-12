@@ -286,13 +286,23 @@ function srPayHit(t, pay) {
     out = pay.slice(0, i) === "out";
   return (out ? isSpend(t) : t.type === "income") && !!t.payee && srCached(t).pay === pay.slice(i + 1);
 }
-/* the payee as last written (a name is one whatever its capitals or accents), "" when no entry has it */
+/* the payee as last written (a name is one whatever its capitals or accents), "" when no entry has it: as written on
+   an entry search lists (an archived one only while Settings lets search find it), else on any */
 function srPayName(pay) {
-  const i = pay.indexOf(":");
+  const i = pay.indexOf(":"),
+    arch = findArch();
   let best = null;
+  const seen = t => arch || !t.archived;
   S.txns.forEach(t => {
     if (!srPayHit(t, pay)) return;
-    if (!best || cmpDay(t.date, best.date) > 0 || (t.date === best.date && (t.ts || 0) >= (best.ts || 0))) best = t;
+    if (best && seen(best) && !seen(t)) return;
+    if (
+      !best ||
+      (seen(t) && !seen(best)) ||
+      cmpDay(t.date, best.date) > 0 ||
+      (t.date === best.date && (t.ts || 0) >= (best.ts || 0))
+    )
+      best = t;
   });
   return i < 0 || !best ? "" : best.payee.trim();
 }

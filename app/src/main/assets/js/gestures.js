@@ -64,8 +64,9 @@ function pressStart(x, y, target) {
     LP = rc.disabled ? null : { kind: "range", x, y, from: rc.dataset.v, cur: rc.dataset.v, moved: false };
     return;
   }
+  /* a row long-pressed starts a selection, but not an archived match in search (it can't be selected: selRows) */
   const tile = !ringSettling && target.closest(".cgrid .tile, .ring.edit .tile"),
-    row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="row-open"]');
+    row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="row-open"]:not(.txarch)');
   const mv =
     (V.screen === "assets" || V.screen === "liabs" || V.screen === "home") &&
     (target.closest(".tx[data-drag]") || target.closest('.strip .acc[data-act="acc-open"]'));

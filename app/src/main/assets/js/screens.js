@@ -809,7 +809,9 @@ function txLine(t) {
       small += line("tx.chargeOff", fm); // a lending payment's older fee
     else small += line("tx.xchargeOn", fm);
   }
-  const selMode = !!V.sel && V.screen === "history",
+  const marked = HARCH && t.archived, // an archived entry that search lists (Settings → History)
+    selMode = !!V.sel && V.screen === "history",
+    noSel = selMode && marked, // never selected (selRows): in sight, but a tap does nothing
     on = selMode && V.sel.has(t.id),
     isOpen = !selMode && V.open === t.id;
   /* search mode: a loan's or balance fix's note is not on its row; when a word matched it, it is a third line */
@@ -825,19 +827,21 @@ function txLine(t) {
   HLW = hw;
   /* an archived entry that search lists (Settings → History): its second line starts with the archive box and the word
      "Archived", so it is said, not only seen (docs/specs/history-archive.md, C) */
-  if (HARCH && t.archived) sub = '<span class="tarch">' + icArchive() + TH("archive.mark") + "</span> \u00b7 " + sub;
+  if (marked) sub = '<span class="tarch">' + icArchive() + TH("archive.mark") + "</span> \u00b7 " + sub;
   return (
     '<button class="tx en' +
     (on ? " on" : "") +
+    (marked ? " txarch" : "") +
+    (noSel ? " unsel" : "") +
     (FX.row === t.id ? " flash" : "") +
-    '" data-act="' +
-    (selMode ? "sel-toggle" : "row-open") +
-    '" data-v="' +
+    '"' +
+    (noSel ? "" : ' data-act="' + (selMode ? "sel-toggle" : "row-open") + '"') +
+    ' data-v="' +
     t.id +
     '"' +
-    (selMode ? ' aria-pressed="' + on + '"' : ' aria-expanded="' + isOpen + '"') +
+    (noSel ? ' aria-disabled="true"' : selMode ? ' aria-pressed="' + on + '"' : ' aria-expanded="' + isOpen + '"') +
     ">" +
-    (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
+    (selMode && !noSel ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
     '<span class="mid"><span class="d" dir="auto">' +
     d +
     '</span><span class="a ' +

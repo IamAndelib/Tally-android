@@ -1129,6 +1129,18 @@ const ok = (c, m) => {
         colour: !!m && getComputedStyle(m).color === getComputedStyle(s).color,
         others: [...document.querySelectorAll("#app .tx[data-v] .tarch")].map(e => e.closest(".tx").dataset.v),
       };
+      /* selecting in that search: the archived match can't be selected, and says so (Ruling O) */
+      V.sel = new Set();
+      render();
+      const q = $('#app .tx[data-v="' + id + '"]');
+      if (out)
+        out.sel = q && {
+          disabled: q.getAttribute("aria-disabled"),
+          pressed: q.getAttribute("aria-pressed"),
+          act: q.dataset.act || "",
+          same: q.textContent === out.name,
+        };
+      V.sel = null;
       findEnd();
       V.screen = "settings";
       render();
@@ -1142,6 +1154,11 @@ const ok = (c, m) => {
         mk.colour &&
         JSON.stringify(mk.others) === JSON.stringify([id]),
       "an archived match says “Archived” in words, its box hidden, in its line's colour " + JSON.stringify(mk)
+    );
+    ok(
+      mk && mk.sel && mk.sel.disabled === "true" && mk.sel.pressed === null && !mk.sel.act && mk.sel.same,
+      "while selecting, an archived match is read as unavailable (aria-disabled), its name unchanged " +
+        JSON.stringify(mk && mk.sel)
     );
     await page.click('#app [data-act="search-arch"]');
     await settle();

@@ -636,7 +636,7 @@ document.addEventListener("click", ev => {
       } else selSync(el);
       break;
     case "sel-all": {
-      const ids = histRows(histList()).map(t => t.id); // a fee goes with its entry
+      const ids = selRows(histList()).map(t => t.id); // a fee goes with its entry; never an archived entry
       V.sel = ids.every(id => V.sel.has(id)) ? new Set() : new Set(ids);
       render();
       break;

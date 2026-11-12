@@ -1408,6 +1408,171 @@ const seed = () => ({
     );
   }
 
+  // ---- 24. selecting in a search that lists archived matches (Ruling O): they stay in sight but can't be selected;
+  // a long press on one starts nothing, a tap on one while selecting does nothing (no tick box, aria-disabled), and
+  // Select all, the count, Archive selected and Delete selected are about the live matches only
+  {
+    const o = seed();
+    o.settings.searchArch = true;
+    o.txns.find(t => t.id === "old").archived = true;
+    o.txns.push(
+      x("gm2", 60, "2026-06-12", "expense", 8, "b", { cat: "groceries", payee: "Green Market" }),
+      x("gm3", 61, "2026-06-13", "expense", 9, "b", { cat: "groceries", payee: "Green Market", archived: true }),
+      x("gm4", 62, "2026-06-11", "expense", 7, "b", { cat: "groceries", payee: "Green Market" })
+    );
+    await load(o);
+    const f0 = await figures();
+    const search = () =>
+      page.evaluate(() => {
+        if (V.find) findEnd();
+        V.sel = null;
+        openFind();
+        const inp = $("#find-q");
+        inp.value = "green";
+        findInput("green");
+        findDraw();
+        inp.blur();
+      });
+    const press = async id => {
+      const b = await (await page.$('#app .tx[data-v="' + id + '"]')).boundingBox();
+      await page.mouse.move(b.x + 60, b.y + 20);
+      await page.mouse.down();
+      await page.waitForTimeout(600);
+      await page.mouse.up();
+      await pause();
+    };
+    const st = () =>
+      page.evaluate(() => {
+        const row = id => {
+          const r = $('#app .tx[data-v="' + id + '"]');
+          return (
+            r && {
+              act: r.dataset.act || "",
+              pressed: r.getAttribute("aria-pressed"),
+              disabled: r.getAttribute("aria-disabled"),
+              pick: !!r.querySelector(".em.pick"),
+              faded: r.classList.contains("unsel"),
+              name: r.textContent,
+            }
+          );
+        };
+        return {
+          sel: V.sel ? [...V.sel].sort().join() : null,
+          title: $("#app header.appbar h1") && $("#app header.appbar h1").textContent,
+          rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+          gm2: row("gm2"),
+          gm3: row("gm3"),
+          old: row("old"),
+        };
+      });
+    await search();
+    const s0 = await st();
+    ok(J(s0.rows) === J(["gm3", "gm2", "gm4", "old"]), "the search lists live and archived matches " + J(s0.rows));
+    await press("gm3");
+    const s1 = await st();
+    ok(
+      s1.sel === null && !(await page.$('#app [data-act="sel-del"]')),
+      "a long press on an archived match starts nothing " + J(s1.sel)
+    );
+    await press("gm2");
+    const s2 = await st();
+    ok(s2.sel === "gm2" && s2.title === "1 selected", "a long press on a live match starts selecting it " + J(s2));
+    ok(
+      J(s2.rows) === J(s0.rows) &&
+        s2.gm3.act === "" &&
+        s2.gm3.disabled === "true" &&
+        s2.gm3.pressed === null &&
+        !s2.gm3.pick &&
+        s2.gm3.name === s0.gm3.name &&
+        s2.gm3.faded &&
+        s2.old.faded &&
+        !s2.gm2.faded &&
+        !s0.gm3.faded &&
+        !s0.old.faded &&
+        s2.gm2.act === "sel-toggle" &&
+        s2.gm2.pick,
+      "while selecting, archived matches stay in sight, without a tick box, aria-disabled, faded (.unsel, only then), their label the same " +
+        J(s2.gm3)
+    );
+    await page.click('#app .tx[data-v="gm3"]', { force: true }); // Playwright won't tap what says it is disabled
+    await pause();
+    const s3 = await st();
+    ok(
+      s3.sel === "gm2" && s3.title === "1 selected" && !s3.gm3.pick,
+      "a tap on an archived match ticks nothing " + J(s3.sel)
+    );
+    await page.click('#app [data-act="sel-all"]');
+    await pause();
+    const s4 = await st();
+    ok(
+      s4.sel === "gm2,gm4" &&
+        s4.title === "2 selected" &&
+        (await page.evaluate(() => histAllSelected() && $('#app [data-act="sel-all"]').getAttribute("aria-label"))) ===
+          "Clear selection",
+      "Select all selects only the live matches, and then reads as all selected " + J(s4.sel)
+    );
+    /* Archive selected: only the live ones are archived (the others already were); they stay in the results, marked */
+    await page.click('#app [data-act="sel-arch"]');
+    await pause();
+    ok((await marked()) === "gm2,gm3,gm4,old", "Archive selected archives the live matches " + (await marked()));
+    ok(
+      (await page.evaluate(() => document.querySelectorAll("#app .tx.unsel").length)) === 0,
+      "selection over: no row is faded"
+    );
+    ok(
+      (await page.evaluate(() => !V.sel && [...document.querySelectorAll("#app .tx .tarch")].length)) === 4,
+      "…the selection ends; every match is still listed, now marked"
+    );
+    sameFigures(f0, await figures(), "archived from a search's selection");
+    await undo();
+    ok((await marked()) === "gm3,old", "Undo: as it was " + (await marked()));
+    /* Delete selected: only the live ones go */
+    await search();
+    await press("gm4");
+    await page.click('#app [data-act="sel-all"]');
+    await pause();
+    await page.click('#app [data-act="sel-del"]');
+    await pause();
+    await page.click("#pop .cd-destroy");
+    await pause();
+    const d = await page.evaluate(() => ["gm2", "gm3", "gm4", "old"].filter(id => entry(id)).join());
+    ok(d === "gm3,old", "Delete selected deletes the live matches only " + d);
+    await undo();
+    await page.evaluate(() => {
+      findEnd();
+      render();
+    });
+  }
+
+  // ---- 25. a payee's name as shown on its filter chip: the latest spelling on an entry search lists (an archived
+  // one only while Settings lets search find it)
+  {
+    const o = seed();
+    o.txns.push(
+      x("pn1", 70, "2026-06-01", "expense", 3, "b", { cat: "food", payee: "corner cafe" }),
+      x("pn2", 71, "2026-06-20", "expense", 3, "b", { cat: "food", payee: "CORNER CAFÉ", archived: true })
+    );
+    await load(o);
+    const names = await page.evaluate(() => {
+      const pay = "out:" + srCached(entry("sp")).pay,
+        out = [srPayName(pay)];
+      V.find = true;
+      out.push(srPayName(pay));
+      S.settings.searchArch = true;
+      out.push(srPayName(pay));
+      V.find = false;
+      out.push(srPayName(pay));
+      delete S.settings.searchArch;
+      S.txns.forEach(t => t.payee && /corner/i.test(t.payee) && (t.archived = true));
+      out.push(srPayName(pay));
+      return out;
+    });
+    ok(
+      J(names) === J(["Corner Cafe", "Corner Cafe", "CORNER CAFÉ", "Corner Cafe", "CORNER CAFÉ"]),
+      "a payee's name comes from a listed entry, an archived one only when search finds it (else any) " + J(names)
+    );
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
 
   await browser.close();

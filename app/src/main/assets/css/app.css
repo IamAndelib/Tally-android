@@ -2187,6 +2187,11 @@ mark.hl {
   vertical-align: -0.2em;
   margin-inline-end: 3px;
 }
+/* while selecting, an archived match search lists can't be selected: faded (it also says "Archived", and is
+   aria-disabled), never hidden, so no row moves under the finger */
+.tx.unsel {
+  opacity: 0.5;
+}
 /* alone on its line (a loan card's payment rows): in a narrow row it ends in "…" rather than lose letters */
 .tx.exp .s .st {
   max-width: 100%;
