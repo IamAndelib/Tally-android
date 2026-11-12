@@ -400,7 +400,7 @@
     "intoAcc": "存入{{account}}",
     "fromAcc": "从{{account}}付款",
     "xchargeAmt": "转账费用{{amount}}",
-    "chargeAmt": "费用{{amount}}",
+    "chargeAmt": "−费用{{amount}}",
     "chargesAmt": "费用{{amount}}",
     "extraAmt": "额外款{{amount}}",
     "extraIncl": "含额外款{{amount}}",

@@ -464,8 +464,6 @@ function readVals() {
     payee: g("f-payee"),
     date: g("f-date"),
     toAmount: g("f-toamt"),
-    charge: g("f-charge"),
-    extra: g("f-extra"),
   };
 }
 /* Charges and extras (docs/specs/charges.md → The buttons, The card, Previews): each kind's words and the field it

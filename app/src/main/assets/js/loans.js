@@ -591,16 +591,6 @@ function loanDrawEdit(txnId) {
   openSheet2(T(t.principal ? (lend ? "loan.editLend" : "loan.editBorrow") : "loan.editPayment"), h);
   loanPreviews();
 }
-/* entry t's add-on of a kind set to n (setAddOn()); one already of that amount only follows the entry's account and
-   day, so what an older version wrote on it (its note, its category) stays as it was */
-function keepAddOn(t, kind, n) {
-  const a = addOnOf(t),
-    same = a && (a.type === "income") === (kind === "extra") && n > 0 && rnd(n) === a.amount;
-  if (kind === "top" || !same) return setAddOn(t, kind, n);
-  a.account = t.account;
-  a.date = t.date;
-  return true;
-}
 function saveLoanDraw() {
   if (!F || !F.editTxn) return;
   const l = loan(F.id);
@@ -653,11 +643,11 @@ function saveLoanDraw() {
     if (setDue) t.due = due2;
     const ok = t.principal
       ? lend
-        ? keepAddOn(t, "charge", ao.xcharge || 0) && keepAddOn(t, "top", ao.extra || 0)
-        : keepAddOn(t, "top", ao.charges || 0)
+        ? setAddOn(t, "charge", ao.xcharge || 0) && setAddOn(t, "top", ao.extra || 0)
+        : setAddOn(t, "top", ao.charges || 0)
       : lend
-        ? keepAddOn(t, "charge", ao.charge || 0) && keepAddOn(t, "extra", ao.extra || 0)
-        : keepAddOn(t, "charge", ao.xcharge || 0);
+        ? setAddOn(t, "charge", ao.charge || 0) && setAddOn(t, "extra", ao.extra || 0)
+        : setAddOn(t, "charge", ao.xcharge || 0);
     relinkLoan(l.id);
     return ok;
   };

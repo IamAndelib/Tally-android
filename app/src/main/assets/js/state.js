@@ -560,7 +560,8 @@ const addOnOf = t => {
    a transfer, a loan payment or a purchase, in the purchase's category or else "fees"; on a lend's draw a loan entry of
    the same lending), "extra" (a tip on a lending's payment: an income into its account, in Other) or "top" (a draw's
    amount on top, onTop: a lend's extra or a borrow's charges). An amount above 0 makes the add-on or updates it with
-   the entry's account, day and category, just after the entry (ts + 1); anything else removes it. An entry has one
+   the entry's account, day and category, just after the entry (ts + 1; one already there keeps its note and, but on a
+   purchase, its category); anything else removes it. An entry has one
    add-on: another kind already there is never replaced. A lending payment's new add-on is an extra, so "charge" there
    only changes or removes the paid fee an older version recorded. False (and nothing changed) when t can't take it or
    amount isn't a number a field takes (only a real 0 or less removes). */
@@ -592,9 +593,16 @@ function setAddOn(t, kind, amount) {
     delete t.feeId;
     return true;
   }
-  const a = old || { id: newId(), ts: (t.ts || Date.now()) + 1 };
+  const a = old || { id: newId(), ts: (t.ts || Date.now()) + 1 },
+    /* one already there keeps what it was written with: its note, and its category unless it is a purchase's charge,
+       which follows the purchase's */
+    kept = old
+      ? { note: old.note || "", ...(old.cat && shape.cat && t.type !== "expense" ? { cat: old.cat } : {}) }
+      : {};
   Object.keys(a).forEach(k => k === "id" || k === "ts" || delete a[k]);
-  Object.assign(a, { date: t.date, type: shape.type, amount: n, account: t.account, note: "" }, shape, { feeOf: t.id });
+  Object.assign(a, { date: t.date, type: shape.type, amount: n, account: t.account, note: "" }, shape, kept, {
+    feeOf: t.id,
+  });
   if (!old) S.txns.push(a);
   t.feeId = a.id;
   return true;

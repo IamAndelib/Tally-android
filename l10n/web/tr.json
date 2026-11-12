@@ -403,7 +403,7 @@
     "intoAcc": "{{account}} hesabına",
     "fromAcc": "{{account}} hesabından",
     "xchargeAmt": "{{amount}} transfer masrafı",
-    "chargeAmt": "{{amount}} masraf",
+    "chargeAmt": "− {{amount}} masraf",
     "chargesAmt": "{{amount}} masraflar",
     "extraAmt": "{{amount}} ekstra",
     "extraIncl": "{{amount}} ekstra dahil",

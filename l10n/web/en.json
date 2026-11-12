@@ -403,7 +403,7 @@
     "intoAcc": "into {{account}}",
     "fromAcc": "from {{account}}",
     "xchargeAmt": "{{amount}} transfer charge",
-    "chargeAmt": "{{amount}} charge",
+    "chargeAmt": "− {{amount}} charge",
     "chargesAmt": "{{amount}} charges",
     "extraAmt": "{{amount}} extra",
     "extraIncl": "incl. {{amount}} extra",

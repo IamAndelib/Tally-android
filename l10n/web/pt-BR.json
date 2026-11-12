@@ -406,7 +406,7 @@
     "intoAcc": "para {{account}}",
     "fromAcc": "de {{account}}",
     "xchargeAmt": "taxa de transferência de {{amount}}",
-    "chargeAmt": "taxa de {{amount}}",
+    "chargeAmt": "− taxa de {{amount}}",
     "chargesAmt": "taxas de {{amount}}",
     "extraAmt": "extra de {{amount}}",
     "extraIncl": "incl. extra de {{amount}}",

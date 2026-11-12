@@ -403,7 +403,7 @@
     "intoAcc": "auf {{account}}",
     "fromAcc": "von {{account}}",
     "xchargeAmt": "{{amount}} Überweisungsgebühr",
-    "chargeAmt": "{{amount}} Gebühr",
+    "chargeAmt": "− {{amount}} Gebühr",
     "chargesAmt": "{{amount}} Gebühren",
     "extraAmt": "{{amount}} Extra",
     "extraIncl": "inkl. {{amount}} Extra",

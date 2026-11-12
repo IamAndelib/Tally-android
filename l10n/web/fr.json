@@ -406,7 +406,7 @@
     "intoAcc": "sur {{account}}",
     "fromAcc": "depuis {{account}}",
     "xchargeAmt": "{{amount}} de frais de virement",
-    "chargeAmt": "{{amount}} de frais",
+    "chargeAmt": "− {{amount}} de frais",
     "chargesAmt": "{{amount}} de frais",
     "extraAmt": "{{amount}} de supplément",
     "extraIncl": "dont {{amount}} de supplément",

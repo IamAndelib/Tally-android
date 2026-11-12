@@ -409,7 +409,7 @@
     "intoAcc": "на счёт {{account}}",
     "fromAcc": "со счёта {{account}}",
     "xchargeAmt": "комиссия за перевод {{amount}}",
-    "chargeAmt": "комиссия {{amount}}",
+    "chargeAmt": "− комиссия {{amount}}",
     "chargesAmt": "комиссии {{amount}}",
     "extraAmt": "доплата {{amount}}",
     "extraIncl": "вкл. доплату {{amount}}",

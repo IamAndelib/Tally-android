@@ -2800,7 +2800,7 @@ function variedV7() {
         x("tD", 300, D.d1, "loan", 3000, "k", { dir: "out", loan: "TM", principal: true }),
         x("oD", 310, D.d1, "loan", 5000, "c", { dir: "out", loan: "ON", principal: true }),
         x("oP", 320, D.d2, "loan", 3000, "c", { dir: "in", loan: "ON", feeId: "oPf" }),
-        x("oPf", 321, D.d2, "expense", 10, "c", { cat: "fees", feeOf: "oP" }),
+        x("oPf", 321, D.d2, "expense", 10, "c", { cat: "fees", note: "Bkash cash-out", feeOf: "oP" }),
       ],
       loans: [
         loanOf("MY", "borrow", "Maya", "a", D.d1),
@@ -3125,8 +3125,8 @@ function variedV7() {
     // an older paid fee: kept, shown as its charge card on the payment's edit, editable and removable
     await open("ON");
     ok(
-      (await raw("#sheet .list .tx.exp .more")).includes((await mr(10)) + "\u00a0charge"),
-      "Ona's older paid fee on its line"
+      (await raw("#sheet .list .tx.exp .more")).includes("−\u00a0" + (await mr(10)) + "\u00a0charge"),
+      "Ona's older paid fee on its line, as History writes it: “− ৳10.00 charge”"
     );
     await page.evaluate(() => loanDrawEdit("oP"));
     await page.waitForTimeout(120);
@@ -3139,12 +3139,19 @@ function variedV7() {
       "its edit: the Charge card, ● Cash +৳2,990.00 · lending ৳3,000.00 − charge ৳10.00, no + Add an extra " +
         (await txt("#sheet2 .aocard .aoprev"))
     );
-    await typeIn("#sheet2 #ed-charge", "12");
+    const c0 = (await db()).bal.c;
+    await typeIn("#sheet2 #ed-charge", "20");
     await tap('#sheet2 [data-act="loandraw-save"]');
     d = await db();
+    const oPf = d.txns.find(t => t.id === "oPf") || {};
     ok(
-      d.txns.find(t => t.id === "oPf").amount === 12 && d.txns.find(t => t.id === "oP").feeId === "oPf",
-      "the paid fee is editable: ৳12.00"
+      oPf.amount === 20 &&
+        oPf.note === "Bkash cash-out" &&
+        oPf.cat === "fees" &&
+        oPf.account === "c" &&
+        d.txns.find(t => t.id === "oP").feeId === "oPf" &&
+        d.bal.c === c0 - 10,
+      "the paid fee is editable: ৳20.00, its note and category kept, Cash ৳10.00 less " + J(oPf)
     );
     await open("ON");
     await page.evaluate(() => loanDrawEdit("oP"));

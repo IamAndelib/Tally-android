@@ -400,7 +400,7 @@
     "intoAcc": "ke {{account}}",
     "fromAcc": "dari {{account}}",
     "xchargeAmt": "biaya transfer {{amount}}",
-    "chargeAmt": "biaya {{amount}}",
+    "chargeAmt": "− biaya {{amount}}",
     "chargesAmt": "biaya {{amount}}",
     "extraAmt": "tambahan {{amount}}",
     "extraIncl": "termasuk tambahan {{amount}}",
