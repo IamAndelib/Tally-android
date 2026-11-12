@@ -837,7 +837,7 @@ function accOpen(id) {
   h +=
     '<div class="gap"></div><div class="row">' +
     (a.archived
-      ? '<button class="btn tonal" data-act="acc-unarch">' + ic("reset") + TH("account.unarchive") + "</button>"
+      ? '<button class="btn tonal" data-act="acc-unarch">' + ic("reset") + TH("archive.unarchive") + "</button>"
       : '<button class="btn tonal" data-act="acc-arch">' + ic("archive") + TH("account.archive") + "</button>") +
     '<button class="btn tonal" data-act="hist-acc" data-v="' +
     a.id +
@@ -1113,7 +1113,8 @@ function entriesSheet() {
   openSheet(
     periodLabel(),
     '<div id="ent-list"></div>' +
-      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>") + // archived ones count in the day totals, never as rows
+      // archived ones count in the day totals, never as rows
+      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>") +
       '<div class="gap"></div><button class="btn text" data-act="go" data-v="history">' +
       TH("entries.fullHistory") +
       "</button>"
@@ -1279,8 +1280,8 @@ function deleteAsk(ids, go, o = {}) {
   );
 }
 /* Delete in an opened row: the entry goes with its fee (and a loan's only draw takes its loan), with an Undo, as in
-   History's selection, unless loanBlock() refuses it (Archive instead is always offered); the entries sheet is drawn
-   again where it was */
+   History's selection, unless loanBlock() refuses it (Archive instead is always offered, but not for an entry already
+   archived: the Archived screen); the entries sheet is drawn again where it was */
 function rowDelete(id) {
   const t = entry(id);
   if (!t) return;
@@ -1296,25 +1297,31 @@ function rowDelete(id) {
       const q = $("#sheet .p");
       if (q) q.scrollTop = scroll;
     };
-  deleteAsk([id], arch => {
-    const no = !arch && loanBlock([id]); // archiving never changes a loan: only Delete can be refused
-    if (no) {
-      snack(no);
-      return;
-    }
-    let n = 0; // the rows that went, as History counts them (histRows): more than this one when a loan's payments go too
-    withUndo(
-      () => (arch ? T("entries.archived") : n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
-      () => {
-        n = histRows(S.txns).length;
-        if (arch) archiveEntries([id], true);
-        else deleteEntries([id]);
-        n -= histRows(S.txns).length;
-        V.open = "";
-      },
-      null,
-      listed => redraw(true, listed)
-    );
-    redraw();
-  });
+  deleteAsk(
+    [id],
+    arch => {
+      const no = !arch && loanBlock([id]); // archiving never changes a loan: only Delete can be refused
+      if (no) {
+        snack(no);
+        return;
+      }
+      /* the rows that went (an add-on is inside its entry), archived or not: more than this one when a loan's
+         payments go too */
+      let n = 0;
+      withUndo(
+        () => (arch ? T("entries.archived") : n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
+        () => {
+          n = entryRows(S.txns).length;
+          if (arch) archiveEntries([id], true);
+          else deleteEntries([id]);
+          n -= entryRows(S.txns).length;
+          V.open = "";
+        },
+        null,
+        listed => redraw(true, listed)
+      );
+      redraw();
+    },
+    { archive: !t.archived }
+  );
 }

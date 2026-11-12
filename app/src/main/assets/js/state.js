@@ -352,7 +352,7 @@ function migrate(o) {
     delete a.due;
     delete a.onTop;
     if (h.type === "expense") a.cat = h.cat;
-    /* an add-on is archived and shown again with its entry (archiveEntries) */
+    /* an add-on is archived and unarchived with its entry (archiveEntries) */
     if (h.archived) a.archived = true;
     else delete a.archived;
   });
@@ -608,7 +608,7 @@ function setAddOn(t, kind, amount) {
   Object.assign(a, { date: t.date, type: shape.type, amount: n, account: t.account, note: "" }, shape, kept, {
     feeOf: t.id,
   });
-  if (t.archived) a.archived = true; // archived and shown again with its entry (archiveEntries)
+  if (t.archived) a.archived = true; // archived and unarchived with its entry (archiveEntries)
   if (!old) S.txns.push(a);
   t.feeId = a.id;
   return true;
@@ -876,7 +876,7 @@ function deleteEntries(ids) {
 }
 /* Archiving hides entries from History and changes nothing else (docs/specs/history-archive.md, B): on sets each one's
    mark (`archived: true`), off takes it away. An entry and its add-on (a charge, a tip, a lend's transfer charge) are
-   archived and shown again together. Amounts, accounts, dates, categories and links stay, so every balance, loan and
+   archived and unarchived together. Amounts, accounts, dates, categories and links stay, so every balance, loan and
    total does too; History's rows, search and the Filters sheet's counts leave archived entries out (histRows()). */
 function archiveEntries(ids, on) {
   const all = new Set(ids);

@@ -44,7 +44,7 @@
     "fallbackName": "账户",
     "addFirst": "请先添加账户",
     "archivedMsg": "{{name}}已归档",
-    "backMsg": "{{name}}已重新显示",
+    "backMsg": "{{name}}已取消归档",
     "archiveQ": "归档{{name}}？",
     "archiveHas": "账户里还有{{amount}}。归档的账户不计入总额，记录仍保留在明细中。",
     "archiveOwes": "账户还欠{{amount}}。归档的账户不计入总额，记录仍保留在明细中。",
@@ -55,7 +55,6 @@
     "mismatchHint": "输入你现在有多少。差额会记为余额校正。",
     "actual": "实际余额",
     "update": "更新余额",
-    "unarchive": "重新显示",
     "edit": "编辑账户",
     "new": "新账户",
     "typeNow": "输入现在有多少",
@@ -398,7 +397,7 @@
     "gotBackQ": "收到还款了？",
     "paidBackQ": "还了一些？",
     "partOk": "只还一部分也可以。",
-    "noPayAccount": "没有{{cur}}账户可以记录：请添加一个，或重新显示已归档的账户。",
+    "noPayAccount": "没有{{cur}}账户可以记录：请添加一个，或将已归档的账户取消归档。",
     "record": "记录还款",
     "drawLent": "{{date}}从{{account}}借出",
     "drawBorrowed": "{{date}}借入到{{account}}",
@@ -703,7 +702,7 @@
     "dragTip": "提示：长按一行，拖到上方空位即可恢复。",
     "netWorth": "净资产",
     "noAccounts": "还没有账户",
-    "dropShow": "拖到这里重新显示",
+    "dropShow": "拖到这里取消归档",
     "showArchived": "显示已归档（{{count}}）",
     "hideArchived": "隐藏已归档（{{count}}）",
     "dropArchive": "拖到这里归档",
@@ -769,10 +768,12 @@
     "selAll": "全选",
     "clearSel": "清除选择",
     "delSel": "删除所选",
+    "archSel": "归档所选",
     "select": "选择记录",
     "allTime": "全部时间",
     "none": {
-      "all": "还没有记录。"
+      "all": "还没有记录。",
+      "archived": "所有记录都已归档。"
     },
     "deleted_other": "已删除{{count}}条记录",
     "words": {
@@ -827,6 +828,14 @@
     "swap": "交换转出和转入",
     "show_other": "显示{{count}}条记录",
     "savedGone": "已保存 · 已不在此列表中"
+  },
+  "archive": {
+    "title": "已归档",
+    "open": "已归档的记录",
+    "unarchive": "取消归档",
+    "back": "已放回明细",
+    "none": "没有已归档的记录。",
+    "noneHint": "你归档的记录会留在这里，所有余额都保持不变。"
   },
   "remind": {
     "nudge": "晚间提醒",

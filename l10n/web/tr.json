@@ -55,7 +55,6 @@
     "mismatchHint": "Şu an ne kadar varsa onu yaz. Fark bakiye düzeltmesi olur.",
     "actual": "Gerçek bakiye",
     "update": "Bakiyeyi güncelle",
-    "unarchive": "Tekrar göster",
     "edit": "Hesabı düzenle",
     "new": "Yeni hesap",
     "typeNow": "Şu an ne kadar var, yaz",
@@ -401,7 +400,7 @@
     "gotBackQ": "Para geri geldi mi?",
     "paidBackQ": "Bir kısmını ödedin mi?",
     "partOk": "Bir kısmı da olur.",
-    "noPayAccount": "Kaydetmek için {{cur}} hesabı yok: bir tane ekle ya da arşivdekini tekrar göster.",
+    "noPayAccount": "Kaydetmek için {{cur}} hesabı yok: bir tane ekle ya da arşivdeki bir hesabı arşivden çıkar.",
     "record": "Ödemeyi kaydet",
     "drawLent": "{{date}}: {{account}} hesabından verildi",
     "drawBorrowed": "{{date}}: {{account}} hesabına alındı",
@@ -712,7 +711,7 @@
     "dragTip": "İpucu: geri getirmek için bir satırı basılı tutup yukarıdaki boş yere sürükle.",
     "netWorth": "Net varlık",
     "noAccounts": "Henüz hesap yok",
-    "dropShow": "Tekrar göstermek için buraya bırak",
+    "dropShow": "Arşivden çıkarmak için buraya bırak",
     "showArchived": "Arşivdekileri göster ({{count}})",
     "hideArchived": "Arşivdekileri gizle ({{count}})",
     "dropArchive": "Arşivlemek için buraya bırak",
@@ -779,10 +778,12 @@
     "selAll": "Tümünü seç",
     "clearSel": "Seçimi temizle",
     "delSel": "Seçilenleri sil",
+    "archSel": "Seçilenleri arşivle",
     "select": "Kayıt seç",
     "allTime": "Tüm zamanlar",
     "none": {
-      "all": "Henüz hiçbir şey yazılmamış."
+      "all": "Henüz hiçbir şey yazılmamış.",
+      "archived": "Tüm kayıtlar arşivde."
     },
     "deleted_one": "{{count}} kayıt silindi",
     "deleted_other": "{{count}} kayıt silindi",
@@ -840,6 +841,14 @@
     "show_one": "{{count}} kaydı göster",
     "show_other": "{{count}} kaydı göster",
     "savedGone": "Kaydedildi · artık bu listede değil"
+  },
+  "archive": {
+    "title": "Arşiv",
+    "open": "Arşivdeki kayıtlar",
+    "unarchive": "Arşivden çıkar",
+    "back": "Geçmişe geri döndü",
+    "none": "Arşivde bir şey yok.",
+    "noneHint": "Arşivlediğin kayıtlar burada bekler; tüm bakiyeler olduğu gibi kalır."
   },
   "remind": {
     "nudge": "Akşam hatırlatması",

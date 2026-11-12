@@ -47,10 +47,10 @@ suite 46 (data, migrate, totals unchanged, linked add-ons), 41.
 **Files:** `js/history.js` / `js/screens.js` (the icon left of search while anything is archived; the screen titled
 "Archived" with History's rows and headings without totals; opened row: Show again and Delete; the empty state;
 "Archive selected" beside "Delete selected"), `js/events.js`, keys; tests: 46, 24, 22.
-- [ ] Failing checks: the icon appears with the first archived entry and goes with the last; "Show again" brings the
+- [x] Failing checks: the icon appears with the first archived entry and goes with the last; "Show again" brings the
   entry back with "Back in History" and Undo; Delete there asks "Delete this entry?" with the warning, Delete and Cancel
   only; the empty state's two lines; Back returns to History; TalkBack "Archived entries", "Archive selected".
-- [ ] Implement, suites, 22 for the new screen and states, lint. Commit.
+- [x] Implement, suites, 22 for the new screen and states, lint. Commit.
 
 ### Task 4: Docs
 README (History), CONTRIBUTING (data model: `archived`), `docs/design.md`, CHANGELOG, the spec's status, the release

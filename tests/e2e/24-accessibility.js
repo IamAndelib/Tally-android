@@ -449,6 +449,17 @@ const ok = (c, m) => {
       "Delete all data, final step",
       () => ((V.screen = "settings"), render(), wipeAll(), $("#pop .cd-destroy").click()),
     ],
+    ["History, selecting", () => (openHistory(), (V.sel = new Set(["e"])), render())],
+    /* archived entries (docs/specs/history-archive.md, B): History's icon, the Archived screen, an opened row there, the
+       delete question there (Delete and Cancel), and the screen once empty */
+    ["History, its archive icon", () => (archiveEntries(["e"], true), commit(), openHistory())],
+    ["Archived", () => archOpen()],
+    ["Archived, an opened row", () => (archOpen(), rowToggle($('#app .tx[data-v="e"]'), "e"))],
+    [
+      "Archived, the delete question",
+      () => (archOpen(), rowToggle($('#app .tx[data-v="e"]'), "e"), $('#app .txo [data-act="tx-del"]').click()),
+    ],
+    ["Archived, empty", () => (archiveEntries(["e"], false), commit(), archOpen())],
   ];
   /* the keypad opened on a field once the form has focused its first field (60ms after it opens: focusAmt), which
      would close it */
@@ -974,6 +985,89 @@ const ok = (c, m) => {
       !(await page.evaluate(() => Object.keys(window.TALLY_ICONS).some(k => /checklist|deselect/i.test(k)))),
       "the checklist is not offered as a category emblem"
     );
+
+    // archived entries (docs/specs/history-archive.md, B): History's archive icon and Archive selected are named and
+    // 48px; the Archived screen's headings are headings, its opened row says so, and Back gives the focus to the icon
+    const named = sel =>
+      page.evaluate(sel => {
+        const b = $(sel),
+          r = b && b.getBoundingClientRect();
+        return (
+          b && {
+            name: b.getAttribute("aria-label"),
+            tap: r.width >= 48 && r.height >= 48,
+            mute: [...b.querySelectorAll("svg")].every(s => s.getAttribute("aria-hidden") === "true"),
+          }
+        );
+      }, sel);
+    const id = await page.evaluate(() => {
+      const t = histRows(S.txns)[0];
+      archiveEntries([t.id], true);
+      commit();
+      V.screen = "history";
+      render();
+      return t.id;
+    });
+    await settle();
+    const icon = await named('#app [data-act="arch-open"]');
+    ok(
+      icon && icon.name === "Archived entries" && icon.tap && icon.mute,
+      "History's archive icon is called “Archived entries”, 48px: " + JSON.stringify(icon)
+    );
+    await page.evaluate(() => {
+      V.sel = new Set([histRows(S.txns)[0].id]);
+      render();
+    });
+    const sa = await named('#app [data-act="sel-arch"]');
+    ok(
+      sa && sa.name === "Archive selected" && sa.tap && sa.mute,
+      "Archive selected is named, 48px: " + JSON.stringify(sa)
+    );
+    await page.evaluate(() => {
+      V.sel = null;
+      render();
+    });
+    await page.click('#app [data-act="arch-open"]');
+    await settle();
+    await page.click('#app .tx[data-v="' + id + '"]');
+    await settle();
+    const ar = await page.evaluate(id => {
+      const row = $('#app .tx[data-v="' + id + '"]');
+      return {
+        back: $("#app .appbar button").getAttribute("aria-label"),
+        title: $("#app .appbar h1").textContent,
+        month: [...document.querySelectorAll("#app .hmon")].map(
+          h => h.getAttribute("role") + h.getAttribute("aria-level")
+        ),
+        day: [...document.querySelectorAll("#app .dayh")].map(
+          h => h.getAttribute("role") + h.getAttribute("aria-level")
+        ),
+        open: row.getAttribute("aria-expanded"),
+        acts: [...document.querySelectorAll("#app .txo .acts button")].map(b => b.textContent),
+      };
+    }, id);
+    ok(
+      ar.back === "Back" &&
+        ar.title === "Archived" &&
+        ar.month.length === 1 &&
+        ar.month.every(m => m === "heading2") &&
+        ar.day.length === 1 &&
+        ar.day.every(d => d === "heading3") &&
+        ar.open === "true" &&
+        JSON.stringify(ar.acts) === JSON.stringify(["Unarchive", "Delete"]),
+      "the Archived screen: Back, its title, month and day headings, the opened row and its actions " +
+        JSON.stringify(ar)
+    );
+    await page.click('#app [data-act="arch-back"]');
+    await settle();
+    ok(
+      (await page.evaluate(() => [V.screen, document.activeElement.dataset.act].join())) === "history,arch-open",
+      "Back gives the focus to the archive icon"
+    );
+    await page.evaluate(id => {
+      archiveEntries([id], false);
+      commit();
+    }, id);
     await page.evaluate(() => {
       V.screen = "home";
       render();

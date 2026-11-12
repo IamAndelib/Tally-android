@@ -55,7 +55,6 @@
     "mismatchHint": "Gib ein, was du jetzt hast. Der Unterschied wird als Korrektur gebucht.",
     "actual": "Tatsächlicher Stand",
     "update": "Stand aktualisieren",
-    "unarchive": "Wieder zeigen",
     "edit": "Konto bearbeiten",
     "new": "Neues Konto",
     "typeNow": "Gib ein, was du jetzt hast",
@@ -401,7 +400,7 @@
     "gotBackQ": "Geld zurückbekommen?",
     "paidBackQ": "Etwas zurückgezahlt?",
     "partOk": "Ein Teil geht auch.",
-    "noPayAccount": "Kein Konto in {{cur}} zum Erfassen: Leg eins an oder zeig ein archiviertes wieder.",
+    "noPayAccount": "Kein Konto in {{cur}} zum Erfassen: Leg eins an oder heb die Archivierung eines Kontos auf.",
     "record": "Zahlung erfassen",
     "drawLent": "Von {{account}} verliehen am {{date}}",
     "drawBorrowed": "Auf {{account}} geliehen am {{date}}",
@@ -712,7 +711,7 @@
     "dragTip": "Tipp: Halte eine Zeile und zieh sie nach oben auf den leeren Platz, um sie zurückzuholen.",
     "netWorth": "Nettovermögen",
     "noAccounts": "Noch keine Konten",
-    "dropShow": "Hier ablegen, um es wieder zu zeigen",
+    "dropShow": "Zum Aufheben der Archivierung hier ablegen",
     "showArchived": "Archivierte zeigen ({{count}})",
     "hideArchived": "Archivierte ausblenden ({{count}})",
     "dropArchive": "Zum Archivieren hier ablegen",
@@ -779,10 +778,12 @@
     "selAll": "Alle auswählen",
     "clearSel": "Auswahl aufheben",
     "delSel": "Auswahl löschen",
+    "archSel": "Auswahl archivieren",
     "select": "Einträge auswählen",
     "allTime": "Gesamte Zeit",
     "none": {
-      "all": "Noch nichts notiert."
+      "all": "Noch nichts notiert.",
+      "archived": "Alle Einträge sind archiviert."
     },
     "deleted_one": "{{count}} Eintrag gelöscht",
     "deleted_other": "{{count}} Einträge gelöscht",
@@ -840,6 +841,14 @@
     "show_one": "{{count}} Eintrag zeigen",
     "show_other": "{{count}} Einträge zeigen",
     "savedGone": "Gespeichert · nicht mehr in dieser Liste"
+  },
+  "archive": {
+    "title": "Archiviert",
+    "open": "Archivierte Einträge",
+    "unarchive": "Archivierung aufheben",
+    "back": "Wieder im Verlauf",
+    "none": "Nichts archiviert.",
+    "noneHint": "Einträge, die du archivierst, warten hier, und jeder Kontostand bleibt, wie er ist."
   },
   "remind": {
     "nudge": "Abend-Erinnerung",

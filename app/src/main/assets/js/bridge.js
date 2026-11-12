@@ -504,7 +504,8 @@ function saveOut(name, mime, text, then) {
   else snack(T("data.noSaving"));
 }
 /* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),
-   then a selection, then another screen goes Home. False when there is nothing left to close (then the app closes). */
+   then a selection, then the Archived screen goes back to History and another screen goes Home. False when there is
+   nothing left to close (then the app closes). */
 function goBack() {
   if ($("#pop").innerHTML) {
     closePop();
@@ -537,6 +538,10 @@ function goBack() {
   }
   if (V.find) {
     if (!findUndo()) findBack(); // a suggestion tapped is undone first, then search mode ends
+    return true;
+  }
+  if (V.screen === "archive") {
+    archBack();
     return true;
   }
   if (V.screen !== "home") {

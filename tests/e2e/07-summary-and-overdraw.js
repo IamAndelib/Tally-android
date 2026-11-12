@@ -225,11 +225,11 @@ const ok = (c, m) => {
   await tap('[data-src="arch"] [data-v="k"]');
   ok(
     (await page.isVisible('#sheet [data-act="acc-unarch"]')) && (await page.isVisible('#sheet [data-act="hist-acc"]')),
-    "archived account: Show again + History"
+    "archived account: Unarchive + History"
   );
   await tap('#sheet [data-act="acc-unarch"]');
   S = await state();
-  ok(!S.accounts.find(a => a.id === "k").archived, "Show again unarchives");
+  ok(!S.accounts.find(a => a.id === "k").archived, "Unarchive unarchives");
   await tap('[data-src="acc"] [data-v="k"]');
   await tap('#sheet [data-act="acc-form"]');
   ok(!(await page.$('#sheet [data-act="acc-arch"]')), "Edit account has no Archive button");

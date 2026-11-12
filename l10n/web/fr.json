@@ -55,7 +55,6 @@
     "mismatchHint": "Saisissez ce que vous avez maintenant. L’écart devient une correction de solde.",
     "actual": "Solde réel",
     "update": "Mettre à jour le solde",
-    "unarchive": "Réafficher",
     "edit": "Modifier le compte",
     "new": "Nouveau compte",
     "typeNow": "Saisissez ce que vous avez maintenant",
@@ -404,7 +403,7 @@
     "gotBackQ": "On vous a remboursé ?",
     "paidBackQ": "Vous avez remboursé ?",
     "partOk": "Même une partie, c’est bien.",
-    "noPayAccount": "Aucun compte en {{cur}} pour l’enregistrer : ajoutez-en un, ou réaffichez un compte archivé.",
+    "noPayAccount": "Aucun compte en {{cur}} pour l’enregistrer : ajoutez-en un, ou désarchivez-en un.",
     "record": "Noter le remboursement",
     "drawLent": "Prêté depuis {{account}} le {{date}}",
     "drawBorrowed": "Emprunté sur {{account}} le {{date}}",
@@ -718,10 +717,10 @@
     "liabs": "Dettes"
   },
   "assets": {
-    "dragTip": "Astuce : maintenez une ligne et faites-la glisser vers l’emplacement vide pour la réafficher.",
+    "dragTip": "Astuce : maintenez une ligne et faites-la glisser vers l’emplacement vide pour la désarchiver.",
     "netWorth": "Patrimoine net",
     "noAccounts": "Aucun compte pour l’instant",
-    "dropShow": "Déposez ici pour le réafficher",
+    "dropShow": "Déposez ici pour désarchiver",
     "showArchived": "Afficher les archivés ({{count}})",
     "hideArchived": "Masquer les archivés ({{count}})",
     "dropArchive": "Déposez ici pour archiver",
@@ -789,10 +788,12 @@
     "selAll": "Tout sélectionner",
     "clearSel": "Effacer la sélection",
     "delSel": "Supprimer la sélection",
+    "archSel": "Archiver la sélection",
     "select": "Sélectionner des opérations",
     "allTime": "Depuis le début",
     "none": {
-      "all": "Rien de noté pour l’instant."
+      "all": "Rien de noté pour l’instant.",
+      "archived": "Toutes les opérations sont archivées."
     },
     "deleted_one": "{{count}} opération supprimée",
     "deleted_many": "{{count}} d’opérations supprimées",
@@ -853,6 +854,14 @@
     "show_one": "Voir {{count}} opération",
     "show_other": "Voir {{count}} opérations",
     "savedGone": "Enregistré · n’est plus dans cette liste"
+  },
+  "archive": {
+    "title": "Archivées",
+    "open": "Opérations archivées",
+    "unarchive": "Désarchiver",
+    "back": "De retour dans l’historique",
+    "none": "Rien d’archivé.",
+    "noneHint": "Les opérations que vous archivez attendent ici, et chaque solde reste tel quel."
   },
   "remind": {
     "nudge": "Rappel du soir",

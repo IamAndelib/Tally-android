@@ -64,7 +64,9 @@ function rowAnchor(box, scroller) {
   return row ? { v: row.dataset.v, top: row.getBoundingClientRect().top - r.top } : null;
 }
 function toAnchor(a, box, scroller) {
+  const drawn = box.firstElementChild; // what was drawn: once it is drawn anew (another screen), the row is let go
   const fix = () => {
+    if (box.firstElementChild !== drawn) return stop();
     const row = box.querySelector('.tx[data-v="' + CSS.escape(a.v) + '"]'),
       d = row ? row.getBoundingClientRect().top - (scroller ? scroller.getBoundingClientRect().top : 0) - a.top : 0;
     if (Math.abs(d) < 1) return;
@@ -87,9 +89,10 @@ function drawScreen() {
   const app = $("#app");
   RBC = LPC = null;
   if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
-  if (V.screen !== "history") {
+  if (!histLike()) {
     V.sel = null;
-    /* leaving History forgets its filters, and ends search mode (its words and payee / amount with them) */
+    /* leaving History forgets its filters, and ends search mode (its words and payee / amount with them); its Archived
+       screen keeps them, for Back */
     if (V.find) findEnd();
     HF = histBlank();
     histUnwatch();
@@ -113,6 +116,9 @@ function drawScreen() {
   }
   if (V.screen === "history") {
     app.innerHTML = historyView();
+    histWatch();
+  } else if (V.screen === "archive") {
+    app.innerHTML = archiveView();
     histWatch();
   } else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
@@ -274,7 +280,8 @@ function homeView() {
       '<div class="sec">' +
       esc(periodLabel()) +
       "</div>" +
-      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>"); // archived ones count in the day totals, never as rows
+      // archived ones count in the day totals, never as rows
+      (histRows(list).length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>");
   }
   const top = h;
   h = "";
@@ -989,11 +996,13 @@ function txOpenView(t) {
     t.id +
     '">' +
     h +
-    '<div class="acts"><button class="btn tonal" data-act="tx-open" data-v="' +
+    /* an archived entry (the Archived screen) is unarchived or deleted, not edited */
+    '<div class="acts"><button class="btn tonal" data-act="' +
+    (t.archived ? "unarchive" : "tx-open") +
+    '" data-v="' +
     t.id +
     '">' +
-    ic("edit") +
-    TH("common.edit") +
+    (t.archived ? icUnarchive() + TH("archive.unarchive") : ic("edit") + TH("common.edit")) +
     '</button><button class="btn text dng" data-act="tx-del" data-v="' +
     t.id +
     '">' +
@@ -1027,8 +1036,11 @@ function loanPill(t) {
   if (!r || !r.ls) return "";
   return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
+/* the rows of a list by day, under day headings: History's (hist), each with its words; the Archived screen's (hist
+   "arch"), the archived entries' rows under headings without totals; elsewhere, each day's spending */
 function dayGroups(list, hist) {
-  const whole = new Map(); // History's day words count the fees too (histLines)
+  const arch = hist === "arch",
+    whole = new Map(); // History's day words count the fees too (histLines)
   if (hist) list.forEach(x => whole.set(x.date, (whole.get(x.date) || []).concat(x)));
   /* elsewhere (Home, the entries sheet: the whole period), each day's spending per currency by the counting rule, the
      charges inside the rows and the worked-out parts included, in one pass (a year is thousands of rows) */
@@ -1043,7 +1055,7 @@ function dayGroups(list, hist) {
     list.forEach(x => isSpend(x) && spend(x.date, (acc(x.account) || {}).currency, x.amount));
     loanParts().forEach(p => p.as === "spend" && spend(p.date, p.cur, p.amount));
   }
-  list = histRows(list); // a fee is shown inside what it was charged on
+  list = arch ? archRows(list) : histRows(list); // a fee is shown inside what it was charged on
   let h = "",
     cur = "";
   list.forEach(x => rows.set(x.date, (rows.get(x.date) || 0) + 1));
@@ -1057,7 +1069,7 @@ function dayGroups(list, hist) {
         .map(([c, v]) => signed(-rnd(v), c))
         .join(" · ");
       const title = capFirst(dayLabel(t.date)),
-        lines = hist ? histLines(whole.get(cur) || [], HF.kind, [cur, cur]) : [];
+        lines = hist && !arch ? histLines(whole.get(cur) || [], HF.kind, [cur, cur]) : [];
       h +=
         (hist
           ? '<div class="day dayh" role="heading" aria-level="3" aria-label="' +
@@ -1083,7 +1095,7 @@ function selSync(b) {
   b.setAttribute("aria-pressed", on);
   b.querySelector(".em.pick").innerHTML = ic(on ? "checked" : "unchecked");
   $("#app .appbar h1").textContent = T("history.selected", { count: n });
-  $('#app [data-act="sel-del"]').disabled = !n;
+  $('#app [data-act="sel-del"]').disabled = $('#app [data-act="sel-arch"]').disabled = !n;
   const all = $('#app [data-act="sel-all"]'),
     every = histAllSelected();
   all.setAttribute("aria-label", T(every ? "history.clearSel" : "history.selAll"));

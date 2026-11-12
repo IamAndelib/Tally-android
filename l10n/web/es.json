@@ -44,7 +44,7 @@
     "fallbackName": "Cuenta",
     "addFirst": "Primero añade una cuenta",
     "archivedMsg": "Se archivó {{name}}",
-    "backMsg": "{{name}} vuelve a mostrarse",
+    "backMsg": "Se desarchivó {{name}}",
     "archiveQ": "¿Archivar {{name}}?",
     "archiveHas": "Aún tiene {{amount}}. Las cuentas archivadas no cuentan en tus totales; sus movimientos siguen en el Historial.",
     "archiveOwes": "Aún debe {{amount}}. Las cuentas archivadas no cuentan en tus totales; sus movimientos siguen en el Historial.",
@@ -55,7 +55,6 @@
     "mismatchHint": "Escribe lo que tienes ahora. La diferencia se anota como un ajuste de saldo.",
     "actual": "Saldo real",
     "update": "Actualizar saldo",
-    "unarchive": "Volver a mostrar",
     "edit": "Editar cuenta",
     "new": "Nueva cuenta",
     "typeNow": "Escribe lo que tienes ahora",
@@ -404,7 +403,7 @@
     "gotBackQ": "¿Te devolvieron dinero?",
     "paidBackQ": "¿Devolviste una parte?",
     "partOk": "Una parte también vale.",
-    "noPayAccount": "No hay ninguna cuenta en {{cur}} para anotarlo: añade una, o vuelve a mostrar una archivada.",
+    "noPayAccount": "No hay ninguna cuenta en {{cur}} para anotarlo: añade una, o desarchiva una.",
     "record": "Anotar pago",
     "drawLent": "Prestado desde {{account}} el {{date}}",
     "drawBorrowed": "Recibido en {{account}} el {{date}}",
@@ -721,7 +720,7 @@
     "dragTip": "Consejo: mantén presionada una fila y arrástrala hasta el hueco vacío para recuperarla.",
     "netWorth": "Patrimonio",
     "noAccounts": "Aún no hay cuentas",
-    "dropShow": "Suelta aquí para volver a mostrarla",
+    "dropShow": "Suelta aquí para desarchivar",
     "showArchived": "Mostrar archivadas ({{count}})",
     "hideArchived": "Ocultar archivadas ({{count}})",
     "dropArchive": "Suelta aquí para archivar",
@@ -789,10 +788,12 @@
     "selAll": "Seleccionar todo",
     "clearSel": "Borrar selección",
     "delSel": "Eliminar selección",
+    "archSel": "Archivar selección",
     "select": "Seleccionar movimientos",
     "allTime": "Todo el tiempo",
     "none": {
-      "all": "Aún no hay nada anotado."
+      "all": "Aún no hay nada anotado.",
+      "archived": "Todos los movimientos están archivados."
     },
     "deleted_one": "Se eliminó {{count}} movimiento",
     "deleted_many": "Se eliminaron {{count}} movimientos",
@@ -853,6 +854,14 @@
     "show_one": "Ver {{count}} movimiento",
     "show_other": "Ver {{count}} movimientos",
     "savedGone": "Guardado · ya no está en esta lista"
+  },
+  "archive": {
+    "title": "Archivados",
+    "open": "Movimientos archivados",
+    "unarchive": "Desarchivar",
+    "back": "De vuelta en el historial",
+    "none": "No hay nada archivado.",
+    "noneHint": "Los movimientos que archives esperan aquí, con todos los saldos tal como están."
   },
   "remind": {
     "nudge": "Aviso de la noche",

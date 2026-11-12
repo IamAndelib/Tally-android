@@ -55,7 +55,6 @@
     "mismatchHint": "Ketik jumlah yang kamu punya sekarang. Selisihnya menjadi koreksi saldo.",
     "actual": "Saldo sebenarnya",
     "update": "Perbarui saldo",
-    "unarchive": "Tampilkan lagi",
     "edit": "Ubah akun",
     "new": "Akun baru",
     "typeNow": "Ketik saldo saat ini",
@@ -398,7 +397,7 @@
     "gotBackQ": "Uangnya sudah kembali?",
     "paidBackQ": "Sudah bayar sebagian?",
     "partOk": "Sebagian juga tidak apa-apa.",
-    "noPayAccount": "Tidak ada akun dalam {{cur}} untuk mencatatnya: tambahkan satu, atau tampilkan lagi akun yang diarsipkan.",
+    "noPayAccount": "Tidak ada akun dalam {{cur}} untuk mencatatnya: tambahkan satu, atau batalkan pengarsipan salah satu akun.",
     "record": "Catat pembayaran",
     "drawLent": "Dipinjamkan dari {{account}} pada {{date}}",
     "drawBorrowed": "Dipinjam, masuk ke {{account}} pada {{date}}",
@@ -700,10 +699,10 @@
     "liabs": "Utang"
   },
   "assets": {
-    "dragTip": "Tips: tahan satu baris lalu geser ke slot kosong untuk menampilkannya lagi.",
+    "dragTip": "Tips: tahan satu baris lalu geser ke slot kosong untuk membatalkan pengarsipannya.",
     "netWorth": "Kekayaan bersih",
     "noAccounts": "Belum ada akun",
-    "dropShow": "Lepas di sini untuk menampilkannya lagi",
+    "dropShow": "Lepas di sini untuk membatalkan pengarsipan",
     "showArchived": "Tampilkan arsip ({{count}})",
     "hideArchived": "Sembunyikan arsip ({{count}})",
     "dropArchive": "Lepas di sini untuk mengarsipkan",
@@ -769,10 +768,12 @@
     "selAll": "Pilih semua",
     "clearSel": "Hapus pilihan",
     "delSel": "Hapus yang dipilih",
+    "archSel": "Arsipkan yang dipilih",
     "select": "Pilih transaksi",
     "allTime": "Sepanjang waktu",
     "none": {
-      "all": "Belum ada catatan."
+      "all": "Belum ada catatan.",
+      "archived": "Semua transaksi diarsipkan."
     },
     "deleted_other": "{{count}} transaksi dihapus",
     "words": {
@@ -827,6 +828,14 @@
     "swap": "Tukar Dari dan Ke",
     "show_other": "Tampilkan {{count}} transaksi",
     "savedGone": "Disimpan · tidak lagi ada di daftar ini"
+  },
+  "archive": {
+    "title": "Arsip",
+    "open": "Transaksi yang diarsipkan",
+    "unarchive": "Batalkan pengarsipan",
+    "back": "Ditampilkan lagi di Riwayat",
+    "none": "Belum ada yang diarsipkan.",
+    "noneHint": "Transaksi yang kamu arsipkan menunggu di sini, dan semua saldo tetap seperti adanya."
   },
   "remind": {
     "nudge": "Pengingat malam",

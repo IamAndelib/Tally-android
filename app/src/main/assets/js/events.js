@@ -634,6 +634,29 @@ document.addEventListener("click", ev => {
       render();
       break;
     }
+    /* archiving asks nothing and is never refused (it changes no balance or loan): the selection goes, with Undo */
+    case "sel-arch": {
+      if (!V.sel || !V.sel.size) return;
+      const ids = [...V.sel];
+      withUndo(T("entries.archived"), () => {
+        archiveEntries(ids, true);
+        V.sel = null;
+      });
+      break;
+    }
+    case "arch-open":
+      archOpen();
+      break;
+    case "arch-back":
+      archBack();
+      break;
+    /* Unarchive (an opened row on the Archived screen): the entry, with its add-on, is back in History */
+    case "unarchive":
+      withUndo(T("archive.back"), () => {
+        archiveEntries([v], false);
+        V.open = "";
+      });
+      break;
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel];
@@ -907,7 +930,7 @@ addEventListener("resize", () => {
   if (LP) return;
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
-  else if (V.screen === "history") histPinSet(); // a new height (search's keyboard): what History can keep pinned
+  else if (histLike()) histPinSet(); // a new height (search's keyboard): what History can keep pinned
   fitCal($("#dp") || $("#pd"));
   fitSmRows();
   /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */

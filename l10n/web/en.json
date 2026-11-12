@@ -55,7 +55,6 @@
     "mismatchHint": "Type what you have now. The difference becomes a balance fix.",
     "actual": "Actual balance",
     "update": "Update balance",
-    "unarchive": "Show again",
     "edit": "Edit account",
     "new": "New account",
     "typeNow": "Type what you have now",
@@ -401,7 +400,7 @@
     "gotBackQ": "Got money back?",
     "paidBackQ": "Paid some back?",
     "partOk": "Part of it is fine too.",
-    "noPayAccount": "No account in {{cur}} to record it: add one, or show an archived one again.",
+    "noPayAccount": "No account in {{cur}} to record it: add one, or unarchive one.",
     "record": "Record payment",
     "drawLent": "Lent from {{account}} on {{date}}",
     "drawBorrowed": "Borrowed into {{account}} on {{date}}",
@@ -712,7 +711,7 @@
     "dragTip": "Tip: hold a row and drag it up to the empty slot to bring it back.",
     "netWorth": "Net worth",
     "noAccounts": "No accounts yet",
-    "dropShow": "Drop here to show it again",
+    "dropShow": "Drop here to unarchive",
     "showArchived": "Show archived ({{count}})",
     "hideArchived": "Hide archived ({{count}})",
     "dropArchive": "Drop here to archive",
@@ -779,10 +778,12 @@
     "selAll": "Select all",
     "clearSel": "Clear selection",
     "delSel": "Delete selected",
+    "archSel": "Archive selected",
     "select": "Select entries",
     "allTime": "All time",
     "none": {
-      "all": "Nothing written down yet."
+      "all": "Nothing written down yet.",
+      "archived": "Every entry is archived."
     },
     "deleted_one": "Deleted {{count}} entry",
     "deleted_other": "Deleted {{count}} entries",
@@ -840,6 +841,14 @@
     "showNone": "No entries",
     "swap": "Swap From and To",
     "savedGone": "Saved · no longer in this list"
+  },
+  "archive": {
+    "title": "Archived",
+    "open": "Archived entries",
+    "unarchive": "Unarchive",
+    "back": "Back in History",
+    "none": "Nothing archived.",
+    "noneHint": "Entries you archive wait here, with every balance as it is."
   },
   "remind": {
     "nudge": "Evening nudge",

@@ -7,6 +7,8 @@
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
  * row and the month in view stay at the top while the entries scroll). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
+ * Last, the Archived screen (`archiveView()`, `archOpen()`, `archBack()`): the archived entries, reached from
+ * History's bar.
  */
 const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "", q: "", pay: "", amt: "" });
 let HF = histBlank();
@@ -93,11 +95,12 @@ const histPick = (f = HF, skip) => {
   return S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f, skip));
 };
 const histList = (f = HF, skip) => histPick(f, skip).sort(byNewest);
-/* the rows shown: an add-on rides inside its entry, and an archived entry is not listed (it still counts in every total:
-   the headings work from the whole list) */
-function histRows(list) {
-  return list.filter(t => !t.archived && !(t.feeOf && entry(t.feeOf)));
-}
+/* the entries that have rows of their own: an add-on rides inside its entry */
+const entryRows = list => list.filter(t => !(t.feeOf && entry(t.feeOf)));
+/* the rows History shows: an archived entry is not listed (it still counts in every total: the headings work from the
+   whole list); the Archived screen shows only those (archRows) */
+const histRows = list => entryRows(list).filter(t => !t.archived);
+const archRows = list => entryRows(list).filter(t => t.archived);
 /* the totals of a list as lines, one per currency (by code) for each phrase of the kind shown, in the order they stack in a
    heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only).
    By the counting rule (docs/specs/charges.md, "History headings and filters"): a charge is spending (inside "spent")
@@ -599,21 +602,25 @@ const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("h
    it up (histPin). Only the first rows are drawn (a notebook of years is thousands of rows); the rest follow as the end
    of the list comes near (histWatch). A chunk ends at the end of a day, and a month cut in two has its heading, with the
    whole month's words, only once: the days that continue it (`cont`) go into its section (histMore). The list holds the
-   archived entries too, for the words: a heading shows only over a row (histRows), with every entry in its totals. */
+   archived entries too, for the words: a heading shows only over a row (histRows), with every entry in its totals.
+   The Archived screen draws its list the same way (arch: its rows are the archived entries, its headings have no
+   totals). */
 const HIST_CHUNK = 300;
 let HSHOW = { sig: "", n: HIST_CHUNK }, // what is drawn: the entries so far, for these filters and this period
-  HLIST = [], // the entries it is drawn from
+  HLIST = [], // the entries it is drawn from (History's, or the Archived screen's)
   HIO = null;
 const histSig = () => JSON.stringify([HF, HP.period, range(HP)]); // the dates shown, so midnight keeps the rows drawn
 const histMonth = t => t.date.slice(0, 7);
 /* the markup for list[i..] up to about `budget` entries: `cont`, the days of a month begun in an earlier chunk, and
    `html`, the months that begin in this one; `next` is where the following chunk starts. While selecting, the month
-   headings scroll with the entries (their totals are not about the selection): their sections don't pin. */
-function histMonths(list, i, budget) {
+   headings scroll with the entries (their totals are not about the selection): their sections don't pin. arch: the
+   Archived screen's list. */
+function histMonths(list, i, budget, arch) {
   let h = "",
     cont = "";
   const stop = i + budget,
-    sec = '<div class="hsec' + (V.sel ? "" : " pin") + '">';
+    sec = '<div class="hsec' + (V.sel ? "" : " pin") + '">',
+    rowsOf = arch ? archRows : histRows;
   HLW = V.find && HF.q.trim() ? hlTerms(HF.q) : null; // search mode marks the words in the rows
   try {
     while (i < list.length && i < stop) {
@@ -622,14 +629,14 @@ function histMonths(list, i, budget) {
       while (j < list.length && histMonth(list[j]) === m) j++;
       const head = i === 0 || histMonth(list[i - 1]) !== m;
       /* a month whose entries are all archived has nothing to show: no heading (its days have none either) */
-      if (head && !histRows(list.slice(i, j)).length) {
+      if (head && !rowsOf(list.slice(i, j)).length) {
         i = j;
         continue;
       }
       let part = "";
       if (head) {
         const title = capFirst(monthLabel(m, true)),
-          lines = histLines(list.slice(i, j), HF.kind, [m + "-01", monthEnd(m)]);
+          lines = arch ? [] : histLines(list.slice(i, j), HF.kind, [m + "-01", monthEnd(m)]);
         part +=
           '<div class="hmon" role="heading" aria-level="2" aria-label="' +
           esc(histHeadSay(title, lines)) +
@@ -644,7 +651,7 @@ function histMonths(list, i, budget) {
         e = stop;
         while (e < j && list[e].date === list[e - 1].date) e++; // the day is whole
       }
-      part += dayGroups(list.slice(i, e), true);
+      part += dayGroups(list.slice(i, e), arch ? "arch" : true);
       if (head) h += sec + part + "</div>";
       else cont += part; // only a chunk's first month can be one begun before
       i = e;
@@ -667,9 +674,10 @@ function histUnwatch() {
   HIO = null;
 }
 function histMore() {
-  const end = $("#app .hmore");
-  if (!end || V.screen !== "history") return histUnwatch();
-  const r = histMonths(HLIST, +end.dataset.next, HIST_CHUNK),
+  const end = $("#app .hmore"),
+    arch = V.screen === "archive";
+  if (!end || !histLike()) return histUnwatch();
+  const r = histMonths(HLIST, +end.dataset.next, HIST_CHUNK, arch),
     secs = document.querySelectorAll("#app .hsec"),
     last = secs[secs.length - 1];
   if (r.cont && last) {
@@ -681,15 +689,16 @@ function histMore() {
     fitFigures(end.previousElementSibling);
   }
   histPinSet();
-  HSHOW.n = r.next;
+  if (arch) ASHOW = r.next;
+  else HSHOW.n = r.next;
   if (r.next >= HLIST.length) end.remove();
   else end.dataset.next = r.next;
   histWatch(); // still near the end? this says so again
 }
-/* History with nothing to list: its words and Clear all sit in the middle of the window, where a thumb reaches them
-   (never above where the list would start) */
+/* History (or the Archived screen) with nothing to list: its words and Clear all sit in the middle of the window,
+   where a thumb reaches them (never above where the list would start) */
 function histCenter(app) {
-  const e = V.screen === "history" && app.querySelector(".empty");
+  const e = histLike() && app.querySelector(".empty");
   if (!e) return;
   e.style.marginTop = "";
   if (e.previousElementSibling && e.previousElementSibling.classList.contains("list")) return; // search suggestions above it: it follows them, never overlapping
@@ -734,7 +743,9 @@ function histParts() {
           ? findNone()
           : anySet
             ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn()
-            : TH("history.none.all")) +
+            : S.txns.length // entries, none listed: every one is archived (the bar's icon leads to them)
+              ? TH("history.none.archived")
+              : TH("history.none.all")) +
         "</div>",
     };
   const r = histMonths(list, 0, Math.max(HSHOW.n, HIST_CHUNK));
@@ -769,6 +780,13 @@ function historyView() {
       '">' +
       (all ? icDeselect() : ic("selectall")) +
       "</button>" +
+      '<button class="icon" data-act="sel-arch" aria-label="' +
+      TH("history.archSel") +
+      '"' +
+      (n ? "" : " disabled") +
+      ">" +
+      icArchive() +
+      "</button>" +
       '<button class="icon" data-act="sel-del" aria-label="' +
       TH("history.delSel") +
       '"' +
@@ -786,6 +804,14 @@ function historyView() {
       "</button><h1>" +
       TH("common.history") +
       "</h1>" +
+      /* left of search, so search and select never move as it comes and goes */
+      (S.txns.some(t => t.archived)
+        ? '<button class="icon" data-act="arch-open" aria-label="' +
+          TH("archive.open") +
+          '">' +
+          icArchive() +
+          "</button>"
+        : "") +
       searchBtn() +
       (histRows(HLIST).length
         ? '<button class="icon" data-act="sel-start" aria-label="' +
@@ -817,12 +843,13 @@ function historyView() {
    row scrolled to (an opened row's part, the focus, a search match) is that plus the tallest month heading
    (scroll-padding-top), so the row lands under the block, not behind it; where the two would cover over half the
    window, the month headings scroll (#app.hfree). A phone held sideways (body.land) keeps only
-   the bar there: the Filters row scrolls away with the entries and comes back (.back) as soon as the list scrolls up. */
+   the bar there: the Filters row scrolls away with the entries and comes back (.back) as soon as the list scrolls up.
+   The Archived screen pins its bar and month headings the same way. */
 const HPIN = { ro: null, ref: null, at: 0, raf: 0, on: false };
 function histPin() {
   if (HPIN.ro) HPIN.ro.disconnect();
   HPIN.ro = null;
-  const pin = V.screen === "history" && $("#app .hpin");
+  const pin = histLike() && $("#app .hpin");
   if (pin && typeof ResizeObserver !== "undefined") {
     HPIN.ro = new ResizeObserver(histPinSet);
     [...pin.children].forEach(e => HPIN.ro.observe(e));
@@ -836,7 +863,7 @@ function histPin() {
 }
 function histPinSet() {
   const root = document.documentElement,
-    pin = V.screen === "history" && $("#app .hpin");
+    pin = histLike() && $("#app .hpin");
   if (!pin) {
     $("#app").classList.remove("hfree");
     root.style.removeProperty("--hpin");
@@ -875,4 +902,53 @@ function histScroll() {
     head.classList.toggle("back", d > 0);
     histPinSet();
   });
+}
+
+/* ---- The Archived screen (docs/specs/history-archive.md, B5): every archived entry, newest first, in History's rows
+   under its month and day headings, without totals (History's headings count these entries; this screen only finds
+   them), and no period, Filters, search or selection. An opened row offers Unarchive and Delete (txOpenView). It is
+   reached from History's bar while an entry is archived, and Back returns to History as it was: its filters and period
+   are kept (drawScreen), and the row in view comes back where it was. Unarchiving or deleting the last one leaves
+   the screen where it is, with its empty state. */
+let ASHOW = HIST_CHUNK, // the entries drawn so far (histMore)
+  ABACK = null; // History's place when the screen opened: {y, a: rowAnchor}
+const histLike = () => V.screen === "history" || V.screen === "archive"; // History's list, bar and pinned block
+function archOpen() {
+  ABACK = { y: scrollY, a: rowAnchor($("#app")) };
+  ASHOW = HIST_CHUNK;
+  V.screen = "archive";
+  render();
+  scrollTo(0, 0);
+}
+function archBack() {
+  const back = ABACK,
+    had = $("#app").contains(document.activeElement);
+  ABACK = null;
+  V.screen = "history";
+  render();
+  scrollTo(0, back ? back.y : 0);
+  if (back && back.a) toAnchor(back.a, $("#app")); // the rows far down only have an estimated height until seen
+  /* the focus goes back to what opened the screen (search, once nothing is archived any more) */
+  const b = had && ($('#app [data-act="arch-open"]') || $('#app [data-act="search-open"]'));
+  if (b) b.focus({ preventScroll: true });
+}
+function archiveView() {
+  HLIST = S.txns.filter(t => t.archived).sort(byNewest); // an archived add-on too: its entry's row shows it
+  let body;
+  if (!archRows(HLIST).length)
+    body = '<div class="empty">' + TH("archive.none") + '<div class="gap"></div>' + TH("archive.noneHint") + "</div>";
+  else {
+    const r = histMonths(HLIST, 0, Math.max(ASHOW, HIST_CHUNK), true);
+    body = r.html + (r.next < HLIST.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : "");
+  }
+  return (
+    '<div class="hpin"><header class="appbar"><button class="icon" data-act="arch-back" aria-label="' +
+    TH("common.back") +
+    '">' +
+    ic("back") +
+    "</button><h1>" +
+    TH("archive.title") +
+    "</h1></header></div>" +
+    body
+  );
 }

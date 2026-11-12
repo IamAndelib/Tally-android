@@ -55,7 +55,6 @@
     "mismatchHint": "Digite o que você tem agora. A diferença vira um ajuste de saldo.",
     "actual": "Saldo real",
     "update": "Atualizar saldo",
-    "unarchive": "Mostrar de novo",
     "edit": "Editar conta",
     "new": "Nova conta",
     "typeNow": "Digite o que você tem agora",
@@ -404,7 +403,7 @@
     "gotBackQ": "Recebeu dinheiro de volta?",
     "paidBackQ": "Devolveu uma parte?",
     "partOk": "Uma parte também vale.",
-    "noPayAccount": "Nenhuma conta em {{cur}} para registrar: adicione uma ou mostre de novo uma arquivada.",
+    "noPayAccount": "Nenhuma conta em {{cur}} para registrar: adicione uma ou desarquive uma.",
     "record": "Registrar pagamento",
     "drawLent": "Emprestado de {{account}} em {{date}}",
     "drawBorrowed": "Entrou em {{account}} em {{date}}",
@@ -721,7 +720,7 @@
     "dragTip": "Dica: segure uma linha e arraste até o espaço vazio para trazê-la de volta.",
     "netWorth": "Patrimônio líquido",
     "noAccounts": "Nenhuma conta ainda",
-    "dropShow": "Solte aqui para mostrar de novo",
+    "dropShow": "Solte aqui para desarquivar",
     "showArchived": "Mostrar arquivadas ({{count}})",
     "hideArchived": "Ocultar arquivadas ({{count}})",
     "dropArchive": "Solte aqui para arquivar",
@@ -789,10 +788,12 @@
     "selAll": "Selecionar tudo",
     "clearSel": "Limpar seleção",
     "delSel": "Excluir selecionados",
+    "archSel": "Arquivar selecionados",
     "select": "Selecionar lançamentos",
     "allTime": "Todo o período",
     "none": {
-      "all": "Nada anotado ainda."
+      "all": "Nada anotado ainda.",
+      "archived": "Todos os lançamentos estão arquivados."
     },
     "deleted_one": "{{count}} lançamento excluído",
     "deleted_many": "{{count}} lançamentos excluídos",
@@ -853,6 +854,14 @@
     "show_one": "Mostrar {{count}} lançamento",
     "show_other": "Mostrar {{count}} lançamentos",
     "savedGone": "Salvo · não está mais nesta lista"
+  },
+  "archive": {
+    "title": "Arquivados",
+    "open": "Lançamentos arquivados",
+    "unarchive": "Desarquivar",
+    "back": "De volta ao histórico",
+    "none": "Nada arquivado.",
+    "noneHint": "Os lançamentos que você arquivar ficam aqui, com todos os saldos como estão."
   },
   "remind": {
     "nudge": "Lembrete da noite",

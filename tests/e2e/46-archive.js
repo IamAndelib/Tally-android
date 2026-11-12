@@ -1,6 +1,6 @@
 // Archived entries (docs/specs/history-archive.md, B): archiving hides an entry from History and changes nothing else.
 // An entry's mark (`archived: true`, data version 8) is kept and sanitised by migrate() and carried by backups; an
-// entry and its linked charge or extra are archived and shown again together. Every balance, loan and total stays
+// entry and its linked charge or extra are archived and unarchived together. Every balance, loan and total stays
 // (History's headings, Home, Summary, the widget, the morning check, CSV); History's rows, search and the Filters
 // sheet's counts leave archived entries out, and a day or month heading shows only while it has a row to show. The
 // delete question: a warning line, then Delete, Archive instead and Cancel.
@@ -79,6 +79,7 @@ const seed = () => ({
       V.sel = null;
       V.open = "";
       HF = histBlank();
+      histAllTime();
       render();
     }, o);
   const snap = () => page.evaluate(() => JSON.stringify(S));
@@ -108,7 +109,11 @@ const seed = () => ({
     page.evaluate(() => {
       const noMark = (k, v) => (k === "archived" ? undefined : v),
         was = V.screen,
+        hf = HF, // History's filters and period, worked on without them and put back
+        hp = { ...HP },
         out = {};
+      HF = histBlank();
+      histAllTime();
       RBC = LPC = null;
       out.bal = balances();
       out.at = [...new Set(S.txns.map(t => t.date))]
@@ -152,6 +157,8 @@ const seed = () => ({
       summarySheet();
       out.summary = $("#sheet").textContent;
       closeSheet();
+      HF = hf;
+      Object.assign(HP, hp);
       V.screen = was;
       render();
       return out;
@@ -512,7 +519,7 @@ const seed = () => ({
       archiveEntries(["sp"], false);
       commit();
     });
-    ok((await marked()) === "p1,p1t", "shown again: the entry and its charge lose the mark " + (await marked()));
+    ok((await marked()) === "p1,p1t", "unarchived: the entry and its charge lose the mark " + (await marked()));
   }
 
   // ---- 10. empty states: the entries sheet and Home's two-pane list say "Nothing written down yet." when every entry
@@ -676,6 +683,311 @@ const seed = () => ({
       return r;
     });
     ok(sel === "bus", "an archived entry drops out of the selection: " + sel);
+  }
+
+  /* History's or the Archived screen's top bar: each button's action and name */
+  const bar = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#app header.appbar button")].map(
+        b => b.dataset.act + ":" + (b.getAttribute("aria-label") || "") + (b.disabled ? ":off" : "")
+      )
+    );
+  const title = () => page.evaluate(() => (document.querySelector("#app header.appbar h1") || {}).textContent);
+  const opened = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#app .txo .acts button")].map(b => b.dataset.act + ":" + b.textContent)
+    );
+  const emptyText = () =>
+    page.evaluate(() => {
+      const e = document.querySelector("#app .empty");
+      return e ? [...e.childNodes].map(n => n.textContent.trim()).filter(Boolean) : null;
+    });
+  const openRow = async id => {
+    await page.click('#app .tx[data-v="' + id + '"]');
+    await pause();
+  };
+
+  // ---- 14. History's bar (B4): the archive icon, left of search, only while an entry is archived; the Archived
+  // screen (B5): History's rows with their month and day headings, no totals, no Filters, search or select
+  {
+    await load();
+    const b0 = await bar();
+    ok(
+      J(b0) === J(["home:Back", "search-open:Search", "sel-start:Select entries"]),
+      "nothing archived: no archive icon " + J(b0)
+    );
+    /* History filtered and on a period: the Archived screen and Back keep both */
+    await page.evaluate(() => {
+      HF.kind = "out";
+      Object.assign(HP, { period: "month", anchor: "2026-06-17" });
+      render();
+    });
+    await askRow("sp");
+    await page.click("#pop .cd-alt");
+    await pause();
+    const b1 = await bar();
+    ok(
+      J(b1) === J(["home:Back", "arch-open:Archived entries", "search-open:Search", "sel-start:Select entries"]),
+      "the first archived entry brings the icon, left of search, named “Archived entries” " + J(b1)
+    );
+    ok(
+      await page.evaluate(() => {
+        const b = $('#app [data-act="arch-open"]'),
+          r = b.getBoundingClientRect();
+        return r.width >= 48 && r.height >= 48 && !!b.querySelector("svg");
+      }),
+      "the icon is 48px to tap"
+    );
+    await page.evaluate(() => {
+      archiveEntries(["p1", "bp"], true);
+      commit();
+    });
+    const s0 = await snap(),
+      f0 = await figures();
+    await page.click('#app [data-act="arch-open"]');
+    await pause();
+    const a = await page.evaluate(() => ({
+      screen: V.screen,
+      rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+      months: [...document.querySelectorAll("#app .hmon")].map(e => [e.getAttribute("aria-label"), e.textContent]),
+      days: [...document.querySelectorAll("#app .dayh")].map(e => [e.getAttribute("aria-label"), e.textContent]),
+      totals: document.querySelectorAll("#app .hcol").length,
+      filters: !!document.querySelector("#app .hbar"),
+      nav: !!document.querySelector("#nav button"),
+      pinned: !!document.querySelector("#app .hpin > header.appbar"),
+    }));
+    ok((await title()) === "Archived" && a.screen === "archive", "the screen is titled “Archived” " + J(a.screen));
+    ok(J(await bar()) === J(["arch-back:Back"]), "its bar has Back only: no search or select " + J(await bar()));
+    ok(
+      J(a.rows) === J(["sp", "p1", "bp"]),
+      "it lists every archived entry, newest first, an add-on inside its entry, whatever History's filters " + J(a.rows)
+    );
+    ok(
+      J(a.months) === J([["June 2026", "June 2026"]]) &&
+        a.days.length === 3 &&
+        a.days.every(d => d[0] === d[1]) &&
+        !a.totals,
+      "month and day headings, without totals " + J([a.months, a.days])
+    );
+    ok(!a.filters && !a.nav && a.pinned, "no period or Filters row, no bottom bar; the bar is pinned " + J(a));
+    /* an opened row: Unarchive and Delete only */
+    await openRow("sp");
+    const o = await opened();
+    ok(J(o) === J(["unarchive:Unarchive", "tx-del:Delete"]), "an opened row offers Unarchive and Delete " + J(o));
+    ok(
+      await page.evaluate(() =>
+        [...document.querySelectorAll("#app .txo .acts button")].every(b => b.getBoundingClientRect().height >= 48)
+      ),
+      "…each 48px to tap"
+    );
+    /* Unarchive: back in History, with Undo; every figure stays */
+    await page.click('#app .txo [data-act="unarchive"]');
+    await pause();
+    ok((await marked()) === "bp,p1,p1t", "Unarchive takes the mark off the entry and its charge " + (await marked()));
+    ok(
+      /^Back in History/.test(await snackText()) && (await page.$('#snack [data-act="undo"]')) !== null,
+      "“Back in History”, with Undo: " + (await snackText())
+    );
+    ok(
+      J(await rows()) === J(["p1", "bp"]) && (await page.evaluate(() => V.screen)) === "archive",
+      "the row leaves the Archived screen, which stays " + J(await rows())
+    );
+    sameFigures(f0, await figures(), "unarchived");
+    await undo();
+    ok((await snap()) === s0, "Undo restores the exact state");
+    ok(J(await rows()) === J(["sp", "p1", "bp"]), "…and the row is back on the Archived screen");
+    /* Delete: the question without Archive instead; Cancel changes nothing */
+    await openRow("p1");
+    await page.click('#app .txo [data-act="tx-del"]');
+    await pause();
+    const d = await shape();
+    ok(
+      d.role === "alertdialog" &&
+        d.title === "Delete this entry?" &&
+        d.text === "Deleting changes the account balance and the loan." &&
+        J(d.btns) === J(["cd-destroy:Delete", "cd-out:Cancel"]) &&
+        d.tall,
+      "Delete asks “Delete this entry?” with its warning, Delete and Cancel only " + J(d)
+    );
+    await page.click("#pop .cd-out");
+    await pause();
+    ok((await snap()) === s0, "Cancel changes nothing");
+    await openRow("sp");
+    await page.click('#app .txo [data-act="tx-del"]');
+    await pause();
+    ok((await shape()).text === "Deleting changes the account balance.", "a purchase: the balance warning");
+    await page.click("#pop .cd-destroy");
+    await pause();
+    ok(
+      (await page.evaluate(() => !entry("sp") && !entry("spc"))) &&
+        J(await rows()) === J(["p1", "bp"]) &&
+        /^Deleted/.test(await snackText()),
+      "Delete deletes it with its charge: “" + (await snackText()) + "”"
+    );
+    await undo();
+    ok((await snap()) === s0, "Undo restores the exact state");
+    /* Back, the app bar's and Android's: History as it was, filtered and on its period */
+    await page.click('#app [data-act="arch-back"]');
+    await pause();
+    const h = await page.evaluate(() => ({ screen: V.screen, kind: HF.kind, period: HP.period, anchor: HP.anchor }));
+    ok(
+      J(h) === J({ screen: "history", kind: "out", period: "month", anchor: "2026-06-17" }),
+      "Back returns to History with its filters and period " + J(h)
+    );
+    ok(
+      (await title()) === "History" && !!(await page.$('#app [data-act="arch-open"]')),
+      "History again, with the icon"
+    );
+    await page.click('#app [data-act="arch-open"]');
+    await pause();
+    const back = await page.evaluate(() => [goBack(), V.screen, HF.kind, HP.period]);
+    ok(J(back) === J([true, "history", "out", "month"]), "Android's Back too " + J(back));
+    ok((await page.evaluate(() => [goBack(), V.screen].join())) === "true,home", "Back from History goes Home");
+  }
+
+  // ---- 15. the last archived entry unarchived or deleted: the Archived screen stays, empty; the icon is gone from
+  // History; Undo brings the entry back
+  for (const how of ["unarchive", "delete"]) {
+    await load();
+    await page.evaluate(() => {
+      archiveEntries(["bus"], true);
+      commit();
+    });
+    const s0 = await snap();
+    await page.click('#app [data-act="arch-open"]');
+    await pause();
+    await openRow("bus");
+    if (how === "unarchive") await page.click('#app .txo [data-act="unarchive"]');
+    else {
+      await page.click('#app .txo [data-act="tx-del"]');
+      await pause();
+      await page.click("#pop .cd-destroy");
+    }
+    await pause();
+    const e = await emptyText();
+    ok(
+      (await page.evaluate(() => V.screen)) === "archive" &&
+        J(e) === J(["Nothing archived.", "Entries you archive wait here, with every balance as it is."]) &&
+        (await title()) === "Archived",
+      how + ": the screen stays, with its empty state's two lines " + J(e)
+    );
+    await undo();
+    ok((await snap()) === s0 && J(await rows()) === J(["bus"]), how + ": Undo brings the entry back");
+    await openRow("bus");
+    await page.click('#app .txo [data-act="' + (how === "unarchive" ? "unarchive" : "tx-del") + '"]');
+    await pause();
+    if (how === "delete") {
+      await page.click("#pop .cd-destroy");
+      await pause();
+    }
+    await page.click('#app [data-act="arch-back"]');
+    await pause();
+    ok(
+      J(await bar()) === J(["home:Back", "search-open:Search", "sel-start:Select entries"]),
+      how + ": back in History, the icon is gone " + J(await bar())
+    );
+  }
+
+  // ---- 16. selecting (B6): Archive selected beside Delete selected archives at once, never refused, with Undo
+  {
+    const o = seed();
+    o.loans.push({ id: "M", kind: "lend", person: "Ann", account: "a", date: "2026-04-01", status: "open" });
+    o.txns.push(
+      x("m1", 60, "2026-04-01", "loan", 100, "a", { dir: "out", loan: "M", principal: true }),
+      x("m2", 61, "2026-04-05", "loan", 50, "a", { dir: "out", loan: "M", principal: true }),
+      x("mp", 62, "2026-04-20", "loan", 120, "a", { dir: "in", loan: "M" })
+    );
+    await load(o);
+    const s0 = await snap(),
+      b0 = await bare(),
+      f0 = await figures();
+    await page.evaluate(() => {
+      V.sel = new Set();
+      render();
+    });
+    ok(
+      J(await bar()) ===
+        J([
+          "sel-cancel:Stop selecting",
+          "sel-all:Select all",
+          "sel-arch:Archive selected:off",
+          "sel-del:Delete selected:off",
+        ]),
+      "Archive selected sits beside Delete selected, off while nothing is selected " + J(await bar())
+    );
+    await page.evaluate(() => {
+      V.sel = new Set(["sp", "tr", "m2"]);
+      render();
+    });
+    ok(
+      (await page.evaluate(() => {
+        const b = $('#app [data-act="sel-arch"]'),
+          r = b.getBoundingClientRect();
+        return !b.disabled && r.width >= 48 && r.height >= 48;
+      })) && !!(await page.evaluate(() => loanBlock(["m2"]))),
+      "on once something is selected, 48px; the draw selected can't be deleted"
+    );
+    await page.click('#app [data-act="sel-arch"]');
+    await pause();
+    ok(!(await page.$("#pop .dialog")), "it asks nothing");
+    ok(
+      (await marked()) === "m2,sp,spc,tr,trf",
+      "everything selected is archived, with its add-ons " + (await marked())
+    );
+    ok((await bare()) === b0, "nothing but the mark changes");
+    sameFigures(f0, await figures(), "archived from a selection");
+    ok(
+      (await page.evaluate(() => V.sel)) === null &&
+        /^Archived/.test(await snackText()) &&
+        (await page.$('#snack [data-act="undo"]')) !== null,
+      "the selection ends; “Archived”, with Undo"
+    );
+    await undo();
+    ok((await snap()) === s0, "Undo restores the exact state");
+  }
+
+  // ---- 17. every entry archived: History doesn't say "Nothing written down yet."; its icon leads to them
+  {
+    await load();
+    await page.evaluate(() => {
+      archiveEntries(
+        S.txns.map(t => t.id),
+        true
+      );
+      commit();
+      V.screen = "history";
+      render();
+    });
+    const e = await emptyText();
+    ok(J(e) === J(["Every entry is archived."]), "History says every entry is archived " + J(e));
+    ok(
+      J(await bar()) === J(["home:Back", "arch-open:Archived entries", "search-open:Search"]),
+      "…with the archive icon, and nothing to select " + J(await bar())
+    );
+  }
+
+  // ---- 18. the row kept in place over a redraw (toAnchor) is let go once the screen is drawn anew: Back from the
+  // Archived screen, or another screen opened right after, is never scrolled to where that row was
+  {
+    const o = seed();
+    for (let i = 0; i < 40; i++)
+      o.txns.push(x("f" + i, 100 + i, "2026-06-1" + (i % 7), "expense", 1, "a", { cat: "food" }));
+    await load(o);
+    await page.setViewportSize({ width: 393, height: 400 });
+    const y = await page.evaluate(async () => {
+      const frames = () => new Promise(r => setTimeout(r, 150));
+      openHistory();
+      scrollTo(0, document.body.scrollHeight);
+      render(); // the same screen: the row in view is kept where it is for a few frames
+      V.screen = "home";
+      render();
+      openHistory();
+      scrollTo(0, 0);
+      await frames();
+      return scrollY;
+    });
+    ok(y === 0, "History opened anew stays at its top: " + y);
+    await page.setViewportSize({ width: 393, height: 852 });
   }
 
   ok(errors.length === 0, "no page errors " + J(errors));

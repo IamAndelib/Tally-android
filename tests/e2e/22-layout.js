@@ -1421,6 +1421,53 @@ function inspect() {
         render();
       })
     );
+    /* archived entries (docs/specs/history-archive.md, B): History's bar with its archive icon, the Archived screen (its
+       months pinned as it scrolls, an opened row, the delete question there, empty once the last is unarchived), and
+       History when every entry is archived */
+    await page.evaluate(() => {
+      S.txns.filter((t, i) => t.type === "expense" && !t.feeOf && i % 3 === 0).forEach(t => (t.archived = true));
+      save();
+    });
+    const archived = () => {
+      openHistory();
+      archOpen();
+    };
+    /* (evaluated in the page: only its own names) */
+    const archRow = del => () =>
+      page.evaluate(del => {
+        openHistory();
+        archOpen();
+        const r = document.querySelector("#app .tx[data-v]");
+        rowToggle(r, r.dataset.v);
+        if (del) $('#app .txo [data-act="tx-del"]').click();
+      }, del);
+    await shot(
+      "history-archive-icon",
+      ev(() => openHistory())
+    );
+    await shot("archived", ev(archived));
+    await shot("archived-pinned", histAt(archived, "mid"));
+    await shot("archived-open", archRow(false));
+    await shot("archived-delete", archRow(true));
+    await shot(
+      "archived-empty",
+      ev(() => {
+        S.txns.forEach(t => delete t.archived);
+        openHistory();
+        archOpen();
+      })
+    );
+    await shot(
+      "history-all-archived",
+      ev(() => {
+        S.txns.forEach(t => (t.archived = true));
+        openHistory();
+      })
+    );
+    await page.evaluate(() => {
+      S.txns.forEach(t => delete t.archived);
+      save();
+    });
     for (const tab of ["range", "month"])
       await shot("period-" + tab, async () => {
         await page.evaluate(() => periodDialog(V));
