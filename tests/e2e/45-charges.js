@@ -3732,6 +3732,368 @@ function variedV7() {
     ok(false, "The lend and borrow forms: " + e.message.split("\n")[0]);
   }
 
+  // ---- 26. the Spent form's charge (docs/specs/charges.md, "The buttons", "The card", "Previews", "Saving"; spend
+  // with charge): "+ Add a charge" under the account chips, its card with the one preview, what is saved and said, the
+  // charge kept in the purchase's category, an edit keeping it linked, ✕ removing it; and Received with none
+  try {
+    const spendBook = () => ({
+      v: 8,
+      settings,
+      accounts: [
+        acct("cc", "Credit card", "card", "BDT", 0),
+        acct("a", "Bank", "bank", "BDT", 50000),
+        acct("c", "Cash", "cash", "BDT", 1050),
+        acct("u", "Dollars", "savings", "USD", 1000),
+      ],
+      types: [],
+      cats: cats8,
+      txns: [],
+      loans: [],
+      assets: [],
+    });
+    const cl = s =>
+      String(s || "")
+        .replace(/⁠/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const tap = async sel => {
+      await page.click(sel);
+      await page.waitForTimeout(320);
+    };
+    const fresh = (type, catId, id) =>
+      page.evaluate(
+        ([o, type, catId, id]) => {
+          closeSheet2();
+          closeSheet();
+          closePop();
+          if (o) {
+            S = migrate(o);
+            RBC = LPC = null;
+            commit();
+          }
+          render();
+          txSheet(id || null, type, catId);
+        },
+        [id ? null : spendBook(), type, catId, id]
+      );
+    const tk = await page
+      .evaluate(() => money(1234.5, "BDT"))
+      .then(
+        t => (n, sign) =>
+          (sign === "-" ? "−" : sign === "+" ? "+" : "") +
+          cl(t).replace(/1,234\.50/, Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 }))
+      );
+    const txt = sel => page.evaluate(s => (document.querySelector(s) || {}).textContent || "", sel).then(cl);
+    const snackText = () => txt("#snack");
+    const db = () => page.evaluate(() => JSON.parse(JSON.stringify({ txns: S.txns, bal: balances() })));
+    const typeIn = async (sel, v) => {
+      await page.fill(sel, v);
+      await page.waitForTimeout(60);
+    };
+    const line = () => txt("#sheet .aoline");
+    const prev = () => txt("#sheet .aocard .aoprev");
+    /* what spending each part counts in BDT (spendItems()), the day's total (spentOn()) */
+    const parts = () =>
+      page.evaluate(() => {
+        const o = {};
+        spendItems("BDT").forEach(x => (o[x.cat] = rnd((o[x.cat] || 0) + x.amount)));
+        return { o, day: spentOn(S.txns.length ? S.txns[0].date : today(), "BDT") };
+      });
+    const look = () =>
+      page.evaluate(() => {
+        const card = $("#sheet .aocard"),
+          adds = $("#sheet .aoadds");
+        return {
+          card: !!card && !card.hidden,
+          group: card && card.getAttribute("aria-label"),
+          rows: card ? [...card.querySelectorAll(".aorow")].filter(r => !r.hidden).map(r => r.dataset.k) : [],
+          adds: adds ? [...adds.children].filter(b => !b.hidden && b.offsetParent).map(b => b.dataset.v) : [],
+          focus: document.activeElement && document.activeElement.id,
+          focusAdd: !!document.activeElement && document.activeElement.dataset.act === "addon-add",
+        };
+      });
+
+    // Spent: "+ Add a charge" under the account chips, above note and date; no preview while nothing is added
+    await fresh("expense", "food");
+    await tap('#sheet [data-act="f-acc"][data-v="cc"]');
+    await typeIn("#sheet #f-amt", "1000");
+    let lk = await look();
+    ok(
+      !lk.card &&
+        J(lk.adds) === J(["charge"]) &&
+        (await txt('#sheet [data-act="addon-add"][data-v="charge"]')) === "Add a charge" &&
+        (await line()) === "" &&
+        (await prev()) === "",
+      "Spent: + Add a charge, no card and no preview yet " + J(lk) + " " + (await line())
+    );
+    ok(
+      await page.evaluate(() => {
+        const b = $('#sheet [data-act="addon-add"][data-v="charge"]'),
+          chips = $('#sheet [data-act="f-acc"]').parentElement,
+          note = $("#sheet #f-note");
+        return (
+          !!(chips.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+          !!(b.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING)
+        );
+      }),
+      "… under the account chips, above note and date"
+    );
+    // the card: its names, its code, its preview
+    await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+    lk = await look();
+    ok(
+      lk.card &&
+        J(lk.rows) === J(["charge"]) &&
+        lk.group === "Charge" &&
+        J(lk.adds) === J([]) &&
+        lk.focus === "f-charge",
+      "+ Add a charge opens the Charge card with its field focused, the button gone " + J(lk)
+    );
+    ok((await prev()) === "", "an empty charge adds nothing: no preview " + (await prev()));
+    const names = await page.evaluate(() => {
+      const inp = $("#f-charge"),
+        row = inp.closest(".aorow");
+      return [
+        $("#" + inp.getAttribute("aria-labelledby")).textContent,
+        row.querySelector(".aocur").textContent,
+        row.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+        row.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+      ];
+    });
+    ok(
+      J(names) === J(["Charge", "BDT", "Calculator for the charge", "Remove the charge"]),
+      "Charge BDT, Calculator for the charge, Remove the charge " + J(names)
+    );
+    await typeIn("#sheet #f-charge", "150");
+    ok(
+      (await prev()) === "Credit card " + tk(1150, "-") + " · " + tk(1000) + " + charge " + tk(150) &&
+        (await line()) === "",
+      "● Credit card −৳1,150.00 · ৳1,000.00 + charge ৳150.00, in the card only " + (await prev())
+    );
+    ok(
+      await page.evaluate(() =>
+        [...document.querySelectorAll("#sheet .aoprev b")]
+          .map(b => b.textContent)
+          .join("|")
+          .includes("1,150")
+      ),
+      "… its figures in bold"
+    );
+    const bars = await page
+      .evaluate(() =>
+        ["f-charge", "f-amt"].map(id => {
+          calcToggle(id, calcToggleBtn(id));
+          if (id === "f-charge") ["+", "5"].forEach(calcKey);
+          const name = ($("#cr-" + id + " .calcname") || {}).textContent || "",
+            p = $("#sheet .aoprev").textContent;
+          calcClose(id, calcToggleBtn(id));
+          return [name, p];
+        })
+      )
+      .then(b => b.map(([n, p]) => [n, cl(p)]));
+    ok(
+      bars[0][0] === "Charge" && bars[1][0] === "Amount" && bars[0][1].includes("+ charge " + tk(155)),
+      "the keypad's bar names Charge (and its sum counts in the preview), then Amount " + J(bars)
+    );
+    await typeIn("#sheet #f-charge", "150");
+    // the code and the preview follow the account
+    await tap('#sheet [data-act="f-acc"][data-v="u"]');
+    ok(
+      (await txt("#sheet .aocard .aocur")) === "USD" && (await prev()).startsWith("Dollars "),
+      "the card's code follows the account (USD) " + (await txt("#sheet .aocard .aocur")) + " " + (await prev())
+    );
+    await tap('#sheet [data-act="f-acc"][data-v="cc"]');
+    ok((await txt("#sheet .aocard .aocur")) === "BDT", "… and back (BDT)");
+    // saved: the purchase and its linked charge in its category; the message says the total
+    await tap('#sheet [data-act="tx-save"]');
+    let d = await db();
+    const p = d.txns.find(t => !t.feeOf),
+      c = p && d.txns.find(t => t.id === p.feeId);
+    ok(
+      !!p &&
+        p.type === "expense" &&
+        p.amount === 1000 &&
+        p.cat === "food" &&
+        p.account === "cc" &&
+        !!c &&
+        c.feeOf === p.id &&
+        c.type === "expense" &&
+        c.amount === 150 &&
+        c.cat === "food" &&
+        c.account === "cc" &&
+        c.date === p.date &&
+        c.ts === p.ts + 1 &&
+        d.txns.length === 2,
+      "saved: ৳1,000.00 in Eating out and its linked ৳150.00 charge, same account, day and category " + J(d.txns)
+    );
+    ok(d.bal.cc === -1150, "Credit card −৳1,150.00 " + d.bal.cc);
+    ok(
+      (await snackText()).startsWith(tk(1150, "-") + " · Eating out"),
+      "−৳1,150.00 · Eating out " + (await snackText())
+    );
+    let q = await parts();
+    ok(
+      J(q.o) === J({ food: 1150 }) && q.day === 1150,
+      "spending: Eating out ৳1,150.00, nothing in Charges; the day ৳1,150.00 " + J(q)
+    );
+    // the charge opens its purchase; the purchase opens with its card open and filled
+    await fresh("expense", null, c.id);
+    lk = await look();
+    ok(
+      (await txt("#sheet h2")).length > 0 &&
+        (await page.evaluate(() => F.id)) === p.id &&
+        lk.card &&
+        J(lk.rows) === J(["charge"]) &&
+        J(lk.adds) === J([]) &&
+        (await page.inputValue("#sheet #f-charge")) === "150.00" &&
+        (await prev()) === "Credit card " + tk(1150, "-") + " · " + tk(1000) + " + charge " + tk(150),
+      "the charge opens its purchase, the card open with ৳150.00 and its preview " +
+        J(lk) +
+        " " +
+        (await page.inputValue("#sheet #f-charge").catch(() => ""))
+    );
+    // an edit: another category and charge, the charge moves with it and keeps its link
+    await page.evaluate(() => pickCat("groceries"));
+    await typeIn("#sheet #f-charge", "200");
+    await tap('#sheet [data-act="tx-save"]');
+    d = await db();
+    const c2 = d.txns.find(t => t.feeOf === p.id),
+      p2 = d.txns.find(t => t.id === p.id);
+    ok(
+      !!c2 &&
+        c2.id === c.id &&
+        p2.feeId === c.id &&
+        c2.amount === 200 &&
+        c2.cat === "groceries" &&
+        p2.cat === "groceries" &&
+        d.txns.length === 2 &&
+        d.bal.cc === -1200,
+      "edited: the charge keeps its id and link, ৳200.00 in Groceries; Credit card −৳1,200.00 " + J(d.txns)
+    );
+    q = await parts();
+    ok(J(q.o) === J({ groceries: 1200 }), "changing the purchase's category moves its charge " + J(q));
+    // the account and day of an edit move the charge with them
+    await fresh("expense", null, p.id);
+    await tap('#sheet [data-act="f-acc"][data-v="a"]');
+    await page.evaluate(d => setDateField($("#f-date"), d), D.d2);
+    await tap('#sheet [data-act="tx-save"]');
+    d = await db();
+    const c3 = d.txns.find(t => t.feeOf === p.id);
+    ok(
+      !!c3 && c3.account === "a" && c3.date === D.d2 && d.bal.a === 48800 && d.bal.cc === 0,
+      "an edit's account and day move its charge: Bank −৳1,200.00, Credit card back to 0 " + J(c3) + J(d.bal)
+    );
+    // ✕ removes it: the linked entry goes, balances exact
+    await fresh("expense", null, p.id);
+    await tap('#sheet [data-act="addon-remove"][data-v="charge"]');
+    lk = await look();
+    ok(
+      !lk.card && J(lk.adds) === J(["charge"]) && lk.focusAdd,
+      "✕ closes the card and brings + Add a charge back, with the focus " + J(lk)
+    );
+    await tap('#sheet [data-act="tx-save"]');
+    d = await db();
+    ok(
+      d.txns.length === 1 && !d.txns[0].feeId && d.bal.a === 49000,
+      "saved without it: the charge is deleted, Bank −৳1,000.00 " + J(d.txns) + " " + d.bal.a
+    );
+    // Undo brings the charge back
+    await page.evaluate(() => {
+      const u = $('#snack [data-act="undo"], #snack button');
+      if (u) u.click();
+    });
+    await page.waitForTimeout(100);
+    d = await db();
+    ok(
+      d.txns.length === 2 && d.txns.some(t => t.feeOf === p.id) && d.bal.a === 48800,
+      "Undo brings the charge back " + J(d.txns.length) + " " + d.bal.a
+    );
+
+    // checks: not a number, negative, 0
+    for (const [v, said] of [
+      ["abc", "That charge isn't a number"],
+      ["-5", "A charge can't be negative"],
+    ]) {
+      await fresh("expense", "food");
+      await typeIn("#sheet #f-amt", "100");
+      await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+      await page.evaluate(v => ($("#f-charge").value = v), v);
+      await tap('#sheet [data-act="tx-save"]');
+      d = await db();
+      ok(
+        d.txns.length === 0 && (await snackText()).startsWith(said) && !!(await page.$("#sheet #f-charge")),
+        v + ": “" + said + "”, nothing saved " + (await snackText())
+      );
+    }
+    await fresh("expense", "food");
+    await tap('#sheet [data-act="f-acc"][data-v="cc"]');
+    await typeIn("#sheet #f-amt", "100");
+    await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+    await typeIn("#sheet #f-charge", "0");
+    await tap('#sheet [data-act="tx-save"]');
+    d = await db();
+    ok(
+      d.txns.length === 1 && !d.txns[0].feeId && (await snackText()).startsWith(tk(100, "-") + " · Eating out"),
+      "0 saves no charge: −৳100.00 · Eating out " + J(d.txns) + " " + (await snackText())
+    );
+    // the low-balance question counts the charge
+    await fresh("expense", "food");
+    await tap('#sheet [data-act="f-acc"][data-v="c"]');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+    await typeIn("#sheet #f-charge", "100");
+    await tap('#sheet [data-act="tx-save"]');
+    ok(
+      !!(await page.$('#pop [data-act="ask-ok"]')) && (await db()).txns.length === 0,
+      "Cash ৳1,050.00: ৳1,000.00 + ৳100.00 charge asks first"
+    );
+    await tap('#pop [data-act="ask-ok"]');
+    d = await db();
+    ok(d.txns.length === 2 && d.bal.c === -50, "Save anyway: both saved, Cash −৳50.00 " + d.bal.c);
+    // a charge refused by setAddOn(): nothing saved
+    await fresh("expense", "food");
+    await tap('#sheet [data-act="f-acc"][data-v="cc"]');
+    await typeIn("#sheet #f-amt", "100");
+    await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+    await typeIn("#sheet #f-charge", "10");
+    await page.evaluate(() => {
+      window.__setAddOn = setAddOn;
+      setAddOn = () => false;
+    });
+    await tap('#sheet [data-act="tx-save"]');
+    await page.evaluate(() => (setAddOn = window.__setAddOn));
+    d = await db();
+    ok(
+      d.txns.length === 0 && (await snackText()).startsWith("That charge isn't a number"),
+      "refused by setAddOn(): “That charge isn't a number”, nothing saved " + J(d.txns)
+    );
+    // deleting the purchase deletes its charge
+    await fresh("expense", "food");
+    await tap('#sheet [data-act="f-acc"][data-v="cc"]');
+    await typeIn("#sheet #f-amt", "1000");
+    await tap('#sheet [data-act="addon-add"][data-v="charge"]');
+    await typeIn("#sheet #f-charge", "150");
+    await tap('#sheet [data-act="tx-save"]');
+    const pid = (await db()).txns.find(t => !t.feeOf).id;
+    await page.evaluate(id => deleteEntries([id]), pid);
+    d = await db();
+    ok(d.txns.length === 0 && d.bal.cc === 0, "deleting the purchase deletes its charge " + J(d.txns));
+
+    // Received: no button, no card, no preview
+    await fresh("income", "income");
+    await typeIn("#sheet #f-amt", "1000");
+    const rv = await page.evaluate(() => ({
+      card: !!$("#sheet .aocard"),
+      adds: !!$('#sheet [data-act="addon-add"]'),
+      line: ($("#sheet .aoline") || {}).textContent || "",
+      calc: document.querySelectorAll('#sheet [data-act="calc-toggle"]').length,
+    }));
+    ok(!rv.card && !rv.adds && rv.line === "" && rv.calc === 1, "Received: no button, no card, no preview " + J(rv));
+    await page.evaluate(() => (closeSheet(), (V.screen = "home"), render()));
+  } catch (e) {
+    ok(false, "The Spent form's charge: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

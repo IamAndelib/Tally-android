@@ -351,7 +351,8 @@
     "lendOff": "Darlehen {{amount}} − Gebühr {{charge}}",
     "owes": "{{who}} schuldet {{amount}}",
     "youOwe": "du schuldest {{amount}}",
-    "youOweWho": "du schuldest {{who}} {{amount}}"
+    "youOweWho": "du schuldest {{who}} {{amount}}",
+    "spend": "{{amount}} + Gebühr {{charge}}"
   },
   "loan": {
     "noDueYet": "Noch keine Frist",

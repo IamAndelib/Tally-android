@@ -760,6 +760,7 @@ document.addEventListener("input", ev => {
   const id = ev.target.id;
   if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
   if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-charge"].includes(id)) trPreview();
+  else if (F && F.kind === "tx" && ["f-amt", "f-charge"].includes(id)) txPreview();
   else if (F && F.kind === "loan" && ["f-amt", "f-charge", "f-extra", "ed-amt", "ed-charge", "ed-extra"].includes(id))
     loanPreviews();
   else if (id === "f-actual") fixPreview();

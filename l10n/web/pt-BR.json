@@ -352,7 +352,8 @@
     "lendOff": "empréstimo {{amount}} − taxa {{charge}}",
     "owes": "{{who}} deve {{amount}}",
     "youOwe": "você deve {{amount}}",
-    "youOweWho": "você deve {{amount}} a {{who}}"
+    "youOweWho": "você deve {{amount}} a {{who}}",
+    "spend": "{{amount}} + taxa {{charge}}"
   },
   "loan": {
     "noDueYet": "Ainda sem vencimento",

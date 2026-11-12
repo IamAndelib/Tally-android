@@ -197,6 +197,106 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- a purchase's charge survives Add category and Add account (typed, or a sum on its keypad), and the widget's
+  // quick add offers it (docs/specs/charges.md, "The buttons")
+  {
+    const { ctx, page } = await open();
+    const charge = () =>
+      page.evaluate(() => {
+        const c = $("#sheet .aocard"),
+          i = $("#f-charge");
+        return {
+          open: !!c && !c.hidden,
+          v: i ? i.value : null,
+          cur: c ? c.querySelector(".aocur").textContent : "",
+          prev: c ? c.querySelector(".aoprev").textContent.replace(/\u2060/g, "") : "",
+        };
+      });
+    await fill(page);
+    await page.evaluate(() => {
+      $('#sheet [data-act="addon-add"][data-v="charge"]').click();
+      $("#f-charge").value = "15";
+      txQuickAdd("cat");
+      $("#f-cname").value = "Pets";
+      saveCat();
+    });
+    let c = await charge(),
+      f = await form(page);
+    ok(
+      c.open &&
+        c.v === "15" &&
+        f.amt === "1,234.5" &&
+        f.cat === (await page.evaluate(() => S.cats.find(x => x.name === "Pets").id)),
+      "Add category: back with the charge's card open and its 15 " + JSON.stringify([c, f.cat])
+    );
+    ok(c.prev.includes("1,249.50") && c.prev.includes("+ charge"), "… and its preview " + c.prev);
+    // the keypad on the charge: its sum is worked out, then Add account
+    await page.evaluate(() => {
+      calcToggle("f-charge", calcToggleBtn("f-charge"));
+      ["+", "5"].forEach(calcKey);
+    });
+    await page.click('#sheet [data-act="f-acc-new"]');
+    await page.fill("#f-name", "Euro card");
+    await page.evaluate(() => {
+      F.cur = "EUR";
+      $("#f-cur span").textContent = "EUR";
+    });
+    await page.click('#sheet [data-act="acc-save"]');
+    c = await charge();
+    f = await form(page);
+    ok(
+      c.open && c.v === "20" && c.cur === "EUR" && f.cur === "EUR" && f.amt === "1,234.5",
+      "Add account: the charge's sum kept (15+5 = 20), its code the new account's (EUR) " + JSON.stringify([c, f])
+    );
+    // closed unsaved: the card as it was
+    await page.evaluate(() => {
+      txQuickAdd("cat");
+      goBack();
+    });
+    await page.waitForTimeout(50);
+    c = await charge();
+    ok(c.open && c.v === "20", "closed unsaved: the card as it was " + JSON.stringify(c));
+    // a closed card stays closed
+    await page.evaluate(() => {
+      $('#sheet [data-act="addon-remove"][data-v="charge"]').click();
+      txQuickAdd("cat");
+      goBack();
+    });
+    await page.waitForTimeout(50);
+    c = await charge();
+    ok(!c.open && c.v === "", "a removed charge stays removed " + JSON.stringify(c));
+    await page.evaluate(() => {
+      $('#sheet [data-act="addon-add"][data-v="charge"]').click();
+      $("#f-charge").value = "20";
+    });
+    await page.waitForTimeout(350);
+    await page.click('#sheet [data-act="tx-save"]');
+    await page.click('#pop [data-act="ask-ok"]'); // more than the new card holds: Save anyway
+    const t = await page.evaluate(() => {
+      const p = S.txns.find(x => x.type === "expense" && !x.feeOf);
+      return { p, c: p && S.txns.find(x => x.id === p.feeId) };
+    });
+    ok(
+      t.p && t.c && t.c.amount === 20 && t.c.account === t.p.account && t.c.cat === t.p.cat && t.c.feeOf === t.p.id,
+      "saved with its charge, on the new account, in Pets " + JSON.stringify(t)
+    );
+    // the widget's quick add: Spent offers the charge, Received none
+    const w = await page.evaluate(() => {
+      openFromNative("add:out");
+      const out = { h2: $("#sheet h2").textContent, add: !!$('#sheet [data-act="addon-add"][data-v="charge"]') };
+      openFromNative("add:in");
+      out.h2in = $("#sheet h2").textContent;
+      out.addIn = !!$('#sheet [data-act="addon-add"]') || !!$("#sheet .aocard");
+      closeSheet();
+      return out;
+    });
+    ok(
+      w.h2 === "Spent" && w.add && w.h2in === "Received" && !w.addIn,
+      "the widget's quick add: Spent offers + Add a charge, Received nothing " + JSON.stringify(w)
+    );
+    await ctx.close();
+  }
+
   // ---- design round, task 9: forms and small marks
   {
     const { ctx, page } = await open();

@@ -350,7 +350,8 @@
     "lendOff": "借出{{amount}} − 费用{{charge}}",
     "owes": "{{who}}欠{{amount}}",
     "youOwe": "你欠{{amount}}",
-    "youOweWho": "你欠{{who}}{{amount}}"
+    "youOweWho": "你欠{{who}}{{amount}}",
+    "spend": "{{amount}} + 费用{{charge}}"
   },
   "loan": {
     "noDueYet": "还没有到期日",

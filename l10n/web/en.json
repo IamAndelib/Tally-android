@@ -351,7 +351,8 @@
     "lendOff": "lending {{amount}} − charge {{charge}}",
     "owes": "{{who}} owes {{amount}}",
     "youOwe": "you owe {{amount}}",
-    "youOweWho": "you owe {{who}} {{amount}}"
+    "youOweWho": "you owe {{who}} {{amount}}",
+    "spend": "{{amount}} + charge {{charge}}"
   },
   "loan": {
     "noDueYet": "No due date yet",

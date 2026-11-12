@@ -350,7 +350,8 @@
     "lendOff": "piutang {{amount}} − biaya {{charge}}",
     "owes": "{{who}} berutang {{amount}}",
     "youOwe": "utang {{amount}}",
-    "youOweWho": "utang ke {{who}} {{amount}}"
+    "youOweWho": "utang ke {{who}} {{amount}}",
+    "spend": "{{amount}} + biaya {{charge}}"
   },
   "loan": {
     "noDueYet": "Belum ada jatuh tempo",

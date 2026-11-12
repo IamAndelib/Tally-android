@@ -196,6 +196,48 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- a purchase's charge: the payee stays on the purchase, its charge has none; an edit keeps both
+  {
+    const { ctx, page } = await open();
+    const r = await page.evaluate(() => {
+      txSheet(null, "expense", "food");
+      $("#f-amt").value = "40";
+      $("#f-payee").value = "Corner Shop";
+      $('#sheet [data-act="addon-add"][data-v="charge"]').click();
+      $("#f-charge").value = "4";
+      saveTx();
+      const p = S.txns.find(x => x.type === "expense" && !x.feeOf),
+        c = S.txns.find(x => x.feeOf === p.id),
+        out = { payee: p.payee, cPayee: "payee" in c, cid: c.id };
+      V.screen = "history";
+      render();
+      out.rows = [...document.querySelectorAll("#app .tx")].map(x => x.querySelector(".d").textContent);
+      txSheet(p.id);
+      out.prefill = $("#f-payee").value;
+      out.charge = $("#f-charge").value;
+      $("#f-payee").value = "Corner Store";
+      saveTx();
+      const p2 = S.txns.find(x => x.id === p.id),
+        c2 = S.txns.find(x => x.feeOf === p.id);
+      out.after = [p2.payee, c2 && c2.id === c.id, c2 && "payee" in c2, c2 && c2.amount];
+      return out;
+    });
+    ok(
+      r.payee === "Corner Shop" && !r.cPayee && r.rows.join("|") === "Corner Shop",
+      "the payee is the purchase's, one row titled with it, the charge has none " + JSON.stringify(r)
+    );
+    ok(
+      r.prefill === "Corner Shop" &&
+        r.charge === "4.00" &&
+        r.after[0] === "Corner Store" &&
+        r.after[1] &&
+        !r.after[2] &&
+        r.after[3] === 4,
+      "editing shows both; the new payee saved, the charge kept and linked " + JSON.stringify(r)
+    );
+    await ctx.close();
+  }
+
   // ---- suggestions
   {
     const { ctx, page } = await open({ locale: "tr-TR", uiLang: "tr" });

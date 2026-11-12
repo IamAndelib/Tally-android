@@ -352,7 +352,8 @@
     "lendOff": "préstamo {{amount}} − cargo {{charge}}",
     "owes": "{{who}} debe {{amount}}",
     "youOwe": "debes {{amount}}",
-    "youOweWho": "debes a {{who}} {{amount}}"
+    "youOweWho": "debes a {{who}} {{amount}}",
+    "spend": "{{amount}} + cargo {{charge}}"
   },
   "loan": {
     "noDueYet": "Aún sin fecha de pago",

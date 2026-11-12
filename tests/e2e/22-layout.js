@@ -883,6 +883,40 @@ function inspect() {
       await page.evaluate(() => txSheet(null, "expense", "groceries"));
       await page.click('#sheet [data-act="calc-toggle"]');
     });
+    /* Spent with its charge's card (docs/specs/charges.md, "The card"): open and filled on the longest account's name,
+       so the preview wraps; and the keypad on the charge (its bar named, a result after the name) */
+    const spendCharge = keypad => async () => {
+      await page.evaluate(() => txSheet(null, "expense", "groceries"));
+      await page.waitForTimeout(100); // the form focuses its amount 60ms after it opens (focusAmt)
+      await page.evaluate(keypad => {
+        pickAccount("b");
+        $("#f-amt").value = groupDigits("1000");
+        $('#sheet [data-act="addon-add"][data-v="charge"]').click();
+        $("#f-charge").value = "150";
+        txPreview();
+        document.activeElement.blur();
+        if (keypad) {
+          calcToggle("f-charge", calcToggleBtn("f-charge"));
+          ["+", "5"].forEach(calcKey);
+        }
+      }, keypad);
+      const bad = await page.evaluate(keypad => {
+        const out = [],
+          c = $("#sheet .aocard"),
+          res = CALC && $("#cr-" + CALC.id);
+        if (!c || !c.offsetParent || !c.querySelector(".aoprev").textContent) out.push("no card with its preview");
+        if ($("#sheet .aoline")) out.push("Spent has no preview line outside its card");
+        if (
+          keypad &&
+          (!res || CALC.id !== "f-charge" || !res.querySelector(".calcname") || !res.querySelector(".calceq"))
+        )
+          out.push("the keypad's bar doesn't name its field and result");
+        return out;
+      }, keypad);
+      if (bad.length) throw new Error("spend charge card: " + bad.join("; "));
+    };
+    await shot("spend-charge", spendCharge(false));
+    await shot("spend-charge-keypad", spendCharge(true));
     await shot(
       "transfer",
       ev(() => trSheet())

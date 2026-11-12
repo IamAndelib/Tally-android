@@ -352,7 +352,8 @@
     "lendOff": "prêt {{amount}} − frais {{charge}}",
     "owes": "{{who}} doit {{amount}}",
     "youOwe": "vous devez {{amount}}",
-    "youOweWho": "vous devez {{amount}} à {{who}}"
+    "youOweWho": "vous devez {{amount}} à {{who}}",
+    "spend": "{{amount}} + frais {{charge}}"
   },
   "loan": {
     "noDueYet": "Pas encore d’échéance",

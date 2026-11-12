@@ -259,7 +259,9 @@ function pickPayee(name) {
 }
 /* pre (a new entry made for something else, e.g. an over-repaid lending's extra): {amount, cur, account, date, note,
    also: a change saved with it, msg: the start of its message, back: the loan to go back to} */
-/* draft: the form as it was before Add category / Add account (txQuickAdd), filled back in over everything else */
+/* draft: the form as it was before Add category / Add account (txQuickAdd), filled back in over everything else.
+   Spent has "+ Add a charge" and its card under the account chips (docs/specs/charges.md, "The buttons"), open from
+   the start for a purchase that has one; Received has none. */
 function txSheet(id, type, catId, pre, draft) {
   if (!id && !activeAccounts().length) {
     snack(T("account.addFirst"));
@@ -303,7 +305,8 @@ function txSheet(id, type, catId, pre, draft) {
   };
   if (pre && pre.back) BACKTO = { screen: V.screen, open: () => loanOpen(pre.back) };
   const k = F.cat ? cat(F.cat) : null,
-    a = acc(F.account);
+    a = acc(F.account),
+    fee = inc ? null : addOnOf(t);
   let list = inc ? inCats() : outCats();
   if (k && !list.includes(k)) list = list.concat([k]);
   const payee = (d ? d.payee : t ? t.payee : "") || "";
@@ -347,6 +350,18 @@ function txSheet(id, type, catId, pre, draft) {
       accChoices(F.account).filter(x => !pre || x.currency === pre.cur),
       pre ? null : "f-acc-new" // not where only one currency will do: a new account in another wouldn't show
     );
+  /* the purchase's charge (the preview is in its card only: none while nothing is added) */
+  if (!inc)
+    h += addOnCard(
+      [
+        {
+          kind: "charge",
+          open: d ? d.charge != null : !!fee,
+          value: d ? d.charge || "" : fee ? amtPre(fee.amount, (acc(fee.account) || {}).currency) : "",
+        },
+      ],
+      a ? a.currency : ""
+    );
   h +=
     '<div class="row notedate"><input id="f-note" placeholder="' +
     TH("entry.notePh") +
@@ -369,14 +384,37 @@ function txSheet(id, type, catId, pre, draft) {
     h += '<div class="gap"></div><button class="btn danger" data-act="tx-del">' + TH("common.delete") + "</button>";
   openSheet(T(id ? (inc ? "entry.editIn" : "entry.editOut") : inc ? "entry.newIn" : "entry.newOut"), h);
   if (d) $("#f-amt").value = d.amt; // as it was shown (grouped the phone's way, or a sum like 12+3)
+  txPreview();
   if (!id && F.cat) focusAmt();
+}
+/* Spent's preview, at the bottom of its charge's card, the figures in bold: "● Credit card −৳1,150.00 · ৳1,000.00 +
+   charge ৳150.00"; none until the amount is a number and the charge more than 0 */
+function txPreview() {
+  const sc = $("#sheet .p");
+  if (!sc || !F || F.kind !== "tx" || F.type === "income") return;
+  const a = acc(F.account);
+  addOnCur(sc, a ? a.currency : "");
+  const amt = evalAmt(readVals().amount),
+    fee = evalAmt(addOnTexts(sc).charge || "");
+  if (!a || !(amt > 0) || !(fee > 0)) return addOnPreview(sc, "");
+  const cur = a.currency,
+    b = x => "<b>" + esc(x) + "</b>";
+  addOnPreview(
+    sc,
+    accTag(a) +
+      " " +
+      b(signed(-rnd(amt + fee), cur)) +
+      " · " +
+      TH("prev.spend", { amount: { html: b(money(amt, cur)) }, charge: { html: b(money(fee, cur)) } })
+  );
 }
 /* Add category / Add account from the entry form: the same form as in Settings, then back to the entry with all of it
    as it was and the new one picked; closed without saving, back to the entry as it was */
 function txDraft() {
-  if (CALC && CALC.id === "f-amt") calcClose("f-amt", calcToggleBtn("f-amt")); // its sum, worked out
+  if (CALC && (CALC.id === "f-amt" || CALC.id === "f-charge")) calcClose(CALC.id, calcToggleBtn(CALC.id)); // its sum
   const val = s => ($(s) || {}).value || "",
-    dt = $("#f-date");
+    dt = $("#f-date"),
+    sc = $("#sheet .p");
   return {
     id: F.id,
     type: F.type,
@@ -386,6 +424,7 @@ function txDraft() {
     amt: val("#f-amt"),
     note: val("#f-note"),
     payee: val("#f-payee"),
+    charge: sc ? addOnTexts(sc).charge : undefined, // as typed while its card is open, else none
     date: dt ? dt.dataset.v : "",
     now: !!(dt && dt.dataset.now),
     back: BACKTO,
@@ -451,7 +490,7 @@ function pickAccount(id) {
     }
     personSuggest(($("#f-person") || {}).value || "");
   }
-  formPreview(); // a lend's or borrow's with its hint
+  formPreview(); // a lend's or borrow's with its hint, Spent's with the card's code
 }
 function readVals() {
   const g = id => {
@@ -638,6 +677,7 @@ function formPreview() {
   if (F && F.kind === "tr") trPreview();
   else if (F && F.kind === "loan") loanPreviews();
   else if (F && F.kind === "loanf") loanFormPreview();
+  else if (F && F.kind === "tx") txPreview();
 }
 /* transfer between own accounts, with optional fee */
 function trSheet(id) {
@@ -1105,6 +1145,11 @@ function saveTx() {
     snack(T("common.pickAccount"));
     return;
   }
+  /* a purchase's charge: an empty card, or one that shows as 0, saves none (and an edit's goes) */
+  const inc = F.type === "income",
+    ao = inc ? {} : addOnAmounts($("#sheet .p"), acc(F.account).currency);
+  if (!ao) return;
+  const fee = ao.charge || 0;
   if (!v.date) {
     snack(T("common.pickDate"));
     return;
@@ -1121,16 +1166,24 @@ function saveTx() {
     pre = F.pre || {},
     nid = newId(),
     ts = Date.now();
+  /* the entry, then a purchase's charge (its account, day and category; false when it is refused) */
   const mutate = id
     ? () => {
         const old = entry(id);
         Object.assign(old, t);
         if (!payee) delete old.payee; // cleared
+        return inc || setAddOn(old, "charge", fee);
       }
     : () => {
         if (pre.also) pre.also();
-        S.txns.push(Object.assign({ id: nid, ts }, t));
+        const n = Object.assign({ id: nid, ts }, t);
+        S.txns.push(n);
+        return inc || setAddOn(n, "charge", fee);
       };
+  if (!inc && !tryChange(mutate)) {
+    snack(T("charge.notNumber")); // never saved without the charge it was given
+    return;
+  }
   guardOverdraw(mutate, t.date, () => {
     if (pre.back) BACKTO = null; // saved: it ends here, like a payment (back to the loan is for closing it unsaved)
     // the account to offer next time, once saved (not when Go back answers the overdraw question)
@@ -1142,7 +1195,7 @@ function saveTx() {
       id
         ? T("common.saved")
         : (pre.msg || "") +
-            signed(t.type === "income" ? amt : -amt, acc(t.account).currency) +
+            signed(inc ? amt : -rnd(amt + fee), acc(t.account).currency) + // the total, as the row shows it
             " · " +
             catName(cat(t.cat)),
       mutate,

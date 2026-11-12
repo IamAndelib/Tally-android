@@ -353,7 +353,8 @@
     "lendOff": "долг {{amount}} − комиссия {{charge}}",
     "owes": "{{who}}: долг {{amount}}",
     "youOwe": "вы должны {{amount}}",
-    "youOweWho": "вы должны: {{who}}, {{amount}}"
+    "youOweWho": "вы должны: {{who}}, {{amount}}",
+    "spend": "{{amount}} + комиссия {{charge}}"
   },
   "loan": {
     "noDueYet": "Срок пока не указан",

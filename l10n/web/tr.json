@@ -351,7 +351,8 @@
     "lendOff": "alacak {{amount}} − masraf {{charge}}",
     "owes": "{{who}} {{amount}} borçlu",
     "youOwe": "{{amount}} borçlusun",
-    "youOweWho": "{{who}} kişisine {{amount}} borçlusun"
+    "youOweWho": "{{who}} kişisine {{amount}} borçlusun",
+    "spend": "{{amount}} + masraf {{charge}}"
   },
   "loan": {
     "noDueYet": "Henüz vade yok",
