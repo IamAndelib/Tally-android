@@ -153,14 +153,16 @@ function restorePlan(t) {
     },
   };
 }
-/* What a Restore confirmation says: the data is replaced, what the backup holds (accounts, entries, and when it was
-   saved if known), then the plan's notes (items left out, a newer version) */
+/* What a Restore confirmation says: the data is replaced, what the backup holds (accounts, entries as History counts
+   them: an add-on is in its entry, histRows(), and when it was saved if known), then the plan's notes (items left out,
+   a newer version) */
 function restoreBody(plan, when) {
-  const what = {
-    accounts: T("restore.accounts", { count: plan.n.accounts.length }),
-    entries: T("restore.entries", { count: plan.n.txns.length }),
-    when: when ? backupWhen(when, true) : "",
-  };
+  const ids = new Set(plan.n.txns.map(t => t.id)),
+    what = {
+      accounts: T("restore.accounts", { count: plan.n.accounts.length }),
+      entries: T("restore.entries", { count: plan.n.txns.filter(t => !(t.feeOf && ids.has(t.feeOf))).length }),
+      when: when ? backupWhen(when, true) : "",
+    };
   return sentences(T(what.when ? "restore.bodySaved" : "restore.body", what), ...plan.notes);
 }
 /* A backup's text (a chosen file, or the auto backup): checked, then one confirmation, then it replaces everything.

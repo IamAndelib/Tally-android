@@ -1289,15 +1289,14 @@ function rowDelete(id) {
       const q = $("#sheet .p");
       if (q) q.scrollTop = scroll;
     };
-  const own = 1 + (t.feeId ? 1 : 0);
   deleteAsk([id], keep => {
-    let n = 0;
+    let n = 0; // the rows that went, as History counts them (histRows): more than this one when a loan's payments go too
     withUndo(
-      () => (n > own ? T("history.deleted", { count: n }) : T("common.deleted")),
+      () => (n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
       () => {
-        n = S.txns.length;
+        n = histRows(S.txns).length;
         deleteEntries([id], keep);
-        n -= S.txns.length;
+        n -= histRows(S.txns).length;
         V.open = "";
       },
       null,

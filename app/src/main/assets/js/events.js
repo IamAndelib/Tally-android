@@ -639,13 +639,13 @@ document.addEventListener("click", ev => {
         return;
       }
       deleteAsk(ids, keep => {
-        let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
+        let n = 0; // the rows that went (a deleted loan's payments go with it), counted as listed: an add-on is in its entry
         withUndo(
           () => T("history.deleted", { count: n }),
           () => {
-            n = S.txns.length;
+            n = histRows(S.txns).length;
             deleteEntries(ids, keep);
-            n -= S.txns.length;
+            n -= histRows(S.txns).length;
             V.sel = null;
           }
         );

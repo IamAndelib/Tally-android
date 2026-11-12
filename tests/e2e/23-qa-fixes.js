@@ -126,7 +126,7 @@ const ok = (c, m) => {
   ok(dmin === d5, "a payment's date starts at the first draw: " + dmin);
   await page.evaluate(() => closeSheet());
 
-  // ---- 3. multi-select delete counts what actually went (a transfer's fee goes with it)
+  // ---- 3. multi-select delete counts what went as History lists it (a transfer's fee goes with it, inside its row)
   await seed({
     txns: [
       { id: "t1", ts: 1, date: t, type: "transfer", amount: 50, account: "a", to: "b", note: "", feeId: "f1" },
@@ -142,7 +142,10 @@ const ok = (c, m) => {
   await settle();
   await page.click("#pop .cd-destroy"); // Change the account balance
   await page.waitForTimeout(350);
-  ok((await snackText()).includes("Deleted 2 entries"), "delete message counts the fee: " + (await snackText()));
+  ok(
+    (await snackText()).includes("Deleted 1 entry"),
+    "delete message counts the row, the fee inside it: " + (await snackText())
+  );
 
   // ---- 4. Undo never restores over a newer change
   await seed({ txns: [{ id: "e1", ts: 1, date: t, type: "expense", amount: 5, account: "a", cat: "food", note: "" }] });

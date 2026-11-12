@@ -4757,6 +4757,68 @@ function variedV7() {
     ok(false, "CSV export: " + e.message.split("\n")[0]);
   }
 
+  // ---- 29. what a person is told counts entries as History lists them: an add-on rides inside its entry (the delete
+  // question, "Deleted N entries", a Restore's "N entries")
+  try {
+    await page.evaluate(
+      o => {
+        closeSheet2();
+        closeSheet();
+        closePop();
+        S = migrate(o);
+        RBC = LPC = null;
+        commit();
+        V.screen = "history";
+        V.sel = new Set(["p1", "p2"]);
+        render();
+      },
+      {
+        v: 8,
+        settings,
+        accounts: [acct("k", "Bkash", "wallet", "BDT", 20000)],
+        types: [],
+        cats: cats8,
+        txns: [
+          x("p1", 100, D.d6, "expense", 100, "k", { cat: "food", feeId: "p1c" }),
+          x("p1c", 101, D.d6, "expense", 5, "k", { cat: "food", feeOf: "p1" }),
+          x("p2", 200, D.d6, "expense", 100, "k", { cat: "food", feeId: "p2c" }),
+          x("p2c", 201, D.d6, "expense", 5, "k", { cat: "food", feeOf: "p2" }),
+          x("p3", 300, D.d6, "expense", 40, "k", { cat: "food" }),
+        ],
+        loans: [],
+        assets: [],
+      }
+    );
+    const body = await page.evaluate(() => restoreBody(restorePlan(JSON.stringify(S))));
+    ok(body.includes("3 entries"), "a Restore says the notebook holds 3 entries, as History lists them: " + body);
+    await page.click('[data-act="sel-del"]');
+    await page.waitForTimeout(320);
+    const title = await page.evaluate(() => (document.querySelector("#pop .dlg-t") || {}).textContent);
+    ok(title === "Delete these 2 entries?", "two purchases with charges selected: " + title);
+    await page.click("#pop .cd-destroy");
+    await page.waitForTimeout(350);
+    const said = await page.evaluate(() => (document.querySelector("#snack") || {}).textContent || "");
+    const left = await page.evaluate(() => S.txns.map(t => t.id).join());
+    ok(
+      said.includes("Deleted 2 entries") && left === "p3",
+      "… then “Deleted 2 entries”, their charges with them " + said
+    );
+    await page.click('#snack [data-act="undo"]');
+    await page.waitForTimeout(350);
+    /* an entry deleted from its opened row: one row (its charge inside), so a plain "Deleted" */
+    await page.evaluate(() => rowDelete("p1"));
+    await page.waitForTimeout(320);
+    await page.click("#pop .cd-destroy");
+    await page.waitForTimeout(350);
+    const one = await page.evaluate(() => (document.querySelector("#snack") || {}).textContent || "");
+    ok(
+      one.startsWith("Deleted") && !/Deleted \d/.test(one),
+      "one purchase with its charge, from its row: “Deleted” " + one
+    );
+  } catch (e) {
+    ok(false, "counts as listed: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");
