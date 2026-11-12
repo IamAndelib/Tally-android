@@ -2666,6 +2666,111 @@ function variedV7() {
     ok(false, "Search: " + e.message.split("\n")[0]);
   }
 
+  // ---- 23. a row whose title would be cut (the amount and its small line take its room) stacks as a tight list's
+  // rows do: the title whole, then the amount and its small line under it; a short title keeps the amount on its right
+  try {
+    const book = {
+      v: 8,
+      settings: { ...settings, cur: "USD" },
+      accounts: [acct("c", "Cash", "cash", "USD", 5000)],
+      types: [],
+      cats: cats8,
+      txns: [
+        x("mx", 100, D.d6, "loan", 1000, "c", { dir: "out", loan: "MX", principal: true, onTop: 150, feeId: "mxc" }),
+        x("mxc", 101, D.d6, "loan", 100, "c", { dir: "out", loan: "MX", principal: true, feeOf: "mx" }),
+        x("sm", 110, D.d6, "loan", 500, "c", { dir: "out", loan: "SM", principal: true, feeId: "smc" }),
+        x("smc", 111, D.d6, "loan", 5, "c", { dir: "out", loan: "SM", principal: true, feeOf: "sm" }),
+      ],
+      loans: [
+        loanOf("MX", "lend", "Maximiliane Hoffmann-Lindqvist", "c", D.d6),
+        loanOf("SM", "lend", "Sam", "c", D.d6),
+      ],
+      assets: [],
+    };
+    /* History at the text size s, the row `open` opened (by a tap when tap, else by render): each row's title, whether
+       it is clamped, where its amount sits against it, its parts in reading order */
+    const look = (s, open, tap) =>
+      page.evaluate(
+        async ([o, s, open, tap]) => {
+          const keep = S,
+            keepV = { ...V },
+            keepFS = Android.fontScale;
+          try {
+            Android.fontScale = () => s;
+            applyTextScale();
+            S = migrate(o);
+            RBC = LPC = null;
+            openHistory({});
+            if (open && tap) document.querySelector('#app .tx[data-v="' + open + '"]').click();
+            else if (open) {
+              V.open = open;
+              render();
+            }
+            const out = { tight: !!document.querySelector("#app .list.tight"), rows: {} };
+            document.querySelectorAll("#app .tx.en[data-v]").forEach(e => {
+              const d = e.querySelector(".d").getBoundingClientRect(),
+                a = e.querySelector(".a").getBoundingClientRect(),
+                dd = e.querySelector(".d");
+              out.rows[e.dataset.v] = {
+                title: dd.textContent.replace(/\s+/g, " ").trim(),
+                clamped: dd.scrollHeight > dd.clientHeight + 1,
+                under: a.top >= d.bottom - 1,
+                right: a.left >= d.right - 1,
+                stacked: e.classList.contains("stacked"),
+                order: [...e.querySelector(".mid").children].map(c => c.className.split(" ")[0]).join(),
+                text: e.textContent.replace(/\s+/g, " ").trim(),
+                expanded: e.getAttribute("aria-expanded"),
+                next: (e.nextElementSibling || {}).className || "",
+              };
+            });
+            return out;
+          } finally {
+            S = keep;
+            Object.assign(V, keepV);
+            Android.fontScale = keepFS;
+            applyTextScale();
+            RBC = LPC = null;
+            render();
+          }
+        },
+        [book, s, open || "", !!tap]
+      );
+    const r1 = await look(1),
+      mx = r1.rows.mx || {},
+      sm = r1.rows.sm || {};
+    ok(
+      !r1.tight &&
+        mx.title === "Lent to Maximiliane Hoffmann-Lindqvist" &&
+        !mx.clamped &&
+        mx.under &&
+        mx.text.includes("+ $100.00 transfer charge"),
+      "393 px, 1×: the long title is whole, its amount and “+ $100.00 transfer charge” under it " + J(mx)
+    );
+    ok(
+      sm.title === "Lent to Sam" && sm.right && !sm.under && !sm.stacked,
+      "… a short title keeps its amount on the right " + J(sm)
+    );
+    ok(
+      mx.order === "d,a,s" && sm.order === "d,a,s",
+      "… the reading order is the same: title, amount, account " + J([mx.order, sm.order])
+    );
+    const r13 = await look(1.3);
+    ok(
+      r13.tight && Object.values(r13.rows).every(r => !r.stacked && r.under && !r.clamped),
+      "1.3×: the list is tight already, no row is marked to stack " + J(r13)
+    );
+    for (const tap of [false, true]) {
+      const ro = await look(1, "mx", tap),
+        m = ro.rows.mx || {};
+      ok(
+        m.expanded === "true" && /\btxo\b/.test(m.next) && !m.clamped && m.under && m.order === "d,a,s",
+        "opened (" + (tap ? "a tap" : "rendered") + "): the stacked row, its opened part right after it " + J(m)
+      );
+    }
+  } catch (e) {
+    ok(false, "A row whose title would be cut: " + e.message.split("\n")[0]);
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

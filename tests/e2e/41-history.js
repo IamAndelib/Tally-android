@@ -1777,6 +1777,79 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // ---- a row whose title would be cut stacks (title whole, the amount under it); a short title keeps the amount on
+  // its right; a row far down is measured as it comes near; selecting keeps it
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "b", name: "Everyday", type: "bank", currency: "USD", opening: 90000, archived: false });
+      const add = (id, date, amount, extra) =>
+        S.txns.push({ id, ts: S.txns.length + 1, date, type: "expense", amount, account: "b", note: "", ...extra });
+      add("long", addDays(today(), -40), 12345.6, {
+        cat: "fun",
+        payee: "Riverside Community Cinema and Bowling Centre",
+        note: "Birthday tickets",
+        feeId: "longc",
+      });
+      add("longc", addDays(today(), -40), 150, { cat: "fun", feeOf: "long" });
+      add("bus", addDays(today(), -40), 2.5, { cat: "transport", payee: "Bus" });
+      for (let i = 1; i <= 30; i++) add("f" + i, addDays(today(), -i), 3, { cat: "food", payee: "Bakery" });
+      save();
+      openHistory({});
+    });
+    const geo = () =>
+      page.evaluate(() =>
+        Object.fromEntries(
+          ["long", "bus", "f1"].map(id => {
+            const e = document.querySelector('#app .tx[data-v="' + id + '"]');
+            if (!e) return [id, null];
+            const dd = e.querySelector(".d"),
+              d = dd.getBoundingClientRect(),
+              a = e.querySelector(".a").getBoundingClientRect();
+            return [
+              id,
+              {
+                clamped: dd.scrollHeight > dd.clientHeight + 1,
+                under: a.top >= d.bottom - 1,
+                right: a.left >= d.right - 1,
+              },
+            ];
+          })
+        )
+      );
+    const near = async () => {
+      await page.evaluate(() => document.querySelector('#app .tx[data-v="long"]').scrollIntoView({ block: "center" }));
+      await page.waitForTimeout(250);
+      return geo();
+    };
+    for (const w of [393, 360]) {
+      await page.setViewportSize({ width: w, height: 852 });
+      await page.evaluate(() => {
+        scrollTo(0, 0);
+        render();
+      });
+      await page.waitForTimeout(300); // render() holds the top row in place for a moment (toAnchor)
+      const g = await near();
+      ok(
+        g.long && !g.long.clamped && g.long.under && g.bus.right && !g.bus.under && g.f1.right,
+        w +
+          " px: the long title (far down at first) is whole with its amount under it; short ones keep it on the right " +
+          JSON.stringify(g)
+      );
+    }
+    await page.evaluate(() => {
+      V.sel = new Set();
+      render();
+    });
+    await page.waitForTimeout(300);
+    const gs = await near();
+    ok(gs.long && !gs.long.clamped && gs.long.under && gs.bus.right, "selecting: the same rows " + JSON.stringify(gs));
+    await ctx.close();
+  }
+
   // ---- Delete asks whether the balance changes or stays
   {
     const { ctx, page } = await open();

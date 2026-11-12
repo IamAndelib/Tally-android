@@ -1889,7 +1889,8 @@ mark.hl {
   grid-column: 1;
   grid-row: 3;
 }
-.list.tight .tx.en .hnote {
+.list.tight .tx.en .hnote,
+.tx.en.stacked .hnote {
   grid-column: 1 / -1;
   grid-row: auto;
 }
@@ -1904,16 +1905,21 @@ mark.hl {
   background: rgb(var(--acr));
 }
 /* a tight list (fitFigures: under 20rem wide, a small phone or a large text size): the title has the whole width, the
-   amount starts the line below it, then the category and account */
+   amount starts the line below it, then the category and account. So does a row of a wider list whose title the amount
+   beside it would cut (.stacked, fitFigures: measured per row) */
 .list.tight .tx.en .d,
-.list.tight .tx.en .s {
+.list.tight .tx.en .s,
+.tx.en.stacked .d,
+.tx.en.stacked .s {
   grid-column: 1 / -1;
   grid-row: auto;
 }
-.list.tight .tx.en .d {
+.list.tight .tx.en .d,
+.tx.en.stacked .d {
   -webkit-line-clamp: 3;
 }
-.list.tight .tx.en .a {
+.list.tight .tx.en .a,
+.tx.en.stacked .a {
   grid-column: 1 / -1;
   grid-row: auto;
   align-self: auto;

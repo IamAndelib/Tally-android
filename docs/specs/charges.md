@@ -328,7 +328,9 @@ opens, then at the bottom of the card** (never twice):
 ### History rows
 
 Each row shows the money that moved; the small line under the amount names what is inside it or on top of it. No icon
-and no dot on the small line.
+and no dot on the small line. The amount and its small line make the row's right column wider, so a row whose title
+would then be cut stacks as a tight list's rows do: the title whole, then the amount and its small line under it
+(decision of 2026-11-07, `.stacked` in `fitFigures()`).
 
 | Entry | Row, collapsed (amount, then the small line under it) |
 |---|---|

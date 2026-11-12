@@ -416,6 +416,7 @@ function fitFigures(root) {
   root
     .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style], .hcol[style], .balbar b[style]")
     .forEach(el => el.removeAttribute("style"));
+  root.querySelectorAll(".tx.en.stacked").forEach(el => el.classList.remove("stacked")); // measured side by side again
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   root
     .querySelectorAll(".list")
@@ -462,10 +463,20 @@ function fitFigures(root) {
     for (let k = 0.9; k > 0.55 && el.scrollWidth > el.clientWidth + 1; k -= 0.1)
       bs.forEach(x => (x.style.fontSize = f * k + "px"));
   });
-  /* a day's list far off screen isn't laid out (content-visibility, .dl): its rows are fitted as they come near */
-  const fitRow = el => {
-    const row = el.closest(".tx");
-    shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+  /* rows, given by their amounts: an entry's row in a list that isn't tight whose title the amount beside it cuts
+     (clamped, measured side by side) stacks as a tight list's rows do (.stacked: the title whole, the amount under it);
+     then a figure the row can't hold is set smaller. All read before any is changed. A day's list far off screen isn't
+     laid out (content-visibility, .dl): its rows are fitted as they come near */
+  const fitRows = as => {
+    as.filter(el => {
+      const row = el.closest(".tx.en"),
+        d = row && !row.closest(".tight") && row.querySelector(".d");
+      return d && d.scrollHeight > d.clientHeight + 1;
+    }).forEach(el => el.closest(".tx").classList.add("stacked"));
+    as.forEach(el => {
+      const row = el.closest(".tx");
+      shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+    });
   };
   if (root.fitIO) root.fitIO.disconnect();
   root.querySelectorAll("[data-far]").forEach(l => delete l.dataset.far); // a second pass: near now is fitted now
@@ -479,7 +490,7 @@ function fitFigures(root) {
         es.forEach(e => {
           if (!e.isIntersecting) return;
           io.unobserve(e.target);
-          e.target.querySelectorAll(".tx .a").forEach(fitRow);
+          fitRows([...e.target.querySelectorAll(".tx .a")]);
         }),
       { root: root.querySelector(".p"), rootMargin: "800px 0px" } // a sheet scrolls its panel, the screen the page
     ));
@@ -488,9 +499,7 @@ function fitFigures(root) {
       io.observe(l);
     });
   }
-  root.querySelectorAll(".tx .a").forEach(el => {
-    if (!el.closest("[data-far]")) fitRow(el);
-  });
+  fitRows([...root.querySelectorAll(".tx .a")].filter(el => !el.closest("[data-far]")));
   /* a name on Home's ring too wide for its tile: a little smaller, down to 9px, and only then its ellipsis (ring names
      are whole or left out: ringHTML) */
   root.querySelectorAll(".rt .cn").forEach(el => {
@@ -722,7 +731,8 @@ const accTag = a => (a ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl
    colour; a transfer: From → To. No balance on the row: tapping it opens it in place (txOpenView), where the balances,
    the time it was written down and the actions are. An add-on has no row of its own (histRows). Every text wraps,
    nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the title
-   the whole width, the amount the line below it, then the second line. */
+   the whole width, the amount the line below it, then the second line; so does a row whose title the amount beside it
+   would cut (.stacked, fitFigures). */
 function txLine(t) {
   const a = acc(t.account),
     cur = a ? a.currency : S.settings.cur,

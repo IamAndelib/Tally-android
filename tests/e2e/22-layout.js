@@ -228,7 +228,7 @@ function inspect() {
       s.overflowY === "hidden" &&
       !/-webkit-box/.test(s.display) &&
       /* lines clamped on purpose end in "…" (newer Chrome computes their -webkit-box as flow-root): an entry's title
-         (.tx.en .d, two lines; .list.tight .tx.en .d, three) and a tile's name (.cat .cn, two) */
+         (.tx.en .d, two lines; .list.tight .tx.en .d and .tx.en.stacked .d, three) and a tile's name (.cat .cn, two) */
       !(s.webkitLineClamp && s.webkitLineClamp !== "none") &&
       e.clientHeight > 0 &&
       s.whiteSpace !== "nowrap"
@@ -1212,6 +1212,118 @@ function inspect() {
     console.log(tag + ": " + states.length + " states");
     await ctx.close();
   }
+  /* History's rows on phones 320–393 px wide, at both text sizes, in English, German and Russian (docs/decisions.md,
+     2026-11-07): a row whose title the amount beside it would cut stacks (.stacked) and shows its whole title; a row
+     left side by side has its whole title too; nothing else on the screen breaks */
+  const rowSeen = {};
+  if (!ONLY.length && !SIZES.length)
+    for (const lang of ["en", "de", "ru"]) {
+      const ctx = await browser.newContext({
+        uiLang: lang,
+        viewport: { width: 393, height: 852 },
+        deviceScaleFactor: 1,
+        isMobile: true,
+        reducedMotion: "reduce",
+        hasTouch: true,
+        locale: LANG_LOCALE[lang] || "en-US",
+      });
+      await ctx.addInitScript(() => {
+        window.__fontScale = 1;
+        window.Android = {
+          getColors: () => null,
+          setBars() {},
+          setReminders() {},
+          takeActions: () => "[]",
+          requestNotifications() {},
+          saveFile() {},
+          fontScale: () => window.__fontScale,
+        };
+      });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on("pageerror", e => errors.push(e.message));
+      await page.goto(appUrl);
+      const t = await page.evaluate(() => today());
+      await page.evaluate(
+        st => {
+          delete st.extraCats;
+          localStorage.setItem("tally:v1", JSON.stringify(st));
+        },
+        sampleState(t, 12)
+      );
+      await page.reload();
+      await page.evaluate(() => {
+        const d = today(),
+          e = (id, type, amount, account, more) =>
+            S.txns.push({ id, ts: 9000 + S.txns.length, date: d, type, amount, account, note: "", ...more });
+        S.loans.push({
+          id: "L9",
+          kind: "lend",
+          person: "Maximiliane Hoffmann-Lindqvist",
+          account: "c",
+          date: d,
+          note: "",
+          status: "open",
+        });
+        e("c9d", "loan", 1000, "c", { dir: "out", loan: "L9", principal: true, onTop: 150, feeId: "c9c" });
+        e("c9c", "loan", 100, "c", { dir: "out", loan: "L9", principal: true, feeOf: "c9d" });
+        e("c9e", "expense", 1000, "b", { cat: "food", payee: "Restaurant am Marktplatz", feeId: "c9x" });
+        e("c9x", "expense", 150, "b", { cat: "food", feeOf: "c9e" });
+        e("c9t", "loan", 300, "c", { dir: "in", loan: "L1", feeId: "c9tt" });
+        e("c9tt", "income", 25, "c", { cat: "otherin", feeOf: "c9t" });
+        e("c9b", "loan", 2600, "s", { dir: "out", loan: "L2", feeId: "c9bc" });
+        e("c9bc", "expense", 5, "s", { cat: "fees", feeOf: "c9b" });
+        save();
+      });
+      await page.evaluate(() => document.fonts.ready);
+      for (const w of [320, 360, 384, 393])
+        for (const s of SCALES)
+          for (const [view, f] of [
+            ["all", {}],
+            ["lent", { kind: "lend" }],
+          ]) {
+            await page.setViewportSize({ width: w, height: 800 });
+            const tag = "rows-" + w + "@" + s + (lang === "en" ? "" : "-" + lang) + "-" + view;
+            const r = await page.evaluate(
+              ([s, f]) => {
+                window.__fontScale = s;
+                applyTextScale();
+                closeSheet();
+                openHistory(f);
+                scrollTo(0, 0);
+                const near = [...document.querySelectorAll("#app .tx.en")].filter(
+                  e => e.getBoundingClientRect().top < innerHeight
+                );
+                const cut = e => {
+                  const d = e.querySelector(".d");
+                  return d.scrollHeight > d.clientHeight + 1;
+                };
+                return {
+                  tight: !!document.querySelector("#app .list.tight"),
+                  stacked: near.filter(e => e.classList.contains("stacked")).map(e => e.dataset.v),
+                  cut: near.filter(cut).map(e => e.dataset.v + (e.classList.contains("stacked") ? " (stacked)" : "")),
+                };
+              },
+              [s, f]
+            );
+            await page.waitForTimeout(80);
+            const probs = await page.evaluate(inspect);
+            await page.screenshot({ path: OUT + "/" + tag + ".png" });
+            if (probs.length) summary[tag] = probs;
+            if (r.cut.length) summary[tag] = (summary[tag] || []).concat("titles cut: " + r.cut.join(", "));
+            if (r.tight && r.stacked.length) summary[tag] = (summary[tag] || []).concat("stacked in a tight list");
+            rowSeen[tag] = r.stacked;
+          }
+      if (errors.length) summary["rows-" + lang + " errors"] = errors;
+      await ctx.close();
+    }
+  if (Object.keys(rowSeen).length)
+    ok(
+      ["", "-de", "-ru"].every(l => (rowSeen["rows-393@1" + l + "-lent"] || []).includes("c9d")),
+      "at 393 px and 1×, Maximiliane's row stacks in every language " +
+        JSON.stringify(Object.fromEntries(Object.entries(rowSeen).filter(([, v]) => v.length)))
+    );
+
   /* an upright phone with its keyboard open (a short window on a tall screen) keeps the upright layout */
   {
     const ctx = await browser.newContext({

@@ -101,7 +101,8 @@ links that would need the internet.
 - **Vertical space is cheap; horizontal space is not.** When something doesn't fit, it wraps and grows down. Boxes
   holding text use `min-height`, not `height`.
 - **Tight lists stack.** A list narrower than 20rem (small phone, large text) becomes `.tight`: the amount moves under
-  the title, from the left, instead of squeezing both onto one line.
+  the title, from the left, instead of squeezing both onto one line. In a wider list, an entry's row whose title the
+  amount beside it would cut stacks the same way on its own (`.stacked`); the others keep the amount on the right.
 - **Sheets fill from the bottom** with the main button last, at the thumb. Content scrolls inside the sheet; the sheet
   never grows past the screen.
 
