@@ -127,9 +127,8 @@ function askDialog(title, text, okText, onOk, o) {
    data): choiceDialog(title, text, buttons, o). Each button is {role, label, run, confirm}; its role sets how it looks:
      keep    green: the safe answer that keeps data (Restore, Save backup)
      destroy red: the answer that loses data (Overwrite, Delete)
-     destroy-outline  outlined red: the milder of two ways to delete (Delete, keep the balance)
      main    filled in the accent colour: the plain next step (Choose another folder)
-     alt     tonal: a side road (Choose another file)
+     alt     tonal: a side road (Choose another file, Archive instead)
      out     outlined: the way out (Cancel, Go back); with no `run` it only closes
    `run` happens after the dialog has closed. With `confirm: {title, text, ok}` the button first asks again: a second
    step replaces this one in place, with Cancel and the button itself (named `ok`, else its label) side by side.
@@ -142,7 +141,6 @@ let CHOICE = null;
 const CHOICE_CLS = {
   keep: "cd-keep",
   destroy: "cd-destroy",
-  "destroy-outline": "cd-destroy-out",
   main: "cd-main",
   alt: "cd-alt",
   out: "cd-out",

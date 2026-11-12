@@ -2,7 +2,7 @@
  * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`: account, kind, then a
  * category, a person or a transfer's two sides), which entries they leave (`histList()`, `histMatch()`), which of those
  * are rows (`histRows()`: an add-on, a charge, a tip or a lend's transfer charge, is shown inside its entry, never as a
- * row), the totals in words
+ * row, and an archived entry is not listed, though it counts in every total), the totals in words
  * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
@@ -93,8 +93,10 @@ const histPick = (f = HF, skip) => {
   return S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, f, skip));
 };
 const histList = (f = HF, skip) => histPick(f, skip).sort(byNewest);
+/* the rows shown: an add-on rides inside its entry, and an archived entry is not listed (it still counts in every total:
+   the headings work from the whole list) */
 function histRows(list) {
-  return list.filter(t => !(t.feeOf && entry(t.feeOf)));
+  return list.filter(t => !t.archived && !(t.feeOf && entry(t.feeOf)));
 }
 /* the totals of a list as lines, one per currency (by code) for each phrase of the kind shown, in the order they stack in a
    heading: {key, tone, cur, amount}. Tone: "in" (+, green), "out" (−, red), "mv" and "fee" (words only).
@@ -596,7 +598,8 @@ const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("h
    days (dayGroups); the heading stays pinned under the bar while its month scrolls, and the next month's heading pushes
    it up (histPin). Only the first rows are drawn (a notebook of years is thousands of rows); the rest follow as the end
    of the list comes near (histWatch). A chunk ends at the end of a day, and a month cut in two has its heading, with the
-   whole month's words, only once: the days that continue it (`cont`) go into its section (histMore). */
+   whole month's words, only once: the days that continue it (`cont`) go into its section (histMore). The list holds the
+   archived entries too, for the words: a heading shows only over a row (histRows), with every entry in its totals. */
 const HIST_CHUNK = 300;
 let HSHOW = { sig: "", n: HIST_CHUNK }, // what is drawn: the entries so far, for these filters and this period
   HLIST = [], // the entries it is drawn from
@@ -618,6 +621,11 @@ function histMonths(list, i, budget) {
       let j = i;
       while (j < list.length && histMonth(list[j]) === m) j++;
       const head = i === 0 || histMonth(list[i - 1]) !== m;
+      /* a month whose entries are all archived has nothing to show: no heading (its days have none either) */
+      if (head && !histRows(list.slice(i, j)).length) {
+        i = j;
+        continue;
+      }
       let part = "";
       if (head) {
         const title = capFirst(monthLabel(m, true)),
@@ -692,7 +700,8 @@ function histCenter(app) {
    (`body`). In search mode nothing is listed until there is something to look for: words, a filter or a period. */
 function histParts() {
   const idle = V.find && !V.sel && !HF.q.trim() && histCount() === 0 && HP.period === "all",
-    list = idle ? [] : histList(HF, ""); // nothing skipped
+    list = idle ? [] : histList(HF, ""), // nothing skipped; archived entries too, for the headings' totals
+    nRows = histRows(list).length;
   if (HSHOW.sig !== histSig()) HSHOW = { sig: histSig(), n: HIST_CHUNK };
   HLIST = list;
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
@@ -705,20 +714,17 @@ function histParts() {
     anySet = HP.period !== "all" || histCount() > 0 || !!(V.find && HF.q.trim());
   /* the chips and Clear all follow the Filters button on its line, wrapping when it is full; Clear all is left out when
      the list is empty (its message has one) */
-  let head = histBar(anySet && list.length, chips, !!V.sel);
+  let head = histBar(anySet && nRows, chips, !!V.sel);
   if (!V.sel) {
     /* no visible summary (the months carry their totals); a hidden status says the count after each change */
     if (!V.find)
-      head +=
-        '<div class="vh" role="status">' +
-        (list.length ? TH("history.count", { count: histRows(list).length }) : "") +
-        "</div>"; // search mode has one that stays (#find-live)
+      head += '<div class="vh" role="status">' + (nRows ? TH("history.count", { count: nRows }) : "") + "</div>"; // search mode has one that stays (#find-live)
   }
   if (idle) return { head, body: recentView(), idle: true }; // search mode, nothing asked yet: the recent searches
   const sug = V.find && !V.sel && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
   /* a Period suggestion ("may 2025") is the answer: nothing is said about the words finding no entries */
-  if (!list.length && sug && SUGS.some(s => s.g === "period")) return { head, body: sug };
-  if (!list.length)
+  if (!nRows && sug && SUGS.some(s => s.g === "period")) return { head, body: sug };
+  if (!nRows)
     return {
       head,
       body:
@@ -781,7 +787,7 @@ function historyView() {
       TH("common.history") +
       "</h1>" +
       searchBtn() +
-      (HLIST.length
+      (histRows(HLIST).length
         ? '<button class="icon" data-act="sel-start" aria-label="' +
           TH("history.select") +
           '">' +

@@ -324,7 +324,7 @@ const ok = (c, m) => {
   await act("sel-start");
   await act("sel-toggle", pr.id);
   await act("sel-del");
-  await page.click("#pop .cd-destroy"); // Change the account balance
+  await page.click("#pop .cd-destroy"); // Delete
   await page.waitForTimeout(350);
   S = await state();
   ok(

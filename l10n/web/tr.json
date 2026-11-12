@@ -507,8 +507,12 @@
   },
   "entries": {
     "fullHistory": "Tüm geçmişi aç",
-    "delUpdate": "Hesap bakiyesini değiştir",
-    "delKeep": "Mevcut bakiyeyi koru",
+    "archiveInstead": "Bunun yerine arşivle",
+    "archived": "Arşivlendi",
+    "warnOne": "Silmek hesap bakiyesini değiştirir.",
+    "warnLend": "Silmek hesap bakiyesini ve alacağı değiştirir.",
+    "warnBorrow": "Silmek hesap bakiyesini ve borcu değiştirir.",
+    "warnMany": "Silmek hesap bakiyelerini değiştirir.",
     "delTitle_one": "Bu kayıt silinsin mi?",
     "delTitle_other": "Bu {{count}} kayıt silinsin mi?"
   },

@@ -25,6 +25,9 @@ const lineAt = (s, i) => s.slice(0, i).split("\n").length;
 /* findings that are fine, each with why; key "<check>:<name>" */
 const ALLOW = {
   // e.g. "css-class:foo": "set by MainActivity on the WebView, not by the page",
+  /* until History's Archived screen is built (docs/plans/2026-11-07-history-archive.md, Task 3), which takes them out */
+  "param:archiveEntries(on)": "false shows entries again: the Archived screen's Show again",
+  "param:deleteAsk(o)": "{ archive: false }: Delete on the Archived screen, without Archive instead",
 };
 
 const findings = [];

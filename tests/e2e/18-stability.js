@@ -159,7 +159,7 @@ const ago = n => {
   await act("sel-start");
   await act("sel-toggle", "d2");
   await act("sel-del");
-  await page.click("#pop .cd-destroy"); // Change the account balance
+  await page.click("#pop .cd-destroy"); // Delete
   await page.waitForTimeout(350);
   await settle();
   S = await state();
@@ -176,7 +176,7 @@ const ago = n => {
   await act("sel-toggle", "d1");
   await act("sel-toggle", "d2");
   await act("sel-del");
-  await page.click("#pop .cd-destroy"); // Change the account balance
+  await page.click("#pop .cd-destroy"); // Delete
   await page.waitForTimeout(350);
   await settle();
   S = await state();

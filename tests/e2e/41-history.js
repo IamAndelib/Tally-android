@@ -1279,7 +1279,7 @@ const ok = (c, m) => {
     ok((await state()).open === "coffee", "the row stays open behind the form");
     await page.click('#app .txo [data-act="tx-del"]');
     await page.waitForTimeout(100);
-    await page.click("#pop .cd-destroy"); // Change the account balance
+    await page.click("#pop .cd-destroy"); // Delete
     await page.waitForTimeout(350);
     const del = await page.evaluate(() => ({
       txo: document.querySelectorAll("#app .txo").length,
@@ -1923,7 +1923,7 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
-  // ---- Delete asks whether the balance changes or stays
+  // ---- Delete asks first: a warning line, then Delete, Archive instead or Cancel (docs/specs/history-archive.md, B2)
   {
     const { ctx, page } = await open();
     const seedAll = () =>
@@ -1976,6 +1976,13 @@ const ok = (c, m) => {
     };
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     const near = (a, b) => Math.abs(a - b) < 0.0005;
+    const marks = () =>
+      page.evaluate(() =>
+        S.txns
+          .filter(t => t.archived)
+          .map(t => t.id)
+          .sort()
+      );
 
     await seedAll();
     const before0 = await snap();
@@ -1983,12 +1990,8 @@ const ok = (c, m) => {
     const sh = await shape();
     ok(
       sh.title === "Delete this entry?" &&
-        !sh.text &&
-        same(sh.btns, [
-          "cd-destroy:Change the account balance",
-          "cd-destroy-out:Keep the current balance",
-          "cd-out:Cancel",
-        ]),
+        sh.text === "Deleting changes the account balance." &&
+        same(sh.btns, ["cd-destroy:Delete", "cd-alt:Archive instead", "cd-out:Cancel"]),
       "an opened row's Delete asks: " + JSON.stringify(sh)
     );
     ok((await snap()) === before0, "asking changes nothing");
@@ -2008,13 +2011,14 @@ const ok = (c, m) => {
       "Back closes the question and changes nothing"
     );
 
-    /* every kind: Update, Keep, Undo */
+    /* every kind: Delete, Archive instead, Undo */
     const kinds = [
-      ["sp", "spent", ["sp"], { a: -30.5 }, false],
-      ["in", "received", ["in"], { a: 100 }, false],
-      ["tr", "transfer with a fee", ["tr", "trf"], { a: -52, b: 50 }, false],
-      ["fx", "transfer between two currencies", ["fx"], { a: -40, c: 36.123 }, false],
-      ["ad", "balance fix", ["ad"], { b: -20 }, false],
+      ["sp", "spent", ["sp"], { a: -30.5 }],
+      ["in", "received", ["in"], { a: 100 }],
+      ["tr", "transfer with a fee", ["tr", "trf"], { a: -52, b: 50 }],
+      ["fx", "transfer between two currencies", ["fx"], { a: -40, c: 36.123 }],
+      ["ad", "balance fix", ["ad"], { b: -20 }],
+      ["p1", "lending's payback", ["p1"], { a: 40 }],
     ];
     for (const [id, name, gone, fx] of kinds) {
       await seedAll();
@@ -2022,7 +2026,7 @@ const ok = (c, m) => {
         b0 = await bals(),
         o0 = await opens(),
         n0 = (await ids()).length;
-      /* Update: today's delete, balances move */
+      /* Delete: the entry goes, balances move */
       await askRow(id);
       await page.click("#pop .cd-destroy");
       await pause();
@@ -2031,52 +2035,26 @@ const ok = (c, m) => {
         (await ids()).length === n0 - gone.length &&
           Object.keys(fx).every(k => near(b1[k], b0[k] - fx[k])) &&
           same(await opens(), o0),
-        name + ", update: the entry goes and the balance follows"
+        name + ", Delete: the entry goes and the balance follows"
       );
       await page.click('#snack [data-act="undo"]');
       await pause();
-      ok((await snap()) === s0, name + ", update, Undo: the state is restored exactly");
-      /* Keep: balances identical, only the openings changed, no new entry */
+      ok((await snap()) === s0, name + ", Delete, Undo: the state is restored exactly");
+      /* Archive instead: every entry stays, so does every balance and opening; only the marks are new */
       await askRow(id);
-      await page.click("#pop .cd-destroy-out");
+      await page.click("#pop .cd-alt");
       await pause();
-      const b2 = await bals(),
-        o2 = await opens();
+      const b2 = await bals();
       ok(
         Object.keys(b0).every(k => b2[k] === b0[k]) &&
-          (await ids()).length === n0 - gone.length &&
-          Object.keys(o0).every(k => (fx[k] === undefined ? o2[k] === o0[k] : near(o2[k], o0[k] + fx[k]))) &&
-          (await page.evaluate(g => g.every(x => !S.txns.some(t => t.id === x)), gone)),
-        name + ", keep: every balance is the same, only the openings changed " + JSON.stringify(o2)
+          (await ids()).length === n0 &&
+          same(await opens(), o0) &&
+          same(await marks(), gone.slice().sort()),
+        name + ", Archive instead: every balance and entry the same, " + gone.join(" and ") + " archived"
       );
       await page.click('#snack [data-act="undo"]');
       await pause();
-      ok((await snap()) === s0, name + ", keep, Undo: entries, fee link and every opening restored exactly");
-    }
-
-    /* a loan payment: only "update" */
-    await seedAll();
-    {
-      const s0 = await snap();
-      await askRow("p1");
-      const lp = await shape();
-      ok(
-        lp.title === "Delete this entry?" &&
-          lp.btns.length === 2 &&
-          lp.btns[0] === "cd-destroy:Change the account balance" &&
-          lp.btns[1] === "cd-out:Cancel",
-        "a loan payment is not offered to keep the balance: " + JSON.stringify(lp)
-      );
-      ok(
-        !(await page.$("#pop .dlg-x")) && !(await page.$("#pop [aria-describedby]")),
-        "a loan entry's question is its title alone, with no line under it"
-      );
-      await page.click("#pop .cd-destroy");
-      await pause();
-      ok(!(await ids()).includes("p1"), "…and its delete works");
-      await page.click('#snack [data-act="undo"]');
-      await pause();
-      ok((await snap()) === s0, "…and Undo restores exactly");
+      ok((await snap()) === s0, name + ", Archive instead, Undo: the state is restored exactly");
     }
 
     /* the entry sheet's Delete and the transfer and fix sheets' Delete ask the same */
@@ -2094,7 +2072,7 @@ const ok = (c, m) => {
       await page.click('#sheet [data-act="' + act + '"]');
       await pause();
       ok(
-        (await page.isVisible("#pop .cd-destroy-out")) && !!(await page.$("#sheet .p")) && (await snap()) === s0,
+        (await page.isVisible("#pop .cd-alt")) && !!(await page.$("#sheet .p")) && (await snap()) === s0,
         id + ": the sheet's Delete asks first, the sheet stays"
       );
       await page.click("#pop .cd-out");
@@ -2106,12 +2084,12 @@ const ok = (c, m) => {
       );
       await page.click('#sheet [data-act="' + act + '"]');
       await pause();
-      await page.click("#pop .cd-destroy-out");
+      await page.click("#pop .cd-destroy");
       await pause();
       const b1 = await bals();
       ok(
-        !(await page.$("#sheet .p")) && Object.keys(b0).every(k => b1[k] === b0[k]) && !(await ids()).includes(id),
-        id + ": keep from the sheet closes it and every balance is the same"
+        !(await page.$("#sheet .p")) && Object.keys(b0).some(k => b1[k] !== b0[k]) && !(await ids()).includes(id),
+        id + ": Delete from the sheet closes it and the balance follows"
       );
       await page.click('#snack [data-act="undo"]');
       await pause();
@@ -2132,23 +2110,22 @@ const ok = (c, m) => {
     {
       const s0 = await snap(),
         b0 = await bals();
-      await selDel(["sp", "in", "tr", "fx", "ad"]);
+      await selDel(["sp", "in", "tr", "fx", "ad", "p1"]);
       const sh2 = await shape();
       ok(
-        sh2.title === "Delete these 5 entries?" && !sh2.text && sh2.btns.length === 3,
+        sh2.title === "Delete these 6 entries?" &&
+          sh2.text === "Deleting changes the account balances." &&
+          sh2.btns.length === 3,
         "a selection is asked once, in the plural: " + JSON.stringify(sh2)
       );
-      await page.click("#pop .cd-destroy-out");
+      await page.click("#pop .cd-alt");
       await pause();
-      const b1 = await bals(),
-        o1 = await opens();
+      const b1 = await bals();
       ok(
         Object.keys(b0).every(k => b1[k] === b0[k]) &&
-          (await ids()).join() === "d1,p1" &&
-          near(o1.a, 1000 + 30.5 * -1 + 100 - 52 - 40) &&
-          near(o1.b, 500 + 50 - 20) &&
-          near(o1.c, 200 + 36.123),
-        "keep for several: all balances identical, each opening takes its entries: " + JSON.stringify(o1)
+          (await ids()).length === 8 &&
+          same(await marks(), ["ad", "fx", "in", "p1", "sp", "tr", "trf"]),
+        "Archive instead for several: every balance and entry the same, each archived"
       );
       await page.click('#snack [data-act="undo"]');
       await pause();
@@ -2159,44 +2136,16 @@ const ok = (c, m) => {
       const b2 = await bals();
       ok(
         near(b2.a, b0.a - (-30.5 + 100 - 52 - 40)) && near(b2.b, b0.b - 30) && near(b2.c, b0.c - 36.123),
-        "update for several: the balances follow"
+        "Delete for several: the balances follow"
       );
       await page.click('#snack [data-act="undo"]');
       await pause();
-      /* with a loan entry in it, keep is not offered */
       await selDel(["sp", "p1"]);
-      const sh3 = await shape();
-      ok(
-        sh3.btns.length === 2 && sh3.btns[0].startsWith("cd-destroy:") && sh3.btns[1] === "cd-out:Cancel",
-        "a selection holding a loan entry has no keep: " + JSON.stringify(sh3)
-      );
       await page.click("#pop .cd-out");
       await pause();
       ok((await snap()) === s0, "Cancel on a selection changes nothing");
       ok((await page.evaluate(() => V.sel && V.sel.size)) === 2, "…and the selection is still there for another try");
       await page.evaluate(() => goBack());
-    }
-    /* an archived account keeps its balance too */
-    await seedAll();
-    await page.evaluate(() => {
-      S.accounts.find(a => a.id === "b").archived = true;
-      save();
-      render();
-    });
-    {
-      const s0 = await snap(),
-        b0 = await bals();
-      await selDel(["ad"]);
-      await page.click("#pop .cd-destroy-out");
-      await pause();
-      const b1 = await bals();
-      ok(
-        b1.b === b0.b && !(await ids()).includes("ad") && (await opens()).b === 500 - 20,
-        "keep on an archived account: its balance stays the same"
-      );
-      await page.click('#snack [data-act="undo"]');
-      await pause();
-      ok((await snap()) === s0, "…and Undo restores exactly");
     }
     await ctx.close();
   }

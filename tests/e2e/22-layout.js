@@ -1026,7 +1026,7 @@ function inspect() {
       await page.evaluate(() => wipeAll());
       await page.click("#pop .cd-destroy");
     });
-    /* Delete asks whether the balance changes or stays: one entry, a selection, and a loan entry (no keep) */
+    /* Delete asks first, with its warning line: one entry, a selection, and a loan entry (… and the loan) */
     await shot(
       "choice-delete",
       ev(() => deleteAsk([S.txns.find(t => t.type === "expense" && !t.feeOf).id], () => {}))

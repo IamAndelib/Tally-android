@@ -507,8 +507,12 @@
   },
   "entries": {
     "fullHistory": "Ganzen Verlauf öffnen",
-    "delUpdate": "Kontostand ändern",
-    "delKeep": "Aktuellen Kontostand behalten",
+    "archiveInstead": "Stattdessen archivieren",
+    "archived": "Archiviert",
+    "warnOne": "Löschen ändert den Kontostand.",
+    "warnLend": "Löschen ändert den Kontostand und das Darlehen.",
+    "warnBorrow": "Löschen ändert den Kontostand und die Schuld.",
+    "warnMany": "Löschen ändert die Kontostände.",
     "delTitle_one": "Diesen Eintrag löschen?",
     "delTitle_other": "Diese {{count}} Einträge löschen?"
   },

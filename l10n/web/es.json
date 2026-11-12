@@ -510,8 +510,12 @@
   },
   "entries": {
     "fullHistory": "Abrir historial completo",
-    "delUpdate": "Cambiar el saldo de la cuenta",
-    "delKeep": "Mantener el saldo actual",
+    "archiveInstead": "Archivar en su lugar",
+    "archived": "Archivado",
+    "warnOne": "Eliminarlo cambia el saldo de la cuenta.",
+    "warnLend": "Eliminarlo cambia el saldo de la cuenta y el préstamo.",
+    "warnBorrow": "Eliminarlo cambia el saldo de la cuenta y la deuda.",
+    "warnMany": "Eliminarlos cambia los saldos de las cuentas.",
     "delTitle_one": "¿Eliminar este movimiento?",
     "delTitle_many": "¿Eliminar estos {{count}} movimientos?",
     "delTitle_other": "¿Eliminar estos {{count}} movimientos?"

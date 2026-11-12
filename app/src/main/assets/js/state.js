@@ -11,10 +11,11 @@ function blank() {
     /* 7: entries may have a payee. 8: charges and extras (docs/specs/charges.md): an add-on that moves money is an
        entry linked both ways to its entry (feeOf on it, feeId on the entry: a charge on a transfer, a loan payment or a
        purchase, a tip on a lending's payment, a lend's transfer charge), what only changes what is owed is a draw's
-       onTop; a new notebook has no Fees category. An older Tally restoring a backup warns it's newer (restoreText) and
-       drops what it doesn't know: saved again there, the file comes back without onTop, a purchase's charge as a plain
-       expense in its category, a lend's transfer charge as a second draw, and with Fees; every balance (and what is
-       owed, apart from onTop) stays right. */
+       onTop; a new notebook has no Fees category; an entry may be archived (`archived: true`: hidden from History,
+       nothing else, docs/specs/history-archive.md). An older Tally restoring a backup warns it's newer (restoreText)
+       and drops what it doesn't know: saved again there, the file comes back without onTop, a purchase's charge as a
+       plain expense in its category, a lend's transfer charge as a second draw, with Fees and every entry shown; every
+       balance (and what is owed, apart from onTop) stays right. */
     v: 8,
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
@@ -257,6 +258,7 @@ function migrate(o) {
         account: sid(t0.account),
         note: str(t0.note),
       };
+      if (t0.archived === true) t.archived = true; // archived: hidden from History, nothing else (only exactly true)
       if (t0.type === "transfer") {
         t.to = sid(t0.to);
         if (t0.toAmount !== "" && okNum(t0.toAmount)) t.toAmount = +t0.toAmount;
@@ -350,6 +352,9 @@ function migrate(o) {
     delete a.due;
     delete a.onTop;
     if (h.type === "expense") a.cat = h.cat;
+    /* an add-on is archived and shown again with its entry (archiveEntries) */
+    if (h.archived) a.archived = true;
+    else delete a.archived;
   });
   /* v6: a loan's due date used to live on the loan itself; move it onto its (first/only) principal draw */
   if (!(ver >= 6) && Array.isArray(o.loans))
@@ -844,13 +849,9 @@ function guardOverdraw(mutate, date, proceed) {
   );
 }
 /* delete entries by id, keeping transfers + fees and loans + their payments consistent: a loan goes (with its
-   payments) only when every one of its draws is deleted; otherwise it follows its remaining draws.
-   With `keep`, each account's opening balance takes over what the deleted entries did to it (the same per-account
-   effect balances() adds up), so no balance changes and no entry is added. Never for loan entries (see canKeepBalance). */
-function deleteEntries(ids, keep) {
-  keep = keep && canKeepBalance([...ids]); // a loan entry never keeps the balance, whatever the caller asked
+   payments) only when every one of its draws is deleted; otherwise it follows its remaining draws */
+function deleteEntries(ids) {
   ids = new Set(ids);
-  const was = keep && S.txns;
   /* a lend's transfer charge is part of its draw: deleted with it, never a draw that keeps the lending */
   const isDraw = t => t.type === "loan" && t.principal && !isAddOn(t),
     hit = new Set(S.txns.filter(t => ids.has(t.id) && isDraw(t)).map(t => t.loan)),
@@ -871,17 +872,21 @@ function deleteEntries(ids, keep) {
   hit.forEach(lid => {
     if (!gone.has(lid)) relinkLoan(lid);
   });
-  if (was) {
-    const fx = {};
-    S.accounts.forEach(a => (fx[a.id] = 0));
-    was.forEach(t => {
-      if (ids.has(t.id)) applyEntry(fx, t);
-    });
-    S.accounts.forEach(a => {
-      if (fx[a.id]) a.opening = rnd((+a.opening || 0) + fx[a.id]);
-    });
-  }
 }
-/* "Delete, keep the balance" is offered only when every entry is plain money: a loan's amounts come from its entries,
-   so a loan entry keeps today's delete (the balance follows) */
-const canKeepBalance = ids => ids.every(id => entry(id) && entry(id).type !== "loan");
+/* Archiving hides entries from History and changes nothing else (docs/specs/history-archive.md, B): on sets each one's
+   mark (`archived: true`), off takes it away. An entry and its add-on (a charge, a tip, a lend's transfer charge) are
+   archived and shown again together. Amounts, accounts, dates, categories and links stay, so every balance, loan and
+   total does too; History's rows, search and the Filters sheet's counts leave archived entries out (histRows()). */
+function archiveEntries(ids, on) {
+  const all = new Set(ids);
+  ids.forEach(id => {
+    const t = entry(id);
+    if (t && t.feeId) all.add(t.feeId);
+    if (t && t.feeOf) all.add(t.feeOf);
+  });
+  S.txns.forEach(t => {
+    if (!all.has(t.id)) return;
+    if (on) t.archived = true;
+    else delete t.archived;
+  });
+}

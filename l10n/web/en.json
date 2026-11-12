@@ -507,8 +507,12 @@
   },
   "entries": {
     "fullHistory": "Open full history",
-    "delUpdate": "Change the account balance",
-    "delKeep": "Keep the current balance",
+    "archiveInstead": "Archive instead",
+    "archived": "Archived",
+    "warnOne": "Deleting changes the account balance.",
+    "warnLend": "Deleting changes the account balance and the loan.",
+    "warnBorrow": "Deleting changes the account balance and the loan.",
+    "warnMany": "Deleting changes the account balances.",
     "delTitle_one": "Delete this entry?",
     "delTitle_other": "Delete these {{count}} entries?"
   },

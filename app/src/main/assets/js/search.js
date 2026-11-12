@@ -6,7 +6,7 @@
  * after typing pauses (`findInput()`, `findDraw()`), Back to where it was opened from (`findBack()`, `findUndo()`), and
  * the suggestions above the list (`findSugs()`: a payee, category, account, person, kind, month or year, an amount that
  * the typed words could mean, each with the entries it would leave; a tap sets it as a filter and takes its words out
- * of the field, `findPick()`).
+ * of the field, `findPick()`). An archived entry is never found or suggested.
  */
 "use strict";
 
@@ -365,7 +365,7 @@ function findEnd() {
   const last = recentTerms(recentLoad()[0] || ""),
     mine = srTerms(HF.q);
   /* only words that found something, and not ones a suggestion just kept */
-  if (HLIST.length && !(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
+  if (histRows(HLIST).length && !(mine.length && mine.every(w => last.includes(w)))) recentKeep(HF.q);
   clearTimeout(FIND_T);
   V.find = false;
   if (FIND.keep) Object.assign(HP, FIND.keep.hp);
@@ -489,6 +489,7 @@ function findTypo() {
     const others = terms.filter((x, j) => j !== i && x).join(" "),
       seen = new Map(); // folded word -> {raw, n (entries with it)}
     histPick({ ...HF, q: others }).forEach(t => {
+      if (t.archived) return; // search leaves an archived entry out
       const own = new Set();
       srTexts(t).forEach(tx =>
         tx.split(SR_SEP).forEach(raw => {
@@ -645,7 +646,8 @@ function sugFind(toks) {
     cats = new Map(),
     accs = new Map(),
     whos = new Map();
-  S.txns.forEach(t => {
+  const listed = S.txns.filter(t => !t.archived); // an archived entry is never suggested (search leaves it out)
+  listed.forEach(t => {
     if (t.feeOf && entry(t.feeOf)) return;
     if (t.cat) cats.set(t.cat, (cats.get(t.cat) || 0) + 1);
     accs.set(t.account, (accs.get(t.account) || 0) + 1);
@@ -747,8 +749,8 @@ function sugFind(toks) {
      that has entries on it (newest first), "jun 14 2026" that day. Those take the typed words they used, so the plain
      month and the plain year for the same words are left out. Else a month: for each year that has entries in it,
      newest first; a year that has entries. */
-  const have = new Set(S.txns.map(t => t.date.slice(0, 7))),
-    days = [...new Set(S.txns.map(t => t.date))].sort().reverse(),
+  const have = new Set(listed.map(t => t.date.slice(0, 7))),
+    days = [...new Set(listed.map(t => t.date))].sort().reverse(),
     isYear = t => /^\d{4}$/.test(t.f),
     isDay = t => /^\d{1,2}$/.test(t.f) && +t.f >= 1 && +t.f <= 31,
     months = [],
@@ -813,7 +815,7 @@ function sugFind(toks) {
       )
     );
   toks.forEach((t, i) => {
-    if (!isYear(t) || usedYear.has(i) || !S.txns.some(x => x.date.slice(0, 4) === t.f)) return;
+    if (!isYear(t) || usedYear.has(i) || !listed.some(x => x.date.slice(0, 4) === t.f)) return;
     add(
       "period",
       t.f,

@@ -510,8 +510,12 @@
   },
   "entries": {
     "fullHistory": "Abrir histórico completo",
-    "delUpdate": "Alterar o saldo da conta",
-    "delKeep": "Manter o saldo atual",
+    "archiveInstead": "Arquivar em vez disso",
+    "archived": "Arquivado",
+    "warnOne": "Excluir altera o saldo da conta.",
+    "warnLend": "Excluir altera o saldo da conta e o empréstimo.",
+    "warnBorrow": "Excluir altera o saldo da conta e a dívida.",
+    "warnMany": "Excluir altera os saldos das contas.",
     "delTitle_one": "Excluir este lançamento?",
     "delTitle_many": "Excluir estes {{count}} lançamentos?",
     "delTitle_other": "Excluir estes {{count}} lançamentos?"

@@ -363,9 +363,11 @@ document.addEventListener("click", ev => {
         break;
       }
       const id = F.id;
-      deleteAsk([id], keep => {
+      deleteAsk([id], arch => {
         closeSheet();
-        withUndo(T("common.deleted"), () => deleteEntries([id], keep));
+        withUndo(T(arch ? "entries.archived" : "common.deleted"), () =>
+          arch ? archiveEntries([id], true) : deleteEntries([id])
+        );
       });
       break;
     }
@@ -398,9 +400,11 @@ document.addEventListener("click", ev => {
       break;
     case "adj-del": {
       const id = F.id;
-      deleteAsk([id], keep => {
+      deleteAsk([id], arch => {
         closeSheet();
-        withUndo(T("fix.deleted"), () => deleteEntries([id], keep));
+        withUndo(T(arch ? "entries.archived" : "fix.deleted"), () =>
+          arch ? archiveEntries([id], true) : deleteEntries([id])
+        );
       });
       break;
     }
@@ -638,13 +642,14 @@ document.addEventListener("click", ev => {
         snack(no);
         return;
       }
-      deleteAsk(ids, keep => {
+      deleteAsk(ids, arch => {
         let n = 0; // the rows that went (a deleted loan's payments go with it), counted as listed: an add-on is in its entry
         withUndo(
-          () => T("history.deleted", { count: n }),
+          () => (arch ? T("entries.archived") : T("history.deleted", { count: n })),
           () => {
             n = histRows(S.txns).length;
-            deleteEntries(ids, keep);
+            if (arch) archiveEntries(ids, true);
+            else deleteEntries(ids);
             n -= histRows(S.txns).length;
             V.sel = null;
           }

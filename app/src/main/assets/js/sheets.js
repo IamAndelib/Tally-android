@@ -1251,18 +1251,29 @@ function saveTr() {
     { row: id || nid }
   );
 }
-/* Deleting asks first whether the balance changes (go(false): today's delete) or stays (go(true): the opening balances
-   take the amounts over, deleteEntries()). Loan entries are only offered the first; the dialog is the title and the answers; one answer for a whole selection.
+/* Deleting asks first, once for a whole selection (ids: History's rows, so its count is theirs; an add-on goes with its
+   entry): the title, one line warning what Delete changes (an account's balance, and the loan for a loan or lending
+   entry), then Delete (go(false)), Archive instead (go(true): the entries leave History and nothing else changes,
+   archiveEntries()) and Cancel. o.archive false leaves Archive instead out (for entries already archived).
    Cancel and Back change nothing; the focus goes back to the Delete that asked. */
-function deleteAsk(ids, go) {
+function deleteAsk(ids, go, o = {}) {
   const count = ids.length,
-    kept = canKeepBalance(ids);
+    t = count === 1 && entry(ids[0]),
+    lend = t && t.type === "loan" && (loan(t.loan) || {}).kind === "lend",
+    warn =
+      count > 1
+        ? "entries.warnMany"
+        : lend
+          ? "entries.warnLend"
+          : t && t.type === "loan"
+            ? "entries.warnBorrow"
+            : "entries.warnOne";
   choiceDialog(
     T("entries.delTitle", { count }),
-    "", // no line under the title (maintainer): the answers say what happens
+    T(warn),
     [
-      { role: "destroy", label: T("entries.delUpdate"), run: () => go(false) },
-      kept && { role: "destroy-outline", label: T("entries.delKeep"), run: () => go(true) },
+      { role: "destroy", label: T("common.delete"), run: () => go(false) },
+      o.archive !== false && { role: "alt", label: T("entries.archiveInstead"), run: () => go(true) },
       { role: "out", label: T("common.cancel") },
     ].filter(Boolean)
   );
@@ -1289,13 +1300,14 @@ function rowDelete(id) {
       const q = $("#sheet .p");
       if (q) q.scrollTop = scroll;
     };
-  deleteAsk([id], keep => {
+  deleteAsk([id], arch => {
     let n = 0; // the rows that went, as History counts them (histRows): more than this one when a loan's payments go too
     withUndo(
-      () => (n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
+      () => (arch ? T("entries.archived") : n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
       () => {
         n = histRows(S.txns).length;
-        deleteEntries([id], keep);
+        if (arch) archiveEntries([id], true);
+        else deleteEntries([id]);
         n -= histRows(S.txns).length;
         V.open = "";
       },
