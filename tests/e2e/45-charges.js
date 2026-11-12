@@ -3232,6 +3232,29 @@ function variedV7() {
         (await txt("#sheet2 .aocard .aoprev"))
     );
     await page.evaluate(() => closeSheet2());
+    // a refused add-on on a draw's edit is named by its own field: the extra's words, or the transfer charge's (a
+    // stand-in setAddOn refuses one kind, as it does past what a field takes); nothing is saved
+    for (const [kind, said] of [
+      ["top", "That extra isn't a number"],
+      ["charge", "That charge isn't a number"],
+    ]) {
+      await open("R");
+      await page.evaluate(() => loanDrawEdit("rD"));
+      await page.waitForTimeout(120);
+      const before = J((await db()).txns);
+      await page.evaluate(k => {
+        window.__setAddOn = setAddOn;
+        setAddOn = (t, kind, n) => (kind === k ? false : window.__setAddOn(t, kind, n));
+      }, kind);
+      await typeIn("#sheet2 #ed-extra", "210");
+      await tap('#sheet2 [data-act="loandraw-save"]');
+      await page.evaluate(() => (setAddOn = window.__setAddOn));
+      ok(
+        (await snackText()).includes(said) && J((await db()).txns) === before,
+        "a lend's draw, its " + kind + " refused: “" + said + "”, nothing saved " + (await snackText())
+      );
+      await page.evaluate(() => closeSheet2());
+    }
     // deleting the loan takes every add-on along
     await open("R");
     await tap('#sheet [data-act="loan-del"]');

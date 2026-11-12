@@ -679,7 +679,9 @@ function saveLoanDraw() {
   }
   /* the entry, then its add-ons as its form has them: a draw's transfer charge (a lend's) and what it owes on top; a
      payment's transfer charge (a loan's), or a lending payment's tip (and an older paid fee, while it keeps one). Its
-     add-on goes with it: same account, same day. False when an add-on is refused. */
+     add-on goes with it: same account, same day. False when an add-on is refused, with the message for that field in
+     refused (an extra's, or a charge's: a borrow's charges on top are charges). */
+  let refused = "";
   const mutate = () => {
     const t = entry(txnId);
     if (!t) return false;
@@ -687,13 +689,14 @@ function saveLoanDraw() {
     t.account = acc2;
     t.date = date2;
     if (setDue) t.due = due2;
+    const add = (kind, n, key) => setAddOn(t, kind, n) || ((refused = key), false);
     const ok = t.principal
       ? lend
-        ? setAddOn(t, "charge", ao.xcharge || 0) && setAddOn(t, "top", ao.extra || 0)
-        : setAddOn(t, "top", ao.charges || 0)
+        ? add("charge", ao.xcharge || 0, "charge.notNumber") && add("top", ao.extra || 0, "extra.notNumber")
+        : add("top", ao.charges || 0, "charge.notNumber")
       : lend
-        ? setAddOn(t, "charge", ao.charge || 0) && setAddOn(t, "extra", ao.extra || 0)
-        : setAddOn(t, "charge", ao.xcharge || 0);
+        ? add("charge", ao.charge || 0, "charge.notNumber") && add("extra", ao.extra || 0, "extra.notNumber")
+        : add("charge", ao.xcharge || 0, "charge.notNumber");
     relinkLoan(l.id);
     return ok;
   };
@@ -704,7 +707,7 @@ function saveLoanDraw() {
     after = loanInfo(loan(l.id));
   });
   if (!ok) {
-    snack(T(t0.principal || !lend ? "charge.notNumber" : "extra.notNumber"));
+    snack(T(refused || "charge.notNumber"));
     return;
   }
   if (after.paid - after.total > Math.max(0, i.paid - i.total) + 0.0005) {
