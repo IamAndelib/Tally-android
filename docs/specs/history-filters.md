@@ -122,7 +122,9 @@ Received (as everywhere in Tally, docs/specs/charges.md "Counting").
   them (a transfer or loan payment with a charge, a written-off lend's draw); only that spending counts in its heading.
   Received = income, and the lending payments that carry an extra (only the extra counts). Transfers = transfers and
   their charges; Lent / Borrowed = a lending's or loan's draws and payments with their add-ons; Balance fixes = fixes.
-  An account matches when it's the entry's account or a transfer's destination.
+  An account matches when it's the entry's account or a transfer's destination. A transfer's charge is the From
+  account's alone: filtered to the To account, the transfer is listed (under Transfers too) but its charge is not
+  counted, and it is not listed under Spent.
 - **An add-on** belongs to the kind of its entry and is shown inside that entry's row (not as a row). The Transfers
   filter says `Transferred $X` and `Charges $Z`, the Lent filter `Extras $Z` (a Charges line for a written-off
   lend's transfer charge), the Borrowed filter `Charges $Z`, each only when not 0. A purchase's charge follows its

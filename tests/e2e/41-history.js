@@ -216,8 +216,8 @@ const ok = (c, m) => {
       "spent words: the transfer's and the loan payment's fees too (Spent lists what carries them): " +
         JSON.stringify(r.spent)
     );
-    ok(r.toK === "fx,t2", "an account matches a transfer into it, and the fee follows: " + r.toK);
-    ok(r.bk === "fx,t2" && r.ck === 0, "From narrows to the sending account: " + r.bk + " / " + r.ck);
+    ok(r.toK === "t2", "an account matches a transfer into it; its fee is the sending account's alone: " + r.toK);
+    ok(r.bk === "t2" && r.ck === 0, "From narrows to the sending account: " + r.bk + " / " + r.ck);
     ok(r.toB === "t6", "To matches the destination: " + r.toB);
     ok(r.who === "fy,t10,t11", "a person's loan entries and fee: " + r.who);
     ok(r.cat === 2, "a category within a kind: " + r.cat);
@@ -381,6 +381,79 @@ const ok = (c, m) => {
       return [c(".hcol .hc-in"), c(".hcol .hc-out")];
     });
     ok(col[0] !== col[1], "received and spent have their own colours: " + col);
+    await ctx.close();
+  }
+
+  // ---- an account filter and a transfer's charge: the charge is the From account's alone (the transfer is listed on
+  // either side; its charge, the spending it carries and the Charges figure only for the account that paid it)
+  {
+    const { ctx, page } = await open();
+    await page.evaluate(() => {
+      S = blank();
+      S.settings.cur = "BDT";
+      S.settings.lastCheck = today();
+      const a = (id, name) =>
+        S.accounts.push({ id, name, type: "bank", currency: "BDT", opening: 50000, archived: false });
+      a("k", "Bkash");
+      a("b", "Bank");
+      S.txns.push({ id: "x", ts: 1, date: today(), type: "transfer", amount: 1000, account: "k", to: "b", note: "" });
+      setAddOn(S.txns[0], "charge", 10);
+      save();
+      location.reload();
+    });
+    await page.waitForLoadState();
+    await page.waitForTimeout(200);
+    const look = f =>
+      page.evaluate(f => {
+        openHistory(f);
+        const col = e => [...e.querySelectorAll(".hcl")].map(l => l.textContent.replace(/\u2060/g, ""));
+        return {
+          rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
+          mon: [...document.querySelectorAll("#app .hmon")].map(col),
+          day: [...document.querySelectorAll("#app .dayh")].map(col),
+          say: [...document.querySelectorAll("#app .hmon, #app .dayh")].map(e => e.getAttribute("aria-label")),
+          list: histList({ ...histBlank(), ...f })
+            .map(t => (t.feeOf ? "charge" : t.id))
+            .sort(),
+          n: hfCount({ ...histBlank(), ...f }),
+          sug: sugCount({ ...histBlank(), ...f }, HP),
+        };
+      }, f);
+    const J = JSON.stringify;
+    const tk = await page.evaluate(() => money(10, "BDT"));
+    const spent = ["−" + tk];
+    let r = await look({ acc: "b" });
+    ok(
+      J(r.rows) === J(["x"]) && J(r.list) === J(["x"]) && J(r.mon) === "[[]]" && J(r.day) === "[[]]",
+      "filtered to Bank (the To side): the transfer is listed, nothing spent " + J(r)
+    );
+    ok(!r.say.some(s => s.includes("spent")), "… and its headings say no spending: " + J(r.say));
+    r = await look({ acc: "b", kind: "out" });
+    ok(
+      J(r.rows) === "[]" && J(r.mon) === "[]" && r.n === 0 && r.sug === 0,
+      "Bank + Spent: nothing listed, nothing counted " + J(r)
+    );
+    r = await look({ acc: "b", kind: "xfer" });
+    ok(
+      J(r.rows) === J(["x"]) &&
+        r.n === 1 &&
+        J(r.mon[0]) === J(["Transferred " + (await page.evaluate(() => money(1000, "BDT")))]),
+      "Bank + Transfers: the transfer is listed, no Charges figure " + J(r)
+    );
+    r = await look({ acc: "k" });
+    ok(
+      J(r.rows) === J(["x"]) && J(r.list) === J(["charge", "x"]) && J(r.mon) === J([spent]) && J(r.day) === J([spent]),
+      "filtered to Bkash (the From side): the charge counts as spent, as on the default view " + J(r)
+    );
+    r = await look({ acc: "k", kind: "out" });
+    ok(
+      J(r.rows) === J(["x"]) && J(r.mon) === J([spent]) && r.n === 1 && r.sug === 1,
+      "Bkash + Spent: the transfer carries its charge " + J(r)
+    );
+    r = await look({ acc: "k", kind: "xfer" });
+    ok(J(r.mon[0].slice(1)) === J(["Charges " + tk]), "Bkash + Transfers: Charges " + J(r.mon));
+    r = await look({});
+    ok(J(r.mon) === J([spent]), "the default view counts the charge once " + J(r.mon));
     await ctx.close();
   }
 

@@ -5,7 +5,7 @@
  * row), the totals in words
  * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
- * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches.
+ * the first rows are drawn, the rest as the end comes near). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
  */
 const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "", q: "", pay: "", amt: "" });
 let HF = histBlank();
@@ -31,16 +31,20 @@ const srTermsOf = q => (HQ[0] === q ? HQ[1] : ((HQ = [q, srTerms(q)]), HQ[1]));
 /* The entries that carry spending or received money inside them without being spending or income (docs/specs/charges.md,
    D1), which the Spent ("out") and Received ("in") views list too: a transfer's or loan payment's charge, a payment
    covering a loan's charges and a written-off lend's draw; a lending's payback with a tip or covering its extra. Their
-   ids, worked out once per loanParts(). */
+   ids, worked out once per loanParts(). With an account filter (f.acc, unless skipped), a charge is carried only into
+   the view of the account that paid it: a transfer's From side (an add-on matches an account on its own: histMatch). */
 let HCARRY = null;
-function histCarries(t, kind) {
+function histCarries(t, kind, f, skip) {
   const parts = loanParts();
   if (!HCARRY || HCARRY.parts !== parts) {
     HCARRY = { parts, out: new Set(), in: new Set() };
     parts.forEach(p => HCARRY[p.as === "spend" ? "out" : "in"].add(p.of));
   }
   const a = addOnOf(t);
-  return (!!a && a.type === (kind === "out" ? "expense" : "income")) || HCARRY[kind].has(t.id);
+  return (
+    (!!a && a.type === (kind === "out" ? "expense" : "income") && (skip === "acc" || !f.acc || a.account === f.acc)) ||
+    HCARRY[kind].has(t.id)
+  );
 }
 /* The draws a worked-out part is dated on when that isn't its payment's day (credit covering a later draw's extra or
    charges: loanParts()'s at), each with the payments whose parts they are: whatever keeps such a payment keeps that
@@ -54,10 +58,12 @@ function histAt(id) {
   }
   return HAT.m.get(id);
 }
-/* skip: "acc", "kind" or "sub" (category, person, sides) is left out, to count what an option would leave */
+/* skip: "acc", "kind" or "sub" (category, person, sides) is left out, to count what an option would leave. An add-on
+   matches what its entry matches, but an account only on its own: a transfer's charge is the From account's, so
+   filtered to the To account the transfer is kept and its charge is not counted (docs/specs/history-filters.md). */
 function histMatch(t, f = HF, skip = "") {
   const host = histHost(t);
-  if (host) return histMatch(host, f, skip);
+  if (host) return (skip === "acc" || !f.acc || t.account === f.acc) && histMatch(host, f, skip);
   if (histOwn(t, f, skip)) return true;
   const of = histAt(t.id);
   return !!of && of.some(id => !!entry(id) && histOwn(entry(id), f, skip));
@@ -68,7 +74,7 @@ function histOwn(t, f, skip) {
     skip !== "kind" &&
     f.kind &&
     histKind(t) !== f.kind &&
-    !((f.kind === "out" || f.kind === "in") && histCarries(t, f.kind))
+    !((f.kind === "out" || f.kind === "in") && histCarries(t, f.kind, f, skip))
   )
     return false;
   if (f.q && !srEntryHit(t, srTermsOf(f.q), false)) return false;
