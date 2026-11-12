@@ -1495,13 +1495,27 @@ input {
 .calceq {
   white-space: nowrap; /* "= 1,250" stays whole */
 }
+/* the button back to the keyboard: a 52×44 pill (its ::after, the state layer its ::before) on a 48px tall button, whose
+   extra 2px above and below reach into the bar's padding and the keys' gap, so the bar stays as tall */
 .calc .kbdbtn {
   flex: none;
   width: 52px;
-  height: 44px;
+  height: 48px;
+  margin: -2px 0;
+  border-radius: 14px;
+  color: var(--on-primary-container);
+  isolation: isolate;
+}
+.calc .kbdbtn::before,
+.calc .kbdbtn::after {
+  inset: 2px 0;
+}
+.calc .kbdbtn::after {
+  content: "";
+  position: absolute;
   border-radius: 14px;
   background: var(--primary-container);
-  color: var(--on-primary-container);
+  z-index: -1;
 }
 .calc .kbdbtn .ic {
   width: 26px;

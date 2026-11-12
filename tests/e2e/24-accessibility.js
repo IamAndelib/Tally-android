@@ -1,6 +1,7 @@
 // Accessibility: focus moves into sheets and dialogs and back, the page behind them is hidden from screen readers,
 // expandable rows, the time wheel, the ring's currency switch and the loan bar say what they are, calendar days are read
-// as dates, percentages and swatches are readable, and every control is 48px to tap.
+// as dates, percentages and swatches are readable, and every control is 48px to tap (the keypad's too); the charges'
+// cards, chips and overpaid dialog are named for TalkBack, and the Charges grey stands out and never stands alone.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("24-accessibility");
 let fails = 0;
@@ -335,6 +336,20 @@ const ok = (c, m) => {
     );
   });
   await sp.reload();
+  /* charges (docs/specs/charges.md): a loan from Bo, and a lending to Cy with a transfer charge and an extra (chips) */
+  await sp.evaluate(() => {
+    const t = today(),
+      e = (id, amount, more) =>
+        S.txns.push({ id, ts: 10 + S.txns.length, date: t, type: "loan", amount, account: "a", note: "", ...more });
+    S.loans.push(
+      { id: "B", kind: "borrow", person: "Bo", account: "a", date: t, status: "open" },
+      { id: "C", kind: "lend", person: "Cy", account: "a", date: t, status: "open" }
+    );
+    e("bd", 20, { dir: "in", loan: "B", principal: true, onTop: 2 });
+    e("cd", 30, { dir: "out", loan: "C", principal: true, onTop: 3, feeId: "cc" });
+    e("cc", 1, { dir: "out", loan: "C", principal: true, feeOf: "cd" });
+    save();
+  });
   await sp.waitForTimeout(200);
   const tooSmall = () =>
     sp.evaluate(() => {
@@ -356,6 +371,7 @@ const ok = (c, m) => {
           }
           if (!b.width || !b.height || getComputedStyle(e).visibility === "hidden") return;
           if (e.tagName === "A" && b.height < 24) return; // a link inside a sentence
+          if (e.dataset.act === "calc-pos") return; // the caret's mirror over a field: the field itself, not a button
           if (e.classList.contains("dd") ? b.height >= 48 && b.width >= 42 : b.width >= 48 && b.height >= 48) return;
           if (e.classList.contains("smcol") && b.width >= 40 && b.height >= 96) return;
           out.push(
@@ -375,7 +391,7 @@ const ok = (c, m) => {
     ["a transfer, its charge card", () => (trSheet(), $('#sheet [data-act="addon-add"]').click())],
     [
       "a transfer, the keypad on its charge",
-      () => (trSheet(), $('#sheet [data-act="addon-add"]').click(), calcToggle("f-charge", calcToggleBtn("f-charge"))),
+      () => (trSheet(), $('#sheet [data-act="addon-add"]').click(), padOn("f-charge")),
     ],
     ["a balance fix", () => adjSheet()],
     ["an account", () => accOpen("a")],
@@ -392,6 +408,27 @@ const ok = (c, m) => {
     [
       "a new loan, its charges card",
       () => (loanForm("borrow"), $('#sheet [data-act="addon-add"][data-v="charges"]').click()),
+    ],
+    [
+      "an expense, its charge card",
+      () => (txSheet(null, "expense", "food"), $('#sheet [data-act="addon-add"]').click()),
+    ],
+    [
+      "an expense, the keypad on its charge",
+      () => (txSheet(null, "expense", "food"), $('#sheet [data-act="addon-add"]').click(), padOn("f-charge")),
+    ],
+    ["a lending's payment, its extra card", () => (loanOpen("L"), $('#sheet [data-act="addon-add"]').click())],
+    ["a loan's payment, its transfer charge card", () => (loanOpen("B"), $('#sheet [data-act="addon-add"]').click())],
+    ["a loan with chips", () => loanOpen("C")],
+    [
+      "a lend's Edit, its card of two rows, the keypad on its extra",
+      () => (loanOpen("C"), loanDrawEdit("cd"), padOn("ed-extra")),
+    ],
+    ["a borrow's Edit, its charges", () => (loanOpen("B"), loanDrawEdit("bd"))],
+    ["paid more than owed", () => (loanOpen("L"), ($("#f-amt").value = "50"), payLoan())],
+    [
+      "History, a lend row with its chips",
+      () => (openHistory({ who: "Cy" }), rowToggle($('#app .tx[data-v="cd"]'), "cd")),
     ],
     ["a category", () => catForm("food")],
     ["the icons", () => iconPicker("food", "#2a78d6", () => {})],
@@ -413,10 +450,17 @@ const ok = (c, m) => {
       () => ((V.screen = "settings"), render(), wipeAll(), $("#pop .cd-destroy").click()),
     ],
   ];
+  /* the keypad opened on a field once the form has focused its first field (60ms after it opens: focusAmt), which
+     would close it */
+  await sp.evaluate(() => {
+    window.padOn = id => new Promise(r => setTimeout(() => (calcToggle(id, calcToggleBtn(id)), r()), 120));
+  });
   for (const [name, open] of views) {
     await sp.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
     await sp.waitForTimeout(150);
     await sp.evaluate(open);
+    if (/keypad on/.test(name))
+      ok(await sp.evaluate(() => !!CALC && !$("#calc-" + CALC.id).hidden), name + ": the keypad is open");
     await sp.waitForTimeout(350);
     const bad = await tooSmall();
     ok(bad.length === 0, "48px to tap: " + name + (bad.length ? " " + bad.join(", ") : ""));
@@ -526,9 +570,9 @@ const ok = (c, m) => {
   await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
   await page.click('#sheet [data-act="addon-add"][data-v="extra"]');
   await settle();
-  const rowNames = () =>
-    page.evaluate(() => {
-      const card = $("#sheet .aocard");
+  const rowNames = (layer = "#sheet") =>
+    page.evaluate(layer => {
+      const card = $(layer + " .aocard:not([hidden])") || $(layer + " .aocard");
       return {
         role: card.getAttribute("role"),
         group: card.getAttribute("aria-label"),
@@ -542,7 +586,7 @@ const ok = (c, m) => {
         }),
         focus: document.activeElement && document.activeElement.id,
       };
-    });
+    }, layer);
   let rn = await rowNames();
   ok(
     rn.role === "group" &&
@@ -577,6 +621,211 @@ const ok = (c, m) => {
   );
   await page.evaluate(() => closeSheet());
   await settle();
+
+  // ---- 7d. the other cards for TalkBack (docs/specs/charges.md, "Which form offers what"): Spent's charge, a lending's
+  // payment's extra, a loan's payment's transfer charge, a lend's and a borrow's Edit; each a group named after its
+  // rows, each row's field, calculator and ✕ named, its button saying what it adds, the focus in the new field
+  const NAMES = {
+    charge: ["Charge", "Calculator for the charge", "Remove the charge"],
+    xcharge: ["Transfer charge", "Calculator for the transfer charge", "Remove the transfer charge"],
+    extra: ["Extra", "Calculator for the extra", "Remove the extra"],
+    charges: ["Charges", "Calculator for the charges", "Remove the charges"],
+  };
+  await page.evaluate(() => {
+    const t = today();
+    S.loans.push(
+      { id: "M", kind: "borrow", person: "Mia", account: "a", date: t, status: "open" },
+      { id: "N", kind: "lend", person: "Noor", account: "a", date: t, status: "open" }
+    );
+    const e = (id, amount, more) =>
+      S.txns.push({ id, ts: 20 + S.txns.length, date: t, type: "loan", amount, account: "a", note: "", ...more });
+    e("md", 200, { dir: "in", loan: "M", principal: true, onTop: 20 });
+    e("nd", 100, { dir: "out", loan: "N", principal: true, onTop: 15, feeId: "nc" });
+    e("nc", 5, { dir: "out", loan: "N", principal: true, feeOf: "nd" });
+    save();
+    render();
+  });
+  for (const [name, open, layer, kinds, group, focus] of [
+    ["Spent", () => txSheet(null, "expense", "food"), "#sheet", ["charge"], "Charge", "f-charge"],
+    ["a lending's payment", () => loanOpen("L"), "#sheet", ["extra"], "Extra", "f-extra"],
+    ["a loan's payment", () => loanOpen("M"), "#sheet", ["xcharge"], "Transfer charge", "f-charge"],
+    [
+      "a lend's Edit",
+      () => (loanOpen("L"), loanDrawEdit("d1")),
+      "#sheet2",
+      ["xcharge", "extra"],
+      "Transfer charge and extra",
+      "ed-extra",
+    ],
+    ["a borrow's Edit", () => (loanOpen("M"), loanDrawEdit("md")), "#sheet2", ["charges"], "Charges", "ed-charge"],
+  ]) {
+    await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+    await settle();
+    await page.evaluate(open);
+    await settle();
+    /* a borrow's draw with charges on top opens with its row; the others are opened by their buttons */
+    const adds = await page.evaluate(
+      layer =>
+        [...document.querySelectorAll(layer + " .aoadd:not([hidden])")].map(b => [b.dataset.v, b.textContent.trim()]),
+      layer
+    );
+    for (const k of kinds)
+      if (adds.some(([v]) => v === k)) await page.click(layer + ' [data-act="addon-add"][data-v="' + k + '"]');
+    await settle();
+    const rn = await rowNames(layer);
+    const want = { charge: "Add a charge", xcharge: "Transfer charge", extra: "Add an extra", charges: "Add charges" };
+    ok(
+      rn.role === "group" &&
+        rn.group === group &&
+        JSON.stringify(rn.rows) === JSON.stringify(kinds.map(k => NAMES[k])) &&
+        adds.every(([v, txt]) => txt === want[v]) &&
+        (name === "a borrow's Edit" || rn.focus === focus),
+      name +
+        ": the card is the group “" +
+        group +
+        "”, each row named, its button says what it adds " +
+        JSON.stringify([rn, adds])
+    );
+  }
+  await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+  await settle();
+
+  // ---- 7e. paid more than owed: a dialog named and described, its three answers in words, the sheet behind hidden;
+  // Escape saves nothing and gives the focus back to the button that paid
+  await page.evaluate(() => loanOpen("L"));
+  await settle();
+  await page.fill("#f-amt", "100");
+  const before = await page.evaluate(() => S.txns.length);
+  await page.click('#sheet [data-act="loan-pay"]');
+  await settle();
+  const ovp = await page.evaluate(() => {
+    const d = document.querySelector("#pop .dialog"),
+      name = d && document.getElementById(d.getAttribute("aria-labelledby")),
+      desc = d && document.getElementById(d.getAttribute("aria-describedby"));
+    return (
+      d && {
+        role: d.getAttribute("role"),
+        name: name && name.textContent,
+        desc: desc && desc.textContent,
+        answers: [...d.querySelectorAll("button")].map(b => b.textContent.trim()).filter(Boolean),
+        focus: d.contains(document.activeElement),
+        behind: $("#sheet").getAttribute("aria-hidden") === "true" && $("#sheet").inert,
+      }
+    );
+  });
+  ok(
+    ovp &&
+      ovp.role === "alertdialog" &&
+      ovp.name === "Sam paid $40.00 more" &&
+      /Sam owed you \$60\.00/.test(ovp.desc) &&
+      ovp.answers.length === 3 &&
+      ovp.focus &&
+      ovp.behind,
+    "paid more than owed: an alertdialog named and described, three answers in words, focused, the sheet hidden " +
+      JSON.stringify(ovp)
+  );
+  await page.keyboard.press("Escape");
+  await settle();
+  ok(
+    await page.evaluate(
+      n => !$("#pop").innerHTML && document.activeElement.dataset.act === "loan-pay" && S.txns.length === n,
+      before
+    ),
+    "Escape saves nothing and gives the focus back to the pay button"
+  );
+  await page.evaluate(() => closeSheet());
+  await settle();
+
+  // ---- 7f. chips (a draw's parts in History's opened row and under the loan sheet's figure): each its words over its
+  // figure, read as text, nothing hidden from TalkBack
+  for (const [where, open, sel] of [
+    ["History", () => (openHistory({ who: "Noor" }), rowToggle($('#app .tx[data-v="nd"]'), "nd")), "#app .txo"],
+    ["the loan sheet", () => loanOpen("N"), "#sheet .hero"],
+  ]) {
+    await page.evaluate(open);
+    await settle();
+    const chips = await page.evaluate(
+      sel =>
+        [...document.querySelectorAll(sel + " .lpart")].map(c => [
+          (c.querySelector(".lpc") || {}).textContent,
+          (c.querySelector(".lpv") || {}).textContent,
+          !!c.closest("[aria-hidden=true]"),
+        ]),
+      sel
+    );
+    ok(
+      chips.length === 3 && chips.every(([w, v, h]) => w && /\$\d/.test(v) && !h),
+      where + ": the chips say their words and figures " + JSON.stringify(chips)
+    );
+    await page.evaluate(() => (closeSheet(), (V.screen = "home"), render()));
+    await settle();
+  }
+
+  // ---- 7g. the Charges grey (CHARGES_C) carries meaning as a part of a drawing: Home's ring slice, the Summary pie's
+  // slice and the dot on its Charges line each stand out 3:1 against what lies behind them, in light and dark; and
+  // never by colour alone: the slice has its label, the line its word
+  for (const th of ["light", "dark"]) {
+    const g = await page.evaluate(th => {
+      S.settings.theme = th;
+      applyTheme();
+      if (!S.accounts.some(a => a.id === "b"))
+        S.accounts.push({ id: "b", name: "Wallet", type: "wallet", currency: "USD", opening: 0 });
+      if (!S.txns.some(x => x.id === "tr"))
+        S.txns.push(
+          { id: "tr", ts: 7, date: today(), type: "transfer", amount: 10, account: "a", to: "b", feeId: "tf" },
+          { id: "tf", ts: 8, date: today(), type: "expense", amount: 2.5, account: "a", cat: "other", feeOf: "tr" }
+        );
+      V.cur = "USD";
+      V.screen = "home";
+      render();
+      const hex = c =>
+        "#" +
+        c
+          .match(/[\d.]+/g)
+          .slice(0, 3)
+          .map(v => (+v).toString(16).padStart(2, "0"))
+          .join("");
+      /* the colour behind e: the first ancestor with a background */
+      const behind = e => {
+        for (let p = e.parentElement; p; p = p.parentElement) {
+          const b = getComputedStyle(p).backgroundColor;
+          if (!/rgba\(.*, 0\)$|transparent/.test(b)) return hex(b);
+        }
+        return hex(getComputedStyle(document.body).backgroundColor);
+      };
+      const slice = document.querySelector('#ring circle[stroke="' + CHARGES_C + '"]'),
+        out = {
+          ring: slice ? +contrast(CHARGES_C, behind(slice.closest("svg"))).toFixed(2) : 0,
+          label: (document.querySelector("#ring .rchg") || {}).textContent || "",
+        };
+      summarySheet();
+      $('#sheet [data-act="sm-mode"][data-v="m"]').click();
+      const pie = [...document.querySelectorAll("#sm .smpie path")].find(p => p.getAttribute("fill") === CHARGES_C),
+        dot = document.querySelector("#sm .smtop .chdot");
+      out.pie = pie ? +contrast(CHARGES_C, behind(pie.closest("svg"))).toFixed(2) : 0;
+      out.dot = dot ? +contrast(hex(getComputedStyle(dot).backgroundColor), behind(dot)).toFixed(2) : 0;
+      out.line = dot ? dot.closest(".tx").getAttribute("aria-label") + " | " + dot.closest(".tx").textContent : "";
+      out.pieHidden = document.querySelector("#sm .smpie svg").getAttribute("aria-hidden") === "true";
+      closeSheet();
+      return out;
+    }, th);
+    ok(
+      g.ring >= 3 && g.pie >= 3 && g.dot >= 3,
+      th + ": the Charges grey stands out 3:1 as the ring's slice, the pie's and the line's dot " + JSON.stringify(g)
+    );
+    ok(
+      /^Charges\$2\.50$/.test(g.label) && /^Charges, \$2\.50/.test(g.line) && /Charges/.test(g.line.split(" | ")[1]),
+      th + ": the grey is never alone: the slice has its label, the line its word " + JSON.stringify(g)
+    );
+    ok(g.pieHidden, th + ": the pie is a drawing, its names in the list under it");
+  }
+  await page.evaluate(() => {
+    S.settings.theme = "light";
+    applyTheme();
+    S.txns = S.txns.filter(x => x.id !== "tr" && x.id !== "tf");
+    S.accounts = S.accounts.filter(a => a.id !== "b");
+    render();
+  });
 
   // ---- 8. the stacked-button dialogs: named and described for TalkBack, focus inside, back where it was
   await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
