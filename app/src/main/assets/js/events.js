@@ -902,6 +902,7 @@ addEventListener("resize", () => {
   if (LP) return;
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
+  else if (V.screen === "history") histPinSet(); // a new height (search's keyboard): what History can keep pinned
   fitCal($("#dp") || $("#pd"));
   fitSmRows();
   /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */

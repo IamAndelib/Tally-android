@@ -855,6 +855,7 @@ function histPinSet() {
    way is how the entries moved in the window, not scrollY: the page's own adjustments (scroll anchoring, as a day's
    list comes into view with its real height) change scrollY while what is seen stays put */
 function histScroll() {
+  if (V.screen !== "history" || !document.body.classList.contains("land")) return (HPIN.ref = null); // nothing to do
   if (HPIN.raf) return;
   HPIN.raf = requestAnimationFrame(() => {
     HPIN.raf = 0;

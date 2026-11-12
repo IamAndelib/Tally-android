@@ -2459,26 +2459,34 @@ const ok = (c, m) => {
       L.head === "March 2026" && L.headHit && Math.abs(L.headTop - pinnedTop) < 1,
       "March's heading is pinned over its last day too: " + JSON.stringify(L)
     );
-    /* a window so short that the block and a month's heading would cover over half of it: the headings scroll */
-    await page.setViewportSize({ width: 300, height: 340 }); // upright: not the sideways layout
-    const short = await page.evaluate(() => {
-      render();
-      const h = $("#app .hmon");
-      return {
-        pos: getComputedStyle(h).position,
-        pad: getComputedStyle(document.documentElement).scrollPaddingTop,
-        pin: Math.ceil($("#app .hpin").getBoundingClientRect().height) + "px",
-      };
-    });
+    /* a window so short that the block and a month's heading would cover over half of it: the headings scroll. Only
+       the height changes (as when search's keyboard opens), so nothing draws History anew: the resize says so */
+    const pinNow = () =>
+      page.evaluate(
+        () =>
+          new Promise(res =>
+            requestAnimationFrame(() =>
+              res({
+                pos: getComputedStyle($("#app .hmon")).position,
+                pad: getComputedStyle(document.documentElement).scrollPaddingTop,
+                pin: Math.ceil($("#app .hpin").getBoundingClientRect().height) + "px",
+              })
+            )
+          )
+      );
+    await page.setViewportSize({ width: 300, height: 700 }); // upright: not the sideways layout
+    await page.evaluate(() => (window.__drawn = $("#app .hpin")));
+    ok((await pinNow()).pos === "sticky", "a narrower window: the month headings still pinned");
+    await page.setViewportSize({ width: 300, height: 340 });
+    const short = await pinNow();
     ok(
       short.pos !== "sticky" && short.pad === short.pin,
       "a short window: the month headings scroll, only the block is pinned: " + JSON.stringify(short)
     );
+    await page.setViewportSize({ width: 300, height: 700 });
+    ok((await pinNow()).pos === "sticky", "…and pin again in a taller one");
+    ok(await page.evaluate(() => window.__drawn === $("#app .hpin")), "…without History being drawn anew");
     await page.setViewportSize({ width: 393, height: 852 });
-    ok(
-      await page.evaluate(() => (render(), getComputedStyle($("#app .hmon")).position === "sticky")),
-      "…and pin again in a taller one"
-    );
     /* other screens have nothing pinned and no room kept at the top */
     await page.click('#app [data-act="home"]');
     ok(

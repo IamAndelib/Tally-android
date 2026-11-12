@@ -127,6 +127,7 @@ function drawScreen() {
     document.fonts.ready.then(() => {
       fitFigures(app);
       histCenter(app);
+      histPinSet(); // the month headings' height in the web font
     });
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
