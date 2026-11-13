@@ -63,10 +63,10 @@ Delete), `css/app.css`, keys; tests: 46, 24, 22.
 
 ### Task 3c: Settings' pinned header (spec D)
 **Files:** `js/screens.js` (each Settings section in its own block), `css/app.css`; tests: 22, 24.
-- [ ] Failing checks: scrolled into a section, the bar and that section's heading are at the top; the next heading
+- [x] Failing checks: scrolled into a section, the bar and that section's heading are at the top; the next heading
   takes its place; sideways and on tablets the same; focus moved to a control (keyboard, TalkBack) stays below the
   pinned block; TalkBack order unchanged.
-- [ ] Implement, suites, 22, lint. Commit.
+- [x] Implement, suites, 22, lint. Commit.
 
 ### Task 4: Docs
 README (History, Settings), CONTRIBUTING (data model: `archived`, the search setting), `docs/design.md`, CHANGELOG, the spec's status, the release

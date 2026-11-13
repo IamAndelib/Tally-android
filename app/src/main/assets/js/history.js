@@ -7,7 +7,7 @@
  * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
- * row and the month in view stay at the top while the entries scroll). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
+ * row and the month in view stay at the top while the entries scroll; Settings' bar and section headings the same way). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
  * Last, the Archived screen (`archiveView()`, `archOpen()`, `archBack()`): the archived entries, reached from
  * the Filters row's archive button.
  */
@@ -864,12 +864,14 @@ function historyView() {
    (scroll-padding-top), so the row lands under the block, not behind it; where the two would cover over half the
    window, the month headings scroll (#app.hfree). A phone held sideways (body.land) keeps only
    the bar there: the Filters row scrolls away with the entries and comes back (.back) as soon as the list scrolls up.
-   The Archived screen pins its bar and month headings the same way. */
+   The Archived screen pins its bar and month headings the same way, and Settings its bar and the heading of the
+   section in view (.ssec, D), with the thin line under that heading only while it is held there (.held). */
 const HPIN = { ro: null, ref: null, at: 0, raf: 0, on: false };
+const pinLike = () => histLike() || V.screen === "settings"; // a screen with a pinned block
 function histPin() {
   if (HPIN.ro) HPIN.ro.disconnect();
   HPIN.ro = null;
-  const pin = histLike() && $("#app .hpin");
+  const pin = pinLike() && $("#app .hpin");
   if (pin && typeof ResizeObserver !== "undefined") {
     HPIN.ro = new ResizeObserver(histPinSet);
     [...pin.children].forEach(e => HPIN.ro.observe(e));
@@ -883,7 +885,7 @@ function histPin() {
 }
 function histPinSet() {
   const root = document.documentElement,
-    pin = histLike() && $("#app .hpin");
+    pin = pinLike() && $("#app .hpin");
   if (!pin) {
     $("#app").classList.remove("hfree");
     root.style.removeProperty("--hpin");
@@ -895,7 +897,7 @@ function histPinSet() {
     top = document.body.classList.contains("land")
       ? h(pin.querySelector(".appbar")) + (head && head.classList.contains("back") ? h(head) : 0)
       : h(pin),
-    month = Math.max(0, ...[...document.querySelectorAll("#app .hsec.pin > .hmon")].map(h)),
+    month = Math.max(0, ...[...document.querySelectorAll("#app .hsec.pin > .hmon, #app .ssec > .sec")].map(h)),
     /* where the bar, the Filters row and a month's heading together would cover over half the window (a short
        window, a large text size, a heading in words wrapped over several lines), the headings scroll with their
        entries */
@@ -903,11 +905,21 @@ function histPinSet() {
   $("#app").classList.toggle("hfree", free);
   root.style.setProperty("--hpin", top + "px");
   root.style.scrollPaddingTop = Math.ceil(top + (free ? 0 : month)) + "px";
+  secHeld();
+}
+/* Settings: the line under a section's heading only while the heading is held under the bar, which is when it has
+   left the top of its section (sticky: it stays put while the section moves up under it) */
+function secHeld() {
+  for (const s of document.querySelectorAll("#app .ssec")) {
+    const h = s.firstElementChild;
+    h.classList.toggle("held", h.getBoundingClientRect().top > s.getBoundingClientRect().top + 0.5);
+  }
 }
 /* sideways, the Filters row comes back on the way up and goes on the way down (once a frame, on a change of way). The
    way is how the entries moved in the window, not scrollY: the page's own adjustments (scroll anchoring, as a day's
    list comes into view with its real height) change scrollY while what is seen stays put */
 function histScroll() {
+  if (V.screen === "settings") return secHeld();
   if (V.screen !== "history" || !document.body.classList.contains("land")) return (HPIN.ref = null); // nothing to do
   if (HPIN.raf) return;
   HPIN.raf = requestAnimationFrame(() => {

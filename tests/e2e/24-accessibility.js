@@ -1,7 +1,8 @@
 // Accessibility: focus moves into sheets and dialogs and back, the page behind them is hidden from screen readers,
 // expandable rows, the time wheel, the ring's currency switch and the loan bar say what they are, calendar days are read
 // as dates, percentages and swatches are readable, and every control is 48px to tap (the keypad's too); the charges'
-// cards, chips and overpaid dialog are named for TalkBack, and the Charges grey stands out and never stands alone.
+// cards, chips and overpaid dialog are named for TalkBack, and the Charges grey stands out and never stands alone;
+// Settings' pinned bar and section heading never cover the focus, and its reading order stays as it was.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("24-accessibility");
 let fails = 0;
@@ -1170,6 +1171,274 @@ const ok = (c, m) => {
       V.screen = "home";
       render();
     });
+  }
+
+  // ---- Settings' pinned header (docs/specs/history-archive.md, D): the bar and the heading of the section in view
+  // stay at the top, the next heading pushes the old one up, a thin line under the held heading only; the same
+  // sideways and on tablets; a control the focus moves to is never left under them; TalkBack's order is unchanged
+  for (const sz of [
+    { id: "phone", w: 393, h: 852, s: 1 },
+    { id: "small 1.3x", w: 320, h: 640, s: 1.3 },
+    { id: "sideways", w: 800, h: 360, s: 1 },
+    { id: "sideways 1.3x", w: 740, h: 360, s: 1.3 },
+    { id: "tablet", w: 800, h: 1280, s: 1 },
+    { id: "tablet sideways", w: 1280, h: 800, s: 1.3 },
+  ]) {
+    const c = await browser.newContext({
+      viewport: { width: sz.w, height: sz.h },
+      screen: { width: sz.w, height: sz.h },
+      isMobile: true,
+      hasTouch: true,
+      locale: "en-US",
+    });
+    await c.addInitScript(s => {
+      window.Android = {
+        setReminders() {},
+        takeActions: () => "[]",
+        getColors: () => null,
+        setBars() {},
+        requestNotifications() {},
+        fontScale: () => s,
+      };
+    }, sz.s);
+    const sp = await c.newPage();
+    sp.on("pageerror", e => errors.push(e.message));
+    await sp.goto(appUrl);
+    await sp.evaluate(() =>
+      localStorage.setItem(
+        "tally:v1",
+        JSON.stringify({
+          v: 6,
+          settings: { cur: "USD", clock: "24", lastCheck: today(), dragTip: true },
+          accounts: [{ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1 }],
+          txns: [],
+        })
+      )
+    );
+    await sp.reload();
+    await sp.evaluate(() => {
+      V.screen = "settings";
+      render();
+    });
+    const frame = () => sp.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await frame();
+    const tag = sz.id + ": ";
+    /* the reading order before anything scrolls: the accessibility tree of the screen */
+    const tree = await sp.locator("#app").ariaSnapshot();
+    /* what the window shows at the top: the bar, the heading under it and its line, and whatever else is in view */
+    const look = () =>
+      sp.evaluate(() => {
+        const box = e => e.getBoundingClientRect(),
+          bar = box($("#app .appbar")),
+          cx = bar.left + bar.width / 2,
+          at = (x, y) => document.elementFromPoint(x, y) || { closest: () => null },
+          heads = [...document.querySelectorAll("#app .sec")],
+          probe = document.createElement("div");
+        probe.style.color = "var(--outline-variant)";
+        document.body.appendChild(probe);
+        const outline = getComputedStyle(probe).color;
+        probe.remove();
+        const line = h =>
+          parseFloat(getComputedStyle(h).borderBottomWidth) > 0 &&
+          getComputedStyle(h).borderBottomColor !== "rgba(0, 0, 0, 0)"
+            ? getComputedStyle(h).borderBottomWidth + " " + getComputedStyle(h).borderBottomColor
+            : "";
+        /* the heading at the top: the one right under the bar, or the one cut by it */
+        const head = heads.find(h => box(h).bottom > bar.bottom + 1 && box(h).top < bar.bottom + 12),
+          hb = head && box(head);
+        /* nothing of a section shows between the bar and the held heading's bottom */
+        let leak = "";
+        if (hb)
+          for (let y = 2; y < hb.bottom - 1; y += 3) {
+            const e = at(cx, y);
+            if (!e.closest(".appbar, .sec") && !e.closest(".hpin")) leak = leak || e.className || e.tagName;
+          }
+        return {
+          y: scrollY,
+          barTop: bar.top,
+          barBottom: bar.bottom,
+          barHit: !!at(cx, bar.top + bar.height / 2).closest(".appbar"),
+          head: head ? head.textContent.trim() : "",
+          headTop: hb ? hb.top : -1,
+          headBottom: hb ? hb.bottom : -1,
+          headHit: !!hb && at(cx, hb.top + hb.height / 2) === head,
+          line: head ? line(head) : "",
+          outline: "1px " + outline,
+          /* the headings in view that aren't held: no line */
+          others: heads
+            .filter(h => h !== head && box(h).top > (hb ? hb.bottom : bar.bottom) && box(h).top < innerHeight)
+            .map(h => [h.textContent.trim(), line(h)]),
+          leak,
+        };
+      });
+    const headY = name =>
+      sp.evaluate(name => {
+        const h = [...document.querySelectorAll("#app .sec")].find(x => x.textContent.trim() === name);
+        return h.getBoundingClientRect().top + scrollY;
+      }, name);
+    /* at the top: the first heading isn't held, so no line under any heading */
+    let L = await look();
+    ok(
+      L.y === 0 && L.others.every(o => o[1] === "") && (L.head === "" || L.line === ""),
+      tag + "unscrolled, no heading has the line " + JSON.stringify(L)
+    );
+    /* halfway through Region */
+    const reg = await headY("Region"),
+      rem = await headY("Reminders");
+    await sp.evaluate(y => scrollTo(0, y), Math.round(reg + (rem - reg) / 2));
+    await frame();
+    L = await look();
+    ok(L.y > 0, tag + "scrolled halfway through Region: " + L.y);
+    ok(Math.abs(L.barTop) < 1 && L.barHit, tag + "the bar stays at the top " + JSON.stringify(L));
+    ok(
+      L.head === "Region" && L.headHit && L.headTop >= L.barBottom - 0.5 && L.headTop <= L.barBottom + 6,
+      tag + "Region's heading stays right under it " + JSON.stringify(L)
+    );
+    ok(L.line === L.outline, tag + "a thin line in the outline-variant colour under it " + JSON.stringify(L));
+    ok(
+      L.others.every(o => o[1] === ""),
+      tag + "the headings below have no line " + JSON.stringify(L.others)
+    );
+    ok(!L.leak, tag + "nothing of the section shows above the heading's bottom: " + L.leak);
+    const pinnedTop = L.headTop;
+    /* the hand-over: Reminders' heading reaches Region's and pushes it up */
+    const remNow = await sp.evaluate(
+      () =>
+        [...document.querySelectorAll("#app .sec")]
+          .find(x => x.textContent.trim() === "Reminders")
+          .getBoundingClientRect().top
+    );
+    await sp.evaluate(d => scrollBy(0, d), Math.round(remNow - L.headBottom + 12));
+    await frame();
+    const hand = await sp.evaluate(() => {
+      const r = n =>
+        [...document.querySelectorAll("#app .sec")].find(x => x.textContent.trim() === n).getBoundingClientRect();
+      return { reg: r("Region"), rem: r("Reminders") };
+    });
+    ok(
+      hand.reg.top < pinnedTop - 4 && hand.reg.bottom <= hand.rem.top + 0.5 && hand.rem.top - hand.reg.bottom < 30,
+      tag + "Reminders' heading pushes Region's up " + JSON.stringify(hand)
+    );
+    /* then takes its place, halfway through Reminders */
+    const rem2 = await headY("Reminders"),
+      hist = await headY("History");
+    await sp.evaluate(y => scrollTo(0, y), Math.round(rem2 + (hist - rem2) / 2));
+    await frame();
+    L = await look();
+    ok(
+      L.head === "Reminders" && L.headHit && Math.abs(L.headTop - pinnedTop) < 1 && L.line === L.outline,
+      tag + "then Reminders' heading takes its place, with the line " + JSON.stringify(L)
+    );
+    ok(Math.abs(L.barTop) < 1 && L.barHit && !L.leak, tag + "the bar still above it " + JSON.stringify(L));
+    /* the focus moved (TalkBack, a keyboard) to a control under the pinned part: it comes out below it */
+    const below = () =>
+      sp.evaluate(() => {
+        /* the control as drawn: a switch's 48px box has a transparent band above and below its track, which Chrome
+           leaves out when it brings the focus into view (it may lie under the heading; the tap still reaches it) */
+        const e = document.activeElement,
+          cs = getComputedStyle(e),
+          b = e.getBoundingClientRect(),
+          clear = cs.borderTopColor === "rgba(0, 0, 0, 0)" ? parseFloat(cs.borderTopWidth) : 0,
+          r = {
+            left: b.left,
+            width: b.width,
+            top: b.top + clear,
+            height: b.height - 2 * clear,
+            bottom: b.bottom - clear,
+          },
+          bar = $("#app .appbar").getBoundingClientRect(),
+          held = [...document.querySelectorAll("#app .sec")]
+            .map(h => h.getBoundingClientRect())
+            .filter(h => h.top <= bar.bottom + 6 && h.bottom > bar.bottom),
+          top = Math.max(bar.bottom, ...held.map(h => h.bottom)),
+          hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return {
+          act: e.dataset.act + (e.dataset.v ? ":" + e.dataset.v : ""),
+          top: r.top,
+          under: top,
+          ok: r.top >= top - 0.5 && r.bottom <= innerHeight + 0.5 && !!hit && (hit === e || e.contains(hit)),
+        };
+      });
+    /* keyboard: Shift+Tab back to the nudge's switch, scrolled under the pinned part */
+    await sp.evaluate(() => {
+      $('#app [data-act="pick-time"][data-v="check"]').focus({ preventScroll: true });
+      const s = $('#app [data-act="rem-daily"]').getBoundingClientRect();
+      scrollBy(0, s.top - $("#app .appbar").getBoundingClientRect().bottom - 2);
+    });
+    await frame();
+    await sp.keyboard.press("Shift+Tab");
+    await frame();
+    let F = await below();
+    ok(
+      F.act === "rem-daily" && F.ok && F.under >= 60,
+      tag + "Shift+Tab to a control under the pinned part brings it out " + JSON.stringify(F)
+    );
+    /* focus() (TalkBack's focus moves the input focus too) to a control of the section above, behind the bar */
+    await sp.evaluate(() => {
+      const s = $('#app [data-act="week"]').getBoundingClientRect();
+      scrollBy(0, s.top - $("#app .appbar").getBoundingClientRect().bottom + 4);
+      $('#app [data-act="week"]').focus();
+    });
+    await frame();
+    F = await below();
+    ok(
+      F.act.startsWith("week") && F.ok && F.under >= 60,
+      tag + "focus() on a control under the pinned part brings it out " + JSON.stringify(F)
+    );
+    /* TalkBack's order: the same tree scrolled as at the top; the bar first, then each heading before its section */
+    ok((await sp.locator("#app").ariaSnapshot()) === tree, tag + "the accessibility tree is unchanged by scrolling");
+    const order = await sp.evaluate(() => {
+      const all = [...document.querySelectorAll("#app *")],
+        heads = [...document.querySelectorAll("#app .sec")];
+      return {
+        first: (all.find(e => e.matches("header, h1, button, a, .sec")) || {}).tagName,
+        h1: $("#app h1").textContent,
+        heads: heads.map(h => h.textContent.trim()),
+        roles: heads.filter(h => h.getAttribute("role") || h.getAttribute("aria-level")).length,
+        hidden: document.querySelectorAll("#app [aria-hidden=true]:not(svg):not(.ic)").length,
+      };
+    });
+    ok(
+      order.first === "HEADER" &&
+        order.h1 === "Settings" &&
+        JSON.stringify(order.heads) ===
+          JSON.stringify([
+            "Theme",
+            "Feel",
+            "Region",
+            "Reminders",
+            "History",
+            "Spending categories",
+            "Received categories",
+            "Your data",
+            "About",
+          ]) &&
+        order.roles === 0,
+      tag + "the bar first, then the section headings in order, as before " + JSON.stringify(order)
+    );
+    /* a long heading (a long word in another language, large text): it wraps, whole, and the room kept above a
+       control scrolled to grows with it */
+    if (sz.w === 320) {
+      const lw = await sp.evaluate(() => {
+        const h = [...document.querySelectorAll("#app .sec")].find(x => x.textContent.trim() === "Region");
+        h.textContent = "Region, Sprache und Zahlenformat für Beträge und Datumsangaben";
+        histPinSet();
+        const r = h.getBoundingClientRect(),
+          bar = $("#app .appbar").getBoundingClientRect();
+        return {
+          cut: h.scrollWidth > h.clientWidth + 1,
+          lines: Math.round(r.height / parseFloat(getComputedStyle(h).lineHeight || "20")),
+          pad: parseFloat(document.documentElement.style.scrollPaddingTop) || 0,
+          need: bar.bottom + r.height,
+        };
+      });
+      ok(
+        !lw.cut && lw.lines > 1 && lw.need > 64 && lw.pad >= lw.need - 1,
+        tag + "a long heading wraps, and the room above the focus grows " + JSON.stringify(lw)
+      );
+      await sp.evaluate(() => render());
+    }
+    await c.close();
   }
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));

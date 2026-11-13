@@ -3767,7 +3767,7 @@ body.land.calcopen #snack .snack {
   height: 1px; /* the marker after the last row drawn (histWatch) */
 }
 /* History's pinned block (histPin): the bar and the period / Filters row stay at the top while the entries scroll under
-   them; it reaches the window's edges (main's 16px padding), so nothing shows beside it */
+   them; it reaches the window's edges (main's 16px padding), so nothing shows beside it. Settings' bar too */
 .hpin {
   position: sticky;
   top: 0;
@@ -3796,8 +3796,28 @@ body.land.calcopen #snack .snack {
   top: var(--hpin, 0px);
   z-index: 2;
 }
+/* Settings (docs/specs/history-archive.md, D): the bar in the same block, and each section's heading (.ssec, its own
+   block) pinned under it while its section scrolls, until the next one pushes it up. Out to the edges like a month's
+   heading, in the place the heading has unpinned (24px above the words, 8px under them), with the thin line only
+   while it is held there (.held, secHeld) */
+.ssec > .sec {
+  position: sticky;
+  top: var(--hpin, 0px);
+  z-index: 2;
+  margin: 16px -16px 0;
+  padding: 8px 20px 7px;
+  border-bottom: 1px solid transparent;
+  background: var(--surface);
+}
+.ssec > .sec.held {
+  border-bottom-color: var(--outline-variant);
+}
+.ssec > .sec + .lbl.set {
+  margin-top: 4px; /* 12px under the words, as when its margin met the heading's */
+}
 /* (not where the block and a heading would cover over half the window: histPinSet) */
-#app.hfree .hsec.pin > .hmon {
+#app.hfree .hsec.pin > .hmon,
+#app.hfree .ssec > .sec {
   position: static;
 }
 /* a phone held sideways: only the bar stays (the block's own box is gone, so the bar sticks to the page), with the

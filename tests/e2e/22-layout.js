@@ -318,9 +318,9 @@ function inspect() {
       out.push("the scrolling chip row does not fade");
   // 3. controls overlapping, 4. tap targets too small
   /* what History holds at the top while the entries scroll under it: its bar, the Filters row (sideways only once it
-     has come back) and the month headings (docs/specs/history-archive.md, A) */
+     has come back) and the month headings (docs/specs/history-archive.md, A); Settings' bar and section headings (D) */
   const pinned = e =>
-    !!e.closest(".hpin, .hsec.pin > .hmon") &&
+    !!e.closest(".hpin, .hsec.pin > .hmon, .ssec > .sec") &&
     !(document.body.classList.contains("land") && e.closest(".hhd:not(.back)"));
   const ctl = all.filter(
     e =>
@@ -522,8 +522,10 @@ function inspect() {
   }
   // 13. History's pinned block (docs/specs/history-archive.md, A), scrolled: the bar at the top, the Filters row under
   //     it (sideways only once it has come back), then the heading of the month in view right under them, unless the
-  //     next month's is pushing it up; together under half the window's height
+  //     next month's is pushing it up; together under half the window's height. Settings (D) the same: its bar, then
+  //     the heading of the section in view, with a thin line under it only while it is held there
   const pin = layer.id === "app" && document.querySelector("#app .hpin");
+  if (layer.id === "app" && V.screen === "settings" && scrollY > 0 && !pin) out.push("Settings' bar not pinned");
   if (pin && scrollY > 0) {
     const bar = pin.querySelector(".appbar").getBoundingClientRect(),
       hhd = pin.querySelector(".hhd"),
@@ -534,18 +536,29 @@ function inspect() {
     if (Math.abs(bar.top) > 0.5) out.push("pinned bar not at the top " + bar.top);
     if (hb && (hb.top < bar.bottom - 0.5 || hb.top > bar.bottom + 6))
       out.push("pinned Filters row not under the bar " + hb.top);
-    for (const sec of document.querySelectorAll("#app .hsec.pin")) {
+    const line = e =>
+      parseFloat(getComputedStyle(e).borderBottomWidth) > 0 &&
+      getComputedStyle(e).borderBottomColor !== "rgba(0, 0, 0, 0)";
+    for (const sec of document.querySelectorAll("#app .ssec")) {
+      const r = sec.getBoundingClientRect(),
+        h = sec.firstElementChild.getBoundingClientRect(),
+        held = h.top > r.top + 0.5;
+      if (h.bottom <= 0 || h.top >= vh) continue;
+      if (held && !line(sec.firstElementChild)) out.push("pinned section heading without its line");
+      if (!held && line(sec.firstElementChild)) out.push("a line under a section heading not pinned");
+    }
+    for (const sec of document.querySelectorAll("#app .hsec.pin, #app .ssec")) {
       const r = sec.getBoundingClientRect();
-      if (r.top >= bottom || r.bottom <= bottom) continue; // not the month in view
-      const hm = sec.querySelector(".hmon"),
+      if (r.top >= bottom || r.bottom <= bottom) continue; // not the month (section) in view
+      const hm = sec.firstElementChild.matches(".sec") ? sec.firstElementChild : sec.querySelector(".hmon"),
         h = hm.getBoundingClientRect();
       if (getComputedStyle(hm).position !== "sticky") {
         // (the headings scroll where the block and one would cover over half the window: say so if they needn't)
-        if (bottom + h.height <= vh / 2) out.push("month headings not pinned though there is room");
+        if (bottom + h.height <= vh / 2) out.push("headings not pinned though there is room");
         continue;
       }
       if (Math.abs(h.top - bottom) > 1 && Math.abs(h.bottom - r.bottom) > 1)
-        out.push("month heading not pinned under the block: " + Math.round(h.top) + " vs " + Math.round(bottom));
+        out.push("heading not pinned under the block: " + Math.round(h.top) + " vs " + Math.round(bottom));
       if (Math.abs(h.top - bottom) <= 1 && h.bottom > vh / 2)
         out.push("pinned part over half the window: " + Math.round(h.bottom) + " of " + vh);
     }
@@ -911,6 +924,22 @@ function inspect() {
         scrollTo(0, document.body.scrollHeight);
       })
     );
+    /* Settings scrolled (docs/specs/history-archive.md, D): halfway through Region, its bar and Region's heading
+       pinned; then Reminders' heading pushing it up */
+    const setAt = how => async () => {
+      await page.evaluate(async how => {
+        V.screen = "settings";
+        render();
+        const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const ms = [...document.querySelectorAll("#app .sec")].map(m => m.getBoundingClientRect().top + scrollY);
+        const pinned = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hpin")) || 0;
+        if (how === "hand") scrollTo(0, ms[3] - pinned() - 30);
+        else scrollTo(0, ms[2] + (ms[3] - ms[2]) / 2);
+        await frame();
+      }, how);
+    };
+    await shot("settings-pinned", setAt("mid"));
+    await shot("settings-pinned-hand", setAt("hand"));
     await shot(
       "spend",
       ev(() => txSheet(null, "expense", "groceries"))

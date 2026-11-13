@@ -202,6 +202,8 @@ links that would need the internet.
   heading of the month in view, with a thin line under it, until the next month's heading pushes it up. While
   selecting only the bar and the dimmed Filters row stay. A phone held sideways keeps the bar and the month on one
   line; the Filters row scrolls away and comes back as soon as the list scrolls up. A row scrolled to lands under them.
+  Settings keeps its bar and the heading of the section in view the same way, the line showing only while a heading
+  is held there; a control the focus moves to lands under them.
 - **Hold to select** several rows; while selecting, the period and Filters row stays where it is, dimmed and not
   tappable, so nothing moves; the app bar becomes "N selected", and with every row selected the app bar's select-all
   icon button becomes a deselect icon labelled "Clear selection".

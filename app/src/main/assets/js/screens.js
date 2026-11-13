@@ -1171,12 +1171,20 @@ function fitWeekSeg() {
     });
 }
 function settingsView() {
-  let h = subBar(T("settings.title"));
+  /* each section in a block of its own (.ssec), its heading first: the heading stays under the bar while its section
+     scrolls, until the next one pushes it up (histPin; docs/specs/history-archive.md, D) */
+  let h = "",
+    open = false;
+  const sec = (t, cls) => {
+    const s =
+      (open ? "</div>" : "") + '<div class="ssec"><div class="sec' + (cls ? " " + cls : "") + '">' + t + "</div>";
+    open = true;
+    return s;
+  };
   const th = S.settings.theme || "system";
   h +=
-    '<div class="sec">' +
-    TH("settings.theme") +
-    '</div><div class="seg">' +
+    sec(TH("settings.theme")) +
+    '<div class="seg">' +
     ["system", "light", "dark"]
       .map(
         k =>
@@ -1191,9 +1199,8 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">' +
-    TH("settings.feel") +
-    '</div><div class="list"><div class="setrow"><span class="mid"><div>' +
+    sec(TH("settings.feel")) +
+    '<div class="list"><div class="setrow"><span class="mid"><div>' +
     TH("settings.vibration") +
     '</div><div class="s">' +
     TH("settings.vibrationHint") +
@@ -1224,9 +1231,8 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">' +
-    TH("settings.region") +
-    '</div><div class="lbl set">' +
+    sec(TH("settings.region")) +
+    '<div class="lbl set">' +
     TH("settings.mainCur") +
     '</div><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
     TH("common.labelValue", {
@@ -1283,9 +1289,7 @@ function settingsView() {
       esc(title) +
       '"></button></div>';
   h +=
-    '<div class="sec">' +
-    TH("settings.reminders") +
-    "</div>" +
+    sec(TH("settings.reminders")) +
     healthCard() +
     '<div class="list">' +
     remRow("nudge", "rem-daily", T("remind.nudge"), T("remind.nudgeHint"), r.daily, r.time) +
@@ -1294,9 +1298,8 @@ function settingsView() {
     "</div>";
   /* whether search finds archived entries too (docs/specs/history-archive.md, C) */
   h +=
-    '<div class="sec">' +
-    TH("common.history") +
-    '</div><div class="list"><div class="setrow"><span class="mid"><div>' +
+    sec(TH("common.history")) +
+    '<div class="list"><div class="setrow"><span class="mid"><div>' +
     TH("settings.searchArch") +
     '</div><div class="s">' +
     TH("settings.searchArchHint") +
@@ -1307,9 +1310,8 @@ function settingsView() {
     TH("settings.searchArch") +
     '"></button></div></div>';
   h +=
-    '<div class="sec">' +
-    TH("settings.outCats") +
-    '</div><p class="hint" style="margin:0 4px 8px">' +
+    sec(TH("settings.outCats")) +
+    '<p class="hint" style="margin:0 4px 8px">' +
     TH("settings.outCatsHint") +
     "</p>" +
     ringHTML(outCats(), { mode: "edit" }) +
@@ -1317,7 +1319,7 @@ function settingsView() {
     ic("add") +
     TH("settings.addOutCat") +
     "</button>";
-  h += '<div class="sec">' + TH("settings.inCats") + "</div>" + catGrid("in");
+  h += sec(TH("settings.inCats")) + catGrid("in");
   const hid = S.cats.filter(c => c.hidden);
   if (hid.length)
     h +=
@@ -1341,9 +1343,8 @@ function settingsView() {
   /* with auto backup on, Back up now replaces Save backup */
   const autoOn = canBackup() && S.settings.backup.on;
   h +=
-    '<div class="sec">' +
-    TH("settings.data") +
-    '</div><p class="muted small" style="margin:0 4px 12px">' +
+    sec(TH("settings.data")) +
+    '<p class="muted small" style="margin:0 4px 12px">' +
     TH(autoOn ? "settings.dataAuto" : "settings.dataLocal") +
     "</p>" +
     autoBackupHtml() +
@@ -1388,9 +1389,8 @@ function settingsView() {
         })()
       : "";
   h +=
-    '<div class="sec center">' +
-    TH("settings.about") +
-    '</div><a class="btn kofi" href="' +
+    sec(TH("settings.about"), "center") +
+    '<a class="btn kofi" href="' +
     DONATE_URL +
     '"><svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' +
     ICONS.local_cafe[0] +
@@ -1403,7 +1403,7 @@ function settingsView() {
     '<br><a href="https://github.com/IamAndelib/Tally-android">' +
     TH("settings.source") +
     "</a></p>";
-  return h;
+  return '<div class="hpin">' + subBar(T("settings.title")) + "</div>" + h + "</div>";
 }
 /* where "Buy me a coffee" (Settings → About) leads: Tally's Ko-fi page, opened in the browser (MainActivity sends web
    links there), so Tally itself stays offline; the repository's Sponsor button (.github/FUNDING.yml) leads there too */
