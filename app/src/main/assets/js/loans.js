@@ -457,7 +457,7 @@ function loanOpen(id, focusPay) {
     const dueDraw = i.dueDraw || i.draws.filter(t => i.rem[t.id] > 0).pop() || i.draws[i.draws.length - 1] || null;
     F.dueDraw = dueDraw ? dueDraw.id : null;
     h +=
-      '<div class="card"><h3 id="loan-due">' +
+      '<div class="card out"><h3 id="loan-due">' +
       esc(dueHead(l, i)) +
       "</h3>" +
       (dueDraw
@@ -473,7 +473,7 @@ function loanOpen(id, focusPay) {
       "</div>";
     const payAccs = activeAccounts().filter(a => a.currency === i.cur);
     h +=
-      '<div class="card"><h3>' +
+      '<div class="card out"><h3>' +
       TH(lend ? "loan.gotBackQ" : "loan.paidBackQ") +
       '</h3><p class="muted small" style="margin:0">' +
       TH("loan.partOk") +

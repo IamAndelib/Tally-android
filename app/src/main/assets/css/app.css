@@ -2376,6 +2376,14 @@ mark.hl {
   padding: 16px;
   margin-top: 12px;
 }
+/* a sheet's card with account chips reaches 8px past the sheet's padding and keeps 12px inside, so the chip row is as
+   wide as in the entry form (the loan sheet's cards; the due card above shares the edge). Not a blanket `#sheet .card`:
+   the Settings card and the balance-fix card hold no chips. */
+.sheet .card.out {
+  margin-left: -8px;
+  margin-right: -8px;
+  padding: 16px 12px;
+}
 .card h3 {
   margin: 0 0 4px;
   font-size: 1rem;

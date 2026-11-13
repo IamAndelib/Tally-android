@@ -1232,6 +1232,22 @@ function inspect() {
       "loan",
       ev(() => loanOpen("L1"))
     );
+    /* a sheet's card holding account chips reaches 8px past the sheet's padding (.card.out), so three short account
+       names take two rows in "Got money back?" at 320 px and 1.3x text (the chip row was 72px narrower than the screen) */
+    if (dev.w === 320 && dev.s === 1.3 && dev.lang === "en") {
+      await page.evaluate(() => {
+        closeSheet();
+        loanOpen("L1");
+      });
+      const rows = await page.evaluate(() => {
+        const chips = [...document.querySelectorAll('#sheet .card [data-act="f-acc"]')];
+        return { n: chips.length, rows: new Set(chips.map(c => Math.round(c.getBoundingClientRect().top))).size };
+      });
+      ok(
+        rows.n === 3 && rows.rows === 2,
+        tag + " Got money back?: 3 account chips take 2 rows (" + rows.n + " chips, " + rows.rows + " rows)"
+      );
+    }
     await shot("loan-fee", async () => {
       await page.evaluate(() => loanOpen("L1"));
       await page.click('#sheet [data-act="addon-add"]');
