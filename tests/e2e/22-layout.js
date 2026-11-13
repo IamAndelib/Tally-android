@@ -1413,6 +1413,34 @@ function inspect() {
       const pie = await pieLook();
       if (pie.length) summary[tag + " summary-months pie"] = pie;
     });
+    /* a part opened in place (the one with the most entries, so "Show all" shows too), scrolled into view: its entries'
+       names, amounts, days and accounts and the button, at every size and text size */
+    await shot("summary-open", async () => {
+      await page.evaluate(() => summarySheet());
+      await page.click('#sheet [data-act="sm-mode"][data-v="m"]');
+      const k = await page.evaluate(() => {
+        const ks = [...document.querySelectorAll("#sm .smx")].map(r => r.dataset.v);
+        return ks.sort((a, b) => smPartRows(b).length - smPartRows(a).length)[0];
+      });
+      await page.click('#sm .smx[data-v="' + k + '"]');
+      const bad = await page.evaluate(() => {
+        const o = document.querySelector("#sm .smo"),
+          row = o && o.previousElementSibling;
+        if (!o || !row || row.getAttribute("aria-expanded") !== "true") return ["the part didn't open"];
+        o.scrollIntoView({ block: "end" });
+        const out = [],
+          r = row.getBoundingClientRect(),
+          rows = [...o.querySelectorAll(".tx")];
+        if (!rows.length || rows.length > 5) out.push(rows.length + " entries");
+        if (!o.querySelector('[data-act="sm-all"]')) out.push("no Show all");
+        rows.forEach(e => {
+          const b = e.getBoundingClientRect();
+          if (b.left < r.left + 40 || b.right > r.right) out.push("an entry outside its part's text column");
+        });
+        return out;
+      });
+      if (bad.length) summary[tag + " summary-open"] = bad;
+    });
     await shot("search", async () => {
       await page.evaluate(() => {
         openFind();

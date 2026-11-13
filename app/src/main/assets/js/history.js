@@ -277,11 +277,13 @@ function histClear() {
   HSHOW.sig = "";
   histAllTime();
 }
-/* History with the given filters (an account's "Open in History"), on all time */
-function openHistory(f = {}) {
+/* History with the given filters (an account's "Open in History"), on all time or on period p (a Summary part's
+   "Show all": {period, anchor, rs, re}) */
+function openHistory(f = {}, p = null) {
   if (V.find) findEnd();
   HF = histNorm({ ...histBlank(), ...f });
-  histAllTime();
+  if (p) Object.assign(HP, p);
+  else histAllTime();
   HSHOW.sig = "";
   V.screen = "history";
   V.open = "";

@@ -673,7 +673,10 @@
     "charges": "Cargos",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "menos del {{pct}}"
+    "under": "menos del {{pct}}",
+    "showAll_one": "Ver {{count}} movimiento en el Historial",
+    "showAll_many": "Ver los {{count}} de movimientos en el Historial",
+    "showAll_other": "Ver los {{count}} movimientos en el Historial"
   },
   "search": {
     "title": "Buscar",

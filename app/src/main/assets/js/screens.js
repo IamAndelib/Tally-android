@@ -423,9 +423,10 @@ function fitFigures(root) {
     .forEach(el => el.removeAttribute("style"));
   root.querySelectorAll(".tx.en.stacked").forEach(el => el.classList.remove("stacked")); // measured side by side again
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  /* a list under 20rem is tight; one already set in from the side (data-tight: Summary's opened part) at its own width */
   root
     .querySelectorAll(".list")
-    .forEach(l => l.classList.toggle("tight", l.clientWidth > 0 && l.clientWidth < 20 * rem));
+    .forEach(l => l.classList.toggle("tight", l.clientWidth > 0 && l.clientWidth < (+l.dataset.tight || 20) * rem));
   root.querySelectorAll(".pnav").forEach(p => {
     p.classList.remove("noarr");
     const l = p.querySelector(".plabel > span");
@@ -730,6 +731,31 @@ function balBar(b, n) {
 /* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
    helps to spot it */
 const accTag = a => (a ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl(a.name) + "</bdi>" : bdi("?"));
+/* what an entry was, as its row's first line (HTML, words search matched marked): a purchase's or income's payee · note,
+   else its category; a transfer's note, else "Transfer"; a loan's "Lent to Rafi"; a balance fix; a fee met on its own */
+function txTitle(t) {
+  if (t.type === "transfer") return t.note ? hl(t.note) : esc(T("transfer.title"));
+  if (t.type === "adjust") return TH("fix.title");
+  if (t.type === "loan") {
+    const l = loan(t.loan),
+      lend = l && l.kind === "lend";
+    return TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
+      who: { html: "<bdi>" + hl(l ? loanWho(l) : "?") + "</bdi>" },
+    });
+  }
+  if (t.feeOf) {
+    const host = entry(t.feeOf) || {};
+    return t.note && !autoNote(t.note)
+      ? hl(t.note)
+      : esc(noteShown(t, host.type === "loan" && loan(host.loan) ? "loan.feeNote" : "transfer.feeNote"));
+  }
+  if (t.payee || t.note)
+    return [t.payee, t.note]
+      .filter(Boolean)
+      .map(x => "<bdi>" + hl(x) + "</bdi>")
+      .join(" \u00b7 ");
+  return hl(catName(cat(t.cat)));
+}
 /* An entry's row: two lines. What it was | how much, the money that moved (a purchase: with its charge), with small
    lines under it naming what is inside it or on top of it (docs/specs/charges.md, "History rows": "incl. $150.00
    charge", "+ $10.00 transfer charge", "incl. $150.00 extra" in green; a transfer between currencies: what arrived),
@@ -738,13 +764,13 @@ const accTag = a => (a ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl
    the time it was written down and the actions are. An add-on has no row of its own (histRows). Every text wraps,
    nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the title
    the whole width, the amount the line below it, then the second line; so does a row whose title the amount beside it
-   would cut (.stacked, fitFigures). */
+   would cut (.stacked, fitFigures). Summary's opened rows (smEntries) show the same title and account. */
 function txLine(t) {
   const a = acc(t.account),
     cur = a ? a.currency : S.settings.cur,
-    f = addOnOf(t);
+    f = addOnOf(t),
+    d = txTitle(t);
   let em,
-    d,
     amt,
     cls = "",
     sub = accTag(a),
@@ -753,24 +779,17 @@ function txLine(t) {
     const to = acc(t.to);
     em = XFER_EMB;
     cls = "xfer";
-    d = t.note ? hl(t.note) : esc(T("transfer.title"));
     amt = esc(money(t.amount, cur));
     sub += ' <span class="ar">\u2192</span> ' + accTag(to);
     if (t.toAmount != null && to && to.currency !== cur)
       small += "<small>\u2192 " + esc(money(t.toAmount, to.currency)) + "</small>";
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = TH("fix.title");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
-    const l = loan(t.loan),
-      lend = l && l.kind === "lend",
-      who = l ? loanWho(l) : "?";
+    const lend = (loan(t.loan) || {}).kind === "lend";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
-    d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
-      who: { html: "<bdi>" + hl(who) + "</bdi>" },
-    });
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
@@ -780,18 +799,11 @@ function txLine(t) {
     cls = "xfer";
     amt = esc(signed(-t.amount, cur));
     em = l ? LOAN_EMB[l.kind === "lend" ? "lend" : "borrow"] : XFER_EMB;
-    d = t.note && !autoNote(t.note) ? hl(t.note) : esc(noteShown(t, l ? "loan.feeNote" : "transfer.feeNote"));
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    if (t.payee || t.note) {
-      d = [t.payee, t.note]
-        .filter(Boolean)
-        .map(x => "<bdi>" + hl(x) + "</bdi>")
-        .join(" \u00b7 ");
-      sub = "<bdi>" + hl(catName(k)) + "</bdi> \u00b7 " + sub;
-    } else d = hl(catName(k));
+    if (t.payee || t.note) sub = "<bdi>" + hl(catName(k)) + "</bdi> \u00b7 " + sub;
     const sum = out && f && f.type === "expense" ? rnd(t.amount + f.amount) : t.amount; // a purchase with its charge
     amt = esc(signed(out ? -sum : sum, cur));
     cls = out ? "spent" : "got";
@@ -910,10 +922,7 @@ function txOpenView(t) {
   let h = "";
   if (t.ts) {
     const w = new Date(t.ts),
-      time =
-        "<b>" +
-        esc(w.toLocaleTimeString(DATE_LOC, { hour: "numeric", minute: "2-digit", hour12: S.settings.clock === "12" })) +
-        "</b>";
+      time = "<b>" + esc(clockTime(t.ts)) + "</b>";
     h +=
       '<div class="added">' +
       ic("schedule") +

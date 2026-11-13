@@ -608,6 +608,212 @@ const ok = (c, m) => {
     await open([[40, 250]], "m");
     ok((await page.$$("#sm .smpie")).length === 0, "months: this month has nothing, no pie though last month has");
   }
+  // ---- a part's row opens in place to its entries: the 5 newest in the period, then "Show all N in History", which opens
+  // History on that period with that part's filter (docs/specs/charges.md, Summary)
+  {
+    await page.evaluate(() => {
+      closeSheet();
+      const t = today(),
+        now = Date.now(),
+        e = (id, min, amount, cat, extra) =>
+          Object.assign(
+            { id, ts: now - min * 60000, date: t, type: "expense", amount, account: "k", cat, note: "" },
+            extra
+          );
+      S.settings.cur = "BDT";
+      S.accounts = [
+        { id: "k", name: "Bkash", type: "wallet", currency: "BDT", opening: 90000 },
+        { id: "k2", name: "Bank", type: "bank", currency: "BDT", opening: 0 },
+        { id: "u", name: "Dollars", type: "savings", currency: "USD", opening: 1000 },
+      ];
+      S.loans = [];
+      S.txns = [];
+      /* Groceries today: 8 purchases (g7 the newest), one with a ৳3.00 charge (the oldest), one archived (still
+         counted, not listed), one in dollars (not this Summary's); 6 transfers with a ৳2.00 charge each */
+      for (let i = 0; i < 8; i++) S.txns.push(e("g" + i, 20 - i, 10 * (i + 1), "groceries", { payee: "Shop " + i }));
+      S.txns.push(
+        e("pe", 30, 50, "groceries", { feeId: "pec", payee: "Market" }),
+        e("pec", 30, 3, "groceries", { feeOf: "pe" }),
+        e("ga", 1, 1000, "groceries", { archived: true }),
+        e("gu", 2, 5, "groceries", { account: "u" })
+      );
+      for (let i = 0; i < 6; i++)
+        S.txns.push(
+          { ...e("x" + i, 40 - i, 100, ""), type: "transfer", to: "k2", feeId: "x" + i + "c", cat: undefined },
+          e("x" + i + "c", 40 - i, 2, "fees", { feeOf: "x" + i })
+        );
+      RBC = LPC = null;
+      Object.assign(V, { screen: "home", period: "day", anchor: t });
+      render();
+      summarySheet();
+    });
+    await page.waitForTimeout(150);
+    const look = () =>
+      page.evaluate(() => {
+        const cl = s => s.replace(/⁠/g, "").replace(/\s+/g, " ").trim(),
+          o = document.querySelector("#sm .smo");
+        return {
+          parts: [...document.querySelectorAll("#sm .smtop > .tx")].map(r => ({
+            k: r.dataset.v,
+            tag: r.tagName,
+            exp: r.getAttribute("aria-expanded"),
+            say: cl(r.getAttribute("aria-label")),
+            chev: !!r.querySelector(".chev"),
+            turned: getComputedStyle(r.querySelector(".chev")).transform !== "none",
+            total: cl(r.querySelector(".a").textContent),
+          })),
+          open: o ? o.previousElementSibling.dataset.v : null,
+          n: document.querySelectorAll("#sm .smo").length,
+          rows: o
+            ? [...o.querySelectorAll(".tx")].map(e => ({
+                id: e.dataset.v,
+                d: cl(e.querySelector(".d").textContent),
+                a: cl(e.querySelector(".a").textContent),
+                s: cl(e.querySelector(".s").textContent),
+                act: !!e.closest("[data-act]") && e.closest("[data-act]").dataset.act !== "sheet-bg",
+              }))
+            : [],
+          more: o && o.querySelector(".btn") ? cl(o.querySelector(".btn").textContent) : null,
+          when: o ? [...o.querySelectorAll(".tx")].map(e => cl(clockTime(entry(e.dataset.v).ts))) : [],
+        };
+      });
+    const amt = s => parseFloat(s.replace(/[^\d.]/g, ""));
+    let s = await look();
+    ok(
+      s.parts.map(p => p.k).join() === "groceries,_charges" &&
+        s.parts.every(p => p.tag === "BUTTON" && p.exp === "false" && p.chev && !p.turned) &&
+        s.parts[0].say === "Groceries, " + s.parts[0].total + ", 99%" &&
+        s.n === 0,
+      "rows: each part a button, closed, a chevron at its end, labelled as before " + JSON.stringify(s.parts)
+    );
+    await tap('#sm .smx[data-v="groceries"]');
+    s = await look();
+    const g = s.rows;
+    ok(
+      s.parts[0].exp === "true" && s.parts[0].turned && s.open === "groceries" && s.n === 1,
+      "a tap opens the row in place: expanded, the chevron turned up, its entries right under it"
+    );
+    ok(
+      g.map(r => r.id).join() === "g7,g6,g5,g4,g3" &&
+        g.map(r => r.d).join() === "Shop 7,Shop 6,Shop 5,Shop 4,Shop 3" &&
+        g.every((r, i) => r.s === s.when[i] + " · Bkash" && !/[-−]/.test(r.a) && !r.act),
+      "… the 5 newest, each named, the time written and the account, the amount without a sign, read-only " +
+        JSON.stringify(g)
+    );
+    ok(
+      g.reduce((q, r) => q + amt(r.a), 0) <= amt(s.parts[0].total) && amt(g[0].a) === 80,
+      "… their amounts add up to at most the part's " + s.parts[0].total
+    );
+    ok(
+      s.more === "Show all 10 in History",
+      "… then Show all, counting what History lists (the archived purchase left out, as there; History has no currency filter, so the dollars one in) " +
+        s.more
+    );
+    await tap('#sm .smx[data-v="groceries"]');
+    await page.waitForTimeout(300); // the chevron's turn
+    s = await look();
+    ok(s.n === 0 && s.parts[0].exp === "false" && !s.parts[0].turned, "a second tap closes it");
+    /* opening Charges closes Groceries; the row tapped stays where it was on the screen */
+    await page.setViewportSize({ width: 393, height: 600 });
+    await tap('#sm .smx[data-v="groceries"]');
+    const y0 = await page.evaluate(() => {
+      const r = document.querySelector('#sm .smx[data-v="_charges"]');
+      r.scrollIntoView({ block: "end" });
+      return r.getBoundingClientRect().top;
+    });
+    await tap('#sm .smx[data-v="_charges"]');
+    s = await look();
+    const y1 = await page.evaluate(
+      () => document.querySelector('#sm .smx[data-v="_charges"]').getBoundingClientRect().top
+    );
+    ok(
+      s.open === "_charges" && s.n === 1 && s.parts[0].exp === "false" && Math.abs(y1 - y0) < 1,
+      "one open at a time: Charges opens, Groceries above it closes, Charges stays put " + JSON.stringify([y0, y1])
+    );
+    ok(
+      s.rows.map(r => r.id).join() === "x5,x4,x3,x2,x1" &&
+        s.rows.every(r => r.d === "Transfer" && amt(r.a) === 2) &&
+        s.more === "Show all 7 in History",
+      "Charges: the transfers with their charge (the purchase's charge is in Groceries), Show all as History's Charges " +
+        JSON.stringify([s.rows, s.more])
+    );
+    await page.setViewportSize({ width: 393, height: 852 });
+    const hist = () =>
+      page.evaluate(() => ({
+        screen: V.screen,
+        hf: { kind: HF.kind, cat: HF.cat },
+        hp: { period: HP.period, anchor: HP.anchor, rs: HP.rs, re: HP.re },
+        rows: [...document.querySelectorAll("#app .tx.en[data-v]")].map(e => e.dataset.v).sort(),
+        sheet: !!document.querySelector("#sheet .p"),
+        t: today(),
+      }));
+    await tap('#sm .smo [data-act="sm-all"]');
+    let h = await hist();
+    ok(
+      h.screen === "history" &&
+        !h.sheet &&
+        h.hf.kind === "charges" &&
+        !h.hf.cat &&
+        h.hp.period === "day" &&
+        h.hp.anchor === h.t &&
+        h.rows.join() === "pe,x0,x1,x2,x3,x4,x5",
+      "Charges' Show all: History, the Charges kind, today, its 7 rows " + JSON.stringify(h)
+    );
+    /* each tab's Show all: History on that tab's period (a week as a date range), Spent in that category */
+    const showAll = async mode => {
+      await page.evaluate(m => {
+        histClear();
+        V.screen = "home";
+        render();
+        summarySheet();
+        document.querySelector('#sheet [data-act="sm-mode"][data-v="' + m + '"]').click();
+      }, mode);
+      await page.waitForTimeout(100);
+      await tap('#sm .smx[data-v="groceries"]');
+      const r = await look();
+      await tap('#sm .smo [data-act="sm-all"]');
+      return [r, await hist()];
+    };
+    const wk = await page.evaluate(() => [weekStart(today()), addDays(weekStart(today()), 6)]);
+    for (const [mode, want] of [
+      ["d", h => h.hp.period === "day" && h.hp.anchor === h.t],
+      ["w", h => h.hp.period === "range" && h.hp.rs === wk[0] && h.hp.re === wk[1]],
+      ["m", h => h.hp.period === "month" && h.hp.anchor === h.t.slice(0, 8) + "01"],
+      ["y", h => h.hp.period === "year" && h.hp.anchor === h.t.slice(0, 5) + "01-01"],
+    ]) {
+      const [r, h] = await showAll(mode);
+      ok(
+        r.rows.map(x => x.id).join() === "g7,g6,g5,g4,g3" &&
+          r.more === "Show all 10 in History" &&
+          h.screen === "history" &&
+          h.hf.kind === "out" &&
+          h.hf.cat === "groceries" &&
+          want(h) &&
+          h.rows.join() === "g0,g1,g2,g3,g4,g5,g6,g7,gu,pe",
+        mode +
+          ": Groceries opens to the same 5, and Show all to History on that period, Spent in Groceries, its 10 rows " +
+          JSON.stringify([r.rows.map(x => [x.id, x.s]), h])
+      );
+      if (mode !== "d")
+        ok(
+          r.rows.every(x => x.s === "Today · Bkash"),
+          mode + ": the second line is the day, then the account " + JSON.stringify(r.rows.map(x => x.s))
+        );
+    }
+    /* an opened part stays open across the tabs (where it is listed) */
+    await page.evaluate(() => {
+      histClear();
+      V.screen = "home";
+      render();
+      summarySheet();
+    });
+    await tap('#sm .smx[data-v="groceries"]');
+    await tap('#sheet [data-act="sm-mode"][data-v="m"]');
+    s = await look();
+    ok(s.open === "groceries" && s.parts[0].exp === "true", "switching tabs keeps the part open");
+    await page.screenshot({ path: OUT + "/opened.png" });
+    await page.evaluate(() => closeSheet());
+  }
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

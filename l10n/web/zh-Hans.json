@@ -661,7 +661,8 @@
     "charges": "费用",
     "say": "{{name}}，{{amount}}",
     "sayShare": "{{name}}，{{amount}}，{{share}}",
-    "under": "低于{{pct}}"
+    "under": "低于{{pct}}",
+    "showAll_other": "在明细中查看全部{{count}}条"
   },
   "search": {
     "title": "搜索",

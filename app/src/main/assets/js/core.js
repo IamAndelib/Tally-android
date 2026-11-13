@@ -564,6 +564,9 @@ function shortDay(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(DATE_LOC, o);
 }
+/* the time of day of timestamp ts (when an entry was written down), on the clock Settings → Region chose */
+const clockTime = ts =>
+  new Date(ts).toLocaleTimeString(DATE_LOC, { hour: "numeric", minute: "2-digit", hour12: S.settings.clock === "12" });
 /* ISO dates (YYYY-MM-DD) sort as plain strings; localeCompare runs ICU collation on every comparison */
 const cmpDay = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 /* oldest first: by day, then by when written (the order balances add entries up in) */

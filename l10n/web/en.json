@@ -667,7 +667,9 @@
     "charges": "Charges",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "less than {{pct}}"
+    "under": "less than {{pct}}",
+    "showAll_one": "Show {{count}} entry in History",
+    "showAll_other": "Show all {{count}} in History"
   },
   "search": {
     "title": "Search",

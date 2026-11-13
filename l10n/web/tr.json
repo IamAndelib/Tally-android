@@ -667,7 +667,9 @@
     "charges": "Masraflar",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "{{pct}} altı"
+    "under": "{{pct}} altı",
+    "showAll_one": "{{count}} kaydı Geçmiş’te göster",
+    "showAll_other": "{{count}} kaydın tümünü Geçmiş’te göster"
   },
   "search": {
     "title": "Ara",

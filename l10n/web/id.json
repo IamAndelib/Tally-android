@@ -661,7 +661,8 @@
     "charges": "Biaya",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "kurang dari {{pct}}"
+    "under": "kurang dari {{pct}}",
+    "showAll_other": "Tampilkan semua {{count}} di Riwayat"
   },
   "search": {
     "title": "Cari",

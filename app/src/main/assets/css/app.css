@@ -1157,20 +1157,21 @@ html[dir="rtl"] .strip.fade {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.smtop .tx {
+.smtop > .tx {
   padding: 10px 14px;
 }
-/* a category in the Summary: its name and share on the whole line (wrapping), its bar and amount below */
-.smtop .tx {
+/* a part in the Summary (smRow, a button): its name and share on the whole line (wrapping), its bar and amount below,
+   and a chevron at the end that turns up while the part's entries show under it */
+.smtop > .tx {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto 20px;
   grid-template-rows: auto auto;
   column-gap: 12px;
   row-gap: 4px;
   align-items: center;
 }
 /* the emblem's place; for Charges, which is no category, a grey dot in it (docs/specs/charges.md, Summary) */
-.smtop .tx > .smi {
+.smtop > .tx > .smi {
   grid-row: 1 / -1;
   display: grid;
   place-items: center;
@@ -1182,21 +1183,65 @@ html[dir="rtl"] .strip.fade {
   height: 12px;
   border-radius: 50%;
 }
-.smtop .tx .mid {
+.smtop > .tx .mid {
   display: contents;
 }
-.smtop .tx .d {
-  grid-column: 2 / -1;
+.smtop > .tx .d {
+  grid-column: 2 / 4;
   grid-row: 1;
   line-height: 1.25;
 }
-.smtop .tx .pbar {
+.smtop > .tx .pbar {
   grid-column: 2;
   grid-row: 2;
 }
-.smtop .tx > .a {
+.smtop > .tx > .a {
   grid-column: 3;
   grid-row: 2;
+}
+.smtop > .tx > .chev {
+  grid-column: 4;
+  grid-row: 1 / -1;
+  width: 20px;
+  height: 20px;
+  fill: var(--on-surface-variant);
+  transition: transform 0.2s;
+}
+.smtop > .tx[aria-expanded="true"] > .chev {
+  transform: rotate(180deg);
+}
+/* an opened part (smEntries): its entries under the names' column, their amounts under the part's, on the opened
+   row's colour. A title the amount beside it would cut stacks (.stacked, fitFigures), as in History; read-only, so a
+   stacked one is never cut (no tap would show the rest) */
+.smo {
+  background: var(--surface-high);
+  padding: 0 0 6px;
+  padding-inline: 66px 46px;
+}
+.smo + .tx {
+  border-top: 1px solid var(--outline-variant);
+}
+.smo .list {
+  background: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.smo .tx.en {
+  padding: 10px 0;
+}
+.smo .tx.en.stacked .d,
+.smo .list.tight .tx.en .d {
+  display: block;
+  overflow: visible;
+}
+.smo > .btn {
+  width: auto;
+  max-width: calc(100% + 12px);
+  margin: 4px 0 0;
+  margin-inline-start: -12px;
+  padding: 6px 12px;
+  justify-content: flex-start;
+  text-align: start;
 }
 .pbar {
   display: block;

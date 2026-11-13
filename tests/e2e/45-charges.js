@@ -1576,9 +1576,12 @@ function variedV7() {
               SM.sel = null;
               return smBuckets().map(b => [b.s, b.e, b.v, catSplit(b.list)]);
             };
+            /* Days: each of the week's days (with the day before it) */
+            const d = days.flatMap(x => ((SM.end = x), tab("d")));
+            SM.end = days[days.length - 1];
             SM.mode = "y";
             smRender();
-            out.sm[c] = { d: tab("d"), w: tab("w"), m: tab("m"), y: $("#sm .big.spent").textContent };
+            out.sm[c] = { d, w: tab("w"), m: tab("m"), y: $("#sm .big.spent").textContent };
             closeSheet();
           });
           out.charges = CHARGES;
@@ -1715,7 +1718,10 @@ function variedV7() {
       const off = ["d", "w", "m"].flatMap(k =>
         sm[k].filter(([s, e, v]) => v !== sumIn(SPENT[c], s, e)).map(b => [k, b[0], b[1], b[2]])
       );
-      ok(!off.length, "Summary, " + c + ": every bar of Days, Weeks and Months as by hand " + J(off));
+      ok(
+        !off.length && sm.d.length === 2 * DAYS.length,
+        "Summary, " + c + ": every day of the week on Days, every bar of Weeks and Months as by hand " + J(off)
+      );
       const yr = sumIn(SPENT[c], dd(0).slice(0, 4) + "-01-01", dd(0).slice(0, 4) + "-12-31");
       ok(sm.y === plain(r, c, yr), "Summary, " + c + ": the Year tab's total " + sm.y);
     });
@@ -1726,6 +1732,106 @@ function variedV7() {
     );
   } catch (e) {
     ok(false, "the counting rule: " + e.message.split("\n")[0]);
+  }
+
+  /* ---- Summary's opened rows (docs/specs/charges.md, Summary): each part of each day, opened, lists the entries behind
+     its amount, from the very items Summary adds up: a purchase with its charge as one row with both; on Charges the
+     entry a charge was paid with (a transfer, a loan payment), or a loan entry a charge is worked out on, with that
+     charge; in the Summary's currency only. Each row named as History names it, then the time written and the account. */
+  try {
+    const OPEN = {
+      BDT: {
+        [dd(-5)]: { _charges: [["jD", 20]] },
+        [dd(-3)]: { _charges: [["jP", 3]] },
+        [dd(-2)]: { _charges: [["sP", 105]] },
+        [dd(-1)]: { food: [["pE", 1150]], fees: [["e1", 300]] },
+        [dd(0)]: { groceries: [["g1", 50]], _charges: [["tA", 10]] },
+      },
+      USD: {
+        [dd(-2)]: { fun: [["uE", 22]] },
+        [dd(-1)]: { _charges: [["uT", 1]] },
+        [dd(0)]: { _charges: [["eP", 25]] },
+      },
+    };
+    const r = await page.evaluate(
+      ([o, days, want]) => {
+        const keep = S,
+          keepV = { ...V },
+          cl = v => String(v).replace(/⁠/g, "").replace(/\s+/g, " ").trim(),
+          got = {},
+          wanted = {},
+          bad = [];
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          V.screen = "home";
+          render();
+          Object.keys(want).forEach(c => {
+            got[c] = {};
+            wanted[c] = {};
+            days.forEach(d => {
+              summarySheet();
+              Object.assign(SM, { cur: c, end: d, mode: "d", sel: null });
+              smRender();
+              const parts = {};
+              [...document.querySelectorAll("#sm .smtop > .smx")].forEach(row => {
+                const k = row.dataset.v;
+                row.click();
+                if (row.getAttribute("aria-expanded") !== "true") bad.push(c + " " + d + " " + k + " not expanded");
+                if (document.querySelectorAll("#sm .smo").length !== 1) bad.push(c + " " + d + " not one part open");
+                if (document.querySelector("#sm .smo .btn"))
+                  bad.push(c + " " + d + " " + k + ": Show all with 1 entry");
+                parts[k] = [...document.querySelectorAll("#sm .smo .tx")].map(e => {
+                  const t = entry(e.dataset.v),
+                    box = document.createElement("div");
+                  box.innerHTML = txLine(t);
+                  if (cl(e.querySelector(".d").textContent) !== cl(box.querySelector(".d").textContent))
+                    bad.push(t.id + " not named as in History");
+                  if (cl(e.querySelector(".s").textContent) !== cl(clockTime(t.ts) + " · " + acc(t.account).name))
+                    bad.push(t.id + " second line " + cl(e.querySelector(".s").textContent));
+                  return [t.id, cl(e.querySelector(".a").textContent)];
+                });
+                const sum = parts[k].length === 1 && parts[k][0][1];
+                if (sum !== cl(row.querySelector(".a").textContent)) bad.push(c + " " + d + " " + k + " not its total");
+              });
+              if (Object.keys(parts).length) got[c][d] = parts;
+              const w = want[c][d];
+              if (w)
+                wanted[c][d] = Object.fromEntries(
+                  Object.entries(w).map(([k, rows]) => [k, rows.map(([id, n]) => [id, cl(money(n, c))])])
+                );
+              closeSheet();
+            });
+          });
+          return { got, wanted, bad };
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          RBC = LPC = null;
+          closeSheet();
+          render();
+        }
+      },
+      [countBook(), DAYS, OPEN]
+    );
+    CURS.forEach(c =>
+      ok(
+        same(r.got[c], r.wanted[c]),
+        "Summary, " +
+          c +
+          ": each day's parts open to the entries behind them (a purchase with its charge, a charge with the entry it " +
+          "was paid with or worked out on), only in " +
+          c +
+          " " +
+          J(r.got[c])
+      )
+    );
+    ok(
+      !r.bad.length,
+      "… each open alone, named as in History, its time and account, its amount the part's " + J(r.bad)
+    );
+  } catch (e) {
+    ok(false, "Summary's opened rows: " + e.message.split("\n")[0]);
   }
 
   // ---- 16. a lend's transfer charge is lent money: never spending while the lending is open
@@ -2001,7 +2107,7 @@ function variedV7() {
           Object.assign(SM, { cur, end, mode, sel });
           smRender();
           const grey = "rgb(122, 129, 144)";
-          const rows = [...document.querySelectorAll("#sm .smtop .tx")].map(e => {
+          const rows = [...document.querySelectorAll("#sm .smtop > .tx")].map(e => {
             const d = e.querySelector(".d"),
               sm = d.querySelector(".small"),
               dot = e.querySelector(".smi .chdot"),
@@ -2010,9 +2116,9 @@ function variedV7() {
               name: (sm ? d.textContent.replace(sm.textContent, "") : d.textContent).trim(),
               share: sm ? sm.textContent : "",
               amount: cl(e.querySelector(".a").textContent),
-              /* TalkBack hears the whole line, wherever it is touched, as one sentence */
+              /* TalkBack hears the whole line as one sentence, a button that says whether it is open */
               say: cl(e.getAttribute("aria-label")),
-              shown: e.getAttribute("role") === "img",
+              shown: e.tagName === "BUTTON" && e.getAttribute("aria-expanded") === "false",
               dot: dot ? getComputedStyle(dot).backgroundColor : null,
               emblem: !!e.querySelector(".emb"),
               bar: getComputedStyle(bar).backgroundColor,

@@ -667,7 +667,9 @@
     "charges": "Gebühren",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "weniger als {{pct}}"
+    "under": "weniger als {{pct}}",
+    "showAll_one": "{{count}} Eintrag im Verlauf zeigen",
+    "showAll_other": "Alle {{count}} im Verlauf zeigen"
   },
   "search": {
     "title": "Suchen",

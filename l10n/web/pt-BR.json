@@ -673,7 +673,10 @@
     "charges": "Taxas",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "menos de {{pct}}"
+    "under": "menos de {{pct}}",
+    "showAll_one": "Mostrar {{count}} lançamento no Histórico",
+    "showAll_many": "Mostrar os {{count}} lançamentos no Histórico",
+    "showAll_other": "Mostrar os {{count}} lançamentos no Histórico"
   },
   "search": {
     "title": "Buscar",

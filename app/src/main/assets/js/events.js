@@ -296,6 +296,13 @@ document.addEventListener("click", ev => {
     case "sm-open":
       smOpen();
       break;
+    case "sm-part":
+      smToggle(v);
+      break;
+    case "sm-all":
+      smAll(v);
+      scrollTo(0, 0);
+      break;
     case "add-out":
       txSheet(null, "expense");
       break;
@@ -943,6 +950,7 @@ addEventListener("resize", () => {
   else if (pinLike()) histPinSet(); // a new height (search's keyboard): what History or Settings can keep pinned
   fitCal($("#dp") || $("#pd"));
   fitSmRows();
+  smFitOpen();
   /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */
   if (CALC && CALC.inp && CALC.inp.isConnected)
     setTimeout(() => {

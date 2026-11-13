@@ -679,7 +679,11 @@
     "charges": "Комиссии",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "меньше {{pct}}"
+    "under": "меньше {{pct}}",
+    "showAll_one": "Показать все {{count}} запись в истории",
+    "showAll_few": "Показать все {{count}} записи в истории",
+    "showAll_many": "Показать все {{count}} записей в истории",
+    "showAll_other": "Показать все {{count}} записи в истории"
   },
   "search": {
     "title": "Поиск",

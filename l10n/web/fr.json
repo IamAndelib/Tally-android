@@ -673,7 +673,10 @@
     "charges": "Frais",
     "say": "{{name}}, {{amount}}",
     "sayShare": "{{name}}, {{amount}}, {{share}}",
-    "under": "moins de {{pct}}"
+    "under": "moins de {{pct}}",
+    "showAll_one": "Voir {{count}} opération dans l’historique",
+    "showAll_many": "Voir les {{count}} d’opérations dans l’historique",
+    "showAll_other": "Voir les {{count}} opérations dans l’historique"
   },
   "search": {
     "title": "Rechercher",

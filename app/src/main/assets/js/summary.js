@@ -1,6 +1,7 @@
 /*
  * summary.js — The spending summary opened by tapping the donut: one day's or one month's categories as a pie,
- * 8 weeks as rows or a year's months as bars, with a comparison to the period before.
+ * 8 weeks as rows or a year's months as bars, with a comparison to the period before; under it the parts (categories,
+ * then Charges), each a row that opens in place to its newest entries and "Show all … in History".
  */
 "use strict";
 
@@ -26,7 +27,8 @@ const weekStart = d => addDays(d, -((parseISO(d).getDay() - S.settings.week + 7)
 function summarySheet() {
   const [, e] = range(),
     t = today();
-  SM = { mode: { month: "m", year: "y" }[V.period] || "d", end: e > t ? t : e, sel: null, cur: viewCur() };
+  /* open: the part whose row shows its entries (smToggle), one at a time; span: the days on screen (drawSm) */
+  SM = { mode: { month: "m", year: "y" }[V.period] || "d", end: e > t ? t : e, sel: null, cur: viewCur(), open: null };
   openSheet(
     T("summary.title") + (currencies().length > 1 ? " · " + SM.cur : ""),
     '<div class="seg">' +
@@ -103,16 +105,22 @@ function catSplit(list) {
 /* a part's name: a category's, or the word Charges (no category: no emblem, never renamed) */
 const partName = k => (k === CHARGES ? T("summary.charges") : catName(cat(k)));
 /* one line of Summary's list: the emblem (for Charges, a grey dot in its place), the name, its share on Days, Months
-   and Year ("<1%"), a bar in the part's colour (sliceCol) and the amount. TalkBack hears the whole line, wherever it is
-   touched, as one sentence: "Charges, ৳158.00, less than 1%" (as the Year tab's bars, an image with its label). */
+   and Year ("<1%"), a bar in the part's colour (sliceCol), the amount and a chevron. A button: a tap shows that part's
+   entries under it (smToggle, smEntries), the chevron turned up. TalkBack hears the whole line as one sentence,
+   "Charges, ৳158.00, less than 1%", and whether it is expanded. */
 function smRow([k, v], total, share) {
   const name = partName(k),
     amount = money(v, SM.cur),
     p = (v / total) * 100,
     small = p < 1,
-    pct = percent(small ? 1 : Math.round(p));
+    pct = percent(small ? 1 : Math.round(p)),
+    open = SM.open === k;
   return (
-    '<div class="tx" role="img" aria-label="' +
+    '<button class="tx smx" data-act="sm-part" data-v="' +
+    esc(k) +
+    '" aria-expanded="' +
+    open +
+    '" aria-label="' +
     esc(
       share
         ? T("summary.sayShare", { name, amount, share: small ? T("summary.under", { pct }) : pct })
@@ -120,17 +128,119 @@ function smRow([k, v], total, share) {
     ) +
     '"><span class="smi">' +
     (k === CHARGES ? '<i class="chdot" style="background:' + CHARGES_C + '"></i>' : emblem(cat(k), "em")) +
-    '</span><span class="mid"><div class="d" dir="auto">' +
+    '</span><span class="mid"><span class="d" dir="auto">' +
     esc(name) +
     (share ? ' <span class="muted small">' + esc((small ? "<" : "") + pct) + "</span>" : "") +
-    '</div><span class="pbar"><span style="width:' +
+    '</span><span class="pbar"><span style="width:' +
     p.toFixed(1) +
     "%;background:" +
     sliceCol(k) +
     '"></span></span></span><span class="a">' +
     esc(amount) +
-    "</span></div>"
+    "</span>" +
+    ic("down").replace('class="ic"', 'class="ic chev"') +
+    "</button>" +
+    (open ? smEntries(k) : "")
   );
+}
+/* The entries behind part k on screen (SM.span), from the very items Summary adds up (spendItems()), one row per entry,
+   newest first: a purchase with its charge as one row with both (its whole amount in its category); on Charges, the
+   entry a charge was paid with (a transfer, a loan payment) with that charge, or the loan entry a charge is worked out on
+   (loanParts()). Only the Summary's currency; an archived entry is not listed, as in History, though it counts. */
+function smPartRows(k) {
+  const [s, e] = SM.span,
+    by = new Map();
+  spendItems(SM.cur).forEach(x => {
+    const t = x.cat === k && x.date >= s && x.date <= e && entry(x.of);
+    if (!t) return;
+    const r = histHost(t) || t,
+      g = by.get(r.id) || { t: r, date: x.date, amount: 0 };
+    g.amount += x.amount;
+    if (x.date > g.date) g.date = x.date;
+    by.set(r.id, g);
+  });
+  return [...by.values()]
+    .filter(g => !g.t.archived)
+    .map(g => ({ ...g, amount: rnd(g.amount) }))
+    .sort((a, b) => cmpDay(b.date, a.date) || (b.t.ts || 0) - (a.t.ts || 0));
+}
+/* History's filters and period for part k on screen: the category on Spent, or the Charges kind (which also lists the
+   purchases with a charge, counted here in their categories); the day, the week (a date range), the month or the year */
+function smHist(k) {
+  const [s, e] = SM.span,
+    f = k === CHARGES ? { kind: "charges" } : { kind: "out", cat: k },
+    p =
+      SM.mode === "w"
+        ? { period: "range", anchor: s, rs: s, re: e }
+        : { period: { d: "day", m: "month", y: "year" }[SM.mode], anchor: s, rs: null, re: null };
+  return [f, p];
+}
+/* what History lists for part k (smHist), counted as History counts its rows (histRows) */
+function smHistCount(k) {
+  const [f, p] = smHist(k),
+    [s, e] = range(p),
+    hf = { ...histBlank(), ...f };
+  return histRows(S.txns.filter(t => t.date >= s && t.date <= e && histMatch(t, hf))).length;
+}
+/* An opened part (docs/specs/charges.md, Summary): its 5 newest entries, read-only, each as History's two lines without
+   the category (the row above names it): what it was | the amount it counts here (no sign: it is all spending), then
+   the day it counts on (Days: the time it was written down) and the account; then, past 5, "Show all 8 in History" */
+const SM_SHOW = 5;
+function smEntries(k) {
+  const rows = smPartRows(k),
+    when = g => (SM.mode === "d" && g.t.ts ? clockTime(g.t.ts) : shortDay(g.date));
+  return (
+    '<div class="smo"><div class="list" data-tight="13">' +
+    rows
+      .slice(0, SM_SHOW)
+      .map(
+        g =>
+          '<div class="tx en" data-v="' +
+          esc(g.t.id) +
+          '"><span class="mid"><span class="d" dir="auto">' +
+          txTitle(g.t) +
+          '</span><span class="a">' +
+          esc(money(g.amount, SM.cur)) +
+          '</span><span class="s">' +
+          esc(when(g)) +
+          " \u00b7 " +
+          accTag(acc(g.t.account)) +
+          "</span></span></div>"
+      )
+      .join("") +
+    "</div>" +
+    (rows.length > SM_SHOW
+      ? '<button class="btn text" data-act="sm-all" data-v="' +
+        esc(k) +
+        '">' +
+        TH("summary.showAll", { count: smHistCount(k) }) +
+        "</button>"
+      : "") +
+    "</div>"
+  );
+}
+/* a tap on part k's row: its entries show under it, or go; another part's close. The row tapped stays where it is on
+   screen (the sheet scrolls by what closed above it), and keeps the focus. */
+function smToggle(k) {
+  const row = [...document.querySelectorAll("#sm .smx")].find(r => r.dataset.v === k);
+  if (!row) return;
+  const sc = row.closest(".p"),
+    y = row.getBoundingClientRect().top;
+  SM.open = SM.open === k ? null : k;
+  document.querySelectorAll("#sm .smo").forEach(o => o.remove());
+  document.querySelectorAll('#sm .smx[aria-expanded="true"]').forEach(r => r.setAttribute("aria-expanded", "false"));
+  if (SM.open) {
+    row.setAttribute("aria-expanded", "true");
+    row.insertAdjacentHTML("afterend", smEntries(k));
+    smFitOpen();
+  }
+  if (sc) sc.scrollTop += row.getBoundingClientRect().top - y;
+}
+/* "Show all" under part k: History with that part's filters and period */
+function smAll(k) {
+  const [f, p] = smHist(k);
+  closeSheet();
+  openHistory(f, p);
 }
 /* a day or a month by category as a pie: category colours, true to size (a tiny share stays tiny), a hairline between
    slices. The names, shares and amounts are in the list under it, so the drawing is hidden from screen readers. */
@@ -195,6 +305,7 @@ function drawSm() {
     b = bars[i],
     prev = all[i],
     cur = SM.cur;
+  SM.span = [b.s, b.e];
   const later = bars[n - 1].e < t;
   let h =
     '<div class="cal-h"><button class="icon" data-act="sm-nav" data-v="-1" aria-label="' +
@@ -282,6 +393,15 @@ function drawSm() {
     "</button>";
   el.innerHTML = h;
   fitSmRows();
+  smFitOpen(el);
+}
+/* an opened part's entries: under 13rem (a small phone, a large text size) its rows stack as a tight list's, a figure
+   too wide is set smaller (fitFigures). Again on resize and when the font has loaded. */
+function smFitOpen(el = $("#sm")) {
+  const o = el && el.querySelector(".smo");
+  if (!o) return;
+  fitFigures(o);
+  if (document.fonts && document.fonts.status === "loading") document.fonts.ready.then(() => smFitOpen());
 }
 /* The Weeks rows share one pair of columns, so every track starts and ends at the same place and equal amounts draw
    equal bars (subgrid is not in WebView 87): the widest label and figure, measured, go to the rows as --smx / --smv.
@@ -328,6 +448,7 @@ function drawSmYear(el) {
     list = sp.filter(x => x.date.startsWith(y + "-")),
     tot = sum(list),
     was = sum(sp.filter(x => x.date >= y - 1 + "-01-01" && x.date <= y - 1 + (part ? t.slice(4) : "-12-31")));
+  SM.span = [y + "-01-01", y + "-12-31"];
   let cmp = "";
   if (was > 0 && tot > 0) {
     const p = Math.round(((tot - was) / was) * 100);
@@ -385,6 +506,7 @@ function drawSmYear(el) {
     : '<div class="empty" style="padding:16px">' + TH("summary.none.y", { year: y }) + "</div>";
   h += '<div class="gap"></div><button class="btn tonal" data-act="sm-open">' + TH("summary.open.y") + "</button>";
   el.innerHTML = h;
+  smFitOpen(el);
   /* this month at the right edge (a past year: December); an edge fades while months that have been are past it, so
      this year's months still to come don't fade this one */
   const ch = $("#smy");

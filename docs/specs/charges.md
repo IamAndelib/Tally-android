@@ -437,6 +437,14 @@ Spending only, as in C-summary:
 - The Months pie ends with the grey slice.
 - TalkBack: "Charges, ৳158.00, less than 1%", each line one sentence (a category's alike: "Rent, ৳120,000.00, 68%";
   no share on Days and Weeks).
+- **Each line opens in place** (a button with a chevron, expanded or collapsed for TalkBack; one open at a time) to the
+  entries behind its amount in the tab's period, worked out from the same items Summary adds up: newest first, at most
+  5, read-only, each as History's two lines without the category: what it was | the amount it counts in this part, no
+  sign (a purchase with its charge: both together; Charges: the charge, on the entry it was paid with or the loan entry
+  it is worked out on), then the day (Days: the time it was written down) and the account. Only the Summary's currency;
+  an archived entry is not listed, as in History. Past 5, "Show all 8 in History" opens History on the tab's period (a
+  week as a date range) with Spent and that category, or the Charges kind for Charges; the number is what History will
+  list (History has no currency filter, and its Charges kind also lists purchases with a charge).
 
 ### Assets and Liabilities
 
