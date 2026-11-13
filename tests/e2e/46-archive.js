@@ -1657,6 +1657,27 @@ const seed = () => ({
     );
   }
 
+  {
+    // the Archived button's icon is centred in its square (the chip's leading-icon pull must not apply)
+    await load(seed());
+    await page.evaluate(() => {
+      S.txns.find(t => t.id === "old").archived = true;
+      render();
+    });
+    const d = await page.evaluate(() => {
+      const b = document.querySelector(".chip.harch"),
+        i = b && b.querySelector(".ic, svg");
+      if (!i) return null;
+      const br = b.getBoundingClientRect(),
+        ir = i.getBoundingClientRect();
+      return {
+        x: ir.left + ir.width / 2 - (br.left + br.width / 2),
+        y: ir.top + ir.height / 2 - (br.top + br.height / 2),
+      };
+    });
+    ok(d && Math.abs(d.x) <= 0.5 && Math.abs(d.y) <= 0.5, "the Archived button's icon is centred " + J(d));
+  }
+
   ok(errors.length === 0, "no page errors " + J(errors));
 
   await browser.close();

@@ -754,6 +754,20 @@ const ok = (c, m) => {
       r.n > 0 && r.focus !== "find-q" && r.q === "corner",
       "Enter draws now and blurs the field: " + JSON.stringify(r)
     );
+    // the focus lands on the heading (no ring, TalkBack reads it), never on a suggestion
+    r = await pg.evaluate(() => {
+      const a = document.activeElement;
+      return {
+        head: !!a && a.getAttribute("role") === "heading" && a.getAttribute("tabindex") === "-1",
+        txt: a && a.textContent,
+        sug: !!(a && a.closest(".sug")),
+        outline: a && getComputedStyle(a).outlineStyle,
+      };
+    });
+    ok(
+      r.head && !r.sug && r.txt === "Suggestions" && r.outline === "none",
+      "after Enter the focus is on the Suggestions heading, no ring: " + JSON.stringify(r)
+    );
 
     // with every account in one currency the labels carry it
     await pg.evaluate(() => (histClear(), S.accounts.forEach(a => (a.currency = "USD")), findDraw()));

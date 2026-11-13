@@ -1136,6 +1136,17 @@ function inspect() {
           if (want && (!CALC || CALC.id !== want)) out.push("the keypad isn't open on " + want);
           if (!c || !c.offsetParent || !c.querySelector(".aoprev").textContent) out.push("no card with its preview");
           if ($("#sheet .aoline").textContent) out.push("the preview shown twice");
+          /* demo B: every row's line is inset 16px from both sides of the card, above its preview */
+          if (c) {
+            const cr = c.getBoundingClientRect();
+            c.querySelectorAll(".aorow:not([hidden])").forEach(r => {
+              const rr = r.getBoundingClientRect();
+              if (Math.abs(rr.left - cr.left - 16) > 0.5 || Math.abs(cr.right - rr.right - 16) > 0.5)
+                out.push("a row's line is not inset 16px: " + (rr.left - cr.left) + " / " + (cr.right - rr.right));
+              if (rr.bottom > c.querySelector(".aoprev").getBoundingClientRect().top + 1.5)
+                out.push("a row's line reaches the preview");
+            });
+          }
           if (res && (!res.querySelector(".calcname") || (CALC.expr.length > 2 && !res.querySelector(".calceq"))))
             out.push("the keypad's bar doesn't name its field and result: " + res.textContent);
           return out;
@@ -1207,6 +1218,15 @@ function inspect() {
             out.push("no card with " + n + " rows");
           if (!prev.textContent || card.lastElementChild !== prev) out.push("no preview at the card's bottom");
           if ($("#sheet .aoline").textContent) out.push("the preview shown twice");
+          /* demo B: every row's line is inset 16px from both sides of the card, above its preview */
+          const cr = card.getBoundingClientRect();
+          card.querySelectorAll(".aorow:not([hidden])").forEach(r => {
+            const rr = r.getBoundingClientRect();
+            if (Math.abs(rr.left - cr.left - 16) > 0.5 || Math.abs(cr.right - rr.right - 16) > 0.5)
+              out.push("a row's line is not inset 16px: " + (rr.left - cr.left) + " / " + (cr.right - rr.right));
+            if (rr.bottom > card.querySelector(".aoprev").getBoundingClientRect().top + 1.5)
+              out.push("a row's line reaches the preview");
+          });
           if (
             keypad &&
             (!res || CALC.id !== keypad || !res.querySelector(".calcname") || !res.querySelector(".calceq"))

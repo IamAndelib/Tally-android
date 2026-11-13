@@ -1559,7 +1559,7 @@ input {
   padding: 10px 2px 2px;
 }
 .aoprev {
-  padding: 10px 16px 12px;
+  padding: 10px 16px 4px;
 }
 .aoline:empty,
 .aoprev:empty {
@@ -1589,12 +1589,15 @@ input {
   margin-top: 12px;
   background: var(--surface-high);
   border-radius: 16px;
+  padding-bottom: 8px; /* room under the last line, inside the rounded shape */
 }
+/* each row's line is inset 16px from both sides of the card */
 .aorow {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 4px 0 16px;
+  margin: 0 16px;
+  padding: 4px 0 0;
   border-bottom: 1px solid var(--outline);
 }
 .aof {
@@ -2290,6 +2293,10 @@ mark.hl {
   font-weight: 600;
   color: var(--primary);
   margin: 24px 4px 8px;
+}
+/* the heading search puts the focus on after Enter (tabindex -1): read by TalkBack, never ringed */
+.sec[tabindex="-1"] {
+  outline: none;
 }
 .sec.center {
   text-align: center;
@@ -3690,6 +3697,10 @@ body.land.calcopen #snack .snack {
   padding: 0;
   justify-content: center;
   flex: none;
+}
+/* icon-only: the icon sits in the middle, not pulled left like a chip's leading icon */
+.chip.harch > .ic:first-child {
+  margin-inline-start: 0;
 }
 /* selecting: the same row, dimmed and out of reach */
 .hbar.hoff {
