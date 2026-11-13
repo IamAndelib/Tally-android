@@ -15,6 +15,6 @@ Notes:
 - C is a new saved setting: `migrate()` must sanitise it, with a test (CLAUDE.md: every format change ships with a
   migration and a test). Week start (`settings.week`) and locales already handled by period code.
 - Scope fit: views only; nothing added to the one-tap entry path.
-- Status: in 1.4.4 (maintainer, 2026-11-01) with #37 (account colour in History) and account reordering (#33, first part only).
+- Status: built in 1.5.0 (maintainer, 2026-11-01) with #37 (account colour in History) and account reordering (#33, first part only).
 - 2026-11-13: the Days tab is no longer the last 7 days as bars: it shows one day as a pie, as Months shows a month
   (docs/decisions.md).

@@ -34,8 +34,6 @@ and versions follow [Semantic Versioning](https://semver.org/).
     and wait while entries are selected;
   - a recent search keeps the suggestion that was tapped, with its emblem; searches that found nothing are not kept;
     each can be removed with its ✕, and **Clear all** empties the list, both with an Undo;
-  - the people under Lent to / Borrowed from, and the payees under Paid to / Received from, are compact chips, each
-    with a ✕ that takes the name out of the suggestions (its entries keep it), with an Undo;
   - with every entry selected, the button reads **Clear selection**;
   - an entry edited so that it no longer fits the filters says "Saved · no longer in this list" and offers Undo.
 - **Archive an entry instead of deleting it.** An archived entry leaves History's list, search and suggestions, and
@@ -53,11 +51,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - **Charges** and **Extras** as kinds in History's Filters and in search, with their counts; search finds them by
   name and by words such as "fee" or "tip" in each language, and their month and day headings read "Charges" or
   "Extras" with the amount.
+- **Suggested names** in the forms: the people under Lent to / Borrowed from, and the payees under Paid to / Received
+  from, are compact chips, each with a ✕ that takes the name out of the suggestions (its entries keep it), with an
+  Undo.
 - **Summary rows open in place** to the newest 5 entries behind their amount, with **Show all** opening History on
   the same period and part.
 - **Charges and extras.** Each has its own calculator and a preview of what it adds up to:
-  - a **transfer charge** (an ATM or cash-out fee) on a transfer, on a loan payment and on a lend, and **Add a charge**
-    on spending, such as VAT or a service charge;
+  - a **transfer charge** (an ATM or cash-out fee) on a lend, and **Add a charge** on spending, such as VAT or a
+    service charge; the fee on a transfer and on a loan payment is now called a transfer charge too;
   - **charges** on a borrow (a fee and interest) and an **extra** on a lend (interest), and an extra on a payback (a
     tip), in a tonal card under the amount;
   - what is owed includes them: a lend's transfer charge and extra, a borrow's charges.
@@ -68,7 +69,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - Entries read in two lines, the same in History and Home: what it was and how much, then its category and
   account. A tap opens the entry in place (the time it was added, the balance left, a loan's progress, any note on a
-  loan or balance fix) with Edit and Delete inside.
+  loan or balance fix) with Edit and Delete inside (Edit opens a loan's own sheet).
 - **Charges count as spending.** A purchase's charge counts in its category, every other charge in a grey **Charges**
   part on Home's ring and in Summary. An extra you get on top is income. A charge or extra sits inside its entry
   instead of a row of its own, and searching counts entries the same way. Transfers, the money loans and lendings
@@ -76,12 +77,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - **Past fees now count.** Fees already recorded on transfers and loan payments count as spending, so earlier days and
   months show more spent. No balance changes.
 - A new notebook starts without the Fees category; an existing one keeps it.
-- An opened entry shows its parts instead of "Paid in all".
 - Paid more than you owed, or paid more than was owed to you? Tally asks: **Track as charge** or **Track as extra** on
   that payment, or a new loan or lending the other way. The income form no longer opens from here.
 - The questions that decide what happens to a notebook are stacked, full-width answers that say what each does: a backup
   folder that already holds a backup (Restore / Overwrite / Cancel), a backup that can't be read (Choose another folder
-  / Overwrite / Cancel), restoring a file (Restore / Choose another file / Cancel) and **Delete all data** (Save backup
+  / Overwrite / Cancel), restoring a file you picked (Cancel / Restore; Restore / Choose another file / Cancel is the auto backup's) and **Delete all data** (Save backup
   / Delete without a backup / Cancel). Overwrite and Delete ask once more before they act, where Cancel and Android's
   Back close everything.
 - One name per thing: **Account** on every form (not "Paid from" or "Into"), **Received** for money in (the entry,
@@ -105,7 +105,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
   buttons fit in every language on small phones; TalkBack still reads "2 selected".
 - An archived account comes back with **Unarchive** (was "Show again"), the same word as for entries; its drop slot
   reads "Drop here to unarchive".
-- An opened entry ends with Edit and Delete only (Edit opens a loan's own sheet).
+- The Summary draws no chart when nothing is spent: the total, the message and the button say it.
+- Net worth and You owe list the notebook's currency first.
+- A 1.5.0 backup restored in 1.4.4 keeps every balance. What 1.4.4 doesn't know is left out: the amounts on top of a
+  draw (so a lending reads lower there) and the links of charges (a purchase's charge becomes a plain expense).
+- History and Home's Year entries list stay quick with years of entries.
 - A dragged Home chip swaps places as soon as its own edge passes the middle of the next one.
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
 - Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
@@ -116,6 +120,16 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Home's ring shows category names whole or leaves them out: they are never cut with "…" or shrunk, and never overlap,
+  even with long names and many categories.
+- A sheet closes only when the tap began outside it, so dragging from a field's text to beyond the sheet's edge no
+  longer closes it.
+- A loan or lending reminder says "no due date" and "Due today" the same way everywhere, and on a locked screen reads
+  "A loan or lending reminder" without names or amounts.
+- Summary closes an opened row when the tab or the period changes.
+- With TalkBack, Select, archive, delete, Unarchive, Undo and a long press keep the focus on the next row or the
+  matching button instead of throwing it to the top of the page; an entry deleted or archived from its sheet no longer
+  comes back with its row opened.
 - A double tap on an answer in a dialog no longer also answers the question that answer opens next.
 - Android's screen reader reads a locked currency as one sentence ("Currency: USD. Locked: this account has entries").
 

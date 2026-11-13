@@ -23,7 +23,7 @@ Suivez l’argent que vous avez emprunté ou prêté : plusieurs montants par p
 Avoirs et Dettes.
 
 UN COUP D’ŒIL EN ARRIÈRE
-L’historique de n’importe quel jour, mois ou année, ou depuis le début, avec le solde de chaque compte après chaque
+L’historique de n’importe quel jour, période, mois ou année, ou depuis le début, avec le solde de chaque compte après chaque
 opération. Cherchez-y une opération, filtrez par compte, type, catégorie ou personne, et archivez celles que vous
 préférez ne plus voir. Touchez l’anneau pour voir vos dépenses par jour, semaine, mois ou année.
 

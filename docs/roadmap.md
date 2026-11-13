@@ -8,6 +8,12 @@
   globals, the saved data and the `Android` bridge, and JSDoc where the checker needs it. No `.ts` files, no build step,
   no change to what runs: the F-Droid recipe and reproducible builds stay as they are. Start: 232 problems in the
   default mode, about 2,800 in strict (2026-11-13); default mode first, strict file by file later. Its own plan.
+- **Also after 1.5.0** (not planned yet): History: an edit far down redraws every row above it (~250 ms at 2,900
+  rows); draw only what's in view · layout suite speed and sharding · test scaffolding in `harness.js` · fixed sleeps
+  · theme.js tests · one spending-rule helper for `dayGroups` · near-copies · file splits (`rows.js`, `addons.js`,
+  `settings.js`) · dead-code.js gaps · search's first keystroke (106–148 ms at 5–10k entries) · monthly reminders
+  missed on their day, back-dated lends reminded at once, and a JUnit test for `monthlyDate` · recent searches
+  filling several slots · Undo for an asset's value.
 - **1.6.0**, budgeting and security (later) · exit: maintainer-tested on a phone
   - Budgeting / planning: the Plan tab with repeating items and what's due, work in progress on
     `claude/plan-wip` (2 commits on top of 1.4.1; its Tally Dev APK: a985307, 2026-10-26). Covers #26 recurring and
@@ -21,5 +27,6 @@
   - **Format clash (P1 when merging):** plan-wip uses saved-data format v7 for `repeats`, but main already shipped
     v7 for payees (1.4.2+). Rebasing must renumber the Plan format (v9 or later (main's v8 = charges, 1.5.0)) and migrate
     from main's v7, with a test restoring a real 1.4.3 backup.
-  - Needs: CONTRIBUTING.md:164 and CLAUDE.md:50 ("no budgets") updated in that release.
+  - Needs: the "Budgets and statement import are left out on purpose" lines in CONTRIBUTING.md (Design principles) and
+    CLAUDE.md (Scope) updated in that release.
 - **Undecided:** #36 CSV import · #33 chart per account, hold-a-category total · #31 split payments (likely not planned)

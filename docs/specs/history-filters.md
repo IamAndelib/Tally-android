@@ -1,6 +1,6 @@
 # History: all time, a period chip and a Filters sheet
 
-Status: approved by the maintainer on 2026-11-05 from mocks on the real app. Search is now a mode of History ([search.md](search.md)) and adds three filters to it: words, payee and amount.
+Status: built in 1.5.0; approved by the maintainer on 2026-11-05 from mocks on the real app. Search is now a mode of History ([search.md](search.md)) and adds three filters to it: words, payee and amount.
 
 ## Why
 
@@ -192,4 +192,4 @@ Three more filters, set only from search mode ([search.md](search.md)); the Filt
 - Closing the sheet without Show (✕, Back, outside) drops its choices; nothing changes.
 - Clear all at the top goes back to the default view (all time, no filters); the sheet's Clear all clears only the
   sheet's choices.
-- Ships in 1.4.4 as item 12, before the remaining polish items.
+- Built in 1.5.0 as item 12, before the remaining polish items.

@@ -22,7 +22,7 @@ Teilzahlungen (mit einer Gebühr oder einem Extra obendrauf), Erinnerungen und A
 du in den Tabs Vermögen und Schulden.
 
 ZURÜCKBLICKEN
-Verlauf für jeden Tag, jeden Monat, jedes Jahr oder die gesamte Zeit, mit dem Stand jedes Kontos nach jedem Eintrag.
+Verlauf für jeden Tag, jeden Zeitraum, jeden Monat, jedes Jahr oder die gesamte Zeit, mit dem Stand jedes Kontos nach jedem Eintrag.
 Durchsuche ihn, filtere nach Konto, Art, Kategorie oder Person und archiviere Einträge, die du nicht mehr sehen willst.
 Tippe auf den Ring, um deine Ausgaben nach Tag, Woche, Monat oder Jahr zu sehen.
 

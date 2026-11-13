@@ -23,7 +23,7 @@ parciales (con un cargo, o un extra encima), recordatorios y préstamos dados po
 pestañas Activos y Pasivos.
 
 MIRA ATRÁS
-Historial de cualquier día, mes o año, o de todo el tiempo, con el saldo de cada cuenta después de cada movimiento.
+Historial de cualquier día, rango de fechas, mes o año, o de todo el tiempo, con el saldo de cada cuenta después de cada movimiento.
 Busca en él, filtra por cuenta, tipo, categoría o persona, y archiva los movimientos que prefieras no ver. Toca el
 gráfico para ver tus gastos por día, semana, mes o año.
 

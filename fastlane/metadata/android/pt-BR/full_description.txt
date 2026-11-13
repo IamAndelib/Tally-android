@@ -23,7 +23,7 @@ Acompanhe o dinheiro que você pegou emprestado ou emprestou: vários valores po
 Ativos e Passivos.
 
 OLHE PARA TRÁS
-Histórico de qualquer dia, mês ou ano, ou de todo o período, com o saldo de cada conta depois de cada lançamento. Busque
+Histórico de qualquer dia, intervalo de datas, mês ou ano, ou de todo o período, com o saldo de cada conta depois de cada lançamento. Busque
 nele, filtre por conta, tipo, categoria ou pessoa, e arquive os lançamentos que você prefere não ver. Toque no gráfico
 para ver seus gastos por dia, semana, mês ou ano.
 

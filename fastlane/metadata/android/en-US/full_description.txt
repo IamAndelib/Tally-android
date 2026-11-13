@@ -22,7 +22,7 @@ Keep track of money you borrowed or lent: several amounts per person, due dates,
 charge, or an extra on top), reminders and write-offs. See your net worth on the Assets and Liabilities tabs.
 
 LOOK BACK
-History for any day, month, year or all time, with each account's balance after every entry. Search it, filter by
+History for any day, date range, month, year or all time, with each account's balance after every entry. Search it, filter by
 account, kind, category or person, and archive entries you'd rather not see. Tap the donut for your spending by day,
 week, month or year.
 

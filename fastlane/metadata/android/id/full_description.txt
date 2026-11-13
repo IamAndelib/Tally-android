@@ -23,7 +23,7 @@ Catat uang yang kamu pinjam atau pinjamkan: beberapa jumlah per orang, jatuh tem
 biaya, atau tambahan di atasnya), pengingat, dan pinjaman yang diikhlaskan. Lihat kekayaan bersihmu di tab Aset dan Utang.
 
 LIHAT KE BELAKANG
-Riwayat untuk hari, bulan, atau tahun apa pun, atau sepanjang waktu, dengan saldo tiap akun setelah setiap transaksi.
+Riwayat untuk hari, rentang tanggal, bulan, atau tahun apa pun, atau sepanjang waktu, dengan saldo tiap akun setelah setiap transaksi.
 Cari di dalamnya, filter berdasarkan akun, jenis, kategori, atau orang, dan arsipkan transaksi yang tidak ingin kamu
 lihat lagi. Ketuk donatnya untuk melihat pengeluaranmu per hari, minggu, bulan, atau tahun.
 

@@ -1,6 +1,6 @@
 # Design round: History and search polish, dialogs, wording, Home, Summary, forms, charges
 
-Status: approved by the maintainer on 2026-11-06 after three rounds of mock-ups. The section "Changes after the
+Status: built in 1.5.0; approved by the maintainer on 2026-11-06 after three rounds of mock-ups. The section "Changes after the
 confirmation page" at the end wins over anything above it. Fees and interest become **charges** (see that section and
 part C); charges are built after parts A and B, with their own data-format update.
 

@@ -29,7 +29,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 | | | |
 |:-:|:-:|:-:|
 | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee, category and account |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week or month, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week, month or year, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
 | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Received"><br>**Received**: with who it came from |  |
 
 ## Features
@@ -173,7 +173,7 @@ content.
 
 | Permission | Why |
 | --- | --- |
-| Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on), and a notice if the daily backup fails |
+| Notifications | the evening nudge, the balance check and loan and lending reminders (only if you keep them on), and a notice if the daily backup fails |
 | Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
 | Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |

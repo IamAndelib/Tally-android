@@ -22,7 +22,7 @@ Aldığın ve verdiğin borçları takip et: kişi başına birden çok tutar, v
 ya da üstüne ekstrayla), hatırlatmalar ve vazgeçilen alacaklar. Net varlığını Varlıklar ve Borçlar sekmelerinde gör.
 
 GERİYE BAK
-Herhangi bir gün, ay, yıl ya da tüm zamanlar için geçmiş; her kayıttan sonra her hesabın bakiyesiyle. İçinde ara;
+Herhangi bir gün, tarih aralığı, ay, yıl ya da tüm zamanlar için geçmiş; her kayıttan sonra her hesabın bakiyesiyle. İçinde ara;
 hesaba, türe, kategoriye ya da kişiye göre filtrele ve görmek istemediğin kayıtları arşivle. Harcamalarını güne,
 haftaya, aya ya da yıla göre görmek için halkaya dokun.
 
