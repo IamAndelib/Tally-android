@@ -3,6 +3,11 @@
 - **1.4.4** · the calculator closes when another field takes the focus (a fix release, 2026-11-06)
 - **1.5.0** · fixes, Year view, search, account colours and order, History's filters and archive, charges (data version
   8), polish · docs/plans/2026-11-01-release-1.5.0.md
+- **Next, after 1.5.0** · type checking as a guardrail (maintainer, 2026-11-13: option 1 of the assessment): TypeScript's
+  checker over the existing JavaScript (`checkJs`, `tsc --noEmit` in lint and CI), one declaration file for the shared
+  globals, the saved data and the `Android` bridge, and JSDoc where the checker needs it. No `.ts` files, no build step,
+  no change to what runs: the F-Droid recipe and reproducible builds stay as they are. Start: 232 problems in the
+  default mode, about 2,800 in strict (2026-11-13); default mode first, strict file by file later. Its own plan.
 - **1.6.0**, budgeting and security (later) · exit: maintainer-tested on a phone
   - Budgeting / planning: the Plan tab with repeating items and what's due, work in progress on
     `claude/plan-wip` (2 commits on top of 1.4.1; its Tally Dev APK: a985307, 2026-10-26). Covers #26 recurring and
