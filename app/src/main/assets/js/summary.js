@@ -335,8 +335,7 @@ function drawSm() {
   const split = catSplit(b.list),
     /* nothing spent in all that the chart shows: no chart (the total, the message and the button say it) */
     none = ONE ? !b.v : !max;
-  if (none);
-  else if (SM.mode === "w")
+  if (!none && SM.mode === "w")
     h +=
       '<div class="smchart smrows">' +
       bars
@@ -363,7 +362,7 @@ function drawSm() {
         })
         .join("") +
       "</div>";
-  else h += '<div class="smchart">' + smPie(split, b.v) + "</div>";
+  else if (!none) h += '<div class="smchart">' + smPie(split, b.v) + "</div>";
   /* details for the chosen day, week or month */
   /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
   const len = x => daysBetween(x.s, x.e) + 1,
