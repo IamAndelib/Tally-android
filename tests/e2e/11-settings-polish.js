@@ -248,6 +248,34 @@ const ok = (c, m) => {
   );
   await page.screenshot({ path: OUT + "/history-aligned.png" });
 
+  // ---- a picker over a scrolled Settings: the pinned block stays at the top (html.lock only; body.lock made body a scroll container)
+  {
+    await page.evaluate(() => {
+      V.screen = "settings";
+      render();
+    });
+    await settle();
+    await page.setViewportSize({ width: 393, height: 500 });
+    await settle();
+    await page.evaluate(() => scrollTo({ top: 400, behavior: "instant" }));
+    await settle();
+    const before = await page.evaluate(() => ({ y: scrollY, has: !!$("#app .hpin") }));
+    const pb = await page.evaluate(() => {
+      const r = $('[data-act="pick-maincur"]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await page.mouse.click(pb.x, pb.y); // a tap where it is: a locator click would scroll first
+    await settle();
+    const r = await page.evaluate(() => ({
+      y: scrollY,
+      top: Math.round($("#app .hpin").getBoundingClientRect().top),
+    }));
+    ok(before.has && before.y > 100, "Settings scrolled down before the picker: " + JSON.stringify(before));
+    ok(r.top === 0 && r.y === before.y, "the pinned block stays at the top behind the picker: " + JSON.stringify(r));
+    await page.keyboard.press("Escape");
+    await page.setViewportSize({ width: 393, height: 852 });
+  }
+
   ok(errors.length === 0, "no page errors overall " + JSON.stringify(errors));
   ok(
     !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)),

@@ -868,7 +868,7 @@ document.addEventListener("keydown", e => {
     }
   }
 });
-/* while a sheet or dialog is up, the page behind it doesn't scroll */
+/* while a sheet or dialog is up, the page behind it doesn't scroll (CSS locks only <html>: see html.lock) */
 ["#sheet", "#sheet2", "#pop"].forEach(id =>
   new MutationObserver(() => {
     const on = !!($("#sheet").innerHTML || $("#sheet2").innerHTML || $("#pop").innerHTML);

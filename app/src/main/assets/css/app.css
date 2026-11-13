@@ -3225,8 +3225,8 @@ body.hasnav .snack {
   place-items: center;
   padding: 16px;
 }
-html.lock,
-body.lock {
+/* the root only: with overflow on <body> too it becomes a scroll container and the sticky blocks lose their place */
+html.lock {
   overflow: hidden;
 }
 .dialog {

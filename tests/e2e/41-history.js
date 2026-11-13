@@ -10,8 +10,8 @@ const ok = (c, m) => {
 (async () => {
   const browser = await chromium.launch(launchOptions);
   const errors = [];
-  const open = async (w = 393) => {
-    const ctx = await browser.newContext({ viewport: { width: w, height: 852 }, locale: "en-US" });
+  const open = async (w = 393, h = 852) => {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, locale: "en-US" });
     await ctx.addInitScript(() => {
       window.Android = { getColors: () => null, setBars() {} };
     });
@@ -2442,6 +2442,73 @@ const ok = (c, m) => {
       (await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingTop)) === "auto",
       "Home keeps no room at the top for a pinned block"
     );
+    await ctx.close();
+  }
+
+  // ---- a sheet over a scrolled History: the pinned block stays, the page stays still (html.lock only)
+  for (const vp of [
+    { width: 393, height: 852, name: "phone" },
+    { width: 852, height: 393, name: "sideways" },
+    { width: 1000, height: 800, name: "two panes" },
+  ]) {
+    const { ctx, page } = await open(vp.width, vp.height);
+    await page.evaluate(() => {
+      for (let i = 0; i < 120; i++)
+        S.txns.push({
+          id: "k" + i,
+          ts: 10 + i,
+          date: addDays(today(), -i),
+          type: "expense",
+          amount: 1,
+          account: "a",
+          cat: "food",
+        });
+      save();
+      V.screen = "history";
+      render();
+    });
+    await page.waitForTimeout(200);
+    await page.evaluate(() => scrollTo({ top: 1500, behavior: "instant" }));
+    await page.waitForTimeout(200);
+    const y0 = await page.evaluate(() => scrollY);
+    const fb = await page.evaluate(() => {
+      const r = $('#app [data-act="hf-open"]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    // a real tap where the button is (a locator click would scroll first); sideways only the bar is pinned, the button scrolls away
+    if (fb.y > 0) await page.mouse.click(fb.x, fb.y);
+    else await page.evaluate(() => $('#app [data-act="hf-open"]').click());
+    await page.waitForTimeout(300);
+    const m = () =>
+      page.evaluate(() => ({
+        y: scrollY,
+        pin: Math.round($("#app .hpin").getBoundingClientRect().top),
+        bar: Math.round($("#app .hbar, #app .hpin").getBoundingClientRect().top),
+        mon: [...document.querySelectorAll("#app .hsec.pin > .hmon")].map(e =>
+          Math.round(e.getBoundingClientRect().top)
+        ),
+      }));
+    const a = await m();
+    ok(
+      await page.evaluate(() => !!$("#sheet .p") && document.documentElement.classList.contains("lock")),
+      vp.name + ": the Filters sheet is open"
+    );
+    ok(y0 > 500, vp.name + ": History scrolled well down: " + y0);
+    ok(
+      a.y === y0 && a.bar === 0 && a.mon.some(t => t >= 0 && t < 200),
+      vp.name + ": block and a month heading stay behind the Filters sheet: " + JSON.stringify(a)
+    );
+    await page.mouse.move(vp.width / 2, 40);
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(250);
+    ok(
+      (await m()).y === y0,
+      vp.name + ": a wheel scroll while the sheet is up leaves the page still " + JSON.stringify(await m())
+    );
+    await page.mouse.move(vp.width - 5, vp.height / 2); // on the scrim
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(250);
+    ok((await m()).y === y0, vp.name + ": …also on the scrim");
     await ctx.close();
   }
 
