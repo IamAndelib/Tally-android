@@ -1648,6 +1648,10 @@ input {
   background-clip: content-box;
   color: var(--on-secondary-container);
 }
+/* the row is inset to keep its line inside the card; the remove button keeps its place near the card's edge */
+.aorow .aox {
+  margin-inline-end: -12px;
+}
 .aocalc .ic,
 .aox .ic {
   width: 22px;
