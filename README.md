@@ -69,13 +69,16 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 - **Home and History** for any day, date range, month or year. History starts on all time; narrow it with the period
   chip and the Filters sheet: account, kind of money movement, category, person, or the accounts a transfer went
   between, each option showing how many entries it leaves. Entries are two lines with the account marked by a dot of
-  its colour; a charge or extra sits inside its entry. Months and days carry what was received over what was spent. Tap an
-  entry to open it in place; hold one to select several and delete them together. Deleting asks whether the account's
-  balance changes or stays as it is.
+  its colour; a charge or extra sits inside its entry. Months and days carry what was received over what was spent, and
+  the bar, Filters and the month you're in stay at the top as you scroll. Tap an entry to open it in place; hold one to
+  select several and delete or archive them together.
+- **Archive instead of deleting:** an archived entry leaves History's list and changes nothing else; every balance,
+  loan and total still counts it. The Archived button beside Filters lists them, each with Unarchive and Delete.
 - **Search** inside History, from any tab: type a word, a number or a month and pick a suggestion (who was paid, who
   paid you, a category, an account, a person, a kind, a period or an amount) to narrow the list, each showing how many
   entries it leaves. Matches are marked, a typo offers the word it was close to, and your last searches wait under the
-  empty field. They stay on this phone only, never in backups.
+  empty field. They stay on this phone only, never in backups. Archived entries are left out, unless **Settings →
+  History → Archived entries in search** is on.
 - **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month as a pie of its categories, or a year's 12
   months, compared with the period before; the bars show whole amounts.
 

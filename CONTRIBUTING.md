@@ -117,6 +117,11 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
   its draw, owed back). What a draw owes on top (a lend's extra, a borrow's charges) is `onTop` on the draw: it moves
   no money. `isSpend()` counts every `expense`, charges included, and `spendCat()` says where: the purchase's own
   category, else the grey `CHARGES` part (not a category). Data version 8; see docs/specs/charges.md.
+- An entry may carry `archived: true` (data version 8; `archiveEntries()` in `js/state.js`): it is left out of
+  History's lists, search and suggestions, and nothing else changes, so every balance, loan figure and total still
+  counts it. `migrate()` keeps the mark only when it is exactly `true`, and an add-on always takes its entry's mark.
+  `settings.searchArch` (Settings → History → Archived entries in search) lets search list archived entries; it is
+  stored only when exactly `true`. See docs/specs/history-archive.md.
 - A **loan** is a person tab, `{id, kind: "borrow" | "lend", person, account, date, note, status}`. Its amounts, what's
   left and its status are always derived from its entries by `loanInfo()`, never stored. That covers what each draw owes
   (with its transfer charge and `onTop`), how payments are shared out, `topPaid` (the part of a payment that covered an

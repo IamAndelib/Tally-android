@@ -37,11 +37,11 @@ block; tests: 41, 44, 22.
 warning line and Delete / Archive instead / Cancel; "Keep the current balance" and `deleteEntries(ids, keep)`'s keep
 path go), `js/history.js` / `js/search.js` (archived entries out of lists, search and suggestions), keys; tests: a new
 suite 46 (data, migrate, totals unchanged, linked add-ons), 41.
-- [ ] Failing checks: archiving a normal entry, a loan payback and two selected changes no balance, loan figure or total;
+- [x] Failing checks: archiving a normal entry, a loan payback and two selected changes no balance, loan figure or total;
   the entry and its charge leave History and search; the snackbar "Archived" with Undo restores it; the warning lines
   ("Deleting changes the account balance." / "… and the loan." / "… balances."); v8 data with junk in `archived` is
   sanitised; a backup round-trips the mark.
-- [ ] Implement, suites, lint. Commit.
+- [x] Implement, suites, lint. Commit.
 
 ### Task 3: The Archived screen
 **Files:** `js/history.js` / `js/screens.js` (the icon left of search while anything is archived; the screen titled
@@ -69,5 +69,5 @@ Delete), `css/app.css`, keys; tests: 46, 24, 22.
 - [x] Implement, suites, 22, lint. Commit.
 
 ### Task 4: Docs
-README (History, Settings), CONTRIBUTING (data model: `archived`, the search setting), `docs/design.md`, CHANGELOG, the spec's status, the release
-plan's item 11 e ticked.
+- [x] README (History, Settings), CONTRIBUTING (data model: `archived`, the search setting), `docs/design.md`,
+  CHANGELOG, the spec's status, the release plan's item 11 e ticked, `docs/decisions.md`. Commit.

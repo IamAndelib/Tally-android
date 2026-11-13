@@ -56,8 +56,9 @@ reach, and the Clear all at the top is then left out (one is enough).
 Tally never files an entry under a category by itself, never changes a balance silently, and never moves money
 without saying so. Where a choice changes money, the person is asked, in words that say what each answer does.
 *Example:* when someone pays back more than they owed, Tally asks what the extra is: a charge or an extra on that
-payment, or a new loan or lending the other way (`overpay()` in `loans.js`). Deleting an entry asks whether the
-account's balance changes ("Change the account balance") or stays ("Keep the current balance").
+payment, or a new loan or lending the other way (`overpay()` in `loans.js`). Deleting an entry says what Delete
+changes ("Deleting changes the account balance.") and offers Archive instead, which hides the entry from History and
+changes no balance, loan or total.
 
 **9. Every change can be undone, and nothing is lost.**
 Every change to entries goes through Undo. Accounts with entries are archived, never deleted. Unreadable saved data is
@@ -205,8 +206,12 @@ links that would need the internet.
   Settings keeps its bar and the heading of the section in view the same way, the line showing only while a heading
   is held there; a control the focus moves to lands under them.
 - **Hold to select** several rows; while selecting, the period and Filters row stays where it is, dimmed and not
-  tappable, so nothing moves; the app bar becomes "N selected", and with every row selected the app bar's select-all
-  icon button becomes a deselect icon labelled "Clear selection".
+  tappable, so nothing moves; the app bar shows only the count (TalkBack reads "2 selected"), with select all, Archive
+  selected and Delete selected beside it, and with every row selected the select-all icon button becomes a deselect
+  icon labelled "Clear selection". An archived match that search lists is faded then, and can't be selected.
+- **Archived entries** leave History's list and still count in every total. While any exist, an icon-only Archived
+  button (TalkBack: "Archived entries") ends the Filters line, after Clear all; it is left out in search. The Archived
+  screen shows the rows and their headings without totals, and an opened row there offers Unarchive and Delete.
 - **Hold and drag to reorder** Assets, Liabilities and Home's chips; drag onto another section to archive, clear or
   reopen. A dragged item ticks once per switch of place.
 - **Long lists draw in chunks** and nothing in how they look changes.
@@ -228,10 +233,10 @@ links that would need the internet.
   backup folder that already holds a backup, a backup that can't be read, restoring a file, Delete all data, Delete
   an entry), the answers are stacked full width and each says its consequence by its colour: green keeps data, red
   loses it, tonal is a side road, outlined is the way out. The same stack is used for a two-answer question that sits
-  beside those (deleting a loan's entry offers only Delete and Cancel). Where an answer is the last step before data
+  beside those (deleting an archived entry offers only Delete and Cancel). Where an answer is the last step before data
   is lost (restoring over the current data, Delete all data), it asks again in a second step, where Cancel and
-  Android's Back both close the whole dialog. Deleting an entry does not: its red answers act at once and the
-  snackbar's Undo is the way back.
+  Android's Back both close the whole dialog. Deleting an entry does not: Delete and Archive instead act at once and
+  the snackbar's Undo is the way back.
 - **Pickers** (date, time, period, currency, emblem) share one look: a tabbed or gridded body and "Today" / "Cancel" at
   the foot; picking a value is the confirmation where that's unambiguous (date, month, year), "OK" only on a wheel.
 

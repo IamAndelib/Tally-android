@@ -36,9 +36,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
     with a ✕ that takes the name out of the suggestions (its entries keep it), with an Undo;
   - with every entry selected, the button reads **Clear selection**;
   - an entry edited so that it no longer fits the filters says "Saved · no longer in this list" and offers Undo.
-- **Delete asks whether the balance changes or stays:** "Delete and update the balance" or "Delete, keep the balance"
-  (the account's opening balance absorbs the amount, no extra entry), asked once for a whole selection. Loan and
-  lending entries are only offered the first answer, because a loan's amounts come from its entries.
+- **Archive an entry instead of deleting it.** An archived entry leaves History's list, search and suggestions, and
+  nothing else changes: every balance, loan, total, Home, the Summary, the widget, the morning check and the CSV export
+  still count it. Deleting asks "Delete this entry?" with one line on what Delete changes, then Delete, **Archive
+  instead** or Cancel, once for a whole selection; "Archived" then offers an Undo. Selecting adds **Archive selected**
+  beside Delete selected. A charge or extra is archived with its entry.
+- **The Archived screen**, from an archive button at the end of History's Filters line while anything is archived:
+  the archived entries under their month and day headings, without totals; an opened one offers **Unarchive** and
+  Delete.
+- **Settings → History → Archived entries in search** (off at first): search also lists archived entries, marked
+  "Archived", each with Unarchive and Delete. While selecting they are faded and can't be picked.
+- History's bar, its Filters line and the month in view stay at the top while the entries scroll, the next month's
+  heading taking over; Settings keeps its bar and the section in view the same way.
 - **Charges and extras.** Each has its own calculator and a preview of what it adds up to:
   - a **transfer charge** (an ATM or cash-out fee) on a transfer, on a loan payment and on a lend, and **Add a charge**
     on spending, such as VAT or a service charge;
@@ -84,7 +93,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
   "Change emblem" text); amount fields start with the currency's own decimals ("4,167.50"); negative balances use a
   true minus; an empty notebook's History keeps only Search until the first entry, and the welcome screen only Settings.
 - While entries are selected, the period and Filters row stays in place, dimmed and not tappable, so nothing jumps; the
-  filter chips continue on the Filters line, with Clear all last.
+  filter chips continue on the Filters line, with Clear all last. The selection bar shows only the count, so its
+  buttons fit in every language on small phones; TalkBack still reads "2 selected".
+- An archived account comes back with **Unarchive** (was "Show again"), the same word as for entries; its drop slot
+  reads "Drop here to unarchive".
 - An opened entry ends with Edit and Delete only (Edit opens a loan's own sheet).
 - A dragged Home chip swaps places as soon as its own edge passes the middle of the next one.
 - The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
