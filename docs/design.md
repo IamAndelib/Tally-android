@@ -156,8 +156,8 @@ links that would need the internet.
 - **Icons are vertically centred** with the text they belong to, whatever the number of lines beside them (Home's
   chips: icon on the left in the middle, the name and balance together beside it).
 - **One icon, one meaning.** ⇄ is a transfer, the loan emblem is a loan, the clock is "Added at", the calculator
-  glyph opens the calculator, the outlined checklist is "Select", the archive box is "archived" (the Archive action, the Archived button and the
-  "Archived" mark on a search match). An icon never stands for two things.
+  glyph opens the calculator, the outlined checklist is "Select", the archive box is "archived" (the Archive action,
+  the Archived button and the "Archived" mark on a search match). An icon never stands for two things.
 - **Icon-only buttons have a label for TalkBack** (`aria-label`) and a 48 dp target.
 - **Emoji only where it is content**, such as the welcome notebook illustration and emblems a person picks.
 
