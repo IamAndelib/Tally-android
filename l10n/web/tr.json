@@ -816,7 +816,13 @@
       "xfer": "Transferler",
       "lend": "Alacaklar",
       "borrow": "Borçlar",
-      "fix": "Bakiye düzeltmeleri"
+      "fix": "Bakiye düzeltmeleri",
+      "charges": "Masraflar",
+      "extras": "Ekstralar"
+    },
+    "kindWords": {
+      "charges": "masraf, ücret, komisyon",
+      "extras": "bahşiş, faiz, ekstra"
     },
     "fromAcc": "Nereden: {{account}}",
     "toAcc": "Nereye: {{account}}",

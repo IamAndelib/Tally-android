@@ -804,7 +804,13 @@
       "xfer": "Transfer",
       "lend": "Piutang",
       "borrow": "Utang",
-      "fix": "Koreksi saldo"
+      "fix": "Koreksi saldo",
+      "charges": "Biaya",
+      "extras": "Tambahan"
+    },
+    "kindWords": {
+      "charges": "ongkos, admin, komisi",
+      "extras": "tip, bunga"
     },
     "fromAcc": "Dari {{account}}",
     "toAcc": "Ke {{account}}",

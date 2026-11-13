@@ -902,6 +902,16 @@ function inspect() {
       "history-borrowed-charges",
       ev(() => openHistory({ kind: "borrow" }))
     );
+    /* the Charges and Extras kinds: their headings in words, and the Filters sheet with both after the other kinds */
+    await shot(
+      "history-charges",
+      ev(() => openHistory({ kind: "charges" }))
+    );
+    await shot(
+      "history-extras",
+      ev(() => openHistory({ kind: "extras" }))
+    );
+    await shot("history-filters-charges", sheetFor({ kind: "charges" }));
     await page.evaluate(() => {
       S.txns = S.txns.filter(t => !/^c9/.test(t.id));
       S.loans = S.loans.filter(l => l.id !== "L9");

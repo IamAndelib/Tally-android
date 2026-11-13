@@ -22,6 +22,32 @@ const HIST_KINDS = [
   ["borrow", t => t.type === "loan"],
   ["fix", t => t.type === "adjust"],
 ];
+/* Charges and Extras, offered after them: not kinds of movement but what an entry carries (docs/specs/charges.md), so an
+   entry is in its own kind and in either or both of these. Charges: a charge paid with it (a purchase's, a transfer's
+   or a loan payment's, a lending payment's older paid fee), a lend's transfer charge, a borrow's charges (listed while
+   unpaid too) or a payment covering them; Extras: a tip on a payback, a lend's extra or a payment covering one. With an
+   account filter a charge or tip is carried only into the view of the account it is paid from or into, as on Spent
+   and Received (histCarries). Worked out from the entries and loanParts(), never stored; the id goes in HF.kind like
+   any kind's. */
+const HIST_MORE = [
+  [
+    "charges",
+    (t, f, skip) => histAddOn(t, ["expense", "loan"], f, skip) || histDraw(t, "borrow") || histCarry(t, "out"),
+  ],
+  ["extras", (t, f, skip) => histAddOn(t, ["income"], f, skip) || histDraw(t, "lend") || histCarry(t, "in")],
+];
+const histAddOn = (t, types, f, skip) => {
+  const a = addOnOf(t);
+  return !!a && types.includes(a.type) && (skip === "acc" || !f.acc || a.account === f.acc);
+};
+/* a draw of a loan of this kind owing an amount on top (a borrow's charges, a lend's extra) */
+const histDraw = (t, kind) => t.type === "loan" && !!t.principal && t.onTop > 0 && (loan(t.loan) || {}).kind === kind;
+/* is entry t in kind k: its own kind, Spent or Received carrying such money, or Charges or Extras */
+function histIs(t, k, f = HF, skip = "") {
+  const more = HIST_MORE.find(m => m[0] === k);
+  if (more) return more[1](t, f, skip);
+  return histKind(t) === k || ((k === "out" || k === "in") && histCarries(t, k, f, skip));
+}
 const histHost = t => (t.feeOf ? entry(t.feeOf) || null : null);
 function histKind(t) {
   const host = histHost(t);
@@ -38,18 +64,17 @@ const srTermsOf = q => (HQ[0] === q ? HQ[1] : ((HQ = [q, srTerms(q)]), HQ[1]));
    ids, worked out once per loanParts(). With an account filter (f.acc, unless skipped), a charge is carried only into
    the view of the account that paid it: a transfer's From side (an add-on matches an account on its own: histMatch). */
 let HCARRY = null;
-function histCarries(t, kind, f, skip) {
+/* whether a worked-out part of entry t counts as spending ("out") or received ("in") */
+function histCarry(t, kind) {
   const parts = loanParts();
   if (!HCARRY || HCARRY.parts !== parts) {
     HCARRY = { parts, out: new Set(), in: new Set() };
     parts.forEach(p => HCARRY[p.as === "spend" ? "out" : "in"].add(p.of));
   }
-  const a = addOnOf(t);
-  return (
-    (!!a && a.type === (kind === "out" ? "expense" : "income") && (skip === "acc" || !f.acc || a.account === f.acc)) ||
-    HCARRY[kind].has(t.id)
-  );
+  return HCARRY[kind].has(t.id);
 }
+const histCarries = (t, kind, f, skip) =>
+  histAddOn(t, [kind === "out" ? "expense" : "income"], f, skip) || histCarry(t, kind);
 /* The draws a worked-out part is dated on when that isn't its payment's day (credit covering a later draw's extra or
    charges: loanParts()'s at), each with the payments whose parts they are: whatever keeps such a payment keeps that
    draw too, so the day the part counts on is drawn, with its heading. Worked out once per loanParts(). */
@@ -74,13 +99,7 @@ function histMatch(t, f = HF, skip = "") {
 }
 function histOwn(t, f, skip) {
   if (skip !== "acc" && f.acc && t.account !== f.acc && t.to !== f.acc) return false;
-  if (
-    skip !== "kind" &&
-    f.kind &&
-    histKind(t) !== f.kind &&
-    !((f.kind === "out" || f.kind === "in") && histCarries(t, f.kind, f, skip))
-  )
-    return false;
+  if (skip !== "kind" && f.kind && !histIs(t, f.kind, f, skip)) return false;
   if (f.q && !srEntryHit(t, srTermsOf(f.q), false)) return false;
   if (f.pay && !srPayHit(t, f.pay)) return false;
   if (f.amt && !srAmtHit(t, f.amt)) return false;
@@ -117,8 +136,9 @@ const selRows = histRows;
    received, and on Lent both back (with its payback) and in words ("Extras"); a lend's transfer charge is lent money.
    With span (the heading's first and last day), the parts of loans worked out (loanParts()) of those days whose entry
    the list's filters keep (histLoanParts()) count too: in "spent" and "received", or on Lent and Borrowed in words (an
-   extra paid back in "extras", charges paid back or a written-off transfer charge in "charges"). A phrase whose
-   amount is 0 is left out. */
+   extra paid back in "extras", charges paid back or a written-off transfer charge in "charges"). On Charges and on
+   Extras the one phrase is in words too: the charges counted as spending (a purchase's in its category included), or
+   the extras counted as received; nothing else the entries move. A phrase whose amount is 0 is left out. */
 const HIST_TONE = {
   received: "in",
   gotBack: "in",
@@ -139,9 +159,11 @@ function histLines(list, kind, span) {
     const m = sums[key] || (sums[key] = {});
     m[cur] = rnd((m[cur] || 0) + v);
   };
-  const words = kind === "xfer" || kind === "lend" || kind === "borrow";
+  const words = kind === "xfer" || kind === "lend" || kind === "borrow",
+    only = kind === "charges" ? ["expense", "spend"] : kind === "extras" ? ["income", "income"] : null;
   list.forEach(t => {
     const cur = (acc(t.account) || {}).currency || S.settings.cur;
+    if (only) return t.feeOf && t.type === only[0] ? add(kind, cur, t.amount) : 0;
     if (t.feeOf && t.type === "expense")
       return words ? add("charges", cur, t.amount) : !kind || kind === "out" ? add("spent", cur, t.amount) : 0;
     if (t.feeOf && t.type === "income" && kind === "lend") {
@@ -162,7 +184,9 @@ function histLines(list, kind, span) {
       p =>
         p.date >= span[0] &&
         p.date <= span[1] &&
-        add(p.as === "spend" ? (words ? "charges" : "spent") : words ? "extras" : "received", p.cur, p.amount)
+        (only
+          ? p.as === only[1] && add(kind, p.cur, p.amount)
+          : add(p.as === "spend" ? (words ? "charges" : "spent") : words ? "extras" : "received", p.cur, p.amount))
     );
   const order = {
     "": ["received", "spent"],
@@ -172,6 +196,8 @@ function histLines(list, kind, span) {
     lend: ["gotBack", "lent", "extras", "charges"],
     borrow: ["borrowed", "paidBack", "charges"],
     fix: ["added", "takenOff"],
+    charges: ["charges"],
+    extras: ["extras"],
   }[kind || ""];
   const lines = [];
   order.forEach(key =>
@@ -376,6 +402,10 @@ function hfBody() {
   h += hfChip("hfs-kind", "", !d.kind, hfName(T("history.all")));
   HIST_KINDS.forEach(([k]) => {
     if (!S.txns.some(t => histKind(t) === k)) return; // never had one
+    h += hfChip("hfs-kind", k, d.kind === k, hfName(T("history.kind." + k)), hfCount(kindOf(k)));
+  });
+  HIST_MORE.forEach(([k, has]) => {
+    if (!S.txns.some(t => has(t, histBlank(), ""))) return;
     h += hfChip("hfs-kind", k, d.kind === k, hfName(T("history.kind." + k)), hfCount(kindOf(k)));
   });
   h += "</div>";
@@ -752,8 +782,8 @@ function histParts() {
   }
   if (idle) return { head, body: recentView(), idle: true }; // search mode, nothing asked yet: the recent searches
   const sug = V.find && !V.sel && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
-  /* a Period suggestion ("may 2025") is the answer: nothing is said about the words finding no entries */
-  if (!nRows && sug && SUGS.some(s => s.g === "period")) return { head, body: sug };
+  /* a suggestion ("may 2025", "Charges" for "fee") is the answer: nothing is said about the words finding no entries */
+  if (!nRows && sug) return { head, body: sug };
   if (!nRows)
     return {
       head,

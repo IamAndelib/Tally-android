@@ -816,7 +816,13 @@
       "xfer": "Transfers",
       "lend": "Lent",
       "borrow": "Borrowed",
-      "fix": "Balance fixes"
+      "fix": "Balance fixes",
+      "charges": "Charges",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "fee, fees, charge",
+      "extras": "tip, tips, interest"
     },
     "fromAcc": "From {{account}}",
     "toAcc": "To {{account}}",

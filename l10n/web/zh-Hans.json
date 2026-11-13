@@ -804,7 +804,13 @@
       "xfer": "转账",
       "lend": "借出",
       "borrow": "借入",
-      "fix": "余额校正"
+      "fix": "余额校正",
+      "charges": "费用",
+      "extras": "额外款"
+    },
+    "kindWords": {
+      "charges": "手续费, 服务费, 佣金",
+      "extras": "小费, 利息"
     },
     "fromAcc": "转出：{{account}}",
     "toAcc": "转入：{{account}}",

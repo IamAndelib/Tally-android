@@ -828,7 +828,13 @@
       "xfer": "Transferências",
       "lend": "Empréstimos",
       "borrow": "Dívidas",
-      "fix": "Ajustes de saldo"
+      "fix": "Ajustes de saldo",
+      "charges": "Taxas",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "taxa, tarifa, tarifas, comissão",
+      "extras": "gorjeta, gorjetas, juros"
     },
     "fromAcc": "De {{account}}",
     "toAcc": "Para {{account}}",

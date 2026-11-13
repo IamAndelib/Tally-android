@@ -56,7 +56,7 @@ never drops it. A month's or a kind's name matches from three letters (the whole
 | Category | the category's name on screen | the category | X ✕ |
 | Account | the account's name | the account | ● X ✕ |
 | Person | a loan's or lending's person ("Lent to", "Borrowed from", or "Person") | the person | X ✕ |
-| Kind | the kind's name (Spent, Transfers, …) | the kind | X ✕ |
+| Kind | the kind's name (Spent, Transfers, …); Charges and Extras also by other words (`history.kindWords`: "fee, fees, charge", "tip, tips, interest" in English), matched like the names | the kind | X ✕ |
 | Period | a month's name (full or short), or a year | that month (each year with entries) or year | period chip |
 | Amount | a number; `>50`, `<50` give only that one | the amount, more than, or less than | `$50.00 to $50.99` ✕, … |
 
@@ -78,6 +78,7 @@ never drops it. A month's or a kind's name matches from three letters (the whole
   word a few typos away finds entries (one typo from five letters, two from nine; a letter changed, missing, extra or
   two neighbours swapped), a button "Search “coffee” · 19 entries" that puts that word in the place of the
   typed one (never swapped in by itself), then Clear all. In the middle of the window, like History's. No hint line.
+  Only when nothing matched at all: under a suggestion (a period, or Charges for "fee") there is no such message.
 - TalkBack hears the count of entries once typing pauses (History's hidden status, announced at most once per pause).
 
 ## Chips and the Filters sheet

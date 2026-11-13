@@ -828,7 +828,13 @@
       "xfer": "Virements",
       "lend": "Prêts",
       "borrow": "Emprunts",
-      "fix": "Corrections de solde"
+      "fix": "Corrections de solde",
+      "charges": "Frais",
+      "extras": "Suppléments"
+    },
+    "kindWords": {
+      "charges": "commission, commissions, tarif",
+      "extras": "pourboire, pourboires, intérêt, intérêts, supplément"
     },
     "fromAcc": "De {{account}}",
     "toAcc": "Vers {{account}}",

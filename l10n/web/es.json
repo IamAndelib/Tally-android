@@ -828,7 +828,13 @@
       "xfer": "Transferencias",
       "lend": "Préstamos",
       "borrow": "Deudas",
-      "fix": "Ajustes de saldo"
+      "fix": "Ajustes de saldo",
+      "charges": "Cargos",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "cargo, comisión, comisiones, tarifa",
+      "extras": "propina, propinas, interés, intereses"
     },
     "fromAcc": "Desde {{account}}",
     "toAcc": "Hacia {{account}}",

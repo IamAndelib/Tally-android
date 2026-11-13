@@ -816,7 +816,13 @@
       "xfer": "Umbuchungen",
       "lend": "Verliehen",
       "borrow": "Geliehen",
-      "fix": "Korrekturen"
+      "fix": "Korrekturen",
+      "charges": "Gebühren",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "Gebühr, Kosten, Provision",
+      "extras": "Trinkgeld, Zinsen, Zins"
     },
     "fromAcc": "Von {{account}}",
     "toAcc": "Nach {{account}}",

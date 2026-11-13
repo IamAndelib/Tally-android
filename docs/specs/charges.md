@@ -675,6 +675,7 @@ previews on the payment card; the loan sheet's lines; the CSV's "lend-extra" and
 - Interest rates, schedules or interest worked out by Tally: a charge or extra is typed.
 - A second add-on of the same kind on one entry, or a charge on money received, a balance fix or an asset.
 - Moving the built-in Fees category's plain entries anywhere: they stay in Fees.
-- A "Charges" or "Extras" filter or suggestion in History: they are found through their entries.
+- A "Charges" or "Extras" filter or suggestion in History: they are found through their entries. (Added later, in
+  the 1.5.0 preview polish: docs/specs/history-filters.md.)
 - Day headings stay as they are: loan paybacks are not income, so there is no "got back" line on a day.
 - Changing loans and lendings recorded before this version.

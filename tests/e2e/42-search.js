@@ -2399,6 +2399,163 @@ const ok = (c, m) => {
     );
     await c8.close();
   }
+  // ---- part 9: Charges and Extras as kind suggestions (docs/plans/2026-11-13-preview-polish.md, item 4): found by
+  // their names and by other words ("fee", "tip"), with a grey emblem; "Nothing matches" only when nothing did
+  {
+    const J9 = JSON.stringify;
+    const open9 = async locale => {
+      const c = await browser.newContext({ viewport: { width: 393, height: 852 }, locale });
+      await c.addInitScript(locale => {
+        const ui = locale.slice(0, 2);
+        window.Android = { getLocale: () => JSON.stringify({ ui, fmt: locale }), getColors: () => null, setBars() {} };
+      }, locale);
+      const p = await c.newPage();
+      p.on("pageerror", e => errors.push(e.message));
+      await p.goto(appUrl);
+      await p.evaluate(() => {
+        const d = today(),
+          e = (id, type, amount, account, extra) => ({
+            id,
+            ts: +id.slice(1),
+            date: d,
+            type,
+            amount,
+            account,
+            ...extra,
+          });
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = d;
+        S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 5000, archived: false });
+        S.accounts.push({ id: "b", name: "Cash", type: "cash", currency: "USD", opening: 100, archived: false });
+        S.txns.push(
+          e("t1", "expense", 70, "a", { payee: "Harbour Grill", cat: "food", feeId: "t2" }),
+          e("t2", "expense", 6.4, "a", { cat: "food", feeOf: "t1" }),
+          e("t3", "transfer", 300, "a", { to: "b", feeId: "t4" }),
+          e("t4", "expense", 1.5, "a", { cat: "fees", feeOf: "t3" }),
+          e("t5", "loan", 500, "a", { dir: "out", loan: "L", principal: true, onTop: 50 }),
+          e("t6", "loan", 100, "a", { dir: "in", loan: "L", feeId: "t7" }),
+          e("t7", "income", 2, "a", { cat: "otherin", feeOf: "t6" }),
+          e("t8", "expense", 12, "a", { payee: "Kiosk", cat: "groceries" }),
+          // archived: never a row, so never counted in a suggestion either
+          e("t9", "expense", 40, "a", { cat: "shopping", feeId: "t10", archived: true }),
+          e("t10", "expense", 4, "a", { cat: "shopping", feeOf: "t9", archived: true })
+        );
+        S.loans.push({ id: "L", ts: 1, kind: "lend", person: "Rafi", account: "a", date: d, note: "", status: "open" });
+        save();
+        V.screen = "home";
+        render();
+      });
+      await p.click('#app [data-act="search-open"]');
+      return { c, p };
+    };
+    const type9 = async (p, q) => {
+      await p.fill("#find-q", "");
+      await p.keyboard.type(q);
+      await p.waitForTimeout(250);
+    };
+    const look9 = p =>
+      p.evaluate(() => ({
+        sugs: [...document.querySelectorAll("#hbody .sug")].map(b => {
+          const em = b.querySelector(".em"),
+            r = em.getBoundingClientRect();
+          return {
+            t: b.querySelector(".sgt").textContent,
+            s: b.querySelector(".s").textContent,
+            a: b.getAttribute("aria-label"),
+            w: Math.round(r.width),
+            h: Math.round(r.height),
+            bg: getComputedStyle(em).backgroundColor,
+            /* which icon: its path is the one in ICONS */
+            i: Object.keys(ICONS).find(k => em.querySelector('svg path[d="' + ICONS[k][0] + '"]')) || "",
+          };
+        }),
+        empty: (document.querySelector("#hbody .empty") || {}).textContent || "",
+        rows: document.querySelectorAll("#hbody .tx").length,
+      }));
+    const { c: c9, p: p9 } = await open9("en-US");
+    const grey = "rgb(122, 129, 144)"; // CHARGES_C, #7a8190
+    for (const [q, want] of [
+      ["fee", "Charges"],
+      ["FEES", "Charges"],
+      ["charge", "Charges"],
+      ["charges", "Charges"],
+      ["tip", "Extras"],
+      ["Tips", "Extras"],
+      ["interest", "Extras"],
+      ["extras", "Extras"],
+    ]) {
+      await type9(p9, q);
+      const r = await look9(p9),
+        s = r.sugs.find(x => x.t === want);
+      ok(!!s && /^Kind · \d+ entr/.test(s.s), q + ": the kind " + want + " is suggested: " + J9(r.sugs.map(x => x.t)));
+    }
+    await type9(p9, "fee");
+    let r = await look9(p9);
+    let s = r.sugs.find(x => x.t === "Charges");
+    ok(
+      s.s === "Kind · 2 entries" && s.a === "Kind Charges, 2 entries",
+      "fee: Charges, 2 entries (not the archived one)"
+    );
+    ok(
+      s.w === 40 && s.h === 40 && s.bg === grey && s.i === "request_quote",
+      "Charges' emblem: a 40 px grey circle with the receipt icon, not a bare dot: " + JSON.stringify(s)
+    );
+    ok(!r.empty && r.rows === 0, "no entry has the word, a suggestion does: no “Nothing matches”: " + J9(r));
+    await type9(p9, "tip");
+    r = await look9(p9);
+    s = r.sugs.find(x => x.t === "Extras");
+    ok(
+      s.s === "Kind · 2 entries" && s.w === 40 && s.bg === grey && s.i === "add_circle",
+      "tip: Extras, 2 entries, a grey circle with the plus icon: " + JSON.stringify(s)
+    );
+    ok(!r.empty, "…and no “Nothing matches” under it");
+    await type9(p9, "zzzz");
+    r = await look9(p9);
+    ok(!r.sugs.length && r.empty.includes("Nothing matches “zzzz”"), "nothing at all: Nothing matches “zzzz”");
+    await type9(p9, "fe");
+    r = await look9(p9);
+    ok(!r.sugs.some(x => x.t === "Charges"), "two letters of a short word are not enough: " + J9(r.sugs));
+    // tapped: the kind is set, its words leave the field, the rows are History's own
+    await type9(p9, "fee");
+    await p9.click('#hbody .sug[data-act="fs-pick"]');
+    await p9.waitForTimeout(250);
+    const got = await p9.evaluate(() => ({
+      kind: HF.kind,
+      q: $("#find-q").value,
+      chips: [...document.querySelectorAll("#app .hchips .hchip")].map(b => b.textContent.trim()),
+      btn: document.querySelector("#app .hfbtn").textContent.trim(),
+      rows: [...document.querySelectorAll("#hbody .tx")].length,
+      mon: (document.querySelector("#hbody .hmon") || {}).textContent,
+      say: $("#find-live").textContent,
+    }));
+    ok(
+      got.kind === "charges" && got.q === "" && J9(got.chips) === J9(["Charges"]) && got.btn === "Filters · 1",
+      "tapped: Charges set, the field empty, its chip and Filters · 1: " + J9(got)
+    );
+    ok(
+      got.rows === 2 && /Charges \$11\.90/.test(got.mon),
+      "two rows under Charges $11.90 (the archived purchase's charge counts, as in every total): " + J9(got)
+    );
+    await c9.close();
+
+    // German: the kind's own name and its other words
+    const { c: cd, p: pd } = await open9("de-DE");
+    for (const [q, want] of [
+      ["gebühren", "Gebühren"],
+      ["Gebühr", "Gebühren"],
+      ["trinkgeld", "Extras"],
+      ["zinsen", "Extras"],
+    ]) {
+      await type9(pd, q);
+      const l = (await look9(pd)).sugs;
+      ok(
+        l.some(x => x.t === want),
+        "de " + q + ": " + want + ": " + J9(l.map(x => x.t))
+      );
+    }
+    await cd.close();
+  }
   ok(errors.length === 0, "no page errors: " + errors.join("; "));
   await browser.close();
   process.exit(fails ? 1 : 0);

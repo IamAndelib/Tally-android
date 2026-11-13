@@ -645,6 +645,8 @@ const SUG_KIND_EMB = {
   lend: LOAN_EMB.lend,
   borrow: LOAN_EMB.borrow,
   fix: { i: "build", c: "#7a8190" },
+  charges: { i: "request_quote", c: CHARGES_C },
+  extras: { i: "add_circle", c: CHARGES_C },
 };
 const SUG_AMT_EMB = { i: "paid", c: "#7a8190" };
 const SUG_PERIOD_EMB = { i: "event", c: "#4b5fd6" };
@@ -742,9 +744,11 @@ function sugFind(toks) {
         ks.size === 1 ? (ks.has("lend") ? "whoLend" : "whoBorrow") : "who"
       );
   });
-  HIST_KINDS.forEach(([k]) => {
+  /* a kind by its name; Charges and Extras by other words too ("fee", "tip": history.kindWords, comma-separated) */
+  HIST_KINDS.concat(HIST_MORE).forEach(([k]) => {
     const name = T("history.kind." + k),
-      idx = hit(name, true);
+      also = HIST_MORE.some(m => m[0] === k) ? T("history.kindWords." + k).split(/[,，、]/) : [],
+      idx = [...new Set([name].concat(also).flatMap(w => (w.trim() ? hit(w.trim(), true) : [])))];
     if (idx.length)
       add(
         "kind",

@@ -1,6 +1,7 @@
 // History: its own period (all time by default, never on Home), the period dialog opened from all time (Month tab, no
 // month picked, this month marked, Today and Cancel only), picking a month leaving all time; the filter logic and the
-// totals' words (kinds, fees following their entry, accounts, people, transfers' sides, gone targets).
+// totals' words (kinds, fees following their entry, accounts, people, transfers' sides, gone targets); the Charges
+// and Extras kinds.
 const { chromium, appUrl, launchOptions } = require("./harness");
 let fails = 0;
 const ok = (c, m) => {
@@ -751,8 +752,9 @@ const ok = (c, m) => {
     ok(r.acc.find(x => x.v === "o").t.includes("archived"), "the archived one is marked");
     ok(r.acc[0].on, "All accounts is picked");
     ok(
-      r.kind.map(x => x.t).join("|") === "All|Spent 8|Received 1|Transfers 4|Lent 3", // Spent: and the transfer with a fee
-      "Transactions with counts, no Borrowed, no Balance fixes (never had): " + r.kind.map(x => x.t).join("|")
+      r.kind.map(x => x.t).join("|") === "All|Spent 8|Received 1|Transfers 4|Lent 3|Charges 1", // Spent and Charges: the transfer with a fee
+      "Transactions with counts, no Borrowed, no Balance fixes, no Extras (never had): " +
+        r.kind.map(x => x.t).join("|")
     );
     ok(r.show === "Show 15 entries", "the foot counts: " + r.show);
     ok(
@@ -780,8 +782,8 @@ const ok = (c, m) => {
       r.kind
         .filter(x => x.dim)
         .map(x => x.v)
-        .join() === "in" && r.kind.find(x => x.v === "xfer").t === "Transfers 1",
-      "Cash's kinds: " + r.kind.map(x => x.t).join("|")
+        .join() === "in,charges" && r.kind.find(x => x.v === "xfer").t === "Transfers 1",
+      "Cash's kinds (the transfer's fee was paid from another account): " + r.kind.map(x => x.t).join("|")
     );
     await tap("hfs-acc", "s");
     r = await sheet();
@@ -2509,6 +2511,253 @@ const ok = (c, m) => {
     await page.mouse.wheel(0, 600);
     await page.waitForTimeout(250);
     ok((await m()).y === y0, vp.name + ": …also on the scrim");
+    await ctx.close();
+  }
+
+  // ---- Charges and Extras (docs/plans/2026-11-13-preview-polish.md, item 4): two kinds worked out from what an
+  // entry carries, after the others in the Filters sheet; their headings count the charges counted as spending, or the
+  // extras counted as received, and agree with Summary and Home
+  {
+    const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, locale: "en-US" });
+    await ctx.addInitScript(() => {
+      window.Android = { getColors: () => null, setBars() {} };
+    });
+    const page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message));
+    await page.goto(appUrl);
+    await page.evaluate(() => {
+      const m = shiftMonth(today().slice(0, 7), -1),
+        d = n => m + "-" + pad(n),
+        x = (id, n, type, amount, account, extra) => ({
+          id,
+          ts: n * 10 + (id.endsWith("c") || id.endsWith("t") ? 1 : 0),
+          date: d(n),
+          type,
+          amount,
+          account,
+          note: "",
+          ...extra,
+        }),
+        loanOf = (id, kind, person, account, n, status = "open") => ({
+          id,
+          ts: 1,
+          kind,
+          person,
+          account,
+          date: d(n),
+          note: "",
+          status,
+        });
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 50000, archived: false });
+      S.accounts.push({ id: "k", name: "Wallet", type: "wallet", currency: "USD", opening: 5000, archived: false });
+      S.accounts.push({ id: "e", name: "Euros", type: "cash", currency: "EUR", opening: 500, archived: false });
+      S.txns.push(
+        // a purchase with a charge (in its own category)
+        x("pE", 16, "expense", 70, "a", { cat: "food", payee: "Harbour Grill", feeId: "pEc" }),
+        x("pEc", 16, "expense", 6.4, "a", { cat: "food", feeOf: "pE" }),
+        // a transfer with a transfer charge (paid from Bank)
+        x("tA", 15, "transfer", 300, "a", { to: "k", feeId: "tAc" }),
+        x("tAc", 15, "expense", 1.5, "a", { cat: "fees", feeOf: "tA" }),
+        // a borrow with charges still unpaid, and its payment with a transfer charge
+        x("bD", 2, "loan", 1000, "a", { dir: "in", loan: "B", principal: true, onTop: 20 }),
+        x("bP", 14, "loan", 250, "a", { dir: "out", loan: "B", feeId: "bPc" }),
+        x("bPc", 14, "expense", 0.75, "a", { cat: "fees", feeOf: "bP" }),
+        // a borrow whose charges are paid back (spending in Charges on the payment's day)
+        x("cD", 3, "loan", 100, "a", { dir: "in", loan: "C", principal: true, onTop: 10 }),
+        x("cP", 12, "loan", 110, "a", { dir: "out", loan: "C" }),
+        // a lend with a transfer charge and an extra, paid back with the extra and a tip
+        x("lD", 4, "loan", 500, "k", { dir: "out", loan: "L", principal: true, onTop: 50, feeId: "lDc" }),
+        x("lDc", 4, "loan", 5, "k", { dir: "out", loan: "L", principal: true, feeOf: "lD" }),
+        x("lP", 11, "loan", 555, "k", { dir: "in", loan: "L", feeId: "lPt" }),
+        x("lPt", 11, "income", 3, "k", { cat: "otherin", feeOf: "lP" }),
+        // a written-off lend: its unpaid transfer charge is spending on the draw's day
+        x("wD", 5, "loan", 200, "k", { dir: "out", loan: "W", principal: true, feeId: "wDc" }),
+        x("wDc", 5, "loan", 4, "k", { dir: "out", loan: "W", principal: true, feeOf: "wD" }),
+        // plain entries, in neither
+        x("e1", 6, "expense", 30, "a", { cat: "groceries" }),
+        x("i1", 7, "income", 1000, "a", { cat: "income" }),
+        // an archived purchase with a charge: no row, but counted, as everywhere
+        x("pX", 8, "expense", 20, "a", { cat: "shopping", feeId: "pXc", archived: true }),
+        x("pXc", 8, "expense", 2, "a", { cat: "shopping", feeOf: "pX", archived: true }),
+        // another currency
+        x("eP", 9, "expense", 10, "e", { cat: "food", feeId: "ePc" }),
+        x("ePc", 9, "expense", 1, "e", { cat: "food", feeOf: "eP" })
+      );
+      S.loans.push(
+        loanOf("B", "borrow", "Maya", "a", 2),
+        loanOf("C", "borrow", "Sam", "a", 3),
+        loanOf("L", "lend", "Rafi", "k", 4),
+        loanOf("W", "lend", "Joy", "k", 5, "writeoff")
+      );
+      save();
+      location.reload();
+    });
+    await page.waitForLoadState();
+    await page.waitForTimeout(200);
+    await page.evaluate(() => (window.CM = shiftMonth(today().slice(0, 7), -1))); // the month of the entries
+    const rowsOf = f =>
+      page.evaluate(
+        f =>
+          histRows(histList({ ...histBlank(), ...f }))
+            .map(t => t.id)
+            .sort(),
+        f
+      );
+    const J = JSON.stringify;
+    let r = await rowsOf({ kind: "charges" });
+    ok(
+      J(r) === J(["bD", "bP", "cD", "cP", "eP", "lD", "pE", "tA", "wD"].sort()),
+      "Charges: a purchase's charge, a transfer's and a loan payment's transfer charge, both borrows (charges unpaid " +
+        "and paid back), a lend's transfer charge, a written-off lend; never the archived one: " +
+        r
+    );
+    r = await rowsOf({ kind: "extras" });
+    ok(J(r) === J(["lD", "lP"]), "Extras: the lend with an extra and the payback with the extra and a tip: " + r);
+    r = await rowsOf({ kind: "charges", acc: "k" });
+    ok(
+      J(r) === J(["lD", "wD"]),
+      "Charges on Wallet: the transfer's charge was paid from Bank, so the transfer is not listed there: " + r
+    );
+    r = await rowsOf({ kind: "charges", acc: "a" });
+    ok(r.includes("tA") && !r.includes("lD"), "Charges on Bank: the transfer is: " + r);
+    r = await rowsOf({ kind: "lend" });
+    ok(r.includes("lD") && r.includes("lP"), "an entry stays in its own kind too: " + r);
+    ok(
+      await page.evaluate(() => histList({ ...histBlank(), kind: "charges" }).some(t => t.id === "pX")),
+      "the archived entry is in the list behind the headings (it counts), not a row"
+    );
+
+    // the headings: the month's and the days', per currency, equal to Summary's and Home's counting
+    await page.evaluate(() => {
+      HP.period = "all";
+      HF = { ...histBlank(), kind: "charges" };
+      V.screen = "history";
+      render();
+    });
+    const heads = () =>
+      page.evaluate(() => ({
+        mon: [...document.querySelectorAll("#app .hmon")].map(e => e.textContent.trim()),
+        days: [...document.querySelectorAll("#app .dayh")].map(e => [
+          e.querySelector("span").textContent,
+          e.querySelector(".hcol") ? e.querySelector(".hcol").textContent : "",
+        ]),
+        say: [...document.querySelectorAll("#app .hmon")].map(e => e.getAttribute("aria-label")).join(),
+        chips: [...document.querySelectorAll("#app .hchips .hchip")].map(b => b.textContent.trim()),
+        btn: document.querySelector("#app .hfbtn").textContent.trim(),
+      }));
+    let h = await heads();
+    const want = await page.evaluate(() => {
+      const s = CM + "-01",
+        e = monthEnd(CM),
+        inM = x => x.date >= s && x.date <= e;
+      /* Summary's Charges part, plus the purchases' charges it counts in their categories */
+      const part = cur => (catSplit(spendItems(cur).filter(inM)).find(p => p[0] === CHARGES) || [0, 0])[1],
+        onPurchases = cur =>
+          S.txns
+            .filter(t => inM(t) && t.feeOf && t.type === "expense" && entry(t.feeOf).type === "expense")
+            .filter(t => acc(t.account).currency === cur)
+            .reduce((q, t) => q + t.amount, 0),
+        plainIn = S.txns.filter(t => inM(t) && t.type === "income" && !t.feeOf).reduce((q, t) => q + t.amount, 0);
+      return {
+        usd: rnd(part("USD") + onPurchases("USD")),
+        eur: rnd(part("EUR") + onPurchases("EUR")),
+        extras: rnd(gotIn("USD", s, e) - plainIn),
+        part: part("USD"),
+        day12: spentOn(CM + "-12", "USD"),
+      };
+    });
+    ok(
+      want.usd === 24.65 && want.eur === 1 && want.extras === 53 && want.part === 16.25,
+      "the reference: $24.65 of charges ($16.25 in Summary's Charges, the rest in the purchases' categories), €1.00, " +
+        "$53.00 of extras: " +
+        J(want)
+    );
+    ok(
+      h.mon.length === 1 && h.mon[0].includes("Charges $24.65") && h.mon[0].includes("Charges €1.00"),
+      "the month's heading: Charges $24.65 and Charges €1.00, as Summary counts them: " + h.mon
+    );
+    ok(!/spent|received|lent|borrowed/i.test(h.mon[0]), "nothing else the entries move: " + h.mon[0]);
+    ok(/Charges \$24\.65/.test(h.say), "TalkBack hears it: " + h.say);
+    const dd = await page.evaluate(() =>
+      [16, 15, 14, 12, 5, 3, 2, 8].map(n => [n, capFirst(dayLabel(CM + "-" + pad(n)))])
+    );
+    const dh = Object.fromEntries(dd.map(([n, label]) => [n, (h.days.find(x => x[0] === label) || [null, null])[1]]));
+    ok(dh[16] === "Charges $6.40", "the purchase's day: Charges $6.40: " + dh[16]);
+    ok(dh[15] === "Charges $1.50", "the transfer's day: Charges $1.50: " + dh[15]);
+    ok(dh[14] === "Charges $0.75", "the loan payment's day: Charges $0.75: " + dh[14]);
+    ok(
+      dh[12] === "Charges $10.00" && want.day12 === 10,
+      "the day the borrow's charges were paid back: Charges $10.00, as Home's spent that day: " + dh[12]
+    );
+    ok(dh[5] === "Charges $4.00", "the written-off lend's day: its transfer charge, $4.00: " + dh[5]);
+    ok(dh[2] === "" && dh[3] === "", "a borrow's draw with charges unpaid: listed, with no total yet: " + J(dh));
+    ok(dh[8] === null, "the archived entry's day has no heading (no row): " + J(h.days.map(x => x[0])));
+    ok(J(h.chips) === J(["Charges"]) && h.btn === "Filters · 1", "the chip Charges, Filters · 1: " + J(h));
+
+    await page.evaluate(() => {
+      HF = { ...histBlank(), kind: "extras" };
+      render();
+    });
+    h = await heads();
+    ok(
+      h.mon.length === 1 && h.mon[0].includes("Extras $53.00") && !/Charges|got back/i.test(h.mon[0]),
+      "Extras: the month's heading, $53.00 (the extra paid back and the tip), as received counts them: " + h.mon
+    );
+    const d11 = await page.evaluate(() => capFirst(dayLabel(CM + "-11")));
+    ok((h.days.find(x => x[0] === d11) || [])[1] === "Extras $53.00", "the payback's day: Extras $53.00: " + J(h.days));
+    ok(J(h.chips) === J(["Extras"]), "the chip Extras: " + h.chips);
+
+    // the Filters sheet: Charges and Extras after the other kinds, with counts; picking one hides category and people
+    await page.evaluate(() => {
+      HF = histBlank();
+      render();
+    });
+    await page.click('#app [data-act="hf-open"]');
+    const sheet = () =>
+      page.evaluate(() => ({
+        kinds: [...document.querySelectorAll('#sheet [data-act="hfs-kind"]')].map(b => [
+          b.dataset.v,
+          b.textContent.replace("✓", "").trim(),
+        ]),
+        secs: [...document.querySelectorAll("#sheet .sec")].map(e => e.textContent),
+        show: document.querySelector('#sheet [data-act="hfs-show"]').textContent,
+      }));
+    let s = await sheet();
+    const vs = s.kinds.map(k => k[0]);
+    ok(
+      J(vs.slice(-2)) === J(["charges", "extras"]) && vs.indexOf("fix") < 0 && vs.indexOf("borrow") < vs.length - 2,
+      "Charges and Extras come after the other kinds: " + J(vs)
+    );
+    ok(
+      J(s.kinds.slice(-2).map(k => k[1])) === J(["Charges 9", "Extras 2"]),
+      "with their counts (rows, archived ones left out): " + J(s.kinds)
+    );
+    await page.click('#sheet [data-act="hfs-kind"][data-v="charges"]');
+    s = await sheet();
+    ok(
+      !s.secs.some(x => /Category|Lent|Borrowed|Between/.test(x)) && s.show === "Show 9 entries",
+      "Charges picked: no category, people or sides to choose, Show 9 entries: " + J(s)
+    );
+    await page.click('#sheet [data-act="hfs-show"]');
+    await page.waitForTimeout(300);
+    h = await heads();
+    ok(J(h.chips) === J(["Charges"]) && h.btn === "Filters · 1", "Show: the chip Charges and Filters · 1: " + J(h));
+    // its chip's ✕ takes it away
+    await page.click('#app .hchips [data-act="hf-del"]');
+    await page.waitForTimeout(200);
+    ok((await page.evaluate(() => HF.kind)) === "", "the chip's ✕ clears the kind");
+    // a notebook without any charge or extra offers neither
+    await page.evaluate(() => {
+      S.txns = S.txns.filter(t => !t.feeOf && !t.feeId && !t.onTop && !t.loan);
+      S.loans = [];
+      save();
+      filtersSheet();
+    });
+    s = await sheet();
+    ok(!s.kinds.some(k => k[0] === "charges" || k[0] === "extras"), "no charge or extra: neither is offered");
     await ctx.close();
   }
 

@@ -78,8 +78,9 @@ goes to the next line only when the line can't hold it). Sections, in order:
 1. **Account**: All, then every account (archived ones only if they have entries, marked "archived"). Each account chip
    has a **dot of the account's colour** before its name; a picked account chip is **tinted in the account's colour**
    (the tint the account pills had: 0.24 light, 0.38 dark, text in the normal colour, WCAG AA on every palette colour).
-2. **Transactions**: All, Spent, Received, Transfers, Lent, Borrowed, Balance fixes. A kind the notebook has never had
-   is not shown at all (never tracked a loan: no Lent or Borrowed).
+2. **Transactions**: All, Spent, Received, Transfers, Lent, Borrowed, Balance fixes, then **Charges** and **Extras**
+   (preview polish, 2026-11-13). A kind the notebook has never had is not shown at all (never tracked a loan: no Lent
+   or Borrowed).
 3. What the picked kind needs:
    - **Spent** → **Category**: the spending categories that have entries in the current choice, most used first, each
      with its emblem.
@@ -90,7 +91,7 @@ goes to the next line only when the line can't hold it). Sections, in order:
      With an account picked in Account: both start as "any account", with "One side is Credit card" under them, and
      list every transfer in and out of it; choosing From fills To with the picked account, locked (no ▾), and the
      other way round; ⇄ flips the two; the dropdowns never list the picked account.
-   - **Balance fixes**, **All** → nothing more.
+   - **Balance fixes**, **Charges**, **Extras**, **All** → nothing more.
    A picked chip shows its ✓ first (`✓ ● Cash`, `✓ Spent 40`, `✓ From ● Everyday ▾`), taking some of its leading
    padding so it doesn't jump to the next line; chips elsewhere in the app keep the ✓ after the name.
 4. A sticky foot: **Clear all** (clears the sheet's choices) and **Show N entries**, the count of what the choices
@@ -112,6 +113,8 @@ Each month heading, per currency (several joined with "+"), in words:
 | Lent | `$X lent · $Y got back` |
 | Borrowed | `$X borrowed · $Y paid back` |
 | Balance fixes | `$X added · $Y taken off` |
+| Charges | `Charges $X`: the charges counted as spending (a purchase's, in its category, included) |
+| Extras | `Extras $X`: the extras counted as received |
 
 Transfers, the money loans move and fixes never count as spent or received. A charge is inside Spent, an extra inside
 Received (as everywhere in Tally, docs/specs/charges.md "Counting").
@@ -122,6 +125,12 @@ Received (as everywhere in Tally, docs/specs/charges.md "Counting").
   them (a transfer or loan payment with a charge, a written-off lend's draw); only that spending counts in its heading.
   Received = income, and the lending payments that carry an extra (only the extra counts). Transfers = transfers and
   their charges; Lent / Borrowed = a lending's or loan's draws and payments with their add-ons; Balance fixes = fixes.
+  Charges and Extras are what an entry carries, not a kind of movement, so an entry is in its own kind and in either
+  or both (`HIST_MORE`, worked out, never stored): Charges = a purchase with a charge, a transfer or loan payment with
+  a transfer charge (an older lending payment's paid fee too), a lend with a transfer charge, a borrow's draw with
+  charges (listed while they are unpaid; they count only once paid back) and a payment covering them; Extras = a lend's
+  draw with an extra, a payback with a tip or covering an extra. With an account picked, a charge or tip counts for
+  the account it is paid from or into, as on Spent and Received.
   An account matches when it's the entry's account or a transfer's destination. A transfer's charge is the From
   account's alone: filtered to the To account, the transfer is listed (under Transfers too) but its charge is not
   counted, and it is not listed under Spent.
