@@ -35,12 +35,15 @@ Unarchive (`events.js:669-674`), the snackbar's Undo, and "Saved · no longer in
 (`layers.js:242-263`) only find the same button or a neighbour. Also: Back to Home's entries sheet focuses the sheet,
 not the edited row (`sheets.js:433-450`, `BACKTO.open`).
 
-- [ ] Targets: Select → the bar's button that ends selection; leaving selection → the Select button; archive or delete
-  (one or many) → the next row in the list, else the previous one, else the Filters button (Archived screen: its
-  first row, else its back button); Unarchive → as delete; Undo → the restored row (its `row-open` button), else as
-  today; "no longer in this list" → the next row; Back to Home's entries sheet → the edited row.
-- [ ] One helper, near `keepFocus`, used by all of these; never `<body>`.
-- [ ] Tests (41-history / 46-archive, next to the chip-focus checks): each action, `document.activeElement` is the
+- [x] Targets: Select → the bar's button that ends selection; leaving selection → the Select button (a row that had
+  the focus, its last tick taken off, keeps it); archive or delete (one or many) → the next row in the list, else the
+  previous one, else the Filters button (Archived screen: its first row, else its back button; with no entries left,
+  History's Back button); Unarchive → as delete; Undo → the restored row (its `row-open` button), else the Filters
+  button, else the screen's first button; "no longer in this list" → the next row; Back to Home's entries sheet → the
+  edited row.
+- [x] One helper, near `keepFocus`, used by all of these; never `<body>` (`landFocus()`, rows by entry id via
+  `rowsAround()`).
+- [x] Tests (41-history / 46-archive, next to the chip-focus checks): each action, `document.activeElement` is the
   target and not `body`.
 
 ### Task 2: ring names whole or left out (flows I2)

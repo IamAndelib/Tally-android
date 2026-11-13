@@ -923,12 +923,17 @@ function layerFocus() {
     else el.removeAttribute("aria-hidden");
     el.inert = below;
   });
-  if (LAND && landNow()) return; // a change took away what had the focus (landFocus)
+  const land = LAND; // a change took away what had the focus (landFocus)
+  LAND = null;
+  if (land && landNow(land)) return;
   /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
   /* (or to the control that replaced it: saving redraws the screen) */
   if (back && back.el.isConnected) back.el.focus({ preventScroll: true });
   else if (back) refocus(document, back.k);
-  if (top < 0) return;
+  if (top < 0) {
+    if (land && document.activeElement === document.body) landNow([], true); // never the page
+    return;
+  }
   const t = $(LAYERS[top]);
   if (t.contains(document.activeElement)) return;
   const d = t.querySelector('[role="dialog"], [role="alertdialog"]');

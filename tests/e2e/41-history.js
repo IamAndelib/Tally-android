@@ -1764,13 +1764,28 @@ const ok = (c, m) => {
     await page.waitForTimeout(60);
     ok(/no longer in this list/.test(await page.evaluate(() => $("#snack").textContent)), "saved out of the list");
     await say("row-open:e3", "Saved · no longer in this list: the next row");
-    // every row gone: the Filters button
+    // every row of a filtered list gone: the Filters button; every entry gone (no Filters row then): the Back button
     await seed();
-    await tap('#app [data-act="sel-start"]');
-    await tap('#app [data-act="sel-all"]');
-    await tap('#app [data-act="sel-del"]');
-    await tap("#pop .cd-destroy");
-    await say("hf-open:", "every row deleted: the Filters button");
+    await page.evaluate(() => {
+      entry("e4").account = "b";
+      HF = histNorm({ ...histBlank(), acc: "a" });
+      commit();
+    });
+    for (const [want, what] of [
+      ["hf-open:", "every row of the list deleted: the Filters button"],
+      ["home:", "every entry deleted: the Back button"],
+    ]) {
+      if (want === "home:")
+        await page.evaluate(() => {
+          HF = histBlank();
+          render();
+        });
+      await tap('#app [data-act="sel-start"]');
+      await tap('#app [data-act="sel-all"]');
+      await tap('#app [data-act="sel-del"]');
+      await tap("#pop .cd-destroy");
+      await say(want, what);
+    }
     // Home's entries sheet: an entry opened from it and closed comes back to its row
     await seed();
     await page.evaluate(() => {

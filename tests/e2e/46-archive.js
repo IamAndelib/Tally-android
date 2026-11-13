@@ -1657,6 +1657,62 @@ const seed = () => ({
     );
   }
 
+  // ---- 26. focus after removals (review I1, M2): Unarchive and Delete on the Archived screen hand the focus to the next
+  // row, else the one before, else the back button; Undo to the row it brings back; in a search that lists archived
+  // entries, an unarchived row stays and keeps it
+  {
+    const o = seed();
+    ["bus", "ad", "old"].forEach(id => (o.txns.find(t => t.id === id).archived = true));
+    await load(o);
+    const where = () =>
+      page.evaluate(() => {
+        const a = document.activeElement;
+        return !a || a === document.body ? "body" : (a.dataset.act || a.tagName) + ":" + (a.dataset.v || "");
+      });
+    const say = async (want, what) => {
+      const w = await where();
+      ok(w === want, what + ": " + w);
+    };
+    await page.click('#app [data-act="arch-open"]');
+    await pause();
+    ok(J(await rows()) === J(["bus", "ad", "old"]), "the Archived screen, newest first " + J(await rows()));
+    await openRow("ad");
+    await page.click('#app .txo [data-act="unarchive"]');
+    await pause();
+    await say("row-open:old", "Unarchive: the next row");
+    await undo();
+    await say("row-open:ad", "its Undo: the row it brought back");
+    await openRow("old");
+    await page.click('#app .txo [data-act="tx-del"]');
+    await pause();
+    await page.click("#pop .cd-destroy");
+    await pause();
+    await say("row-open:ad", "Delete, the last row: the row before it");
+    for (const id of ["bus", "ad"]) {
+      await openRow(id);
+      await page.click('#app .txo [data-act="unarchive"]');
+      await pause();
+    }
+    ok(J(await rows()) === "[]", "nothing archived is left");
+    await say("arch-back:", "the last one unarchived: the back button");
+
+    // search listing archived entries: the row stays, unmarked, with the focus
+    o.settings.searchArch = true;
+    await load(o);
+    await page.evaluate(() => {
+      openFind();
+      const inp = $("#find-q");
+      inp.value = "City Bus";
+      findInput(inp.value);
+      findDraw();
+      inp.blur();
+    });
+    await openRow("bus");
+    await page.click('#app .txo [data-act="unarchive"]');
+    await pause();
+    await say("row-open:bus", "search: an unarchived row stays listed and keeps the focus");
+  }
+
   {
     // the Archived button's icon is centred in its square (the chip's leading-icon pull must not apply)
     await load(seed());

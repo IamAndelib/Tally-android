@@ -265,21 +265,20 @@ function refocus(root, k) {
    or ended, an Undo, an entry saved out of the list), the focus lands on the next control that makes sense, never on
    the page: the first of `to` that is drawn and usable in the top layer (else the screen), each an entry's row by its
    id ({row}, so it holds however much of a list is drawn), a selector or an element; with none of them, the screen's
-   first button. While a layer is still opening or closing, layerFocus() places it once the layers have settled (it
-   would give the focus back to the control that opened the layer, which the change took away), and with none of them
-   does what it does today. Given by a script, the
-   focus shows its ring only when the last input was a key (Chromium's :focus-visible): a tap leaves none. */
-let LAND = null;
+   first button (`last`). While a layer is still opening or closing, layerFocus() places it once the layers have
+   settled: it would give the focus back to the control that opened the layer, which the change took away. Given by a
+   script, the focus shows its ring only when the last input was a key (Chromium's :focus-visible): a tap leaves none. */
+let LAND = null; // where the focus goes once the layers have settled
 const landRoot = () => ["#pop", "#sheet2", "#sheet"].map(s => $(s)).find(el => el.innerHTML) || $("#app");
 function landFocus(to) {
   LAND = to;
-  if (!LAYERS.some((id, i) => i > 1 && !!$(id).dataset.up !== !!$(id).innerHTML)) landNow(true);
-}
-function landNow(last) {
-  const to = LAND || [],
-    root = landRoot(),
-    rows = new Map();
+  if (LAYERS.some((id, i) => i > 1 && !!$(id).dataset.up !== !!$(id).innerHTML)) return;
   LAND = null;
+  landNow(to, true);
+}
+function landNow(to, last) {
+  const root = landRoot(),
+    rows = new Map();
   root.querySelectorAll(".tx[data-v]").forEach(r => rows.has(r.dataset.v) || rows.set(r.dataset.v, r));
   let el = null;
   for (const t of to) {
