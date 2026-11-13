@@ -648,13 +648,20 @@ function histFocus(sel, at) {
    for landFocus(): the first of them if the list still shows it (search listing archived entries), else the row after
    it, else the one before it, else the Filters button (the Archived screen: its first row, else its back button). By
    entry id, from the list as it is before the change: History's or the Archived screen's whole list (HLIST, drawn or
-   not), the entries sheet's rows. */
+   not), the entries sheet's or Home's pane's (DAYL, drawn or not). */
 function rowsAround(ids) {
   const box = landRoot(),
     own = box !== $("#app") && box.querySelector(".tx.en[data-v]"), // the entries sheet
+    rows = b => {
+      /* the entries sheet's rows, or Home's (two panes); not the accounts' rows */
+      const key = b === $("#sheet") ? "#sheet" : b === $("#app") ? "#app" : "";
+      return key && DAYL[key] && b.querySelector(".dmore")
+        ? histRows(DAYL[key]).map(t => t.id)
+        : [...b.querySelectorAll(".tx.en[data-v]")].map(r => r.dataset.v);
+    },
     order =
-      own || !histLike() // the entries sheet's rows, or Home's (two panes); not the accounts' rows
-        ? [...(own ? box : $("#app")).querySelectorAll(".tx.en[data-v]")].map(r => r.dataset.v)
+      own || !histLike()
+        ? rows(own ? box : $("#app"))
         : (V.screen === "archive" ? archRows : listRows)(HLIST).map(t => t.id),
     set = new Set(ids),
     i = order.findIndex(id => set.has(id)),
@@ -793,7 +800,9 @@ function histParts() {
   const idle = V.find && !V.sel && !HF.q.trim() && histCount() === 0 && HP.period === "all",
     list = idle ? [] : histList(HF, ""), // nothing skipped; archived entries too, for the headings' totals
     nRows = listRows(list).length;
+  /* drawn anew after a change: only so far (drawTo; by the list before the change when the rows in view are gone) */
   if (HSHOW.sig !== histSig()) HSHOW = { sig: histSig(), n: HIST_CHUNK };
+  else if (DRAWAT) HSHOW.n = drawTo(list, DRAWAT.ids, HSHOW.n) || drawTo(HLIST, DRAWAT.ids, HSHOW.n) || HSHOW.n;
   HLIST = list;
   /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
      entry out of sight */
@@ -1033,7 +1042,9 @@ function archBack() {
   if (b) b.focus({ preventScroll: true });
 }
 function archiveView() {
-  HLIST = S.txns.filter(t => t.archived).sort(byNewest); // an archived add-on too: its entry's row shows it
+  const list = S.txns.filter(t => t.archived).sort(byNewest); // an archived add-on too: its entry's row shows it
+  if (DRAWAT) ASHOW = drawTo(list, DRAWAT.ids, ASHOW) || drawTo(HLIST, DRAWAT.ids, ASHOW) || ASHOW; // as History's
+  HLIST = list;
   let body;
   if (!archRows(HLIST).length)
     body = '<div class="empty">' + TH("archive.none") + '<div class="gap"></div>' + TH("archive.noneHint") + "</div>";

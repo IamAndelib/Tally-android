@@ -435,13 +435,14 @@ function openEntry(id) {
   const p0 = $("#sheet .p"),
     scroll = (p0 || {}).scrollTop || 0,
     a = p0 && rowAnchor(p0, p0),
+    was = dayDrawn("#sheet"),
     list = $("#sheet #ent-list"),
     to = list && rowsAround([id]);
   BACKTO = list
     ? {
         screen: V.screen,
         open: () => {
-          entriesSheet();
+          entriesSheet([a && a.v, id], was);
           const p = $("#sheet .p");
           if (!p) return;
           p.scrollTop = scroll;
@@ -1109,7 +1110,9 @@ function restoreCat(id) {
   commit();
   snack(T("category.back", { name: catName(c) }));
 }
-function entriesSheet() {
+/* the period's entries in a sheet; coming back to it (at: the ids of the row that was in view and the row to focus;
+   was: how many entries it had drawn), its rows are drawn through those (drawTo), the rest as the end comes near */
+function entriesSheet(at, was) {
   RBC = LPC = null;
   V.open = "";
   rowsClose($("#app")); // one open row at a time: not the page's behind this list
@@ -1117,11 +1120,12 @@ function entriesSheet() {
   openSheet(
     periodLabel(),
     '<div id="ent-list"></div>' +
-      dayList(list) +
+      dayList(list, "#sheet", drawTo(list, at, was)) +
       '<div class="gap"></div><button class="btn text" data-act="go" data-v="history">' +
       TH("entries.fullHistory") +
       "</button>"
   );
+  dayWatch("#sheet");
 }
 function saveTx() {
   const v = readVals(),
@@ -1293,10 +1297,12 @@ function rowDelete(id) {
      closed meanwhile) and the screen is the same */
   const p = $("#sheet #ent-list") && $("#sheet .p"),
     scroll = p ? p.scrollTop : 0,
+    a = p && rowAnchor(p, p),
+    was = dayDrawn("#sheet"),
     screen = V.screen,
     redraw = (undone, listed) => {
       if (!p || (undone && (!listed || V.screen !== screen || $("#sheet").innerHTML))) return;
-      entriesSheet();
+      entriesSheet([a && a.v, id], was);
       const q = $("#sheet .p");
       if (q) q.scrollTop = scroll;
     };

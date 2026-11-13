@@ -2112,6 +2112,231 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // I3: a big notebook stays quick after a change. History drawn far down and scrolled back up: an edit draws only
+  // through the rows in view plus one chunk, the row stays where it was, the rest follows on scroll; Undo of a row
+  // no longer drawn draws down to it and focuses it. The Year entries sheet and the tablet's Year pane draw in History's
+  // chunks: the same days, totals and rows once scrolled to the end, and an edit from deep in the sheet comes back
+  // to its row without drawing them all. Timings only as a loose guard against a baseline of the same run.
+  {
+    const seedBig = page =>
+      page.evaluate(() => {
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1e8, archived: false });
+        for (let i = 0; i < 10000; i++)
+          S.txns.push({
+            id: "t" + i,
+            ts: 1e6 - i,
+            date: addDays(today(), -Math.floor(i / 10)),
+            type: "expense",
+            amount: 1 + (i % 9),
+            account: "a",
+            cat: i % 2 ? "food" : "transport",
+            note: "",
+          });
+        save();
+      });
+    const median = (page, src) =>
+      page.evaluate(src => {
+        const f = new Function(src),
+          ts = [];
+        for (let k = 0; k < 3; k++) {
+          const t0 = performance.now();
+          f();
+          ts.push(performance.now() - t0);
+        }
+        return ts.sort((a, b) => a - b)[1];
+      }, src);
+    const rowsIn = (page, box) => page.evaluate(box => document.querySelectorAll(box + " .tx.en[data-v]").length, box);
+
+    // History
+    {
+      const { ctx, page } = await open();
+      await seedBig(page);
+      await page.evaluate(() => openHistory());
+      await page.waitForTimeout(200);
+      // the baseline: the same edit at the top of the list (its first two chunks drawn)
+      const base = await median(page, "withUndo('', () => (S.txns[0].amount = 5), { row: S.txns[0].id })");
+      const id = await page.evaluate(() => {
+        while (HSHOW.n < 3000 && $("#app .hmore")) histMore();
+        const id = listRows(HLIST)[400].id;
+        document.querySelector('#app .tx[data-v="' + id + '"]').scrollIntoView({ block: "center" });
+        return id;
+      });
+      await page.waitForTimeout(300);
+      const top = () =>
+        page.evaluate(id => {
+          const r = document.querySelector('#app .tx[data-v="' + id + '"]');
+          return r ? Math.round(r.getBoundingClientRect().top) : null;
+        }, id);
+      const far = await rowsIn(page, "#app"),
+        top0 = await top();
+      const edit = await page.evaluate(id => {
+        const t0 = performance.now();
+        withUndo(T("common.saved"), () => (entry(id).amount = 77), { row: id });
+        return performance.now() - t0;
+      }, id);
+      await page.waitForTimeout(300);
+      const near = await rowsIn(page, "#app"),
+        top1 = await top();
+      console.log("I3 timings (ms): an edit at the top " + Math.round(base) + ", an edit far down " + Math.round(edit));
+      ok(far > 2500, "History drawn far down first: " + far + " rows");
+      ok(
+        top1 !== null && Math.abs(top1 - top0) < 2,
+        "after the edit its row stays where it was: " + top0 + " → " + top1
+      );
+      ok(near <= 900, "only the rows through the one in view and a chunk more are drawn again: " + near + " of " + far);
+      ok(edit < 4 * base, "the edit takes under 4× the same edit at the top: " + Math.round(edit));
+      for (let k = 0; k < 10; k++) {
+        await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        await page.waitForTimeout(80);
+      }
+      ok((await rowsIn(page, "#app")) > near, "scrolling on draws the rest as before");
+      // a row deleted far down, the list drawn anew from the top, then Undo: the row is drawn again and focused
+      const gone = await page.evaluate(() => {
+        while (HSHOW.n < 2600 && $("#app .hmore")) histMore();
+        const id = listRows(HLIST)[2500].id,
+          to = rowsAround([id]);
+        withUndo(T("common.deleted"), () => deleteEntries([id]));
+        landFocus(to);
+        scrollTo(0, 0);
+        render();
+        return id;
+      });
+      await page.waitForTimeout(300);
+      const drawnBefore = await page.evaluate(id => !document.querySelector('#app .tx[data-v="' + id + '"]'), gone);
+      await page.click('#snack [data-act="undo"]');
+      await page.waitForTimeout(300);
+      const u = await page.evaluate(id => {
+        const a = document.activeElement,
+          r = a.getBoundingClientRect();
+        return { v: a.dataset.v, back: !!entry(id), seen: r.top >= 0 && r.bottom <= innerHeight };
+      }, gone);
+      ok(drawnBefore, "drawn anew from the top, History no longer draws that row");
+      ok(
+        u.back && u.v === gone && u.seen,
+        "Undo draws down to the row it brings back and focuses it, in view " + JSON.stringify(u)
+      );
+      await ctx.close();
+    }
+
+    // the Year entries sheet (phone) and the tablet's Year pane
+    {
+      const { ctx, page } = await open();
+      await seedBig(page);
+      await page.evaluate(() => {
+        V.screen = "home";
+        V.period = "year";
+        V.anchor = +today().slice(0, 4) - 1 + "-06-15"; // a whole year: 3,650 entries
+        render();
+      });
+      await page.click('#app [data-act="entries"]');
+      await page.waitForTimeout(200);
+      const total = await page.evaluate(() => histRows(periodTxns()).length);
+      const first = await rowsIn(page, "#sheet");
+      ok(
+        first > 0 && first <= 400 && (await page.evaluate(() => !!$("#sheet .dmore"))),
+        "the Year entries sheet draws its first chunk: " + first + " of " + total
+      );
+      for (let k = 0; k < 40 && (await page.evaluate(() => !!$("#sheet .dmore"))); k++) {
+        await page.evaluate(() => ($("#sheet .p").scrollTop = $("#sheet .p").scrollHeight));
+        await page.waitForTimeout(60);
+      }
+      const same = await page.evaluate(() => {
+        const J = JSON.stringify,
+          d = document.createElement("div"),
+          days = b => [...b.querySelectorAll(".day")].map(x => x.textContent),
+          rows = b => [...b.querySelectorAll(".tx.en[data-v]")].map(x => x.dataset.v).join();
+        d.innerHTML = dayGroups(periodTxns().sort(byNewest));
+        const s = $("#sheet .p");
+        return {
+          days: J(days(s)) === J(days(d)),
+          n: days(s).length,
+          rows: rows(s) === rows(d),
+          more: !!$("#sheet .dmore"),
+        };
+      });
+      ok(
+        same.days && same.rows && same.n > 300 && !same.more,
+        "scrolled to its end, it shows the same days, day totals and rows as drawn at once " + JSON.stringify(same)
+      );
+      // an edit from deep in the sheet
+      await page.evaluate(() => {
+        closeSheet();
+        entriesSheet();
+        while (dayDrawn("#sheet") && dayDrawn("#sheet") < 2400) dayMore("#sheet");
+      });
+      const id = await page.evaluate(() => {
+        const id = histRows(periodTxns().sort(byNewest))[600].id;
+        document.querySelector('#sheet .tx[data-v="' + id + '"]').scrollIntoView({ block: "center" });
+        return id;
+      });
+      await page.waitForTimeout(300);
+      const seen = () =>
+        page.evaluate(id => {
+          const r = document.querySelector('#sheet .tx[data-v="' + id + '"]'),
+            p = $("#sheet .p").getBoundingClientRect();
+          return !!r && r.getBoundingClientRect().top >= p.top && r.getBoundingClientRect().bottom <= p.bottom;
+        }, id);
+      ok(await seen(), "a row deep in the sheet, in view");
+      await page.click('#sheet .tx[data-v="' + id + '"]');
+      await page.click('#sheet .txo [data-act="tx-open"]');
+      await page.fill("#f-amt", "8");
+      await page.click('#sheet [data-act="tx-save"]');
+      await page.waitForTimeout(400);
+      const back = await page.evaluate(
+        id => ({
+          list: !!$("#sheet #ent-list"),
+          n: document.querySelectorAll("#sheet .tx.en[data-v]").length,
+          focus: document.activeElement.dataset.v === id,
+          amount: entry(id).amount,
+        }),
+        id
+      );
+      ok(back.list && back.amount === 8, "saved, the entries sheet is back " + JSON.stringify(back));
+      ok(await seen(), "its row still in view");
+      ok(back.focus, "the focus on its row");
+      ok(back.n <= 1200, "drawn through that row and a chunk more only: " + back.n + " of " + total);
+      // the last row drawn archived from the sheet: the focus goes on to the next row, drawn for it
+      const last = await page.evaluate(() => {
+        closeSheet();
+        entriesSheet();
+        const rows = document.querySelectorAll("#sheet .tx.en[data-v]"),
+          r = rows[rows.length - 1];
+        r.scrollIntoView({ block: "center" });
+        rowToggle(r, r.dataset.v);
+        const list = histRows(periodTxns().sort(byNewest));
+        return { id: r.dataset.v, next: list[list.findIndex(t => t.id === r.dataset.v) + 1].id };
+      });
+      ok(
+        !(await page.$('#sheet .tx[data-v="' + last.next + '"]')),
+        "the row after the last one drawn is not drawn yet"
+      );
+      await page.click('#sheet .txo [data-act="tx-del"]');
+      await page.waitForTimeout(150);
+      await page.click("#pop .cd-alt");
+      await page.waitForTimeout(300);
+      ok(
+        (await page.evaluate(() => document.activeElement.dataset.v)) === last.next,
+        "archiving the last row drawn moves the focus on to the next row: " + JSON.stringify(last)
+      );
+      await page.evaluate(() => closeSheet());
+      // the tablet's Year pane
+      await page.setViewportSize({ width: 1000, height: 800 });
+      await page.evaluate(() => render());
+      await page.waitForTimeout(200);
+      const pane = await rowsIn(page, "#app");
+      ok(pane > 0 && pane <= 400, "the tablet's Year pane draws its first chunk: " + pane + " of " + total);
+      for (let k = 0; k < 4; k++) {
+        await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        await page.waitForTimeout(80);
+      }
+      ok((await rowsIn(page, "#app")) > pane, "scrolling the pane draws more");
+      await ctx.close();
+    }
+  }
+
   // ---- a row whose title would be cut stacks (title whole, the amount under it); a short title keeps the amount on
   // its right; a row far down is measured as it comes near; selecting keeps it
   {

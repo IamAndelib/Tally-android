@@ -264,11 +264,12 @@ function refocus(root, k) {
 /* After a change takes away the control that had the focus (rows deleted, archived or unarchived, the selection begun
    or ended, an Undo, an entry saved out of the list), the focus lands on the next control that makes sense, never on
    the page: the first of `to` that is drawn and usable in the top layer (else the screen), each an entry's row by its
-   id ({row}, so it holds however much of a list is drawn), a selector or an element; with none of them, the screen's
-   first button (`last`). While a layer is still opening or closing, layerFocus() places it once the layers have
-   settled: it would give the focus back to the control that opened the layer, which the change took away. Given by a
-   script, the focus shows its ring only when the last input was a key (Chromium's :focus-visible): a tap leaves none.
-   A control out of sight (under what History keeps pinned: scroll-padding-top) is scrolled just into view. */
+   id ({row}, so it holds however much of a list is drawn: one not drawn yet is drawn first, drawThrough), a selector
+   or an element; with none of them, the screen's first button (`last`). While a layer is still opening or closing,
+   layerFocus() places it once the layers have settled: it would give the focus back to the control that opened the
+   layer, which the change took away. Given by a script, the focus shows its ring only when the last input was a key
+   (Chromium's :focus-visible): a tap leaves none. A control out of sight (under what History keeps pinned:
+   scroll-padding-top) is scrolled just into view, and the row a redraw was holding in place is let go (toAnchor). */
 let LAND = null; // where the focus goes once the layers have settled
 const landRoot = () => ["#pop", "#sheet2", "#sheet"].map(s => $(s)).find(el => el.innerHTML) || $("#app");
 function landFocus(to) {
@@ -283,7 +284,13 @@ function landNow(to, last) {
   root.querySelectorAll(".tx.en[data-v]").forEach(r => rows.has(r.dataset.v) || rows.set(r.dataset.v, r));
   let el = null;
   for (const t of to) {
-    el = !t ? null : t.row ? rows.get(t.row) : typeof t === "string" ? root.querySelector(t) : root.contains(t) && t;
+    el = !t
+      ? null
+      : t.row
+        ? rows.get(t.row) || drawThrough(root, t.row)
+        : typeof t === "string"
+          ? root.querySelector(t)
+          : root.contains(t) && t;
     if (el && usable(el)) break;
     el = null;
   }
@@ -295,7 +302,10 @@ function landNow(to, last) {
     b = box
       ? box.getBoundingClientRect()
       : { top: parseFloat(document.documentElement.style.scrollPaddingTop) || 0, bottom: innerHeight };
-  if (r.top < b.top || r.bottom > b.bottom) el.scrollIntoView({ block: "nearest" });
+  if (r.top < b.top || r.bottom > b.bottom) {
+    HOLDS.forEach(stop => stop());
+    el.scrollIntoView({ block: "nearest" });
+  }
   return true;
 }
 function setDateField(el, v, keepNow) {

@@ -36,8 +36,15 @@ let RINGW = 0;
 let drawnScreen = "";
 function render() {
   const a = V.screen === drawnScreen && !FIND_BACK ? rowAnchor($("#app")) : null, // not around search's list (findBack)
-    f = V.find ? findKeep() : null; // search mode: the caret in the field comes back too
-  keepFocus($("#app"), drawScreen);
+    f = V.find ? findKeep() : null, // search mode: the caret in the field comes back too
+    on = document.activeElement,
+    fr = a && on && $("#app").contains(on) && on.closest("[data-v]");
+  DRAWAT = a ? { ids: [a.v, fr && fr.dataset.v], pane: dayDrawn("#app") } : null; // the pane: before drawScreen clears it
+  try {
+    keepFocus($("#app"), drawScreen);
+  } finally {
+    DRAWAT = null;
+  }
   drawnScreen = V.screen;
   if (f) findRestore(f);
   if (a) toAnchor(a, $("#app"));
@@ -63,6 +70,9 @@ function rowAnchor(box, scroller) {
     row = rows.find(below) || rows[rows.length - 1];
   return row ? { v: row.dataset.v, top: row.getBoundingClientRect().top - r.top } : null;
 }
+/* the rows toAnchor() holds in place, each by the function that lets it go: when the focus is scrolled to elsewhere
+   (landFocus), that place no longer counts */
+const HOLDS = new Set();
 function toAnchor(a, box, scroller) {
   /* once the box is drawn anew (another screen, or the next render, which keeps its own row), the row is let go */
   const drawn = box.firstElementChild;
@@ -79,12 +89,46 @@ function toAnchor(a, box, scroller) {
      runs before the frame is painted), for the few frames that takes, or until the person touches or scrolls */
   const ro = new ResizeObserver(fix),
     stop = () => {
+      HOLDS.delete(stop);
       ro.disconnect();
       ["pointerdown", "wheel", "keydown"].forEach(t => removeEventListener(t, stop, true));
     };
   box.querySelectorAll(".dl").forEach(l => ro.observe(l));
+  HOLDS.add(stop);
   ["pointerdown", "wheel", "keydown"].forEach(t => addEventListener(t, stop, true));
   setTimeout(stop, 250);
+}
+/* A long list drawn anew on the same screen (History's, the Archived screen's, Home's pane; the entries sheet when it
+   comes back) is drawn only through the chunk (HIST_CHUNK entries) holding the row in view and the row with the focus,
+   plus one chunk, and never further than it was (`was`, entries drawn so far) unless those rows moved down: the place
+   and the focus stay, and the rest follows as the end comes near, as on opening (histWatch, dayWatch). DRAWAT: those
+   rows' ids while render() draws, and how far Home's pane was drawn (else null); drawTo(): how many of list's
+   entries to draw, or 0 when neither row is in it. */
+let DRAWAT = null;
+function drawTo(list, ids, was) {
+  const i = Math.max(-1, ...(ids || []).map(id => (id ? list.findIndex(t => t.id === id) : -1)));
+  if (i < 0) return 0;
+  const n = (Math.floor(i / HIST_CHUNK) + 2) * HIST_CHUNK;
+  return was ? Math.min(n, Math.max(was, i + 1)) : n;
+}
+/* Draws a long list on until entry id's row is in it, as scrolling there would (histMore, dayMore), so the focus can
+   land on a row not drawn yet (landFocus): History's or the Archived screen's, or a period's day list in root (the
+   entries sheet, Home's pane). The row, or null when the list doesn't list it. */
+function drawThrough(root, id) {
+  const sel = '.tx.en[data-v="' + CSS.escape(id) + '"]',
+    app = root === $("#app"),
+    hist = app && histLike(),
+    key = app ? "#app" : "#sheet",
+    more = hist ? ".hmore" : ".dmore",
+    row = root.querySelector(sel);
+  if (row || !root.querySelector(more) || !(hist || (root === $(key) && DAYL[key]))) return row;
+  const rows = hist ? (V.screen === "archive" ? archRows : listRows)(HLIST) : histRows(DAYL[key]);
+  if (!rows.some(t => t.id === id)) return null;
+  while (!root.querySelector(sel) && root.querySelector(more)) {
+    if (hist) histMore();
+    else dayMore(key);
+  }
+  return root.querySelector(sel);
 }
 function drawScreen() {
   const app = $("#app");
@@ -127,6 +171,7 @@ function drawScreen() {
     app.innerHTML = settingsView();
     fitWeekSeg();
   } else app.innerHTML = homeView();
+  dayWatch("#app"); // Home's pane: its period's rows past the first chunk
   fitFigures(app);
   histCenter(app);
   histPin();
@@ -277,7 +322,11 @@ function homeView() {
   if (!wide) h += side;
   else {
     const list = periodTxns().sort(byNewest);
-    side += '<div class="sec">' + esc(periodLabel()) + "</div>" + dayList(list);
+    side +=
+      '<div class="sec">' +
+      esc(periodLabel()) +
+      "</div>" +
+      dayList(list, "#app", DRAWAT ? drawTo(list, DRAWAT.ids, DRAWAT.pane) : 0);
   }
   const top = h;
   h = "";
@@ -1046,12 +1095,56 @@ function loanPill(t) {
   if (!r || !r.ls) return "";
   return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
-/* a period's rows by day (Home's two panes, the entries sheet), or why there are none: nothing written down, or every
-   entry archived (archived entries count in the day totals, never as rows) */
-const dayList = list =>
-  histRows(list).length
-    ? dayGroups(list)
-    : '<div class="empty">' + TH(list.some(t => t.archived) ? "history.none.archived" : "home.nothingYet") + "</div>";
+/* a period's rows by day (Home's two panes: box "#app"; the entries sheet: "#sheet"), or why there are none: nothing
+   written down, or every entry archived (archived entries count in the day totals, never as rows). A year is
+   thousands of rows: they are drawn in History's chunks, at least `n` entries (drawTo) and whole days, then a marker
+   (.dmore) after which the rest follows as it comes near (dayWatch, dayMore), from the list kept in DAYL[box]. */
+const DAYL = {},
+  DAYIO = {};
+function dayList(list, box, n) {
+  if (!histRows(list).length)
+    return (
+      '<div class="empty">' + TH(list.some(t => t.archived) ? "history.none.archived" : "home.nothingYet") + "</div>"
+    );
+  DAYL[box] = list;
+  return dayChunk(list, 0, Math.max(n || 0, HIST_CHUNK));
+}
+/* how many entries box's day list has drawn (0: all of them, or none drawn) */
+const dayDrawn = box => {
+  const end = $(box + " .dmore");
+  return end ? +end.dataset.next : 0;
+};
+/* list[i..] for about `budget` entries, ending with a day (a day's total is the whole day's), then the marker */
+function dayChunk(list, i, budget) {
+  let e = Math.min(list.length, i + budget);
+  while (e < list.length && list[e].date === list[e - 1].date) e++;
+  return dayGroups(list.slice(i, e)) + (e < list.length ? '<div class="dmore" data-next="' + e + '"></div>' : "");
+}
+/* the rest of a day list is drawn when its marker comes within a few screens of the view (the sheet's panel, which
+   scrolls itself, or the page) */
+function dayWatch(box) {
+  if (DAYIO[box]) DAYIO[box].disconnect();
+  DAYIO[box] = null;
+  const end = $(box + " .dmore");
+  if (!end || typeof IntersectionObserver === "undefined") return;
+  DAYIO[box] = new IntersectionObserver(es => es.some(e => e.isIntersecting) && dayMore(box), {
+    root: end.closest(".p"),
+    rootMargin: "1500px 0px",
+  });
+  DAYIO[box].observe(end);
+}
+function dayMore(box) {
+  const end = $(box + " .dmore"),
+    list = DAYL[box];
+  if (!end || !list) return dayWatch(box);
+  end.insertAdjacentHTML("beforebegin", "<div>" + dayChunk(list, +end.dataset.next, HIST_CHUNK) + "</div>");
+  const part = end.previousElementSibling,
+    next = part.querySelector(".dmore");
+  end.remove();
+  if (next) part.after(next); // the marker stays last, after the rows
+  fitFigures(part);
+  dayWatch(box); // still near the end? this says so again
+}
 /* the rows of a list by day, under day headings: History's (hist), each with its words; the Archived screen's (hist
    "arch"), the archived entries' rows under headings without totals; elsewhere, each day's spending */
 function dayGroups(list, hist) {
