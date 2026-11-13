@@ -47,6 +47,39 @@ function cycleDonut() {
   save();
   render();
 }
+/* how wide a ring label is at label size f (as --f writes it), in the labels' font: measured on a canvas, so drawing
+   the ring lays nothing out */
+let RING_TEXT = null;
+function ringTextW(s, f, bold) {
+  if (!RING_TEXT) RING_TEXT = { g: document.createElement("canvas").getContext("2d"), family: "" };
+  if (!RING_TEXT.family) RING_TEXT.family = getComputedStyle(document.body).fontFamily;
+  RING_TEXT.g.font = (bold ? "700 " : "") + f.toFixed(1) + "px " + RING_TEXT.family;
+  return RING_TEXT.g.measureText(s).width;
+}
+/* whether every tile's name fits whole (docs/decisions.md, 2026-11-05: ring names are whole or left out): on its one
+   line within its tile (.rt .cn: 92%), with it and the % under it (Home) clear of the next tile's icon, name and %,
+   by a pixel across. Laid out as .rt does it: the icon (d) 4px from the top, then 2px apart the name's line (1.3) and
+   the %'s (1.1), each centred. */
+function ringNamesFit(L, cats, d, f, share) {
+  const { u, slots } = L,
+    n = cats.length,
+    rect = (x, w, t, h) => ({ l: x - w / 2, r: x + w / 2, t, b: t + h });
+  const tiles = cats.map((c, i) => {
+    const { x, y } = slots[i],
+      w = ringTextW(catName(c), f),
+      t = y - u / 2 + 6 + d, // the name's line
+      p = share(c),
+      lines = [rect(x, w, t, 1.3 * f)];
+    if (p) lines.push(rect(x, ringTextW(p, f, true), t + 1.3 * f + 2, 1.1 * f));
+    return { w, icon: rect(x, d, y - u / 2 + 4, d), lines };
+  });
+  const meet = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > -1 && Math.min(a.b, b.b) > Math.max(a.t, b.t),
+    clear = (a, b) => a.lines.every(l => !meet(l, b.icon) && b.lines.every(m => !meet(l, m)));
+  return tiles.every((a, i) => {
+    const b = tiles[(i + 1) % n];
+    return a.w + 1 <= u * 0.92 && (n < 2 || (clear(a, b) && clear(b, a)));
+  });
+}
 function ringHTML(cats, o) {
   const home = o.mode === "home",
     W = Math.max(240, RINGW || $("#app").clientWidth - 24),
@@ -67,7 +100,12 @@ function ringHTML(cats, o) {
     room = Math.min(u, pitch - 2) - 4 - f * rows,
     d0 = Math.round(u * (u < 70 ? 0.5 : 0.56)),
     dfit = Math.round(Math.max(u * 0.42, Math.min(d0, room))),
-    names = room >= dfit - 1,
+    /* and across: every name whole and clear of the next tile, or no name on the whole ring */
+    share = c => {
+      const v = home ? o.by[c.id] || 0 : 0;
+      return v ? percent(Math.max(1, Math.round((v / o.spent) * 100))) : "";
+    },
+    names = room >= dfit - 1 && ringNamesFit(L, cats, dfit, f, share),
     /* no name: only the % on Home, which still has to fit, clear of the next icon on the diagonal too (a small
        ring on a phone held sideways): the name's line less a little */
     d = names ? dfit : Math.round(Math.max(u * 0.42, Math.min(d0, room + (home ? 1 * f : f * rows))));
@@ -83,7 +121,7 @@ function ringHTML(cats, o) {
     };
   });
   const tile = p => {
-    const v = home ? o.by[p.c.id] || 0 : 0;
+    const v = share(p.c);
     return (
       '<button class="cat rt' +
       (home ? (FX.cat === p.c.id ? " saved" : "") : " tile") +
@@ -106,9 +144,7 @@ function ringHTML(cats, o) {
       '"' +
       (home
         ? ' aria-label="' +
-          (v
-            ? TH("ring.addShare", { cat: catName(p.c), share: percent(Math.max(1, Math.round((v / o.spent) * 100))) })
-            : TH("ring.add", { cat: catName(p.c) })) +
+          (v ? TH("ring.addShare", { cat: catName(p.c), share: v }) : TH("ring.add", { cat: catName(p.c) })) +
           '"'
         : "") +
       ">" +
@@ -118,7 +154,7 @@ function ringHTML(cats, o) {
         ? '<span class="cp" style="color:' +
           inkOn(p.c.c) + // the category's colour, readable on the surface
           '">' +
-          (v ? esc(percent(Math.max(1, Math.round((v / o.spent) * 100)))) : "") +
+          esc(v) +
           "</span>"
         : "") +
       "</button>"

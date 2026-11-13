@@ -550,9 +550,8 @@ html[dir="rtl"] .strip.fade {
 }
 .rt .cn {
   display: block; /* one line, not a tile's two: whole or not at all (ringHTML leaves out a name that has no room) */
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  line-height: 1.3; /* tall enough for descenders (g, y) inside the clipped name */
+  white-space: nowrap; /* never an ellipsis: ringHTML shows a name only where it fits whole */
+  line-height: 1.3; /* tall enough for descenders (g, y) */
   max-width: 92%; /* a little air between neighbouring names in a full ring */
   flex-shrink: 0;
 }

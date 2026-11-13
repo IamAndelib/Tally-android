@@ -132,7 +132,7 @@ function sampleState(t, nCats) {
       name: [
         "Coffee",
         "Pets",
-        "Gifts",
+        "Travel and holidays", // a long name of the user's own: Home's ring shows it whole or no names (ringNames)
         "Gym",
         "Books",
         "Phone",
@@ -140,7 +140,7 @@ function sampleState(t, nCats) {
         "Kids",
         "Taxes",
         "Repairs",
-        "Travel",
+        "Gifts",
         "Charity",
       ][i],
       i: "star",
@@ -173,6 +173,59 @@ function sampleState(t, nCats) {
     ],
     assets: [{ id: "a1", name: "Laptop", i: "laptop", c: "#5b6cff", value: 1400, currency: "USD" }],
   };
+}
+
+/* runs in the page: Home's ring names (ringHTML). Every tile shows its name or none does; a name shown is whole (no
+   "…", nothing clipped), inside its tile and clear of every other tile's icon and name; every tile's label names its
+   category either way */
+function ringNames() {
+  const tiles = [...document.querySelectorAll("#ring .rt")],
+    out = [],
+    text = e => {
+      const r = document.createRange();
+      r.selectNodeContents(e);
+      return r.getBoundingClientRect();
+    },
+    meet = (a, b) =>
+      Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 &&
+      Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+  const named = tiles.filter(
+    t => t.querySelector(".cn") && getComputedStyle(t.querySelector(".cn")).display !== "none"
+  );
+  if (named.length && named.length < tiles.length)
+    out.push("names on " + named.length + " of " + tiles.length + " tiles");
+  if (document.querySelector("#ring .cn[hidden]"))
+    out.push("names measured too narrow: hidden once laid out (fitFigures)");
+  if (named.length && getComputedStyle(named[0].querySelector(".cn")).textOverflow !== "clip")
+    out.push("names may end in an ellipsis");
+  for (const t of tiles) {
+    const c = cat(t.dataset.v),
+      id = catName(c);
+    if (!(t.getAttribute("aria-label") || "").includes(catName(c))) out.push(id + ": its label doesn't name it");
+    const n = named.includes(t) && t.querySelector(".cn");
+    if (!n) continue;
+    const b = text(n),
+      tb = t.getBoundingClientRect();
+    if (n.textContent !== catName(c)) out.push(id + ": name shown as '" + n.textContent + "'");
+    if (
+      n.scrollWidth > n.clientWidth ||
+      b.left < tb.left - 0.5 ||
+      b.right > tb.right + 0.5 ||
+      b.bottom > tb.bottom + 0.5
+    )
+      out.push(id + ": name cut (" + Math.round(b.width) + " px in " + n.clientWidth + ")");
+    for (const o of tiles)
+      if (o !== t)
+        for (const e of o.querySelectorAll(".ci, .cn"))
+          if (
+            getComputedStyle(e).display !== "none" &&
+            meet(b, e.classList.contains("ci") ? e.getBoundingClientRect() : text(e))
+          )
+            out.push(
+              id + ": name over " + catName(cat(o.dataset.v)) + "'s " + (e.classList.contains("ci") ? "icon" : "name")
+            );
+  }
+  return { named: named.length > 0, out };
 }
 
 /* runs in the page: problems with the layer on top (dialog, sheet2, sheet or the screen) */
@@ -281,11 +334,8 @@ function inspect() {
         tiny[1].textContent.trim().slice(0, 20) +
         "'"
     );
-  // 9. a category name cut to an ellipsis (fitFigures makes it a little smaller first); a full ring (more than 16, at
-  //    9px) may cut, as a launcher does
+  // 9. a category name cut (Home's ring too, full or not: its names are whole or left out)
   for (const e of layer.querySelectorAll(".cat .cn")) {
-    const ring = e.closest(".ring");
-    if (ring && ring.querySelectorAll(".rt").length > 16) continue;
     if (vis(e) && e.scrollWidth > e.clientWidth + 1) out.push("name cut " + name(e) + " '" + e.textContent + "'");
   }
   // 2b. Home's balance bar: every figure and code lies wholly inside the bar, the codes in one column, the figures
@@ -405,7 +455,7 @@ function inspect() {
           .map(e => {
             const r = document.createRange();
             r.selectNodeContents(e);
-            /* a label's visible part: its text, cut to its own box (long names end in an ellipsis) */
+            /* a label's visible part: its text, within its own box */
             const b = e.getBoundingClientRect(),
               tr = r.getBoundingClientRect();
             return [
@@ -1748,6 +1798,90 @@ function inspect() {
     if (errors.length) summary[tag + " errors"] = errors;
     console.log(tag + ": " + states.length + " states");
     await ctx.close();
+  }
+  /* Home's ring with long names (docs/decisions.md, 2026-11-05: ring names are whole or left out): 12, 14 and 16
+     categories on a phone and a tablet, at both text sizes, in English and German; once with names that fit some
+     rings ("Personal care", "Versicherung") and once with one that fits none at these counts ("Travel and
+     holidays"). Each ring shows every name whole or none (ringNames) */
+  if (!SIZES.length) {
+    const ringSeen = { named: [], bare: [] };
+    for (const lang of ["en", "de"])
+      for (const dev of DEVICES.filter(d => ["galaxy-s", "tablet-portrait"].includes(d.id))) {
+        const ctx = await browser.newContext({
+          uiLang: lang,
+          viewport: { width: dev.w, height: dev.h },
+          screen: { width: dev.w, height: dev.h },
+          deviceScaleFactor: 1,
+          isMobile: true,
+          reducedMotion: "reduce",
+          hasTouch: true,
+          locale: LANG_LOCALE[lang] || "en-US",
+        });
+        await ctx.addInitScript(() => {
+          window.__fontScale = 1;
+          window.Android = {
+            getColors: () => null,
+            setBars() {},
+            setReminders() {},
+            takeActions: () => "[]",
+            requestNotifications() {},
+            saveFile() {},
+            fontScale: () => window.__fontScale,
+          };
+        });
+        const page = await ctx.newPage();
+        const errors = [];
+        page.on("pageerror", e => errors.push(e.message));
+        await page.goto(appUrl);
+        const t = await page.evaluate(() => today());
+        await page.evaluate(
+          st => {
+            localStorage.setItem("extra", JSON.stringify(st.extraCats));
+            delete st.extraCats;
+            localStorage.setItem("tally:v1", JSON.stringify(st));
+          },
+          sampleState(t, 16)
+        );
+        await page.reload();
+        await page.evaluate(() => document.fonts.ready);
+        for (const s of SCALES)
+          for (const k of [12, 14, 16])
+            for (const long of [["Personal care", "Versicherung"], ["Travel and holidays"]]) {
+              const tag = "ring-" + dev.id + "@" + s + (lang === "en" ? "" : "-" + lang) + "-" + k + "-" + long.length;
+              await page.evaluate(
+                ([s, k, long]) => {
+                  window.__fontScale = s;
+                  applyTextScale();
+                  const extra = JSON.parse(localStorage.getItem("extra"));
+                  S.cats = S.cats.filter(c => !c.id.startsWith("x"));
+                  /* the long names first, so every count shows them, then the notebook's own */
+                  const outs = long
+                    .map((name, i) => ({ ...extra[i], name }))
+                    .concat(S.cats.filter(c => c.kind === "out"));
+                  outs.forEach((c, i) => (c.hidden = i >= k));
+                  S.cats = outs.concat(S.cats.filter(c => c.kind !== "out"));
+                  V.screen = "home";
+                  render();
+                  scrollTo(0, 0);
+                },
+                [s, k, long]
+              );
+              const r = await page.evaluate(ringNames);
+              await page.screenshot({ path: OUT + "/" + tag + ".png" });
+              ringSeen[r.named ? "named" : "bare"].push(tag);
+              if (r.out.length) summary[tag] = r.out;
+            }
+        if (errors.length) summary["ring-" + dev.id + "-" + lang + " errors"] = errors;
+        await ctx.close();
+      }
+    ok(
+      ringSeen.named.some(x => x.startsWith("ring-galaxy-s@1-") && x.endsWith("-2")) &&
+        ringSeen.named.some(x => x.startsWith("ring-tablet-portrait@1-") && x.endsWith("-2")) &&
+        ringSeen.bare.some(x => x.startsWith("ring-galaxy-s@1.3-")) &&
+        !ringSeen.named.some(x => x.endsWith("-1")),
+      "Home's ring shows its names where every one fits whole and leaves them all out where one doesn't " +
+        JSON.stringify(ringSeen)
+    );
   }
   /* History's rows on phones 320–393 px wide, at both text sizes, in English, German and Russian (docs/decisions.md,
      2026-11-07): a row whose title the amount beside it would cut stacks (.stacked) and shows its whole title; a row

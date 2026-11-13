@@ -419,7 +419,7 @@ function perCur(add) {
    word doesn't fit beside it; a name that wrapped gets a box as wide as its longest line (fitWrapped). */
 function fitFigures(root) {
   root
-    .querySelectorAll(".sumcard .big[style], .tx .a[style], .rt .cn[style], .hcol[style], .balbar b[style]")
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .hcol[style], .balbar b[style]")
     .forEach(el => el.removeAttribute("style"));
   root.querySelectorAll(".tx.en.stacked").forEach(el => el.classList.remove("stacked")); // measured side by side again
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -506,15 +506,12 @@ function fitFigures(root) {
     });
   }
   fitRows([...root.querySelectorAll(".tx .a")].filter(el => !el.closest("[data-far]")));
-  /* a name on Home's ring too wide for its tile: a little smaller, down to 9px, and only then its ellipsis (ring names
-     are whole or left out: ringHTML) */
-  root.querySelectorAll(".rt .cn").forEach(el => {
-    for (
-      let px = parseFloat(getComputedStyle(el).fontSize) - 0.5;
-      px >= 9 && el.scrollWidth > el.clientWidth + 1;
-      px -= 0.5
-    )
-      el.style.fontSize = px + "px";
+  /* ring names are whole or left out (ringHTML measures them): should one still not fit its line as laid out (the web
+     font arriving after the ring was drawn), the ring shows none */
+  root.querySelectorAll(".ring").forEach(ring => {
+    const cn = [...ring.querySelectorAll(".rt .cn")];
+    cn.forEach(el => (el.hidden = false));
+    if (cn.some(el => el.scrollWidth > el.clientWidth + 1)) cn.forEach(el => (el.hidden = true));
   });
   fitChargeLabel(root); // after the names, which it must stay clear of
 }
