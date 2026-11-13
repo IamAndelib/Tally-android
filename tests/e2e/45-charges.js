@@ -1787,7 +1787,16 @@ function variedV7() {
                   box.innerHTML = txLine(t);
                   if (cl(e.querySelector(".d").textContent) !== cl(box.querySelector(".d").textContent))
                     bad.push(t.id + " not named as in History");
-                  if (cl(e.querySelector(".s").textContent) !== cl(clockTime(t.ts) + " · " + acc(t.account).name))
+                  /* the time it was written, with that day too when it isn't the day it counts on */
+                  const at = new Date(t.ts),
+                    when =
+                      iso(at) === d
+                        ? clockTime(t.ts)
+                        : T("backup.when", {
+                            day: at.toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }),
+                            time: clockTime(t.ts),
+                          });
+                  if (cl(e.querySelector(".s").textContent) !== cl(when + " · " + acc(t.account).name))
                     bad.push(t.id + " second line " + cl(e.querySelector(".s").textContent));
                   return [t.id, cl(e.querySelector(".a").textContent)];
                 });
