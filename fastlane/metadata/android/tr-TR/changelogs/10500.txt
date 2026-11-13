@@ -1,0 +1,5 @@
+- Geçmiş içinde arama ve Filtrelerle tüm zamanların geçmişi: hesap, tür, kategori, kişi.
+- Bir kaydı silmek yerine arşivle: bakiyeler olduğu gibi kalır.
+- Ana sayfada, Geçmiş'te ve harcama özetinde dönem olarak bir yıl.
+- Masraflar ve ekstralar: ATM masrafı, KDV ya da bahşiş; harcama ya da gelir olarak sayılır.
+- Hesapları, borçları ve Ana sayfadaki bakiyeleri basılı tutup sürükleyerek yeniden sırala.

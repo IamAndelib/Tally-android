@@ -10,7 +10,7 @@ TODAS TUS CUENTAS, CUALQUIER MONEDA
 Cuentas bancarias, billeteras móviles, efectivo, tarjetas de crédito y ahorros, cada uno en su moneda: cualquiera de
 las monedas del mundo.
 
-TRANSFERENCIAS QUE NUNCA CUENTAN COMO GASTO
+MUEVE DINERO ENTRE TUS CUENTAS
 Mueve dinero entre tus propias cuentas, incluso entre monedas, y añade un cargo, como la comisión del cajero o del
 retiro, que cuenta como gasto.
 
@@ -23,8 +23,9 @@ parciales (con un cargo, o un extra encima), recordatorios y préstamos dados po
 pestañas Activos y Pasivos.
 
 MIRA ATRÁS
-Historial de cualquier día, rango de fechas o mes, con el saldo de cada cuenta después de cada movimiento. Toca el
-gráfico para ver tus últimos 7 días, 8 semanas o un mes por categoría.
+Historial de cualquier día, mes o año, o de todo el tiempo, con el saldo de cada cuenta después de cada movimiento.
+Busca en él, filtra por cuenta, tipo, categoría o persona, y archiva los movimientos que prefieras no ver. Toca el
+gráfico para ver tus gastos por día, semana, mes o año.
 
 RECORDATORIOS Y UN WIDGET
 Un aviso por la noche si hoy no anotaste nada, recordatorios de las fechas de pago y un widget para la pantalla de

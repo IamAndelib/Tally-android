@@ -1,0 +1,5 @@
+- Cari di dalam Riwayat, dan Riwayat sepanjang waktu dengan Filter: akun, jenis, kategori, orang.
+- Arsipkan transaksi alih-alih menghapusnya: saldo tetap seperti semula.
+- Tahun sebagai periode di Beranda, di Riwayat, dan di ringkasan pengeluaran.
+- Biaya dan tambahan: biaya ATM, PPN, atau tip, dihitung sebagai pengeluaran atau pemasukan.
+- Tahan dan geser untuk mengurutkan ulang akun, pinjaman, dan saldo di Beranda.

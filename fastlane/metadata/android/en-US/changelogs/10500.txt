@@ -1,0 +1,5 @@
+- Search inside History, and History from all time with Filters: account, kind, category, person.
+- Archive an entry instead of deleting it: balances stay as they are.
+- A year as a period on Home, in History and in the Summary.
+- Charges and extras: an ATM fee, VAT or a tip, counted as spending or income.
+- Hold and drag to reorder accounts, loans and Home's chips.

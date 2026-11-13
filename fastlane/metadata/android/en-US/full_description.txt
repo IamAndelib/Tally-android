@@ -10,7 +10,7 @@ EVERY ACCOUNT, EVERY CURRENCY
 Bank accounts, mobile wallets, cash, credit cards and savings, each in its own currency: any of the world's
 currencies.
 
-TRANSFERS THAT NEVER COUNT AS SPENDING
+MOVE MONEY BETWEEN YOUR ACCOUNTS
 Move money between your own accounts, even between currencies, and add a charge, such as an ATM or cash-out fee, which
 counts as spending.
 
@@ -22,8 +22,9 @@ Keep track of money you borrowed or lent: several amounts per person, due dates,
 charge, or an extra on top), reminders and write-offs. See your net worth on the Assets and Liabilities tabs.
 
 LOOK BACK
-History for any day, date range or month, with each account's balance after every entry. Tap the donut for your last
-7 days, 8 weeks or a month by category.
+History for any day, month, year or all time, with each account's balance after every entry. Search it, filter by
+account, kind, category or person, and archive entries you'd rather not see. Tap the donut for your spending by day,
+week, month or year.
 
 REMINDERS AND A WIDGET
 An evening nudge if you haven't written anything today, loan due-date reminders, and a home-screen widget with today's

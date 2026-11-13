@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-11-13
+
 ### Added
 
 - A loan or lending with no payback day gets a reminder once a month, on the day the money was lent, until it is paid
@@ -601,6 +603,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.5.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.5.0
 [1.4.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.4
 [1.4.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.3
 [1.4.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.2

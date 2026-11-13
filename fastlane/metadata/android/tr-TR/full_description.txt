@@ -10,7 +10,7 @@ HER HESAP, HER PARA BİRİMİ
 Banka hesapları, mobil cüzdanlar, nakit, kredi kartları ve birikimler, her biri kendi para biriminde: dünyadaki
 tüm para birimleri desteklenir.
 
-HARCAMAYA HİÇ SAYILMAYAN TRANSFERLER
+HESAPLARIN ARASINDA PARA AKTAR
 Kendi hesapların arasında, farklı para birimleri arasında bile para aktar; masraf ekle, örneğin ATM ya da para çekme
 masrafı; harcamaya sayılır.
 
@@ -22,8 +22,9 @@ Aldığın ve verdiğin borçları takip et: kişi başına birden çok tutar, v
 ya da üstüne ekstrayla), hatırlatmalar ve vazgeçilen alacaklar. Net varlığını Varlıklar ve Borçlar sekmelerinde gör.
 
 GERİYE BAK
-Herhangi bir gün, tarih aralığı ya da ay için geçmiş; her kayıttan sonra her hesabın bakiyesiyle. Son 7 günü,
-8 haftayı ya da bir ayı kategoriye göre görmek için halkaya dokun.
+Herhangi bir gün, ay, yıl ya da tüm zamanlar için geçmiş; her kayıttan sonra her hesabın bakiyesiyle. İçinde ara;
+hesaba, türe, kategoriye ya da kişiye göre filtrele ve görmek istemediğin kayıtları arşivle. Harcamalarını güne,
+haftaya, aya ya da yıla göre görmek için halkaya dokun.
 
 HATIRLATMALAR VE WIDGET
 Bugün hiçbir şey yazmadıysan bir akşam hatırlatması, borç vadesi hatırlatmaları ve bugünün bakiyesini, bugünün

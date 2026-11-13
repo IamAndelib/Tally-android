@@ -1,0 +1,5 @@
+- Suchen im Verlauf, dazu der Verlauf über die gesamte Zeit mit Filtern: Konto, Art, Kategorie, Person.
+- Einträge archivieren statt löschen: Die Kontostände bleiben, wie sie sind.
+- Ein Jahr als Zeitraum auf der Startseite, im Verlauf und in der Ausgabenübersicht.
+- Gebühren und Extras: etwa eine Geldautomatengebühr, Mehrwertsteuer oder ein Trinkgeld, gezählt als Ausgabe oder Einnahme.
+- Halten und ziehen, um Konten, Schulden und die Kontostände auf der Startseite neu zu ordnen.
