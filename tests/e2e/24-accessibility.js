@@ -1333,19 +1333,9 @@ const ok = (c, m) => {
     /* the focus moved (TalkBack, a keyboard) to a control under the pinned part: it comes out below it */
     const below = () =>
       sp.evaluate(() => {
-        /* the control as drawn: a switch's 48px box has a transparent band above and below its track, which Chrome
-           leaves out when it brings the focus into view (it may lie under the heading; the tap still reaches it) */
+        /* the whole 48px box, a switch's clear bands above and below its track too (its scroll-margin) */
         const e = document.activeElement,
-          cs = getComputedStyle(e),
-          b = e.getBoundingClientRect(),
-          clear = cs.borderTopColor === "rgba(0, 0, 0, 0)" ? parseFloat(cs.borderTopWidth) : 0,
-          r = {
-            left: b.left,
-            width: b.width,
-            top: b.top + clear,
-            height: b.height - 2 * clear,
-            bottom: b.bottom - clear,
-          },
+          r = e.getBoundingClientRect(),
           bar = $("#app .appbar").getBoundingClientRect(),
           held = [...document.querySelectorAll("#app .sec")]
             .map(h => h.getBoundingClientRect())
@@ -1437,6 +1427,43 @@ const ok = (c, m) => {
         tag + "a long heading wraps, and the room above the focus grows " + JSON.stringify(lw)
       );
       await sp.evaluate(() => render());
+    }
+    /* dragging a category up towards a ring whose top is hidden under the pinned part: the page scrolls along (the
+       drag's top edge counts from the pinned part's bottom, not the window's top) */
+    if (sz.id === "phone") {
+      await sp.evaluate(() => render());
+      const cdp = await c.newCDPSession(sp);
+      const T = (type, x, y) =>
+        cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+      const at = await sp.evaluate(() => {
+        const pad = parseFloat(document.documentElement.style.scrollPaddingTop) || 0,
+          ring = $("#app .ring.edit");
+        scrollBy(0, ring.getBoundingClientRect().top - (pad - 30));
+        /* the lowest tile in view, to lift */
+        const t = [...ring.querySelectorAll(".tile")]
+          .map(e => e.getBoundingClientRect())
+          .filter(r => r.bottom < innerHeight - 10)
+          .sort((a, b) => b.top - a.top)[0];
+        return { x: t.left + t.width / 2, y: t.top + t.height / 2, pad, ring: ring.getBoundingClientRect().top };
+      });
+      const y0 = await sp.evaluate(() => scrollY);
+      await T("touchStart", at.x, at.y);
+      await sp.waitForTimeout(450);
+      for (let k = 1; k <= 6; k++) {
+        await T("touchMove", at.x, at.y + ((at.pad + 30 - at.y) * k) / 6);
+        await sp.waitForTimeout(16);
+      }
+      for (let k = 0; k < 6; k++) {
+        await T("touchMove", at.x + (k % 2), at.pad + 30);
+        await sp.waitForTimeout(16);
+      }
+      const drag = await sp.evaluate(y0 => ({ lifted: !!document.querySelector(".ghost"), up: y0 - scrollY }), y0);
+      await T("touchEnd");
+      await sp.waitForTimeout(400);
+      ok(
+        drag.lifted && drag.up >= 20 && at.ring < at.pad && at.ring > 0,
+        tag + "a category dragged up to a ring under the pinned part scrolls the page " + JSON.stringify([at, drag])
+      );
     }
     await c.close();
   }

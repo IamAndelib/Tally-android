@@ -293,10 +293,12 @@ function dragMove(x, y) {
   L.ghost.style.left = x - L.dx + "px";
   L.ghost.style.top = y - L.dy + "px";
   /* near an edge the page scrolls along; for the ring only while part of it is still off-screen that way, so a ring
-     that fits never creeps under the finger */
+     that fits never creeps under the finger. The top edge is below what a screen keeps pinned there (Settings' bar
+     and section heading: the room scroll-padding-top keeps, histPinSet), so a ring hidden under it scrolls too */
   const rb = L.ring && L.ring.getBoundingClientRect(),
+    pinned = parseFloat(document.documentElement.style.scrollPaddingTop) || 0,
     low = innerHeight - (document.body.classList.contains("hasnav") ? 150 : 70);
-  if (y < 70 && (!rb || rb.top < 0)) scrollBy(0, -10);
+  if (y < pinned + 70 && (!rb || rb.top < pinned)) scrollBy(0, -10);
   else if (y > low && (!rb || rb.bottom > low)) scrollBy(0, 10);
   if (L.kind === "chip") {
     /* Home's balance chips: sideways, the strip scrolling along near its ends */
