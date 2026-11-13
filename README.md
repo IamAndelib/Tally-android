@@ -79,7 +79,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   entries it leaves. Matches are marked, a typo offers the word it was close to, and your last searches wait under the
   empty field. They stay on this phone only, never in backups. Archived entries are left out, unless **Settings →
   History → Archived entries in search** is on.
-- **Spending summary:** tap the donut for the last 7 days, 8 weeks, a month as a pie of its categories, or a year's 12
+- **Spending summary:** tap the donut for a day or a month as a pie of its categories, the last 8 weeks, or a year's 12
   months, compared with the period before; the bars show whole amounts.
 
 **Around the phone**

@@ -303,7 +303,7 @@ links that would need the internet.
 
 - **No budgets** (until 1.6.0's planned budgeting/planning work), **no statement import**, no bank connections.
 - **No network, analytics, ads, accounts or sign-up**, ever. No remote content.
-- **No charts to study.** Summary shows bars (or, in its Months tab, a pie) and a category list with one comparison;
+- **No charts to study.** Summary shows bars (or, in its Days and Months tabs, a pie) and a category list with one comparison;
   nothing more.
 - **Transfers, loan movements and balance fixes never count as spending or income;** a charge paid with them is
   spending, an extra received on top is income.

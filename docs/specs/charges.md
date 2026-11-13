@@ -431,12 +431,12 @@ Spending only, as in C-summary:
 
 - Every tab's bars, total, average and comparison include charges and worked-out spending; extras are not in Summary.
 - **The list ends with a Charges line** whenever the period has charges outside purchases: a grey dot where a
-  category's emblem would be, **Charges**, its percentage on Months and Year ("Charges <1%"), a grey bar and the
-  amount. On Days and Weeks it comes after the three top categories; on Months and Year after all of them, whatever its
+  category's emblem would be, **Charges**, its percentage on Days, Months and Year ("Charges <1%"), a grey bar and the
+  amount. On Weeks it comes after the three top categories; on Days, Months and Year after all of them, whatever its
   size. It is Summary's legend.
-- The Months pie ends with the grey slice.
+- The Days and Months pies end with the grey slice.
 - TalkBack: "Charges, ৳158.00, less than 1%", each line one sentence (a category's alike: "Rent, ৳120,000.00, 68%";
-  no share on Days and Weeks).
+  no share on Weeks).
 - **Each line opens in place** (a button with a chevron, expanded or collapsed for TalkBack; one open at a time) to the
   entries behind its amount in the tab's period, worked out from the same items Summary adds up: newest first, at most
   5, read-only, each as History's two lines without the category: what it was | the amount it counts in this part, no
@@ -444,7 +444,8 @@ Spending only, as in C-summary:
   it is worked out on), then the day (Days: the time it was written down) and the account. Only the Summary's currency;
   an archived entry is not listed, as in History. Past 5, "Show all 8 in History" opens History on the tab's period (a
   week as a date range) with Spent and that category, or the Charges kind for Charges; the number is what History will
-  list (History has no currency filter, and its Charges kind also lists purchases with a charge).
+  list (History has no currency filter, and its Charges kind also lists purchases with a charge). A charge whose
+  transfer was deleted (an orphan fee, from old data) is in Summary's Charges part but not in History's Charges kind.
 
 ### Assets and Liabilities
 

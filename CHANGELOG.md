@@ -50,6 +50,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
   "Archived", each with Unarchive and Delete. While selecting they are faded and can't be picked.
 - History's bar, its Filters line and the month in view stay at the top while the entries scroll, the next month's
   heading taking over; Settings keeps its bar and the section in view the same way.
+- **Charges** and **Extras** as kinds in History's Filters and in search, with their counts; search finds them by
+  name and by words such as "fee" or "tip" in each language, and their month and day headings read "Charges" or
+  "Extras" with the amount.
+- **Summary rows open in place** to the newest 5 entries behind their amount, with **Show all** opening History on
+  the same period and part.
 - **Charges and extras.** Each has its own calculator and a preview of what it adds up to:
   - a **transfer charge** (an ATM or cash-out fee) on a transfer, on a loan payment and on a lend, and **Add a charge**
     on spending, such as VAT or a service charge;
@@ -88,8 +93,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
   edge where more chips wait.
 - Loans and lendings say each thing once: a row reads person and what's left, then the account and due date beside its
   status (Active, Partly paid); the loan's sheet leaves out what the row already says.
-- The Summary shows whole amounts on every tab (a compact form such as 12.4K only from five digits), and its Months tab
-  shows the month's categories as a pie, with the total under it.
+- The Summary shows whole amounts on every tab (a compact form such as 12.4K only from five digits), and its Days and
+  Months tabs show one day's or one month's categories as a pie, with the total under it. Days is no longer the last 7
+  days as bars; use ‹ › to move a day.
 - Small marks: History's Select icon is a checklist; the net worth card has no explaining line and the same soft
   container in light and dark; a category's emblem is the button that changes it (a pen over a dark tint, replacing the
   "Change emblem" text); amount fields start with the currency's own decimals ("4,167.50"); negative balances use a

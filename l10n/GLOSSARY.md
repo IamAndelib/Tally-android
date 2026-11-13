@@ -39,7 +39,8 @@ Never edit `app/src/main/assets/js/i18n/*.js`: `tools/gen_i18n.py` makes them fr
 | spending / spent | money that went out on something (an expense) |
 | money in / received / income | money that came in |
 | transfer | money moved between two of your own accounts; never spending |
-| fee | a charge on a transfer or a loan payment; never counted as spending |
+| fee / charge | a cost paid with an entry (an ATM fee, VAT, a service charge, a loan's interest); counted as spending, in the Charges part (docs/specs/charges.md) |
+| extra | what you receive on top of what you lent (interest, a tip); counted as income |
 | loan / borrowed | money **you** borrowed from someone: you owe it |
 | lending / lent | money **you** lent to someone: they owe you |
 | payment / paid back / got back | money returned on a loan (you paid back) or a lending (you got back) |
