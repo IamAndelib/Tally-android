@@ -781,16 +781,20 @@ function withUndo(msg, change, fx, after) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
   const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
     before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) },
-    near = fx && fx.row && V.screen === "history" ? rowsAround([fx.row]) : null; // where an entry saved out goes
+    row = fx && fx.row,
+    drawn = () => !!$("#app").querySelector('.tx.en[data-v="' + CSS.escape(row) + '"]'),
+    hist = V.screen === "history",
+    near = row && (hist || drawn()) ? rowsAround([row]) : null; // where an entry saved out of its list goes
   change();
   FX = fx || {};
   commit();
   FX = {};
   let said = typeof msg === "function" ? msg() : msg;
-  /* an entry saved while History is filtered, no longer fitting the list it was opened from: say so */
-  if (said === T("common.saved") && near && histGone(fx.row)) {
-    said = T("history.savedGone");
-    landFocus(near); // its row is gone: the next one
+  /* an entry saved out of the list it was opened from (History's filters, Home's period): its row is gone, the focus
+     goes to the next one; History says so */
+  if (near && (hist ? histGone(row) : !drawn())) {
+    if (hist && said === T("common.saved")) said = T("history.savedGone");
+    landFocus(near);
   }
   snack(said, entries => {
     /* the rows Undo brings back or changes again (an add-on's in its entry's), the first in the list taking the focus */

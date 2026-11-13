@@ -1712,6 +1712,17 @@ const ok = (c, m) => {
     await tap('#app [data-act="sel-start"]');
     await page.evaluate(() => goBack());
     await say("sel-start:", "Back while selecting: the Select button");
+    {
+      const r = await (await page.$(row("e3"))).boundingBox();
+      await page.mouse.move(r.x + 60, r.y + 20);
+      await page.mouse.down();
+      await page.waitForTimeout(600);
+      await page.mouse.up();
+      await page.waitForTimeout(320);
+      await say("sel-toggle:e3", "a long press starts selecting: the row held keeps the focus");
+      await page.evaluate(() => goBack());
+      await page.waitForTimeout(60);
+    }
     await tap('#app [data-act="sel-start"]');
     await tap(row("e2"));
     await tap(row("e2"));
@@ -1826,6 +1837,91 @@ const ok = (c, m) => {
         (await page.evaluate(() => document.activeElement.matches(":focus-visible"))),
       "with the keyboard, the row given the focus shows its ring: " + (await where())
     );
+    await ctx.close();
+  }
+
+  // Focus after removals on Home: its two panes (a tablet, a phone held sideways) and its entries sheet
+  for (const [w, h] of [
+    [1000, 800],
+    [393, 852],
+  ]) {
+    const panes = w > 900;
+    const { ctx, page } = await open(w, h);
+    const seed = () =>
+      page.evaluate(() => {
+        closeSheet();
+        closePop();
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 500, archived: false });
+        // all today, newest first: e1 … e4
+        [1, 2, 3, 4].forEach(n =>
+          S.txns.push({ id: "e" + n, ts: 10 - n, date: today(), type: "expense", amount: n, account: "a", cat: "food" })
+        );
+        V.screen = "home";
+        V.open = "";
+        commit();
+      });
+    const where = () =>
+      page.evaluate(() => {
+        const a = document.activeElement;
+        if (!a || a === document.body) return "body";
+        return (a.closest("#sheet") ? "sheet " : "") + (a.dataset.act || a.tagName) + ":" + (a.dataset.v || "");
+      });
+    const tap = async sel => {
+      await page.click(sel);
+      await page.waitForTimeout(320);
+    };
+    const say = async (want, what) => {
+      const g = await where();
+      ok(g === want, (panes ? "two panes: " : "phone: ") + what + ": " + g);
+    };
+    if (panes) {
+      // a row opened in the right pane → Edit → Delete or Archive instead in its own sheet: the next row
+      for (const alt of [false, true]) {
+        await seed();
+        ok(await page.evaluate(() => !!$('#app .tx.en[data-v="e2"]')), "two panes: the entries are in the pane");
+        await tap('#app .tx[data-v="e2"]');
+        await tap('#app .txo [data-act="tx-open"]');
+        await tap('#sheet [data-act="tx-del"]');
+        await tap(alt ? "#pop .cd-alt" : "#pop .cd-destroy");
+        await say("row-open:e3", (alt ? "Archive instead" : "Delete") + " in the entry's own sheet: the next row");
+      }
+      // Edit → Save moving it out of the period: the next row
+      await seed();
+      await tap('#app .tx[data-v="e2"]');
+      await tap('#app .txo [data-act="tx-open"]');
+      await page.evaluate(() => {
+        const d = addDays(today(), -1);
+        saveChecked(() => (entry("e2").date = d), d, T("common.saved"), { row: "e2" });
+      });
+      await page.waitForTimeout(320);
+      await say("row-open:e3", "saved out of the period: the next row");
+      // the account rows (.tx too) are never taken for entries
+      ok(
+        await page.evaluate(() => rowsAround(["e3"]).every(t => !t.row || t.row.startsWith("e"))),
+        "two panes: the account rows are not entry rows"
+      );
+    }
+    // the entries sheet: an entry opened from it and deleted in its own sheet: the next row, back in the list
+    await seed();
+    await page.evaluate(() => entriesSheet());
+    await page.waitForTimeout(320);
+    await tap('#sheet .tx[data-v="e2"]');
+    await tap('#sheet .txo [data-act="tx-open"]');
+    await tap('#sheet [data-act="tx-del"]');
+    await tap("#pop .cd-destroy");
+    await page.waitForTimeout(100);
+    await say("sheet row-open:e3", "deleted from the entries sheet's entry: the next row in the list");
+    // a row's own Delete inside the entries sheet, then its Undo
+    await tap('#sheet .tx[data-v="e3"]');
+    await tap('#sheet .txo [data-act="tx-del"]');
+    await tap("#pop .cd-destroy");
+    await say("sheet row-open:e4", "a row's Delete in the entries sheet: the next row");
+    await tap('#snack [data-act="undo"]');
+    await page.waitForTimeout(100);
+    await say("sheet row-open:e3", "its Undo: the row back in the entries sheet");
     await ctx.close();
   }
 

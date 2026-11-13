@@ -267,7 +267,8 @@ function refocus(root, k) {
    id ({row}, so it holds however much of a list is drawn), a selector or an element; with none of them, the screen's
    first button (`last`). While a layer is still opening or closing, layerFocus() places it once the layers have
    settled: it would give the focus back to the control that opened the layer, which the change took away. Given by a
-   script, the focus shows its ring only when the last input was a key (Chromium's :focus-visible): a tap leaves none. */
+   script, the focus shows its ring only when the last input was a key (Chromium's :focus-visible): a tap leaves none.
+   A control out of sight (under what History keeps pinned: scroll-padding-top) is scrolled just into view. */
 let LAND = null; // where the focus goes once the layers have settled
 const landRoot = () => ["#pop", "#sheet2", "#sheet"].map(s => $(s)).find(el => el.innerHTML) || $("#app");
 function landFocus(to) {
@@ -279,7 +280,7 @@ function landFocus(to) {
 function landNow(to, last) {
   const root = landRoot(),
     rows = new Map();
-  root.querySelectorAll(".tx[data-v]").forEach(r => rows.has(r.dataset.v) || rows.set(r.dataset.v, r));
+  root.querySelectorAll(".tx.en[data-v]").forEach(r => rows.has(r.dataset.v) || rows.set(r.dataset.v, r));
   let el = null;
   for (const t of to) {
     el = !t ? null : t.row ? rows.get(t.row) : typeof t === "string" ? root.querySelector(t) : root.contains(t) && t;
@@ -287,8 +288,15 @@ function landNow(to, last) {
     el = null;
   }
   if (!el && last && root === $("#app")) el = [...root.querySelectorAll("button")].find(usable);
-  if (el) el.focus({ preventScroll: true });
-  return !!el;
+  if (!el) return false;
+  el.focus({ preventScroll: true });
+  const r = el.getBoundingClientRect(),
+    box = el.closest(".p"), // a sheet's panel scrolls itself
+    b = box
+      ? box.getBoundingClientRect()
+      : { top: parseFloat(document.documentElement.style.scrollPaddingTop) || 0, bottom: innerHeight };
+  if (r.top < b.top || r.bottom > b.bottom) el.scrollIntoView({ block: "nearest" });
+  return true;
 }
 function setDateField(el, v, keepNow) {
   const shownAs = v ? shortDay(v) : el.dataset.none;

@@ -1695,6 +1695,10 @@ const seed = () => ({
     }
     ok(J(await rows()) === "[]", "nothing archived is left");
     await say("arch-back:", "the last one unarchived: the back button");
+    // the screen's own fallbacks, when no row next to it is drawn: its first row, else its back button
+    await undo();
+    await page.evaluate(() => landFocus(rowsAround(["not-drawn"])));
+    await say("row-open:ad", "no neighbour drawn: the Archived screen's first row");
 
     // search listing archived entries: the row stays, unmarked, with the focus
     o.settings.searchArch = true;

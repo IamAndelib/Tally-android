@@ -651,10 +651,10 @@ function histFocus(sel, at) {
    not), the entries sheet's rows. */
 function rowsAround(ids) {
   const box = landRoot(),
-    own = box !== $("#app") && box.querySelector(".tx[data-v]"), // the entries sheet
+    own = box !== $("#app") && box.querySelector(".tx.en[data-v]"), // the entries sheet
     order =
-      own || !histLike()
-        ? [...(own ? box : $("#app")).querySelectorAll(".tx[data-v]")].map(r => r.dataset.v)
+      own || !histLike() // the entries sheet's rows, or Home's (two panes); not the accounts' rows
+        ? [...(own ? box : $("#app")).querySelectorAll(".tx.en[data-v]")].map(r => r.dataset.v)
         : (V.screen === "archive" ? archRows : listRows)(HLIST).map(t => t.id),
     set = new Set(ids),
     i = order.findIndex(id => set.has(id)),
@@ -663,14 +663,14 @@ function rowsAround(ids) {
   return [
     ...(i < 0 ? [] : [row(order[i]), ...other(order.slice(i + 1)), ...other(order.slice(0, i).reverse())]),
     ...(V.screen === "archive" ? ['.tx[data-act="row-open"]', '[data-act="arch-back"]'] : [".hfbtn"]),
-    ".tx[data-v]",
+    ".tx.en[data-v]",
   ];
 }
 /* the selection ends (its ✕, Back, its last row unticked): a row that had the focus keeps it, else the Select button
    takes it */
 function selEnd() {
   const a = document.activeElement,
-    r = a && a.closest && a.closest("#app .tx[data-v]");
+    r = a && a.closest && a.closest("#app .tx.en[data-v]");
   V.sel = null;
   render();
   landFocus([r && { row: r.dataset.v }, '[data-act="sel-start"]', ".hfbtn"]);

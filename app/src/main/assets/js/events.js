@@ -378,8 +378,8 @@ document.addEventListener("click", ev => {
       }
       const id = F.id;
       deleteAsk([id], arch => {
+        const to = !BACKTO && rowsAround([id]); // from the entries sheet, openEntry() places it on its way back
         closeSheet();
-        const to = histLike() && rowsAround([id]); // the entry's own sheet, opened from its row
         withUndo(T(arch ? "entries.archived" : "common.deleted"), () =>
           arch ? archiveEntries([id], true) : deleteEntries([id])
         );

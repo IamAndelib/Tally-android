@@ -105,8 +105,10 @@ function pressStart(x, y, target) {
       swallowNextClick();
       buzz("long");
       if (LP.kind === "sel") {
-        V.sel = new Set([LP.el.dataset.v]);
+        const id = LP.el.dataset.v;
+        V.sel = new Set([id]);
         render();
+        landFocus([{ row: id }, '[data-act="sel-cancel"]']); // the row held, now ticked
         LP = null;
       } else dragBegin();
     },
