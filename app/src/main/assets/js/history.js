@@ -772,23 +772,22 @@ function histParts() {
   }
   const chips = histChips(),
     anySet = HP.period !== "all" || histCount() > 0 || !!(V.find && HF.q.trim());
+  const sug = V.find && !V.sel && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
   /* the chips and Clear all follow the Filters button on its line, wrapping when it is full; Clear all is left out when
-     the list is empty (its message has one) */
-  let head = histBar(anySet && nRows, chips, !!V.sel);
+     the list is empty and its message, which has one, is shown (not under a suggestion) */
+  let head = histBar(anySet && (nRows || sug), chips, !!V.sel);
   if (!V.sel) {
     /* no visible summary (the months carry their totals); a hidden status says the count after each change */
     if (!V.find)
       head += '<div class="vh" role="status">' + (nRows ? TH("history.count", { count: nRows }) : "") + "</div>"; // search mode has one that stays (#find-live)
   }
   if (idle) return { head, body: recentView(), idle: true }; // search mode, nothing asked yet: the recent searches
-  const sug = V.find && !V.sel && HF.q.trim() ? findSugs() : ""; // search mode: what the words could mean, above the entries
   /* a suggestion ("may 2025", "Charges" for "fee") is the answer: nothing is said about the words finding no entries */
   if (!nRows && sug) return { head, body: sug };
   if (!nRows)
     return {
       head,
       body:
-        sug +
         '<div class="empty">' +
         (V.find
           ? findNone()

@@ -2510,6 +2510,24 @@ const ok = (c, m) => {
       "tip: Extras, 2 entries, a grey circle with the plus icon: " + JSON.stringify(s)
     );
     ok(!r.empty, "…and no “Nothing matches” under it");
+    // with a filter set, no rows and a suggestion (so no message with its Clear all): Clear all stays on the bar
+    await p9.evaluate(() => {
+      HF.acc = "a";
+      findDraw();
+    });
+    await type9(p9, "fee");
+    r = await look9(p9);
+    const bar = await p9.evaluate(() => ({
+      clear: [...document.querySelectorAll('#app [data-act="hf-clear"]')].map(b => !!b.closest(".hbar")),
+      chips: document.querySelectorAll("#app .hchips .hchip").length,
+    }));
+    ok(
+      r.sugs.some(x => x.t === "Charges") && !r.empty && r.rows === 0 && J9(bar.clear) === "[true]",
+      "a filter set, a suggestion and no rows: Clear all is on the bar: " + J9(bar)
+    );
+    await p9.click('#app .hbar [data-act="hf-clear"]');
+    await p9.waitForTimeout(250);
+    ok(await p9.evaluate(() => histCount() === 0 && !HF.q), "…and it clears the filter and the words");
     await type9(p9, "zzzz");
     r = await look9(p9);
     ok(!r.sugs.length && r.empty.includes("Nothing matches “zzzz”"), "nothing at all: Nothing matches “zzzz”");
