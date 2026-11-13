@@ -1104,7 +1104,7 @@ function selSync(b) {
   b.classList.toggle("on", on);
   b.setAttribute("aria-pressed", on);
   b.querySelector(".em.pick").innerHTML = ic(on ? "checked" : "unchecked");
-  $("#app .appbar h1").textContent = T("history.selected", { count: n });
+  $("#app .appbar h1").outerHTML = selTitle(n);
   $('#app [data-act="sel-del"]').disabled = $('#app [data-act="sel-arch"]').disabled = !n;
   const all = $('#app [data-act="sel-all"]'),
     every = histAllSelected();

@@ -775,8 +775,8 @@
   },
   "history": {
     "stopSel": "Stop selecting",
-    "selected_one": "{{count}} selected",
-    "selected_other": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
     "selAll": "Select all",
     "clearSel": "Clear selection",
     "delSel": "Delete selected",

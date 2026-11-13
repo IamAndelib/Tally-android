@@ -775,8 +775,8 @@
   },
   "history": {
     "stopSel": "Seçimi bitir",
-    "selected_one": "{{count}} seçildi",
-    "selected_other": "{{count}} seçildi",
+    "selected_one": "{{count}} seçildi",
+    "selected_other": "{{count}} seçildi",
     "selAll": "Tümünü seç",
     "clearSel": "Seçimi temizle",
     "delSel": "Seçilenleri sil",

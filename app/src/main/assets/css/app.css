@@ -3674,6 +3674,13 @@ body.land.calcopen #snack .snack {
 .hchips {
   display: contents;
 }
+/* the way to the Archived screen, last on the Filters line: an outlined square, the archive box in its middle */
+.chip.harch {
+  width: 48px;
+  padding: 0;
+  justify-content: center;
+  flex: none;
+}
 /* selecting: the same row, dimmed and out of reach */
 .hbar.hoff {
   opacity: 0.45;

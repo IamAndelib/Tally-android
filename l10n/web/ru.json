@@ -793,10 +793,10 @@
   },
   "history": {
     "stopSel": "Отменить выбор",
-    "selected_one": "Выбрано: {{count}}",
+    "selected_one": "Выбрано: {{count}}",
     "selected_few": "Выбрано: {{count}}",
     "selected_many": "Выбрано: {{count}}",
-    "selected_other": "Выбрано: {{count}}",
+    "selected_other": "Выбрано: {{count}}",
     "selAll": "Выбрать все",
     "clearSel": "Снять выбор",
     "delSel": "Удалить выбранные",

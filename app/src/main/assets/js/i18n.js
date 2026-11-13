@@ -68,13 +68,12 @@ function i18nText(key, vars, html) {
       console.error("i18n: " + k + " needs {{" + n + "}}");
       return "";
     }
-    if (n === "count" && typeof v === "number") {
-      COUNT_NF = COUNT_NF || new Intl.NumberFormat(LOC.fmt);
-      v = COUNT_NF.format(v);
-    }
+    if (n === "count" && typeof v === "number") v = countText(v);
     return html ? (v.html != null ? v.html : esc(v)) : String(v);
   });
 }
+/* a count as the phone writes numbers (its digits and grouping) */
+const countText = n => (COUNT_NF = COUNT_NF || new Intl.NumberFormat(LOC.fmt)).format(n);
 /* a text as plain text: for textContent, snack(), askDialog() and what goes to the shell */
 const T = (key, vars) => i18nText(key, vars, false);
 /* a text as HTML: the text and each value escaped, except values given as {html: …} (a name in bdi(), an icon) */

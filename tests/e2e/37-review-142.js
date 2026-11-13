@@ -135,7 +135,7 @@ const ok = (c, m) => {
       render();
       undoFn();
       out.afterUndo = [...V.sel].join();
-      out.header = $("#app .appbar h1").textContent;
+      out.header = $("#app .appbar h1").getAttribute("aria-label"); // TalkBack's title (the bar shows the count)
       // History on an old month with two of its entries selected, then the day changes: History moves to this month
       const old = addDays(today(), -40); // t120, t121 are from that day
       HP.anchor = old;
@@ -155,7 +155,7 @@ const ok = (c, m) => {
     });
     ok(r.payee, "a payee longer than the box takes isn't cut by an edit of the amount");
     ok(
-      r.afterUndo === "t1" && r.header === "1\u00a0selected",
+      r.afterUndo === "t1" && r.header === "1 selected",
       "after Undo only the listed entry stays selected: " + r.header
     );
     ok(

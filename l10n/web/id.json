@@ -766,7 +766,7 @@
   },
   "history": {
     "stopSel": "Berhenti memilih",
-    "selected_other": "{{count}} dipilih",
+    "selected_other": "{{count}} dipilih",
     "selAll": "Pilih semua",
     "clearSel": "Hapus pilihan",
     "delSel": "Hapus yang dipilih",

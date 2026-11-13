@@ -452,7 +452,7 @@ const ok = (c, m) => {
     ["History, selecting", () => (openHistory(), (V.sel = new Set(["e"])), render())],
     /* archived entries (docs/specs/history-archive.md, B): History's icon, the Archived screen, an opened row there, the
        delete question there (Delete and Cancel), and the screen once empty */
-    ["History, its archive icon", () => (archiveEntries(["e"], true), commit(), openHistory())],
+    ["History, its archive button on the Filters line", () => (archiveEntries(["e"], true), commit(), openHistory())],
     ["Archived", () => archOpen()],
     ["Archived, an opened row", () => (archOpen(), rowToggle($('#app .tx[data-v="e"]'), "e"))],
     [
@@ -999,7 +999,7 @@ const ok = (c, m) => {
       "the checklist is not offered as a category emblem"
     );
 
-    // archived entries (docs/specs/history-archive.md, B): History's archive icon and Archive selected are named and
+    // archived entries (docs/specs/history-archive.md, B): History's archive button and Archive selected are named and
     // 48px; the Archived screen's headings are headings, its opened row says so, and Back gives the focus to the icon
     const named = sel =>
       page.evaluate(sel => {
@@ -1022,10 +1022,10 @@ const ok = (c, m) => {
       return t.id;
     });
     await settle();
-    const icon = await named('#app [data-act="arch-open"]');
+    const icon = await named('#app .hbar [data-act="arch-open"]');
     ok(
       icon && icon.name === "Archived entries" && icon.tap && icon.mute,
-      "History's archive icon is called “Archived entries”, 48px: " + JSON.stringify(icon)
+      "History's archive button, on the Filters line, is called “Archived entries”, 48px: " + JSON.stringify(icon)
     );
     await page.evaluate(() => {
       V.sel = new Set([histRows(S.txns)[0].id]);
@@ -1075,7 +1075,7 @@ const ok = (c, m) => {
     await settle();
     ok(
       (await page.evaluate(() => [V.screen, document.activeElement.dataset.act].join())) === "history,arch-open",
-      "Back gives the focus to the archive icon"
+      "Back gives the focus to the archive button"
     );
     // archived entries in search (spec C): Settings' switch is a named switch, 48px; an archived match says
     // "Archived" in words (its box is hidden from TalkBack), in its line's own colour: not colour alone

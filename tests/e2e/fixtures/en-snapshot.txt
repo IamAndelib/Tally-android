@@ -1807,7 +1807,8 @@ title "Tally"
 === history-select
 #app
 @aria-label="Stop selecting"
-"2 selected"
+@aria-label="2 selected"
+"2"
 @aria-label="Select all"
 @aria-label="Archive selected"
 @aria-label="Delete selected"

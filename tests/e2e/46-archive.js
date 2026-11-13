@@ -718,6 +718,13 @@ const seed = () => ({
         b => b.dataset.act + ":" + (b.getAttribute("aria-label") || "") + (b.disabled ? ":off" : "")
       )
     );
+  /* the Filters line's buttons: action and name */
+  const filtersRow = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#app .hbar button")].map(
+        b => b.dataset.act + ":" + (b.getAttribute("aria-label") || "")
+      )
+    );
   const title = () => page.evaluate(() => (document.querySelector("#app header.appbar h1") || {}).textContent);
   const opened = () =>
     page.evaluate(() =>
@@ -733,14 +740,16 @@ const seed = () => ({
     await pause();
   };
 
-  // ---- 14. History's bar (B4): the archive icon, left of search, only while an entry is archived; the Archived
+  // ---- 14. History's archive button (B4, moved by the maintainer's ruling to the Filters line): last on that line,
+  // after Clear all, only while an entry is archived, never in the top bar, in search or usable while selecting; the Archived
   // screen (B5): History's rows with their month and day headings, no totals, no Filters, search or select
   {
     await load();
     const b0 = await bar();
     ok(
-      J(b0) === J(["home:Back", "search-open:Search", "sel-start:Select entries"]),
-      "nothing archived: no archive icon " + J(b0)
+      J(b0) === J(["home:Back", "search-open:Search", "sel-start:Select entries"]) &&
+        !(await page.$('#app [data-act="arch-open"]')),
+      "nothing archived: no archive button " + J(b0)
     );
     /* History filtered and on a period: the Archived screen and Back keep both */
     await page.evaluate(() => {
@@ -751,19 +760,64 @@ const seed = () => ({
     await askRow("sp");
     await page.click("#pop .cd-alt");
     await pause();
-    const b1 = await bar();
+    const b1 = await bar(),
+      r1 = await filtersRow();
     ok(
-      J(b1) === J(["home:Back", "arch-open:Archived entries", "search-open:Search", "sel-start:Select entries"]),
-      "the first archived entry brings the icon, left of search, named “Archived entries” " + J(b1)
+      J(b1) === J(["home:Back", "search-open:Search", "sel-start:Select entries"]) &&
+        r1[r1.length - 1] === "arch-open:Archived entries" &&
+        r1[r1.length - 2] === "hf-clear:",
+      "the first archived entry brings the archive button, last on the Filters line after Clear all, named “Archived entries”; the top bar keeps Back, Search and Select " +
+        J([b1, r1])
     );
+    const look = await page.evaluate(() => {
+      const b = $('#app [data-act="arch-open"]'),
+        f = document.createElement("button"); // Filters as it is with no filter set: outlined
+      f.className = "chip hfbtn";
+      $("#app .hbar").appendChild(f);
+      const r = b.getBoundingClientRect(),
+        cs = getComputedStyle(b),
+        fs = getComputedStyle(f);
+      const out = {
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        svg:
+          b.querySelector("path").getAttribute("d") ===
+          new DOMParser().parseFromString(icArchive(), "text/html").querySelector("path").getAttribute("d"),
+        outline:
+          cs.borderTopWidth !== "0px" &&
+          cs.borderTopWidth === fs.borderTopWidth &&
+          cs.borderTopColor === fs.borderTopColor &&
+          cs.borderRadius === fs.borderRadius,
+        pinned: !!b.closest(".hpin .hhd .hbar"), // with the Filters line: pinned upright, back with it sideways
+      };
+      f.remove();
+      return out;
+    });
     ok(
-      await page.evaluate(() => {
-        const b = $('#app [data-act="arch-open"]'),
-          r = b.getBoundingClientRect();
-        return r.width >= 48 && r.height >= 48 && !!b.querySelector("svg");
-      }),
-      "the icon is 48px to tap"
+      look.w === 48 && look.h === 48 && look.svg && look.outline && look.pinned,
+      "the button: 48×48, the outlined archive box, outlined as Filters, in the pinned block " + J(look)
     );
+    /* not in search; while selecting it stays in its place, dimmed and out of reach, as Filters */
+    const modes = await page.evaluate(() => {
+      const out = {};
+      V.sel = new Set();
+      render();
+      const b = $('#app [data-act="arch-open"]');
+      out.sel = !!b && b.disabled && !!b.closest(".hbar.hoff");
+      V.sel = null;
+      render();
+      const keepHF = { ...HF },
+        keepHP = { ...HP };
+      openFind();
+      out.find = !!$('#app [data-act="arch-open"]');
+      findEnd();
+      V.find = false;
+      HF = keepHF;
+      Object.assign(HP, keepHP);
+      render();
+      return out;
+    });
+    ok(modes.sel && !modes.find, "selecting: dimmed and disabled with the Filters line; search: not there " + J(modes));
     await page.evaluate(() => {
       archiveEntries(["p1", "bp"], true);
       commit();
@@ -931,7 +985,13 @@ const seed = () => ({
       V.sel = new Set();
       render();
     });
-    ok((await title()) === "0\u00a0selected", "the count and its word are joined, so the title wraps whole");
+    ok(
+      (await page.evaluate(() => {
+        const h = $("#app header.appbar h1");
+        return h.textContent + "|" + h.getAttribute("aria-label");
+      })) === "0|0 selected",
+      "the selection bar shows only the count; TalkBack reads “0 selected”"
+    );
     ok(
       J(await bar()) ===
         J([
@@ -988,8 +1048,9 @@ const seed = () => ({
     const e = await emptyText();
     ok(J(e) === J(["Every entry is archived."]), "History says every entry is archived " + J(e));
     ok(
-      J(await bar()) === J(["home:Back", "arch-open:Archived entries", "search-open:Search"]),
-      "…with the archive icon, and nothing to select " + J(await bar())
+      J(await bar()) === J(["home:Back", "search-open:Search"]) &&
+        !!(await page.$('#app .hbar [data-act="arch-open"]')),
+      "…with the archive button on the Filters line, and nothing to select " + J(await bar())
     );
   }
 
@@ -1397,14 +1458,14 @@ const seed = () => ({
       return S.settings.searchArch === true;
     });
     ok(wiped, "Delete all data keeps the setting, as the other preferences");
-    /* catalogue fixes: Chinese joins the count with no-break spaces (no word joiners); Indonesian Unarchive's message */
+    /* catalogue fixes: "N selected" has plain spaces (Ruling P: a long title wraps); Indonesian Unarchive's message */
     const cat = await page.evaluate(() => [
       i18nCat("zh-Hans")["history.selected_other"],
       i18nCat("id")["archive.back"],
     ]);
     ok(
-      cat[0] === "已选\u00a0{{count}}\u00a0项" && !/\u2060/.test(cat[0]) && cat[1] === "Dikembalikan ke Riwayat",
-      "zh's selected count uses no-break spaces; id's “Back in History” reads “Dikembalikan ke Riwayat” " + J(cat)
+      cat[0] === "已选 {{count}} 项" && !/[\u00a0\u2060]/.test(cat[0]) && cat[1] === "Dikembalikan ke Riwayat",
+      "zh's selected count uses plain spaces; id's “Back in History” reads “Dikembalikan ke Riwayat” " + J(cat)
     );
   }
 
@@ -1458,7 +1519,7 @@ const seed = () => ({
         };
         return {
           sel: V.sel ? [...V.sel].sort().join() : null,
-          title: $("#app header.appbar h1") && $("#app header.appbar h1").textContent,
+          title: $("#app header.appbar h1") && $("#app header.appbar h1").getAttribute("aria-label"), // what TalkBack reads
           rows: [...document.querySelectorAll("#app .tx[data-v]")].map(e => e.dataset.v),
           gm2: row("gm2"),
           gm3: row("gm3"),
@@ -1476,7 +1537,30 @@ const seed = () => ({
     );
     await press("gm2");
     const s2 = await st();
-    ok(s2.sel === "gm2" && s2.title === "1 selected", "a long press on a live match starts selecting it " + J(s2));
+    ok(s2.sel === "gm2" && s2.title === "1 selected", "a long press on a live match starts selecting it " + J(s2));
+    const shown = await page.evaluate(() => {
+      const h = $("#app header.appbar h1");
+      return [
+        h.textContent,
+        h.querySelector("[aria-hidden=true]") && h.querySelector("[aria-hidden=true]").textContent,
+      ];
+    });
+    ok(shown[0] === "1" && shown[1] === "1", "the bar shows only the count, hidden from TalkBack " + J(shown));
+    /* the count as the phone writes numbers; a tap on a row (selSync) keeps the count and the phrase together */
+    const big = await page.evaluate(() => selTitle(1234));
+    ok(
+      /aria-label="1,234 selected"/.test(big) && />1,234<\/span>/.test(big),
+      "the count in the phone's number format " + big
+    );
+    await page.click('#app .tx[data-v="gm4"]');
+    await pause();
+    const tapped = await page.evaluate(() => {
+      const h = $("#app header.appbar h1");
+      return h.textContent + "|" + h.getAttribute("aria-label");
+    });
+    ok(tapped === "2|2 selected", "a row ticked: the count and TalkBack's phrase follow " + tapped);
+    await page.click('#app .tx[data-v="gm4"]');
+    await pause();
     ok(
       J(s2.rows) === J(s0.rows) &&
         s2.gm3.act === "" &&
@@ -1498,7 +1582,7 @@ const seed = () => ({
     await pause();
     const s3 = await st();
     ok(
-      s3.sel === "gm2" && s3.title === "1 selected" && !s3.gm3.pick,
+      s3.sel === "gm2" && s3.title === "1 selected" && !s3.gm3.pick,
       "a tap on an archived match ticks nothing " + J(s3.sel)
     );
     await page.click('#app [data-act="sel-all"]');
@@ -1506,7 +1590,7 @@ const seed = () => ({
     const s4 = await st();
     ok(
       s4.sel === "gm2,gm4" &&
-        s4.title === "2 selected" &&
+        s4.title === "2 selected" &&
         (await page.evaluate(() => histAllSelected() && $('#app [data-act="sel-all"]').getAttribute("aria-label"))) ===
           "Clear selection",
       "Select all selects only the live matches, and then reads as all selected " + J(s4.sel)

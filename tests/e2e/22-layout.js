@@ -352,6 +352,17 @@ function inspect() {
       if (x > 2 && y > 2) out.push("overlap " + name(a) + " / " + name(b));
     }
   }
+  // 3b. every control in a top bar (the selection bar too) lies wholly within the window's width: a long title must
+  //     wrap, never push a button off the edge. Measured against the window itself (__winW), not innerWidth: on a
+  //     phone, content wider than the window widens the page (innerWidth and scrollWidth grow together), so check 1
+  //     doesn't see it; check 11 skips a control whose middle is past the edge, and an icon has no text to be off screen
+  const winW = window.__winW || vw;
+  for (const e of layer.querySelectorAll(".appbar button, .appbar input, .appbar a[href]")) {
+    if (!vis(e)) continue;
+    const r = e.getBoundingClientRect();
+    if (r.right > winW + 1 || r.left < -1)
+      out.push("bar control off screen " + name(e) + " " + Math.round(r.left) + "–" + Math.round(r.right));
+  }
   // 11. every control in view can be tapped: nothing lies on top of its middle (a bar, a scrim, another layer). One
   //     only partly in view (under the bottom bar, past its panel's edge, behind the keypad) is reached by scrolling.
   const nav = layer.id === "app" && document.querySelector("#nav"),
@@ -565,18 +576,22 @@ function inspect() {
       locale: LANG_LOCALE[dev.lang] || "en-US",
     });
     if (dev.lang === "en-XA") await ctx.addInitScript(c => (window.I18N = { "en-XA": c }), pseudo());
-    await ctx.addInitScript(s => {
-      window.Android = {
-        getColors: () => null,
-        setBars() {},
-        setReminders() {},
-        takeActions: () => "[]",
-        requestNotifications() {},
-        saveFile() {},
-        fontScale: () => s,
-      };
-      window.__fontScale = s;
-    }, dev.s);
+    await ctx.addInitScript(
+      ([s, w]) => {
+        window.Android = {
+          getColors: () => null,
+          setBars() {},
+          setReminders() {},
+          takeActions: () => "[]",
+          requestNotifications() {},
+          saveFile() {},
+          fontScale: () => s,
+        };
+        window.__fontScale = s;
+        window.__winW = w; // the window's own width: content too wide widens the page's (innerWidth) on a phone
+      },
+      [dev.s, dev.w]
+    );
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
@@ -1421,9 +1436,9 @@ function inspect() {
         render();
       })
     );
-    /* archived entries (docs/specs/history-archive.md, B): History's bar with its archive icon, the Archived screen (its
-       months pinned as it scrolls, an opened row, the delete question there, empty once the last is unarchived), and
-       History when every entry is archived */
+    /* archived entries (docs/specs/history-archive.md, B): History with its archive button on the Filters line (after
+       Clear all, filtered), the Archived screen (its months pinned as it scrolls, an opened row, the delete question
+       there, empty once the last is unarchived), and History when every entry is archived */
     await page.evaluate(() => {
       S.txns.filter((t, i) => t.type === "expense" && !t.feeOf && i % 3 === 0).forEach(t => (t.archived = true));
       save();
@@ -1442,8 +1457,12 @@ function inspect() {
         if (del) $('#app .txo [data-act="tx-del"]').click();
       }, del);
     await shot(
-      "history-archive-icon",
+      "history-archive-button",
       ev(() => openHistory())
+    );
+    await shot(
+      "history-archive-button-filtered",
+      ev(() => openHistory({ kind: "out", acc: "b", cat: "groceries" }))
     );
     await shot("archived", ev(archived));
     await shot("archived-pinned", histAt(archived, "mid"));

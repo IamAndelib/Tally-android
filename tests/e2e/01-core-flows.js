@@ -342,7 +342,11 @@ const ok = (c, m) => {
   );
   await act("sel-toggle", food.id);
   await act("sel-toggle", gift.id);
-  ok((await page.textContent(".appbar h1")).startsWith("3\u00a0selected"), "3 selected");
+  ok(
+    (await page.getAttribute(".appbar h1", "aria-label")) === "3 selected" &&
+      (await page.textContent(".appbar h1")) === "3",
+    "3 selected: the bar shows the count, TalkBack reads “3 selected”"
+  );
   await page.screenshot({ path: OUT + "/history-select.png" });
   await act("sel-del");
   await page.click("#pop .cd-destroy"); // Delete

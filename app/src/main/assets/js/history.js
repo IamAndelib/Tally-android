@@ -9,7 +9,7 @@
  * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
  * row and the month in view stay at the top while the entries scroll). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
  * Last, the Archived screen (`archiveView()`, `archOpen()`, `archBack()`): the archived entries, reached from
- * History's bar.
+ * the Filters row's archive button.
  */
 const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "", q: "", pay: "", amt: "" });
 let HF = histBlank();
@@ -590,6 +590,14 @@ function histBar(clearHere, chips = "", off = false) {
     "</span></button>" +
     (chips ? '<div class="hchips">' + chips + "</div>" : "") +
     (clearHere ? histClearBtn() : "") +
+    /* the way to the Archived screen: last on the line, only while an entry is archived (not in search) */
+    (!V.find && S.txns.some(t => t.archived)
+      ? '<button class="chip harch" data-act="arch-open" aria-label="' +
+        TH("archive.open") +
+        '">' +
+        icArchive() +
+        "</button>"
+      : "") +
     "</div>";
   /* while selecting the row stays where it is, dimmed and out of reach (disabled, out of the tab order and hidden from screen readers; `inert` where the web view knows it) */
   return off
@@ -756,7 +764,7 @@ function histParts() {
           ? findNone()
           : anySet
             ? TH("history.noMatch") + '<div class="gap"></div>' + histClearBtn()
-            : S.txns.length // entries, none listed: every one is archived (the bar's icon leads to them)
+            : S.txns.length // entries, none listed: every one is archived (the archive button leads to them)
               ? TH("history.none.archived")
               : TH("history.none.all")) +
         "</div>",
@@ -771,6 +779,14 @@ function histParts() {
       (r.next < list.length ? '<div class="hmore" data-next="' + r.next + '"></div>' : ""),
   };
 }
+/* the selection bar's title: only the count shows (a phrase of the longest words can't fit beside four buttons on a
+   small phone), and TalkBack reads the whole phrase ("2 selected") */
+const selTitle = n =>
+  '<h1 aria-label="' +
+  TH("history.selected", { count: n }) +
+  '"><span aria-hidden="true">' +
+  esc(countText(n)) +
+  "</span></h1>";
 /* is every row listed in History selected (the select-all button then clears) */
 const histAllSelected = () => selRows(HLIST).every(t => V.sel.has(t.id));
 function historyView() {
@@ -785,9 +801,8 @@ function historyView() {
       TH("history.stopSel") +
       '">' +
       ic("close") +
-      "</button><h1>" +
-      TH("history.selected", { count: n }) +
-      "</h1>" +
+      "</button>" +
+      selTitle(n) +
       '<button class="icon" data-act="sel-all" aria-label="' +
       TH(all ? "history.clearSel" : "history.selAll") +
       '">' +
@@ -817,14 +832,6 @@ function historyView() {
       "</button><h1>" +
       TH("common.history") +
       "</h1>" +
-      /* left of search, so search and select never move as it comes and goes */
-      (S.txns.some(t => t.archived)
-        ? '<button class="icon" data-act="arch-open" aria-label="' +
-          TH("archive.open") +
-          '">' +
-          icArchive() +
-          "</button>"
-        : "") +
       searchBtn() +
       (selRows(HLIST).length
         ? '<button class="icon" data-act="sel-start" aria-label="' +
@@ -920,7 +927,7 @@ function histScroll() {
 /* ---- The Archived screen (docs/specs/history-archive.md, B5): every archived entry, newest first, in History's rows
    under its month and day headings, without totals (History's headings count these entries; this screen only finds
    them), and no period, Filters, search or selection. An opened row offers Unarchive and Delete (txOpenView). It is
-   reached from History's bar while an entry is archived, and Back returns to History as it was: its filters and period
+   reached from the archive button on History's Filters line while an entry is archived, and Back returns to History as it was: its filters and period
    are kept (drawScreen), and the row in view comes back where it was. Unarchiving or deleting the last one leaves
    the screen where it is, with its empty state. */
 let ASHOW = HIST_CHUNK, // the entries drawn so far (histMore)

@@ -784,9 +784,9 @@
   },
   "history": {
     "stopSel": "Parar de selecionar",
-    "selected_one": "{{count}} selecionado",
+    "selected_one": "{{count}} selecionado",
     "selected_many": "{{count}} selecionados",
-    "selected_other": "{{count}} selecionados",
+    "selected_other": "{{count}} selecionados",
     "selAll": "Selecionar tudo",
     "clearSel": "Limpar seleção",
     "delSel": "Excluir selecionados",

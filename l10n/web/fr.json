@@ -784,9 +784,9 @@
   },
   "history": {
     "stopSel": "Arrêter la sélection",
-    "selected_one": "{{count}} sélectionnée",
+    "selected_one": "{{count}} sélectionnée",
     "selected_many": "{{count}} sélectionnées",
-    "selected_other": "{{count}} sélectionnées",
+    "selected_other": "{{count}} sélectionnées",
     "selAll": "Tout sélectionner",
     "clearSel": "Effacer la sélection",
     "delSel": "Supprimer la sélection",

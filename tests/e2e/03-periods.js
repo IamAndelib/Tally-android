@@ -222,7 +222,7 @@ const ok = (c, m) => {
   await act("sel-toggle", "a");
   await step(-1);
   ok(
-    (await page.evaluate(() => document.querySelector("header h1").textContent)) === "0\u00a0selected",
+    (await page.evaluate(() => document.querySelector("header h1").getAttribute("aria-label"))) === "0 selected",
     "selection clears when the period changes"
   );
   await act("sel-cancel");

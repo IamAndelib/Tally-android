@@ -767,7 +767,9 @@ const ok = (c, m) => {
     await frame(page);
     let L = await look(page);
     ok(
-      L.y > 300 && L.bar && (await page.evaluate(() => $("#app .appbar h1").textContent)) === "1\u00a0selected",
+      L.y > 300 &&
+        L.bar &&
+        (await page.evaluate(() => $("#app .appbar h1").getAttribute("aria-label"))) === "1 selected",
       "selecting: the bar with its count stays at the top: " + JSON.stringify(L)
     );
     ok(L.fb && !L.rowUnderFb, "selecting: the dimmed Filters row stays under it: " + JSON.stringify(L));
