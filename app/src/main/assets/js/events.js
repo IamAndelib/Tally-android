@@ -379,6 +379,7 @@ document.addEventListener("click", ev => {
       const id = F.id;
       deleteAsk([id], arch => {
         const to = !BACKTO && rowsAround([id]); // from the entries sheet, openEntry() places it on its way back
+        if (V.open === id) V.open = ""; // its row was opened: it doesn't come back opened (after Unarchive or Undo)
         closeSheet();
         withUndo(T(arch ? "entries.archived" : "common.deleted"), () =>
           arch ? archiveEntries([id], true) : deleteEntries([id])
