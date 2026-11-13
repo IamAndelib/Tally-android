@@ -813,6 +813,30 @@ const ok = (c, m) => {
     ok(s.open === "groceries" && s.parts[0].exp === "true", "switching tabs keeps the part open");
     await page.screenshot({ path: OUT + "/opened.png" });
     await page.evaluate(() => closeSheet());
+    /* a part whose every entry is archived (still counted): opened, it says so in one muted line */
+    await page.evaluate(() => {
+      S.txns = S.txns.filter(t => t.cat === "groceries" && t.account === "k" && !t.feeOf && !t.feeId);
+      S.txns.forEach(t => (t.archived = true));
+      RBC = LPC = null;
+      render();
+      summarySheet();
+    });
+    await tap('#sm .smx[data-v="groceries"]');
+    const arch = await page.evaluate(() => {
+      const o = document.querySelector("#sm .smo");
+      return {
+        open: !!o && o.previousElementSibling.getAttribute("aria-expanded") === "true",
+        line: o && o.querySelector(".smnone") ? o.querySelector(".smnone").textContent : null,
+        muted: o && o.querySelector(".smnone.muted") ? true : false,
+        rows: o ? o.querySelectorAll(".tx, .btn").length : -1,
+        h: o ? o.getBoundingClientRect().height : 0,
+      };
+    });
+    ok(
+      arch.open && arch.line === "Every entry is archived." && arch.muted && arch.rows === 0 && arch.h >= 30,
+      "a part whose every entry is archived opens to one muted line saying so " + JSON.stringify(arch)
+    );
+    await page.evaluate(() => closeSheet());
   }
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

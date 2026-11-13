@@ -1433,9 +1433,13 @@ function inspect() {
           rows = [...o.querySelectorAll(".tx")];
         if (!rows.length || rows.length > 5) out.push(rows.length + " entries");
         if (!o.querySelector('[data-act="sm-all"]')) out.push("no Show all");
+        /* each entry's text starts where the part's name does (within 1px), whatever the emblem's size */
+        const col = row.querySelector(".d").getBoundingClientRect().left;
         rows.forEach(e => {
-          const b = e.getBoundingClientRect();
-          if (b.left < r.left + 40 || b.right > r.right) out.push("an entry outside its part's text column");
+          const b = e.getBoundingClientRect(),
+            d = e.querySelector(".d").getBoundingClientRect().left;
+          if (Math.abs(d - col) > 1) out.push("an entry's text at " + d + ", not under the part's name at " + col);
+          if (b.right > r.right) out.push("an entry past its part's right edge");
         });
         return out;
       });

@@ -1234,6 +1234,10 @@ html[dir="rtl"] .strip.fade {
   display: block;
   overflow: visible;
 }
+.smo .smnone {
+  margin: 0;
+  padding: 10px 0 8px;
+}
 .smo > .btn {
   width: auto;
   max-width: calc(100% + 12px);

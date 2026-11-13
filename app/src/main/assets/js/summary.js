@@ -184,7 +184,8 @@ function smHistCount(k) {
 }
 /* An opened part (docs/specs/charges.md, Summary): its 5 newest entries, read-only, each as History's two lines without
    the category (the row above names it): what it was | the amount it counts here (no sign: it is all spending), then
-   the day it counts on (Days: the time it was written down) and the account; then, past 5, "Show all 8 in History" */
+   the day it counts on (Days: the time it was written down) and the account; then, past 5, "Show all 8 in History".
+   A part whose every entry is archived (they still count) says so in one line. */
 const SM_SHOW = 5;
 function smEntries(k) {
   const rows = smPartRows(k),
@@ -209,6 +210,7 @@ function smEntries(k) {
       )
       .join("") +
     "</div>" +
+    (rows.length ? "" : '<p class="smnone muted small">' + TH("history.none.archived") + "</p>") +
     (rows.length > SM_SHOW
       ? '<button class="btn text" data-act="sm-all" data-v="' +
         esc(k) +
