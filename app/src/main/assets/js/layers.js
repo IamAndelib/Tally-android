@@ -247,17 +247,47 @@ function keepFocus(root, draw) {
   if (k && !(now && now !== document.body && now.isConnected)) refocus(root, k);
 }
 const focusKey = el => ({ id: el.id, act: el.dataset && el.dataset.act, v: el.dataset && el.dataset.v });
+const usable = b => !b.disabled && b.getClientRects().length > 0;
 function refocus(root, k) {
   const sel = k.id
-      ? "#" + CSS.escape(k.id)
-      : k.act
-        ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
-        : "",
-    usable = b => !b.disabled && b.getClientRects().length > 0;
+    ? "#" + CSS.escape(k.id)
+    : k.act
+      ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
+      : "";
   let el = sel && root.querySelector(sel);
   /* a button that just turned itself off (Next reaching today, Later at the newest period): its neighbour in the same
      bar takes the focus, so it isn't lost to the page */
   if (el && !usable(el)) el = [...el.parentElement.querySelectorAll("button")].find(usable) || null;
+  if (el) el.focus({ preventScroll: true });
+  return !!el;
+}
+/* After a change takes away the control that had the focus (rows deleted, archived or unarchived, the selection begun
+   or ended, an Undo, an entry saved out of the list), the focus lands on the next control that makes sense, never on
+   the page: the first of `to` that is drawn and usable in the top layer (else the screen), each an entry's row by its
+   id ({row}, so it holds however much of a list is drawn), a selector or an element; with none of them, the screen's
+   first button. While a layer is still opening or closing, layerFocus() places it once the layers have settled (it
+   would give the focus back to the control that opened the layer, which the change took away), and with none of them
+   does what it does today. Given by a script, the
+   focus shows its ring only when the last input was a key (Chromium's :focus-visible): a tap leaves none. */
+let LAND = null;
+const landRoot = () => ["#pop", "#sheet2", "#sheet"].map(s => $(s)).find(el => el.innerHTML) || $("#app");
+function landFocus(to) {
+  LAND = to;
+  if (!LAYERS.some((id, i) => i > 1 && !!$(id).dataset.up !== !!$(id).innerHTML)) landNow(true);
+}
+function landNow(last) {
+  const to = LAND || [],
+    root = landRoot(),
+    rows = new Map();
+  LAND = null;
+  root.querySelectorAll(".tx[data-v]").forEach(r => rows.has(r.dataset.v) || rows.set(r.dataset.v, r));
+  let el = null;
+  for (const t of to) {
+    el = !t ? null : t.row ? rows.get(t.row) : typeof t === "string" ? root.querySelector(t) : root.contains(t) && t;
+    if (el && usable(el)) break;
+    el = null;
+  }
+  if (!el && last && root === $("#app")) el = [...root.querySelectorAll("button")].find(usable);
   if (el) el.focus({ preventScroll: true });
   return !!el;
 }

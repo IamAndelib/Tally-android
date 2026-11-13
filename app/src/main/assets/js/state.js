@@ -780,20 +780,32 @@ const mainFirst = (a, b) => (a === S.settings.cur ? -1 : b === S.settings.cur ? 
 function withUndo(msg, change, fx, after) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
   const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
-    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) };
+    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) },
+    near = fx && fx.row && V.screen === "history" ? rowsAround([fx.row]) : null; // where an entry saved out goes
   change();
   FX = fx || {};
   commit();
   FX = {};
   let said = typeof msg === "function" ? msg() : msg;
   /* an entry saved while History is filtered, no longer fitting the list it was opened from: say so */
-  if (said === T("common.saved") && fx && fx.row && V.screen === "history" && histGone(fx.row))
+  if (said === T("common.saved") && near && histGone(fx.row)) {
     said = T("history.savedGone");
+    landFocus(near); // its row is gone: the next one
+  }
   snack(said, entries => {
+    /* the rows Undo brings back or changes again (an add-on's in its entry's), the first in the list taking the focus */
+    const now = new Map(S.txns.map(t => [t.id, t])),
+      same = (a, b) =>
+        !!b && Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(k => a[k] === b[k]),
+      back = before.txns.filter(t => !same(t, now.get(t.id))).sort(byNewest);
     Object.assign(S, before);
     commit();
     if (after) after(entries); // whether the entries list was open when Undo was tapped (it is closed by then)
     snack(T("common.undone"));
+    landFocus([
+      ...back.flatMap(t => [{ row: t.id }, t.feeOf && { row: t.feeOf }]),
+      ...(V.screen === "archive" ? ['.tx[data-act="row-open"]', '[data-act="arch-back"]'] : [".hfbtn"]),
+    ]);
   });
 }
 /* a form's save: the low-balance question when it applies, then the form closes and the change is made with its Undo */

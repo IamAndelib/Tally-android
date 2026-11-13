@@ -1665,6 +1665,155 @@ const ok = (c, m) => {
     await ctx.close();
   }
 
+  // Focus after removals (review I1, M2): whatever an action takes away, the focus goes on to the control that makes
+  // sense (the next row, the bar's button), never back to the page
+  {
+    const { ctx, page } = await open();
+    const seed = () =>
+      page.evaluate(() => {
+        closeSheet();
+        closePop();
+        S = blank();
+        S.settings.cur = "USD";
+        S.settings.lastCheck = today();
+        S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 500, archived: false });
+        S.accounts.push({ id: "b", name: "Cash", type: "cash", currency: "USD", opening: 500, archived: false });
+        // newest first: e1 (today) … e4 (three days ago)
+        [1, 2, 3, 4].forEach(n =>
+          S.txns.push({ id: "e" + n, ts: n, date: addDays(today(), 1 - n), type: "expense", amount: n, account: "a" })
+        );
+        S.txns.forEach(t => (t.cat = "food"));
+        V.screen = "home";
+        commit();
+        openHistory();
+      });
+    /* the focused control as act:v, "body" when it fell back to the page */
+    const where = () =>
+      page.evaluate(() => {
+        const a = document.activeElement;
+        return !a || a === document.body ? "body" : (a.dataset.act || a.tagName) + ":" + (a.dataset.v || "");
+      });
+    /* past the 300 ms in which a tap where a layer just closed is dropped */
+    const tap = async sel => {
+      await page.click(sel);
+      await page.waitForTimeout(320);
+    };
+    const row = id => '#app .tx[data-v="' + id + '"]';
+    const undo = () => tap('#snack [data-act="undo"]');
+    const say = async (want, what) => {
+      const w = await where();
+      ok(w === want, what + ": " + w);
+    };
+    await seed();
+    await tap('#app [data-act="sel-start"]');
+    await say("sel-cancel:", "Select: the bar's button that ends the selection has the focus");
+    await tap('#app [data-act="sel-cancel"]');
+    await say("sel-start:", "its ✕: the Select button has it");
+    await tap('#app [data-act="sel-start"]');
+    await page.evaluate(() => goBack());
+    await say("sel-start:", "Back while selecting: the Select button");
+    await tap('#app [data-act="sel-start"]');
+    await tap(row("e2"));
+    await tap(row("e2"));
+    await say("row-open:e2", "the last row unticked: that row keeps the focus, as it stays where it was");
+    // archive selected: the row after the first selected one; Undo: the first restored one
+    await tap('#app [data-act="sel-start"]');
+    await tap(row("e2"));
+    await tap(row("e3"));
+    await tap('#app [data-act="sel-arch"]');
+    await say("row-open:e4", "Archive selected: the row after them");
+    await undo();
+    await say("row-open:e2", "its Undo: the first row it brought back");
+    // delete selected, the last row: the one before it
+    await tap('#app [data-act="sel-start"]');
+    await tap(row("e4"));
+    await tap('#app [data-act="sel-del"]');
+    await tap("#pop .cd-destroy");
+    await say("row-open:e3", "Delete selected, the last row: the row before it");
+    await undo();
+    await say("row-open:e4", "its Undo: that row");
+    // an opened row's Delete and Archive instead
+    await tap(row("e2"));
+    await tap('#app .txo [data-act="tx-del"]');
+    await tap("#pop .cd-destroy");
+    await say("row-open:e3", "an opened row's Delete: the next row");
+    await undo();
+    await say("row-open:e2", "its Undo: the row back");
+    await tap(row("e2"));
+    await tap('#app .txo [data-act="tx-del"]');
+    await tap("#pop .cd-alt");
+    await say("row-open:e3", "Archive instead: the next row");
+    // the entry's own sheet: Delete there
+    await seed();
+    await tap(row("e1"));
+    await tap('#app .txo [data-act="tx-open"]');
+    await tap('#sheet [data-act="tx-del"]');
+    await tap("#pop .cd-destroy");
+    await say("row-open:e2", "Delete in the entry's own sheet: the next row");
+    // saved out of a filtered list (its own sheet): the next row
+    await seed();
+    await page.evaluate(() => {
+      HF = histNorm({ ...histBlank(), acc: "a" });
+      render();
+    });
+    await tap(row("e2"));
+    await tap('#app .txo [data-act="tx-open"]');
+    await page.evaluate(() =>
+      saveChecked(() => (entry("e2").account = "b"), entry("e2").date, T("common.saved"), { row: "e2" })
+    );
+    await page.waitForTimeout(60);
+    ok(/no longer in this list/.test(await page.evaluate(() => $("#snack").textContent)), "saved out of the list");
+    await say("row-open:e3", "Saved · no longer in this list: the next row");
+    // every row gone: the Filters button
+    await seed();
+    await tap('#app [data-act="sel-start"]');
+    await tap('#app [data-act="sel-all"]');
+    await tap('#app [data-act="sel-del"]');
+    await tap("#pop .cd-destroy");
+    await say("hf-open:", "every row deleted: the Filters button");
+    // Home's entries sheet: an entry opened from it and closed comes back to its row
+    await seed();
+    await page.evaluate(() => {
+      V.screen = "home";
+      render();
+      entriesSheet();
+    });
+    await page.waitForTimeout(60);
+    await tap('#sheet .tx[data-v="e1"]');
+    await tap('#sheet .txo [data-act="tx-open"]');
+    await page.evaluate(() => goBack());
+    await page.waitForTimeout(100);
+    ok(
+      (await page.evaluate(() => $("#sheet").contains(document.activeElement))) && (await where()) === "row-open:e1",
+      "Back to the entries sheet: the edited row has the focus: " + (await where())
+    );
+    // a tap leaves no ring on the control the focus went to; a key press before does
+    await seed();
+    await tap(row("e2"));
+    await tap('#app .txo [data-act="tx-del"]');
+    await tap("#pop .cd-destroy");
+    ok(
+      !(await page.evaluate(() => document.activeElement.matches(":focus-visible"))),
+      "after taps, the row given the focus shows no ring"
+    );
+    await page.focus(row("e3"));
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(60);
+    await page.focus('#app .txo [data-act="tx-del"]');
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(60);
+    await page.keyboard.press("Tab"); // Cancel → Archive instead → Delete, whichever: the key is what counts
+    await page.evaluate(() => $("#pop .cd-destroy").focus());
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(60);
+    ok(
+      (await where()) === "row-open:e4" &&
+        (await page.evaluate(() => document.activeElement.matches(":focus-visible"))),
+      "with the keyboard, the row given the focus shows its ring: " + (await where())
+    );
+    await ctx.close();
+  }
+
   // I4: History > Search > Back comes back as it was left; leaving any other way resets
   {
     const { ctx, page } = await open();

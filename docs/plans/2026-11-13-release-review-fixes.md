@@ -85,6 +85,9 @@ rows at once (1,728 rows: open 138 ms, a save from it 519 ms); the tablet's Year
   set" → "· no due date"; `n_payback_today`/`n_payback_was` use "due" wording; `pub_dues` "A loan or lending is due" →
   wording true for monthly reminders too (e.g. "A loan or lending reminder"). Keep placeholders; check the page's own
   words in each language (`l10n/web/*.json`, "due").
+- [ ] **Summary closes an opened row on a tab or period change** (maintainer, 2026-11-13: "close it"): reset `SM.open`
+  in `sm-mode`, `sm-nav` and `sm-pick` (`events.js:283-295`); suite 09's "switching tabs keeps the part open" check
+  becomes "closes"; Task 5 records it in docs/decisions.md and the charges spec's Summary bullet.
 - [ ] Tests for each (the Russian check, the opened row's entry and date, the saved data after the two edits; the
   strings by suite 32 if it covers native strings, else a grep check).
 
@@ -120,5 +123,4 @@ rows at once (1,728 rows: open 138 ms, a save from it 519 ms); the tablet's Year
 Layout suite speed and sharding; test scaffolding in `harness.js`; fixed sleeps; theme.js tests; one spending-rule
 helper for `dayGroups`; near-copies; file splits (`rows.js`, `addons.js`, `settings.js`); dead-code.js gaps; search's
 first keystroke (106–148 ms at 5–10k entries); monthly reminders missed on their day, back-dated lends reminded at
-once, and a JUnit test for `monthlyDate`; recent searches filling several slots; Undo for an asset's value; whether
-Summary keeps an opened part open across tabs (maintainer to say).
+once, and a JUnit test for `monthlyDate`; recent searches filling several slots; Undo for an asset's value.

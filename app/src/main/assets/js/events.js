@@ -379,9 +379,11 @@ document.addEventListener("click", ev => {
       const id = F.id;
       deleteAsk([id], arch => {
         closeSheet();
+        const to = histLike() && rowsAround([id]); // the entry's own sheet, opened from its row
         withUndo(T(arch ? "entries.archived" : "common.deleted"), () =>
           arch ? archiveEntries([id], true) : deleteEntries([id])
         );
+        if (to) landFocus(to);
       });
       break;
     }
@@ -629,18 +631,16 @@ document.addEventListener("click", ev => {
     case "sel-start":
       V.sel = new Set();
       render();
+      landFocus(['[data-act="sel-cancel"]']); // the bar's button that ends the selection
       break;
     case "sel-cancel":
-      V.sel = null;
-      render();
+      selEnd();
       break;
     case "sel-toggle":
       if (V.sel.has(v)) V.sel.delete(v);
       else V.sel.add(v);
-      if (!V.sel.size) {
-        V.sel = null;
-        render();
-      } else selSync(el);
+      if (!V.sel.size) selEnd();
+      else selSync(el);
       break;
     case "sel-all": {
       const ids = selRows(histList()).map(t => t.id); // a fee goes with its entry; never an archived entry
@@ -651,11 +651,13 @@ document.addEventListener("click", ev => {
     /* archiving asks nothing and is never refused (it changes no balance or loan): the selection goes, with Undo */
     case "sel-arch": {
       if (!V.sel || !V.sel.size) return;
-      const ids = [...V.sel];
+      const ids = [...V.sel],
+        to = rowsAround(ids);
       withUndo(T("entries.archived"), () => {
         archiveEntries(ids, true);
         V.sel = null;
       });
+      landFocus(to);
       break;
     }
     case "arch-open":
@@ -666,12 +668,15 @@ document.addEventListener("click", ev => {
       break;
     /* Unarchive (an opened row on the Archived screen, or in search): the entry, with its add-on, is back in History; a
        search keeps listing it, now unmarked */
-    case "unarchive":
+    case "unarchive": {
+      const to = rowsAround([v]);
       withUndo(T("archive.back"), () => {
         archiveEntries([v], false);
         V.open = "";
       });
+      landFocus(to);
       break;
+    }
     case "sel-del": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel];
@@ -684,6 +689,7 @@ document.addEventListener("click", ev => {
         /* the rows that went (a deleted loan's payments go with it), archived or not: an add-on is in its entry (as
            Delete in an opened row counts them) */
         let n = 0;
+        const to = rowsAround(ids);
         withUndo(
           () => (arch ? T("entries.archived") : T("history.deleted", { count: n })),
           () => {
@@ -694,6 +700,7 @@ document.addEventListener("click", ev => {
             V.sel = null;
           }
         );
+        landFocus(to);
       });
       break;
     }
@@ -916,6 +923,7 @@ function layerFocus() {
     else el.removeAttribute("aria-hidden");
     el.inert = below;
   });
+  if (LAND && landNow()) return; // a change took away what had the focus (landFocus)
   /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
   /* (or to the control that replaced it: saving redraws the screen) */
   if (back && back.el.isConnected) back.el.focus({ preventScroll: true });

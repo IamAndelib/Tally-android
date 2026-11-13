@@ -641,10 +641,39 @@ function histBar(clearHere, chips = "", off = false) {
 /* after a chip, the period or Clear all is gone, the focus goes on: to the chip now in the removed one's place (else the
    one before it), else the Filters button, so it never falls back to the page */
 function histFocus(sel, at) {
-  const all = [...document.querySelectorAll("#app " + sel)],
-    el = at == null ? all[0] : all[Math.min(at, all.length - 1)];
-  const to = el || $("#app .hfbtn");
-  if (to) to.focus({ preventScroll: true });
+  const all = [...document.querySelectorAll("#app " + sel)];
+  landFocus([at == null ? all[0] : all[Math.min(at, all.length - 1)], ".hfbtn"]);
+}
+/* where the focus goes once the rows of entries `ids` leave the list (deleted, archived, unarchived, saved out of it),
+   for landFocus(): the first of them if the list still shows it (search listing archived entries), else the row after
+   it, else the one before it, else the Filters button (the Archived screen: its first row, else its back button). By
+   entry id, from the list as it is before the change: History's or the Archived screen's whole list (HLIST, drawn or
+   not), the entries sheet's rows. */
+function rowsAround(ids) {
+  const box = landRoot(),
+    own = box !== $("#app") && box.querySelector(".tx[data-v]"), // the entries sheet
+    order =
+      own || !histLike()
+        ? [...(own ? box : $("#app")).querySelectorAll(".tx[data-v]")].map(r => r.dataset.v)
+        : (V.screen === "archive" ? archRows : listRows)(HLIST).map(t => t.id),
+    set = new Set(ids),
+    i = order.findIndex(id => set.has(id)),
+    row = id => ({ row: id }),
+    other = list => list.filter(id => !set.has(id)).map(row);
+  return [
+    ...(i < 0 ? [] : [row(order[i]), ...other(order.slice(i + 1)), ...other(order.slice(0, i).reverse())]),
+    ...(V.screen === "archive" ? ['.tx[data-act="row-open"]', '[data-act="arch-back"]'] : [".hfbtn"]),
+    ".tx[data-v]",
+  ];
+}
+/* the selection ends (its ✕, Back, its last row unticked): a row that had the focus keeps it, else the Select button
+   takes it */
+function selEnd() {
+  const a = document.activeElement,
+    r = a && a.closest && a.closest("#app .tx[data-v]");
+  V.sel = null;
+  render();
+  landFocus([r && { row: r.dataset.v }, '[data-act="sel-start"]', ".hfbtn"]);
 }
 const histClearBtn = () => '<button class="hclear" data-act="hf-clear">' + TH("history.clearAll") + "</button>";
 /* the entries, month by month: each month in a section of its own (.hsec), a heading with the month's words, then its

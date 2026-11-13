@@ -429,12 +429,15 @@ function txQuickAdd(what) {
   if (what === "cat") catForm(null, inc ? "in" : "out", id => reopen({ cat: id }));
   else accForm(null, id => reopen({ account: id }));
 }
-/* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list */
+/* an entry row tapped in a list; from the entries sheet, closing the entry goes back to that list, the focus on its row
+   (on the next one, once it is deleted) */
 function openEntry(id) {
   const p0 = $("#sheet .p"),
     scroll = (p0 || {}).scrollTop || 0,
-    a = p0 && rowAnchor(p0, p0);
-  BACKTO = $("#sheet #ent-list")
+    a = p0 && rowAnchor(p0, p0),
+    list = $("#sheet #ent-list"),
+    to = list && rowsAround([id]);
+  BACKTO = list
     ? {
         screen: V.screen,
         open: () => {
@@ -443,6 +446,7 @@ function openEntry(id) {
           if (!p) return;
           p.scrollTop = scroll;
           if (a) toAnchor(a, p, p); // the row it was opened from, where it was
+          landFocus(to);
         },
       }
     : null;
@@ -1307,6 +1311,7 @@ function rowDelete(id) {
       /* the rows that went (an add-on is inside its entry), archived or not: more than this one when a loan's
          payments go too */
       let n = 0;
+      const to = rowsAround([id]);
       withUndo(
         () => (arch ? T("entries.archived") : n > 1 ? T("history.deleted", { count: n }) : T("common.deleted")),
         () => {
@@ -1320,6 +1325,7 @@ function rowDelete(id) {
         listed => redraw(true, listed)
       );
       redraw();
+      landFocus(to);
     },
     { archive: !t.archived }
   );

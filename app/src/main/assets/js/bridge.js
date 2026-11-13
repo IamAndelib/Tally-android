@@ -532,8 +532,7 @@ function goBack() {
     return true;
   }
   if (V.sel) {
-    V.sel = null;
-    render();
+    selEnd();
     return true;
   }
   if (V.find) {
