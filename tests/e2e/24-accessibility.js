@@ -374,7 +374,6 @@ const ok = (c, m) => {
           if (e.tagName === "A" && b.height < 24) return; // a link inside a sentence
           if (e.dataset.act === "calc-pos") return; // the caret's mirror over a field: the field itself, not a button
           if (e.classList.contains("dd") ? b.height >= 48 && b.width >= 42 : b.width >= 48 && b.height >= 48) return;
-          if (e.classList.contains("smcol") && b.width >= 40 && b.height >= 96) return;
           out.push(
             (e.dataset.act || e.className || e.tagName) + " " + Math.round(b.width) + "x" + Math.round(b.height)
           );

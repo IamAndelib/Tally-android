@@ -154,46 +154,61 @@ const ok = (c, m) => {
   await tap('[data-act="home"]');
 
   // ---- 5. summary from the donut; balance bar still lists entries
+  /* Days: one day at a time, as a pie (as Months), ‹ › a day; today 30, yesterday the transfer's charge (5), then 100
+     and 70 */
   await tap("#ring .dwrap");
+  const dayView = () =>
+    page.evaluate(() => ({
+      head: document.querySelector("#sm .cal-h b").textContent,
+      later: document.querySelector('#sm [data-act="sm-nav"][data-v="1"]').disabled,
+      pie: !!document.querySelector("#sm .smchart .smpie svg"),
+      bars: document.querySelectorAll("#sm .smcol, #sm .smrow").length,
+      smd: document.querySelector("#sm .smd").textContent.replace(/\s+/g, " "),
+      rows: [...document.querySelectorAll("#sm .smtop .tx .d")].map(e => e.textContent.replace(/\s+/g, " ").trim()),
+      empty: (document.querySelector("#sm .empty") || {}).textContent || "",
+    }));
+  let dv = await dayView();
   ok(
-    (await page.isVisible('#sheet [data-act="sm-mode"][data-v="w"]')) && (await page.$$("#sheet .smcol")).length === 7,
-    "donut opens the summary with 7 day bars"
+    (await page.isVisible('#sheet [data-act="sm-mode"][data-v="w"]')) &&
+      (await page.getAttribute('#sheet [data-act="sm-mode"][data-v="d"]', "aria-pressed")) === "true" &&
+      dv.head === "Today" &&
+      dv.pie &&
+      dv.bars === 0 &&
+      dv.later,
+    "the donut opens Days on today: its pie, no bars, › off " + JSON.stringify(dv)
   );
-  const vals = await page.$$eval("#sheet .smcol .v", e => e.map(x => x.textContent));
-  ok(
-    vals[6] === "30" && vals[5] === "5" && vals[4] === "100" && vals[3] === "70",
-    "bar values match the entries, yesterday's transfer charge in its bar " + JSON.stringify(vals)
-  );
-  ok((await txt("#sm .smd")).includes("30") && (await txt("#sm .smd")).includes("Today"), "today selected by default");
-  await tap('#sheet .smcol[data-v="4"]');
-  const det = await txt("#sm .smd");
-  ok(
-    det.includes("100") && det.includes("↑ 43%"),
-    "tapping a bar shows its total and comparison: " + det.replace(/\s+/g, " ")
-  );
-  ok((await txt("#sm .smtop")).includes("Groceries"), "top categories listed");
+  ok(dv.smd.includes("BDT 30.00") && dv.smd.includes("↑ 500%"), "today's total, against the day before: " + dv.smd);
+  await page.evaluate(() => smNav(1)); // the button is off; a swipe or a stray call stops at today too
+  ok((await dayView()).head === "Today", "› never goes past today");
+  await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
+  dv = await dayView();
   /* yesterday spent only the transfer's charge: its total, and the list is the Charges line alone */
-  await tap('#sheet .smcol[data-v="5"]');
-  const yd =
-    (await txt("#sm .smd")) +
-    " | " +
-    ((await page.$("#sm .smtop")) ? await txt("#sm .smtop") : "").replace(/\s+/g, " ");
   ok(
-    yd.includes("BDT 5.00") && (await page.$$("#sm .smtop .tx")).length === 1 && yd.includes("Charges"),
-    "a day with only a transfer charge: its total and the Charges line " + yd
+    dv.head === "Yesterday" &&
+      !dv.later &&
+      dv.smd.includes("BDT 5.00") &&
+      dv.rows.length === 1 &&
+      dv.rows[0] === "Charges 100%",
+    "‹ steps one day: yesterday, only a transfer charge: its total and the Charges line " + JSON.stringify(dv)
   );
   await page.screenshot({ path: OUT + "/summary-days.png" });
-  await tap('#sheet [data-act="sm-mode"][data-v="w"]');
-  ok((await page.$$("#sheet .smrow")).length === 8, "8 week rows");
-  await tap('#sheet [data-act="sm-mode"][data-v="m"]');
-  ok(!!(await page.$("#sheet .smpie svg")), "month pie");
-  const lbl0 = await txt("#sm .cal-h b");
   await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
-  ok((await txt("#sm .cal-h b")) !== lbl0, "‹ moves the window");
-  await tap('#sheet [data-act="sm-mode"][data-v="d"]');
-  await tap('#sheet [data-act="sm-nav"][data-v="1"]');
-  /* a week with nothing spent has no bars to pick: its last day is the one shown */
-  ok(!(await page.$("#sheet .smcol")), "a window with nothing spent draws no bars");
+  dv = await dayView();
+  const d2head = await page.evaluate(d => capFirst(dayLabel(d)), d.d2);
+  ok(
+    dv.head === d2head && dv.smd.includes("BDT 100.00") && dv.smd.includes("↑ 43%"),
+    "two days back: its date, its total and its comparison " + JSON.stringify(dv)
+  );
+  ok(
+    dv.rows.some(r => /^Groceries \d+%$/.test(r)),
+    "the day's categories with their shares " + JSON.stringify(dv.rows)
+  );
+  for (let k = 0; k < 2; k++) await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
+  dv = await dayView();
+  ok(
+    !dv.pie && dv.empty.includes("Nothing spent that day.") && dv.smd.includes("BDT 0.00"),
+    "a day with nothing spent: no pie, its total and the message " + JSON.stringify(dv)
+  );
   await tap('#sheet [data-act="sm-open"]');
   ok(
     !(await page.isVisible("#sheet .p")) &&
@@ -201,7 +216,27 @@ const ok = (c, m) => {
       !!(await page.$('[data-act="go-today"]')),
     "Open on Home shows that day: " + (await txt(".pnav .plabel"))
   );
+  /* Home on a day: the Summary opens on that day */
+  await tap("#ring .dwrap");
+  ok((await txt("#sm .cal-h b")) === (await txt(".pnav .plabel")), "the donut of a day opens that day");
+  await tap('#sheet [data-act="close"]');
+  await page.waitForTimeout(300); // a tap right where one just closed the sheet is dropped
   await tap('[data-act="go-today"]');
+  ok(!(await page.$('[data-act="go-today"]')), "Home back on today");
+  await tap("#ring .dwrap");
+  await tap('#sheet [data-act="sm-mode"][data-v="w"]');
+  ok((await page.$$("#sheet .smrow")).length === 8, "8 week rows");
+  await tap('#sheet [data-act="sm-mode"][data-v="m"]');
+  ok(!!(await page.$("#sheet .smpie svg")), "month pie");
+  const lbl0 = await txt("#sm .cal-h b");
+  await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
+  ok((await txt("#sm .cal-h b")) !== lbl0, "‹ moves the window");
+  /* back to Days: the last day of the month on screen */
+  await tap('#sheet [data-act="sm-mode"][data-v="d"]');
+  const lastDay = await page.evaluate(() => capFirst(dayName(monthEnd(shiftMonth(today().slice(0, 7), -1)))));
+  ok((await txt("#sm .cal-h b")) === lastDay, "Days after a month back: its last day " + lastDay);
+  await tap('#sheet [data-act="close"]');
+  await page.waitForTimeout(300); // a tap right where one just closed the sheet is dropped
   await tap(".balbar");
   ok(await page.isVisible('#sheet [data-v="e2"]'), "balance bar still opens the entries");
   await tap('#sheet [data-act="close"]');

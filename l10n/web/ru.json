@@ -640,7 +640,6 @@
     },
     "weekOf": "Неделя с {{date}}",
     "soFar": "{{year}} год на сегодня",
-    "todayCol": "Сег.",
     "earlier": "Раньше",
     "later": "Позже",
     "same": {

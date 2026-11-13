@@ -628,7 +628,6 @@
     },
     "weekOf": "{{date}} haftası",
     "soFar": "{{year}} şu ana kadar",
-    "todayCol": "Bugün",
     "earlier": "Önceki",
     "later": "Sonraki",
     "same": {

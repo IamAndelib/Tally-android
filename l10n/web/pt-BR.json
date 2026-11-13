@@ -634,7 +634,6 @@
     },
     "weekOf": "Semana de {{date}}",
     "soFar": "{{year}} até agora",
-    "todayCol": "Hoje",
     "earlier": "Antes",
     "later": "Depois",
     "same": {

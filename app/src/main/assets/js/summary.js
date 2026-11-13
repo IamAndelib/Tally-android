@@ -1,12 +1,13 @@
 /*
- * summary.js — The spending summary opened by tapping the donut: 7 days, 8 weeks or one month's categories, with a comparison
- * to the period before.
+ * summary.js — The spending summary opened by tapping the donut: one day's or one month's categories as a pie,
+ * 8 weeks as rows or a year's months as bars, with a comparison to the period before.
  */
 "use strict";
 
 let SM = null;
-/* a bar's label, the same in every tab: the whole amount grouped the phone's way, no currency sign (the title names the
-   currency), and compact ("12.4K") only from five digits. TalkBack and the figure under the chart keep the exact amount. */
+/* a bar's label, the same in Weeks and Year: the whole amount grouped the phone's way, no currency sign (the title
+   names the currency), and compact ("12.4K") only from five digits. TalkBack and the figure under the chart keep the
+   exact amount. */
 let BARNUM = null;
 const compact = n => {
   n = Math.round(n) || 0; // never "-0"
@@ -45,20 +46,15 @@ function summarySheet() {
   );
   smRender();
 }
-/* the buckets on screen, oldest first, plus one before them (for "vs last ...") */
+/* the buckets on screen, oldest first, plus one before them (for "vs last ..."): Days and Months show one */
 function smBuckets() {
   const t = today(),
     e = SM.end,
     out = [];
   if (SM.mode === "d")
-    for (let i = 7; i >= 0; i--) {
+    for (let i = 1; i >= 0; i--) {
       const d = addDays(e, -i);
-      out.push({
-        s: d,
-        e: d,
-        x: capFirst(parseISO(d).toLocaleDateString(DATE_LOC, { weekday: "short" })),
-        full: dayName(d),
-      });
+      out.push({ s: d, e: d, full: dayName(d) });
     }
   else if (SM.mode === "w") {
     const w = weekStart(e);
@@ -106,8 +102,8 @@ function catSplit(list) {
 }
 /* a part's name: a category's, or the word Charges (no category: no emblem, never renamed) */
 const partName = k => (k === CHARGES ? T("summary.charges") : catName(cat(k)));
-/* one line of Summary's list: the emblem (for Charges, a grey dot in its place), the name, its share on Months and
-   Year ("<1%"), a bar in the part's colour (sliceCol) and the amount. TalkBack hears the whole line, wherever it is
+/* one line of Summary's list: the emblem (for Charges, a grey dot in its place), the name, its share on Days, Months
+   and Year ("<1%"), a bar in the part's colour (sliceCol) and the amount. TalkBack hears the whole line, wherever it is
    touched, as one sentence: "Charges, ৳158.00, less than 1%" (as the Year tab's bars, an image with its label). */
 function smRow([k, v], total, share) {
   const name = partName(k),
@@ -136,8 +132,8 @@ function smRow([k, v], total, share) {
     "</span></div>"
   );
 }
-/* a month by category as a pie: category colours, true to size (a tiny share stays tiny), a hairline between slices.
-   The names, shares and amounts are in the list under it, so the drawing is hidden from screen readers. */
+/* a day or a month by category as a pie: category colours, true to size (a tiny share stays tiny), a hairline between
+   slices. The names, shares and amounts are in the list under it, so the drawing is hidden from screen readers. */
 function smPie(split, total) {
   const RP = 48,
     pt = a => (50 + RP * Math.cos(a)).toFixed(2) + " " + (50 + RP * Math.sin(a)).toFixed(2);
@@ -186,12 +182,14 @@ function drawSm() {
     drawSmYear(el);
     return;
   }
+  /* Days and Months show one period (ONE): a pie, then every part with its share; Weeks, 8 rows to pick from */
   const all = smBuckets(),
     bars = all.slice(1),
     n = bars.length,
     t = today(),
-    M = SM.mode === "m";
-  if (M || SM.sel == null || SM.sel >= n) SM.sel = n - 1;
+    M = SM.mode === "m",
+    ONE = M || SM.mode === "d";
+  if (ONE || SM.sel == null || SM.sel >= n) SM.sel = n - 1;
   const max = Math.max(...bars.map(b => b.v), 0),
     i = SM.sel,
     b = bars[i],
@@ -204,7 +202,7 @@ function drawSm() {
     '">' +
     ic("left") +
     "</button><b>" +
-    esc(capFirst(M ? monthLabel(b.s.slice(0, 7), true) : smSpan(bars))) +
+    esc(capFirst(M ? monthLabel(b.s.slice(0, 7), true) : ONE ? b.full : smSpan(bars))) +
     '</b><button class="icon" data-act="sm-nav" data-v="1" aria-label="' +
     TH("summary.later") +
     '"' +
@@ -214,38 +212,8 @@ function drawSm() {
     "</button></div>";
   const split = catSplit(b.list),
     /* nothing spent in all that the chart shows: no chart (the total, the message and the button say it) */
-    none = M ? !b.v : !max;
+    none = ONE ? !b.v : !max;
   if (none) h += "";
-  else if (SM.mode === "d")
-    h +=
-      '<div class="smchart smc">' +
-      bars
-        .map((x, k) => {
-          const pct = max ? (x.v / max) * 100 : 0,
-            future = x.s > t;
-          return (
-            '<button class="smcol' +
-            (k === i ? " on" : "") +
-            '" aria-pressed="' +
-            (k === i) +
-            '" data-act="sm-pick" data-v="' +
-            k +
-            '"' +
-            (future ? " disabled" : "") +
-            ' aria-label="' +
-            TH("common.labelValue", { label: x.full, value: money(x.v, cur) }) +
-            '">' +
-            '<span class="v">' +
-            (x.v ? esc(compact(x.v)) : "") +
-            '</span><span class="bw"><span class="b" style="height:' +
-            (x.v ? Math.max(2, pct) : 0).toFixed(1) +
-            '%"></span></span><span class="x">' +
-            esc(x.s === t ? T("summary.todayCol") : x.x) + // today can't pass for the same weekday a week back
-            "</span></button>"
-          );
-        })
-        .join("") +
-      "</div>";
   else if (SM.mode === "w")
     h +=
       '<div class="smchart smrows">' +
@@ -274,7 +242,7 @@ function drawSm() {
         .join("") +
       "</div>";
   else h += '<div class="smchart">' + smPie(split, b.v) + "</div>";
-  /* details for the chosen bar */
+  /* details for the chosen day, week or month */
   /* a week or month that isn't over yet is compared by its daily average, not its (still growing) total */
   const len = x => daysBetween(x.s, x.e) + 1,
     part = SM.mode !== "d" && b.days < len(b);
@@ -284,8 +252,8 @@ function drawSm() {
     cmp = T("summary." + (p === 0 ? "same" : p > 0 ? "up" : "down") + "." + SM.mode, { pct: percent(Math.abs(p)) });
   }
   const avg = SM.mode !== "d" && b.days > 0 && b.v ? T("summary.avg", { amount: money(rnd(b.v / b.days), cur) }) : "";
-  /* Days and Weeks: the three top categories, then Charges; Months: all of them, then Charges */
-  const top = M
+  /* Weeks: the three top categories, then Charges; Days and Months: all of them, then Charges */
+  const top = ONE
     ? split
     : split
         .filter(p => p[0] !== CHARGES)
@@ -293,7 +261,7 @@ function drawSm() {
         .concat(split.filter(p => p[0] === CHARGES));
   h +=
     '<div class="smd">' +
-    (M ? "" : '<div class="muted small">' + esc(b.full) + "</div>") +
+    (ONE ? "" : '<div class="muted small">' + esc(b.full) + "</div>") +
     '<div class="big spent">' +
     esc(money(b.v, cur)) +
     "</div>" +
@@ -302,7 +270,7 @@ function drawSm() {
       .map(x => '<div class="muted small">' + esc(x) + "</div>")
       .join("") +
     "</div>";
-  if (top.length) h += '<div class="list smtop">' + top.map(x => smRow(x, b.v, M)).join("") + "</div>";
+  if (top.length) h += '<div class="list smtop">' + top.map(x => smRow(x, b.v, ONE)).join("") + "</div>";
   else
     h +=
       '<div class="empty" style="padding:16px">' +
@@ -314,16 +282,6 @@ function drawSm() {
     "</button>";
   el.innerHTML = h;
   fitSmRows();
-  /* a label wider than its day's column (Today at a large text size): smaller, not below 10px (summary.todayCol is
-     short where the word is long, like the weekdays beside it) */
-  el.querySelectorAll(".smcol .x").forEach(x => {
-    for (
-      let px = parseFloat(getComputedStyle(x).fontSize) - 0.5;
-      px >= 10 && x.offsetWidth > x.parentNode.clientWidth;
-      px -= 0.5
-    )
-      x.style.fontSize = px + "px";
-  });
 }
 /* The Weeks rows share one pair of columns, so every track starts and ends at the same place and equal amounts draw
    equal bars (subgrid is not in WebView 87): the widest label and figure, measured, go to the rows as --smx / --smv.
@@ -446,12 +404,12 @@ function drawSmYear(el) {
   fade();
   ch.addEventListener("scroll", fade, { passive: true });
 }
-/* "18 – 24 Sep", "3 Aug – 27 Sep", "Apr – Sep" (year added when it isn't this year) */
-const smSpan = bars => rangeLabel(bars[0].s, bars[bars.length - 1].e, SM.mode === "m");
+/* the weeks on screen: "3 Aug – 27 Sep" (year added when it isn't this year) */
+const smSpan = bars => rangeLabel(bars[0].s, bars[bars.length - 1].e);
 function smNav(d) {
   const t = today();
   let e = SM.end;
-  if (SM.mode === "d") e = addDays(e, 7 * d);
+  if (SM.mode === "d") e = addDays(e, d);
   else if (SM.mode === "w") e = addDays(e, 56 * d);
   else if (SM.mode === "y") e = +e.slice(0, 4) + d + "-12-31";
   else e = monthEnd(shiftMonth(e.slice(0, 7), d));

@@ -998,13 +998,6 @@ html[dir="rtl"] .strip.fade {
   width: 72%;
   height: 72%;
 }
-.smc {
-  display: flex;
-  align-items: stretch;
-  height: 170px;
-  border-bottom: 1px solid var(--outline-variant);
-  margin: 4px 0 0;
-}
 .smcol {
   flex: 1;
   min-width: 0;

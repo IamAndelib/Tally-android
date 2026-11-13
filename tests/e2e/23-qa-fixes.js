@@ -285,11 +285,9 @@ const ok = (c, m) => {
   const rl = await page.evaluate(() => [
     rangeLabel("2026-06-03", "2026-06-09"),
     rangeLabel("2025-12-29", "2026-01-04"),
-    rangeLabel("2026-04-01", "2026-09-30", true),
   ]);
   ok(/^Jun 3\s*–\s*9$/.test(rl[0]), "en-US range: " + rl[0]);
   ok(/2025/.test(rl[1]) && /2026/.test(rl[1]), "across years, with the years: " + rl[1]);
-  ok(/^Apr\s*–\s*Sep$/.test(rl[2]), "months: " + rl[2]);
 
   // ---- 12. Delete all data: the backup question's buttons say what they do
   await page.evaluate(() => wipeAll());

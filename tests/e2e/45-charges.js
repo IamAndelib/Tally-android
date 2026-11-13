@@ -2092,24 +2092,32 @@ function variedV7() {
       return c || {};
     };
     const week = dd(0);
-    /* Days: today, the top three and Charges */
-    const d0 = await smView(book, "BDT", week, "d", 6, { period: "day", anchor: dd(0) });
+    /* Days: today, every category (Transport ৳5.00 too), then Charges with "<1%"; the pie ends grey */
+    const d0 = await smView(book, "BDT", week, "d", 0, { period: "day", anchor: dd(0) });
     let c = chargeRow(d0, "Days");
     ok(
       same(
         d0.rows.map(x => x.name),
-        ["Rent", "Shopping", "Fun", "Charges"]
+        ["Rent", "Shopping", "Fun", "Health", "Groceries", "Transport", "Charges"]
       ),
-      "Days: the three top categories, then Charges " + J(d0.rows.map(x => x.name))
+      "Days: every category, then Charges " + J(d0.rows.map(x => x.name))
     );
-    ok(c.amount === mo(d0, 10) && c.share === "", "Days: Charges ৳10.00, no share " + J(c));
-    ok(c.say === "Charges, " + mo(d0, 10) && c.shown, "Days: TalkBack says " + J(c.say));
+    ok(
+      c.amount === mo(d0, 10) && c.share === "<1%" && c.say === "Charges, " + mo(d0, 10) + ", " + d0.under && c.shown,
+      "Days: Charges ৳10.00 <1%; TalkBack says " + J(c.say)
+    );
+    ok(
+      d0.pie.length === d0.rows.length &&
+        d0.pie[d0.pie.length - 1].fill === "#7a8190" &&
+        d0.pie.filter(p => p.fill === "#7a8190").length === 1,
+      "Days: the pie ends with the one grey slice " + J(d0.pie)
+    );
     ok(
       d0.total === mo(d0, 101265) && d0.total === d0.homeSpent,
       "Days: the total is Home's " + J([d0.total, d0.homeSpent])
     );
     /* yesterday: the dinner's charge is in Eating out, no charge outside a purchase: no Charges line */
-    const d1 = await smView(book, "BDT", week, "d", 5, { period: "day", anchor: dd(-1) });
+    const d1 = await smView(book, "BDT", dd(-1), "d", 0, { period: "day", anchor: dd(-1) });
     ok(
       !d1.rows.some(isCh) && d1.rows.length === 2 && d1.total === d1.homeSpent,
       "Days, yesterday: charges only inside purchases, no Charges line; the total is Home's " +

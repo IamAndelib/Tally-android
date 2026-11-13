@@ -1363,19 +1363,10 @@ function inspect() {
     await shot("loan-edit-borrow-keypad", loanLook("L8", "c8d", { rows: 1, prev: true }, "ed-charge"));
     await shot("loan-edit-tip", loanLook("L7", "c7p", { rows: 1, prev: true }));
     await shot("loan-edit-tip-keypad", loanLook("L7", "c7p", { rows: 1, prev: true }, "ed-extra"));
-    await shot(
-      "summary",
-      ev(() => summarySheet())
-    );
-    await shot("summary-weeks", async () => {
-      await page.evaluate(() => summarySheet());
-      await page.click('#sheet [data-act="sm-mode"][data-v="w"]');
-    });
-    await shot("summary-months", async () => {
-      await page.evaluate(() => summarySheet());
-      await page.click('#sheet [data-act="sm-mode"][data-v="m"]');
-      /* the Months pie: a whole disc (no hole, no hub), square, inside the window and the sheet, above the total */
-      const pie = await page.evaluate(() => {
+    /* the Days and Months pie: a whole disc (no hole, no hub), square, inside the window and the sheet, above the total,
+       every part listed with its share */
+    const pieLook = () =>
+      page.evaluate(() => {
         const p = document.querySelector("#sm .smpie"),
           r = p && p.getBoundingClientRect(),
           sh = document.querySelector("#sheet").getBoundingClientRect(),
@@ -1401,8 +1392,25 @@ function inspect() {
         }
         if (!paths.length || paths[paths.length - 1].getAttribute("fill") !== "#7a8190")
           out.push("the pie doesn't end grey");
+        const rows = [...document.querySelectorAll("#sm .smtop .tx")];
+        if (rows.length !== p.querySelectorAll("path, circle").length) out.push("not one slice per listed part");
+        if (rows.some(x => !x.querySelector(".d .small"))) out.push("a part without its share");
         return out;
       });
+    await shot("summary", async () => {
+      await page.evaluate(() => summarySheet());
+      /* Days: today as a pie, as Months */
+      const pie = await pieLook();
+      if (pie.length) summary[tag + " summary-days pie"] = pie;
+    });
+    await shot("summary-weeks", async () => {
+      await page.evaluate(() => summarySheet());
+      await page.click('#sheet [data-act="sm-mode"][data-v="w"]');
+    });
+    await shot("summary-months", async () => {
+      await page.evaluate(() => summarySheet());
+      await page.click('#sheet [data-act="sm-mode"][data-v="m"]');
+      const pie = await pieLook();
       if (pie.length) summary[tag + " summary-months pie"] = pie;
     });
     await shot("search", async () => {

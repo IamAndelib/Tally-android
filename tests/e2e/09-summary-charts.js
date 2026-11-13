@@ -151,11 +151,16 @@ const ok = (c, m) => {
   const home0 = await txt(".pnav .plabel");
   await tap("#ring .dwrap");
   await page.waitForTimeout(300);
-  /* today: its category, then the Charges line (the payback's fee), with no share on Days */
-  const dayRows = await page.$$eval("#sm .smtop .tx", e => e.map(x => x.querySelector(".d").textContent.trim()));
+  /* today: its category (৳40.00), then the Charges line (the payback's ৳7.00 fee), each with its share */
+  const dayRows = await page.$$eval("#sm .smtop .tx", e =>
+    e.map(x => x.querySelector(".d").textContent.replace(/\s+/g, " ").trim())
+  );
   ok(
-    dayRows.length === 2 && dayRows[1] === "Charges" && !!(await page.$("#sm .smtop .tx:last-child .chdot")),
-    "days: the list ends with Charges, a grey dot for its emblem " + JSON.stringify(dayRows)
+    dayRows.length === 2 &&
+      / 85%$/.test(dayRows[0]) &&
+      dayRows[1] === "Charges 15%" &&
+      !!(await page.$("#sm .smtop .tx:last-child .chdot")),
+    "days: the list ends with Charges, a grey dot for its emblem, shares as Months " + JSON.stringify(dayRows)
   );
   ok(await page.evaluate(() => document.body.classList.contains("lock")), "page locked while the sheet is open");
   const c = await (await page.$("#sm .smchart")).boundingBox();
@@ -267,24 +272,40 @@ const ok = (c, m) => {
     "weeks fit at 360px"
   );
   await page.screenshot({ path: OUT + "/weeks-360.png" });
-  /* Days: today's column says Today (not its weekday, which a week back is the same), and the picked day is bold */
+  /* Days: one day at a time, named as Home names it (Today, Yesterday, then its date); ‹ › a day, never past today */
   const days = await page.evaluate(() => {
     SM.end = today();
     SM.sel = null;
     setPressed("sm-mode", "d");
     SM.mode = "d";
     smRender();
-    const xs = [...document.querySelectorAll("#sm .smcol .x")].map(x => x.textContent);
+    const at = () => [
+      $("#sm .cal-h b").textContent,
+      $('#sm [data-act="sm-nav"][data-v="1"]').disabled,
+      document.querySelectorAll("#sm .smcol, #sm .smrow").length,
+    ];
+    const out = [at()];
     smNav(-1);
-    const back = [...document.querySelectorAll("#sm .smcol .x")].map(x => x.textContent);
-    return { xs, back };
+    out.push(at());
+    smNav(-1);
+    out.push(at());
+    smNav(1);
+    smNav(1);
+    smNav(1);
+    out.push(at());
+    return { out, d2: capFirst(dayLabel(addDays(today(), -2))) };
   });
   ok(
-    days.xs[6] === "Today" && days.xs.filter(x => x === "Today").length === 1,
-    "this week: Today under today: " + days.xs
+    JSON.stringify(days.out) ===
+      JSON.stringify([
+        ["Today", true, 0],
+        ["Yesterday", false, 0],
+        [days.d2, false, 0],
+        ["Today", true, 0],
+      ]),
+    "days: Today, ‹ Yesterday, ‹ " + days.d2 + ", › › › stops at Today; no bars " + JSON.stringify(days.out)
   );
-  ok(!days.back.includes("Today"), "a week back: weekdays only: " + days.back);
-  // ---- #12 bar labels: whole amounts from every tab; the Months tab is a pie (no hole); Home's ring is unchanged
+  // ---- #12 bar labels: whole amounts in every tab with bars; Days and Months are pies (no hole); Home's ring unchanged
   for (const [loc, want, dec] of [
     ["en-US", ["89", "1,347", "12.4K"], "."],
     ["de-DE", ["89", "1.347"], ","],
@@ -324,11 +345,19 @@ const ok = (c, m) => {
         S.txns.push(t(5, 0, 7777, "food", "e"));
         render();
         summarySheet();
-        const days = [...document.querySelectorAll("#sm .smcol")].map(c => ({
-          v: c.querySelector(".v").textContent,
-          a: c.getAttribute("aria-label"),
-        }));
-        const big = document.querySelector("#sm .smd .big").textContent;
+        /* today, yesterday and the day before: each one category, a whole disc, its line with the exact amount */
+        const days = [0, 1, 2].map(n => {
+          SM.end = iso(n);
+          smRender();
+          return {
+            big: document.querySelector("#sm .smd .big").textContent,
+            say: [...document.querySelectorAll("#sm .smtop .tx")].map(e => e.getAttribute("aria-label")),
+            circles: document.querySelectorAll("#sm .smpie circle").length,
+            paths: document.querySelectorAll("#sm .smpie path").length,
+          };
+        });
+        const bars = [89.4, 1347.2, 12400.6, 0.002, -0.2].map(compact);
+        SM.end = iso(0);
         setPressed("sm-mode", "w");
         SM.mode = "w";
         smRender();
@@ -349,25 +378,26 @@ const ok = (c, m) => {
           hidden: svg.getAttribute("aria-hidden"),
           list: document.querySelector("#sm .smtop").textContent,
         };
-        return { days, wk, big, pie, dec };
+        return { days, bars, wk, pie, dec };
       },
       [loc, dec]
     );
-    const labels = r.days.map(d => d.v).filter(Boolean);
     ok(
-      want.every(w => labels.includes(w)) && labels.every(l => !/[$€]/.test(l)),
-      loc + " day bars: whole, grouped, no sign: " + labels
+      want.every(w => r.bars.includes(w)) && r.bars.every(l => !/[$€]/.test(l)),
+      loc + " bar labels: whole, grouped, no sign: " + r.bars
     );
+    ok(r.bars[3] === "0" && r.bars[4] === "0", loc + " a sub-unit amount is 0, never -0: " + r.bars);
     ok(
-      r.days.every(d => !d.v || /\d/.test(d.a)) &&
-        r.days.some(d => /1[,.\s\u202f]?347[.,]20/.test(d.a)) &&
-        r.days.some(d => /12[,.\s\u202f]?400[.,]60/.test(d.a)),
-      loc + " TalkBack labels keep the exact amount: " + r.days.map(d => d.a).join(" | ")
+      r.days.every(d => d.say.length === 1 && d.circles === 1 && d.paths === 0) &&
+        /89[.,]40/.test(r.days[0].say[0]) &&
+        /1[,.\s\u202f]?347[.,]20/.test(r.days[1].say[0]) &&
+        /12[,.\s\u202f]?400[.,]60/.test(r.days[2].say[0]) &&
+        r.days.every(d => /100\s?%$/.test(d.say[0])),
+      loc +
+        " days: one category is a whole disc; TalkBack keeps the exact amount and its share: " +
+        r.days.map(d => d.say.join(" ")).join(" | ")
     );
-    ok(
-      !r.days.some(d => d.v === "0" && /0[.,]00/.test(d.a) === false && d.a.includes("0.002")),
-      loc + " a sub-unit amount is not shown as a figure it isn't"
-    );
+    ok(!/7[,.\s\u202f]?777/.test(r.days[0].big), loc + " days: only the Summary's currency " + r.days[0].big);
     ok(
       r.wk.some(w => w.v.length && !/[$€.]\d\d$/.test(w.v) && !/[$€]/.test(w.v)),
       loc + " week figures are whole, no sign"
@@ -500,11 +530,79 @@ const ok = (c, m) => {
       );
     }
     /* only when everything in view is zero: older spending outside the view doesn't count */
-    await open([[40, 250]], "d");
+    await open([[1, 250]], "d");
     ok(
-      (await page.$$("#sm .smchart")).length === 0,
-      "days: nothing in the last 8 days, no chart though older entries exist"
+      (await page.$$("#sm .smchart")).length === 0 &&
+        (await txt("#sm .empty")).trim() === "Nothing spent that day." &&
+        (await page.$$("#sm .smtop")).length === 0,
+      "days: nothing today, no pie and the empty text, though yesterday has spending"
     );
+    /* a day with five categories and a charge outside a purchase: every part listed (not just the top three), each
+       with its share, Charges last; one slice per part, in the list's order and colours, the grey one last. And the
+       donut of a day on Home opens that day. */
+    const dp = await page.evaluate(() => {
+      closeSheet();
+      const d = addDays(today(), -2),
+        e = (id, amount, cat, extra) =>
+          Object.assign(
+            { id, ts: S.txns.length + 1, date: d, type: "expense", amount, account: "k", cat, note: "" },
+            extra
+          );
+      S.txns = [];
+      S.txns.push(
+        e("g", 400, "groceries"),
+        e("f", 300, "food"),
+        e("t", 120, "transport"),
+        e("h", 60, "health"),
+        e("b", 20, "bills"),
+        { id: "tr", ts: 90, date: d, type: "transfer", amount: 500, account: "k", to: "k2", feeId: "trc", note: "" },
+        e("trc", 100, "fees", { feeOf: "tr" })
+      );
+      S.accounts.push({ id: "k2", name: "Bank", type: "bank", currency: "BDT", opening: 0 });
+      Object.assign(V, { screen: "home", period: "day", anchor: d });
+      render();
+      const home = $(".pnav .plabel").textContent;
+      summarySheet();
+      const rows = [...document.querySelectorAll("#sm .smtop .tx")],
+        slices = [...document.querySelectorAll("#sm .smpie path, #sm .smpie circle")];
+      return {
+        home,
+        mode: SM.mode,
+        head: $("#sm .cal-h b").textContent,
+        later: $('#sm [data-act="sm-nav"][data-v="1"]').disabled,
+        big: $("#sm .smd .big").textContent.replace(/\u2060/g, ""),
+        rows: rows.map(r => r.querySelector(".d").textContent.replace(/\s+/g, " ").trim()),
+        rowCols: rows.map(r => getComputedStyle(r.querySelector(".pbar span")).backgroundColor),
+        slices: slices.map(p => (p.querySelector("title") || {}).textContent),
+        sliceCols: slices.map(p => {
+          const x = document.createElement("i");
+          x.style.color = p.getAttribute("fill");
+          document.body.appendChild(x);
+          const c = getComputedStyle(x).color;
+          x.remove();
+          return c;
+        }),
+        lastFill: slices.length ? slices[slices.length - 1].getAttribute("fill") : "",
+      };
+    });
+    ok(
+      dp.mode === "d" && dp.head === dp.home && !dp.later && /^BDT\s1,000\.00$/.test(dp.big),
+      "days: the donut of a day opens that day, ‹ › on, its total " +
+        JSON.stringify([dp.mode, dp.later, dp.home, dp.head, dp.big])
+    );
+    ok(
+      JSON.stringify(dp.rows) ===
+        JSON.stringify(["Groceries 40%", "Eating out 30%", "Transport 12%", "Health 6%", "Bills 2%", "Charges 10%"]),
+      "days: every part with its share, Charges last " + JSON.stringify(dp.rows)
+    );
+    ok(
+      dp.slices.length === dp.rows.length &&
+        dp.slices.every((n, k) => dp.rows[k].startsWith(n + " ")) &&
+        JSON.stringify(dp.sliceCols) === JSON.stringify(dp.rowCols) &&
+        dp.lastFill === "#7a8190",
+      "days: one slice per part, in the list's order and colours, the grey one last " + JSON.stringify(dp.slices)
+    );
+    await page.screenshot({ path: OUT + "/days.png" });
     await open([[40, 250]], "w");
     ok((await page.$$("#sm .smchart")).length === 1, "weeks: spending in one of the weeks still shows the chart");
     await open([[40, 250]], "m");

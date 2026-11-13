@@ -343,13 +343,12 @@ function dayFull(d) {
 }
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
 const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));
-/* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
-   months: whole months ("Apr – Sep") */
-function rangeLabel(a, b, months) {
+/* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one) */
+function rangeLabel(a, b) {
   const s = parseISO(a),
     e = parseISO(b),
     y = new Date().getFullYear(),
-    o = months ? { month: "short" } : { day: "numeric", month: "short" };
+    o = { day: "numeric", month: "short" };
   if (s.getFullYear() !== y || e.getFullYear() !== y) o.year = "numeric";
   try {
     return new Intl.DateTimeFormat(DATE_LOC, o).formatRange(s, e);
