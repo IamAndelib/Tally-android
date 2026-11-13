@@ -822,7 +822,7 @@
       "extras": "Extras"
     },
     "kindWords": {
-      "charges": "Gebühr, Provision, Spesen",
+      "charges": "Gebühr, Provision, Spesen, Zinsen, Zins",
       "extras": "Trinkgeld, Zinsen, Zins"
     },
     "fromAcc": "Von {{account}}",

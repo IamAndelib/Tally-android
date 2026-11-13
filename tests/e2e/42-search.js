@@ -769,6 +769,32 @@ const ok = (c, m) => {
       "after Enter the focus is on the Suggestions heading, no ring: " + JSON.stringify(r)
     );
 
+    // words that match only entries (no suggestion): Enter leaves the focus on a month heading, no row ringed
+    await pg.evaluate(() => {
+      S.txns.find(t => t.id === "t4").note = "zebra stripes";
+      save();
+      histClear();
+      findClear();
+      findDraw();
+    });
+    await pg.fill("#find-q", "");
+    await pg.keyboard.type("zebra");
+    await pg.keyboard.press("Enter");
+    r = await pg.evaluate(() => {
+      const a = document.activeElement;
+      return {
+        sugs: document.querySelectorAll("#hbody .sug").length,
+        rows: document.querySelectorAll("#hbody .tx").length,
+        head: !!a && a.classList.contains("hmon") && a.getAttribute("tabindex") === "-1",
+        row: !!(a && a.closest(".tx, .sug")),
+        outline: a && getComputedStyle(a).outlineStyle,
+      };
+    });
+    ok(
+      r.sugs === 0 && r.rows > 0 && r.head && !r.row && r.outline === "none",
+      "entries only: after Enter the focus is on a month heading, no row ringed: " + JSON.stringify(r)
+    );
+
     // with every account in one currency the labels carry it
     await pg.evaluate(() => (histClear(), S.accounts.forEach(a => (a.currency = "USD")), findDraw()));
     await typeIn(pg, "50");
@@ -2490,8 +2516,14 @@ const ok = (c, m) => {
         s = r.sugs.find(x => x.t === want);
       ok(!!s && /^Kind · \d+ entr/.test(s.s), q + ": the kind " + want + " is suggested: " + J9(r.sugs.map(x => x.t)));
     }
-    await type9(p9, "fee");
+    await type9(p9, "interest");
     let r = await look9(p9);
+    ok(
+      ["Charges", "Extras"].every(w => r.sugs.some(x => x.t === w && /^Kind · \d+ entr/.test(x.s))),
+      "interest: a borrow's interest is a charge, so Charges is offered with Extras: " + J9(r.sugs.map(x => x.t))
+    );
+    await type9(p9, "fee");
+    r = await look9(p9);
     let s = r.sugs.find(x => x.t === "Charges");
     ok(
       s.s === "Kind · 2 entries" && s.a === "Kind Charges, 2 entries",

@@ -835,7 +835,7 @@
       "extras": "Extras"
     },
     "kindWords": {
-      "charges": "cargo, comisión, comisiones, tarifa",
+      "charges": "cargo, comisión, comisiones, tarifa, interés, intereses",
       "extras": "propina, propinas, interés, intereses"
     },
     "fromAcc": "Desde {{account}}",

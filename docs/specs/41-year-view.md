@@ -11,6 +11,7 @@ What the user wants:
   Home has no Week period, so offer the periods Home has (Today / This month / This year once B exists).
 
 Notes:
+- The donut opens the Summary on Home's period; when Home shows a custom date range, it opens Days on the range's last day.
 - C is a new saved setting: `migrate()` must sanitise it, with a test (CLAUDE.md: every format change ships with a
   migration and a test). Week start (`settings.week`) and locales already handled by period code.
 - Scope fit: views only; nothing added to the one-tap entry path.

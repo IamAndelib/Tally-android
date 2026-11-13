@@ -835,7 +835,7 @@
       "extras": "Suppléments"
     },
     "kindWords": {
-      "charges": "commission, commissions, tarif",
+      "charges": "commission, commissions, tarif, intérêt, intérêts",
       "extras": "pourboire, pourboires, intérêt, intérêts, supplément"
     },
     "fromAcc": "De {{account}}",

@@ -80,7 +80,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   empty field. They stay on this phone only, never in backups. Archived entries are left out, unless **Settings →
   History → Archived entries in search** is on.
 - **Spending summary:** tap the donut for a day or a month as a pie of its categories, the last 8 weeks, or a year's 12
-  months, compared with the period before; the bars show whole amounts.
+  months, compared with the period before; the bars show whole amounts. A category's row opens to its newest entries, with
+  "Show all" to see the rest in History.
 
 **Around the phone**
 

@@ -1128,13 +1128,13 @@ function recentUndo(before, msg) {
 }
 /* Enter: the list follows at once and the keyboard closes. A page cannot close the keyboard and keep the focus on the
    field, and a blurred field would leave TalkBack's focus on nothing, so it moves to the heading of what is shown
-   ("Suggestions", else "Entries"; made focusable, no outline, so nothing in the list is ringed and TalkBack reads it),
+   ("Suggestions", else "Entries", else the first month's; made focusable, no outline, so nothing in the list is ringed and TalkBack reads it),
    else to the first button. */
 function findSubmit() {
   findDraw();
   const inp = $("#find-q");
   if (inp) inp.blur();
-  const head = $("#hbody .sec[role='heading']");
+  const head = $("#hbody .sec[role='heading']") || $("#hbody .hmon[role='heading']");
   if (head) head.setAttribute("tabindex", "-1");
   const first = head || $("#hbody .sug, #hbody [data-act='row-open'], #hbody button");
   if (first) first.focus({ preventScroll: true });

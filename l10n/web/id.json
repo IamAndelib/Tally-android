@@ -809,7 +809,7 @@
       "extras": "Tambahan"
     },
     "kindWords": {
-      "charges": "ongkos, admin, komisi",
+      "charges": "ongkos, admin, komisi, bunga",
       "extras": "tip, bunga"
     },
     "fromAcc": "Dari {{account}}",

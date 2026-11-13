@@ -835,7 +835,7 @@
       "extras": "Extras"
     },
     "kindWords": {
-      "charges": "taxa, tarifa, tarifas, comissão",
+      "charges": "taxa, tarifa, tarifas, comissão, juros",
       "extras": "gorjeta, gorjetas, juros"
     },
     "fromAcc": "De {{account}}",

@@ -809,7 +809,7 @@
       "extras": "额外款"
     },
     "kindWords": {
-      "charges": "手续费, 服务费, 佣金",
+      "charges": "手续费, 服务费, 佣金, 利息",
       "extras": "小费, 利息"
     },
     "fromAcc": "转出：{{account}}",

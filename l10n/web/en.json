@@ -822,7 +822,7 @@
       "extras": "Extras"
     },
     "kindWords": {
-      "charges": "fee, fees, charge",
+      "charges": "fee, fees, charge, interest",
       "extras": "tip, tips, interest"
     },
     "fromAcc": "From {{account}}",

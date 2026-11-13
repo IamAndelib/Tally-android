@@ -713,6 +713,35 @@ const ok = (c, m) => {
     await page.waitForTimeout(300); // the chevron's turn
     s = await look();
     ok(s.n === 0 && s.parts[0].exp === "false" && !s.parts[0].turned, "a second tap closes it");
+    /* Days: an entry written on another day than it counts on shows that date and the time */
+    await page.evaluate(() => {
+      window.g7ts = entry("g7").ts;
+      entry("g7").ts = Date.now() + 30 * 3600000; // written later than the day it counts on, still the newest
+      smRender();
+    });
+    await tap('#sm .smx[data-v="groceries"]');
+    const other = await page.evaluate(() => {
+      const t = entry("g7"),
+        w = new Date(t.ts),
+        rows = [...document.querySelectorAll("#sm .smo .tx")];
+      return {
+        s: rows[0].querySelector(".s").textContent.replace(/\s+/g, " "),
+        want: w.toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" }) + ", " + clockTime(t.ts),
+        same: rows[1].querySelector(".s").textContent.replace(/\s+/g, " "),
+        diff: iso(w) !== t.date,
+      };
+    });
+    ok(
+      other.diff && other.s.startsWith(other.want + " ·") && !/,/.test(other.same.split(" ·")[0]),
+      "Days: written on another day, the entry shows its date and time; the others only the time " +
+        JSON.stringify(other)
+    );
+    await page.evaluate(() => {
+      entry("g7").ts = window.g7ts;
+      smRender();
+    });
+    await tap('#sm .smx[data-v="groceries"]');
+    await page.waitForTimeout(300);
     /* opening Charges closes Groceries; the row tapped stays where it was on the screen */
     await page.setViewportSize({ width: 393, height: 600 });
     await tap('#sm .smx[data-v="groceries"]');

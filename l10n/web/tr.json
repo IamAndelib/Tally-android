@@ -822,7 +822,7 @@
       "extras": "Ekstralar"
     },
     "kindWords": {
-      "charges": "masraf, ücret, komisyon",
+      "charges": "masraf, ücret, komisyon, faiz",
       "extras": "bahşiş, faiz, ekstra"
     },
     "fromAcc": "Nereden: {{account}}",

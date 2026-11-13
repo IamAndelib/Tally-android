@@ -2341,7 +2341,8 @@ mark.hl {
   margin: 24px 4px 8px;
 }
 /* the heading search puts the focus on after Enter (tabindex -1): read by TalkBack, never ringed */
-.sec[tabindex="-1"] {
+.sec[tabindex="-1"],
+.hmon[tabindex="-1"] {
   outline: none;
 }
 .sec.center {

@@ -124,7 +124,8 @@ links that would need the internet.
 - **Signs carry direction.** "−" money left an account, "+" money arrived; a transfer has no sign and is drawn with
   "→" between its two accounts. The minus is always the true minus, U+2212 (also in negative balances and in the
   calculator). Amount fields start with the currency's own decimals ("4,167.50").
-- **Chart labels are whole amounts** in every Summary tab; a compact form ("12.4K") appears only from five digits, and
+- **Chart labels are whole amounts** on the bars of the Weeks and Year tabs (Days and Months are pies without
+  labels); a compact form ("12.4K") appears only from five digits, and
   only where the language has one.
 - **Two currencies are never added together.** They are listed side by side, each in its own symbol.
 - **Short labels.** A label names; it doesn't explain. Explanations, if needed at all, are a muted line under the
