@@ -25,9 +25,9 @@
     <!-- %1$s: a pessoa, %2$s: o valor devido -->
     <string name="n_owes_you">%1$s deve %2$s a você</string>
     <string name="n_you_owe">Você deve %2$s a %1$s</string>
-    <string name="n_payback_today">Hoje é dia de receber</string>
+    <string name="n_payback_today">Vence hoje</string>
     <!-- %1$s: uma data, como "seg., 15 de jun." -->
-    <string name="n_payback_was">Era para receber em %1$s</string>
+    <string name="n_payback_was">Venceu em %1$s</string>
     <string name="n_due_today">Vence hoje</string>
     <string name="n_due_was">Venceu em %1$s</string>
     <!-- %1$s: o valor total ainda devido -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 semana</string>
     <string name="n_still_owes_you">%1$s ainda deve %2$s a você</string>
     <string name="n_you_still_owe">Você ainda deve %2$s a %1$s</string>
-    <string name="n_lent_on">Emprestado em %1$s · sem dia de devolução</string>
-    <string name="n_borrowed_on">Pego emprestado em %1$s · sem dia de devolução</string>
+    <string name="n_lent_on">Emprestado em %1$s · sem vencimento</string>
+    <string name="n_borrowed_on">Pego emprestado em %1$s · sem vencimento</string>
     <string name="n_set_due">Definir uma data</string>
     <string name="n_someone">Alguém</string>
     <!-- na tela de bloqueio que oculta o conteúdo das notificações: só o tipo -->
     <string name="pub_check">Conferir saldos</string>
-    <string name="pub_dues">Uma dívida ou um empréstimo vence</string>
+    <string name="pub_dues">Lembrete de uma dívida ou um empréstimo</string>
     <string name="pub_backup">Problema no backup</string>
     <string name="pub_nudge">Nada anotado hoje</string>
 

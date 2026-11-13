@@ -512,8 +512,9 @@
     "warnLend": "Silmek hesap bakiyesini ve alacağı değiştirir.",
     "warnBorrow": "Silmek hesap bakiyesini ve borcu değiştirir.",
     "warnMany": "Silmek hesap bakiyelerini değiştirir.",
-    "delTitle_one": "Bu kayıt silinsin mi?",
-    "delTitle_other": "Bu {{count}} kayıt silinsin mi?"
+    "delTitle_one": "{{count}} kayıt silinsin mi?",
+    "delTitle_other": "Bu {{count}} kayıt silinsin mi?",
+    "delThis": "Bu kayıt silinsin mi?"
   },
   "home": {
     "nothingYet": "Henüz hiçbir şey yazılmadı.",

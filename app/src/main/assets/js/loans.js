@@ -688,7 +688,10 @@ function saveLoanDraw() {
     t.amount = amt;
     t.account = acc2;
     t.date = date2;
-    if (setDue) t.due = due2;
+    if (setDue) {
+      if (due2) t.due = due2;
+      else delete t.due; // no due day: none kept, not an empty one
+    }
     const add = (kind, n, key) => setAddOn(t, kind, n) || ((refused = key), false);
     const ok = t.principal
       ? lend
@@ -766,7 +769,7 @@ function saveLoan() {
   }
   const pid = newId(),
     ts = Date.now(),
-    l = merge || { id: newId(), kind: F.lk, person, account, date, note, status: "open" };
+    l = merge || { id: newId(), ts, kind: F.lk, person, account, date, note, status: "open" };
   let refused = "";
   const mutate = () => {
     if (!merge) S.loans.push(Object.assign({}, l));

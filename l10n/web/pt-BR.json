@@ -515,9 +515,10 @@
     "warnLend": "Excluir altera o saldo da conta e o empréstimo.",
     "warnBorrow": "Excluir altera o saldo da conta e a dívida.",
     "warnMany": "Excluir altera os saldos das contas.",
-    "delTitle_one": "Excluir este lançamento?",
+    "delTitle_one": "Excluir {{count}} lançamento?",
     "delTitle_many": "Excluir estes {{count}} lançamentos?",
-    "delTitle_other": "Excluir estes {{count}} lançamentos?"
+    "delTitle_other": "Excluir estes {{count}} lançamentos?",
+    "delThis": "Excluir este lançamento?"
   },
   "home": {
     "nothingYet": "Nada anotado ainda.",

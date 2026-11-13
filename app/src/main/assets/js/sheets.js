@@ -1277,7 +1277,7 @@ function deleteAsk(ids, go, o = {}) {
             ? "entries.warnBorrow"
             : "entries.warnOne";
   choiceDialog(
-    T("entries.delTitle", { count }),
+    count === 1 ? T("entries.delThis") : T("entries.delTitle", { count }),
     T(warn),
     [
       { role: "destroy", label: T("common.delete"), run: () => go(false) },

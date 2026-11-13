@@ -829,18 +829,37 @@ const ok = (c, m) => {
           mode + ": the second line is the day, then the account " + JSON.stringify(r.rows.map(x => x.s))
         );
     }
-    /* an opened part stays open across the tabs (where it is listed) */
+    /* an opened part closes when other days show: another tab, the arrows, a swipe or another week picked */
     await page.evaluate(() => {
       histClear();
       V.screen = "home";
       render();
       summarySheet();
     });
+    const closes = async (how, go) => {
+      await tap('#sm .smx[data-v="groceries"]');
+      const a = await look();
+      await go();
+      const b = await look();
+      ok(
+        a.open === "groceries" &&
+          b.open === null &&
+          b.n === 0 &&
+          b.parts.every(p => p.exp === "false") &&
+          (await page.evaluate(() => SM.open)) === null,
+        how + " closes the opened part " + JSON.stringify([a.open, b.open, b.n])
+      );
+    };
+    await closes("switching tabs", () => tap('#sheet [data-act="sm-mode"][data-v="m"]'));
     await tap('#sm .smx[data-v="groceries"]');
-    await tap('#sheet [data-act="sm-mode"][data-v="m"]');
-    s = await look();
-    ok(s.open === "groceries" && s.parts[0].exp === "true", "switching tabs keeps the part open");
     await page.screenshot({ path: OUT + "/opened.png" });
+    await tap('#sm .smx[data-v="groceries"]');
+    await page.evaluate(() => document.querySelector('#sheet [data-act="sm-mode"][data-v="d"]').click());
+    await page.waitForTimeout(90);
+    await closes("the period arrows", () => tap('#sm [data-act="sm-nav"][data-v="-1"]'));
+    await page.evaluate(() => document.querySelector('#sheet [data-act="sm-mode"][data-v="w"]').click());
+    await page.waitForTimeout(90);
+    await closes("picking another week", () => tap('#sm [data-act="sm-pick"][data-v="0"]'));
     await page.evaluate(() => closeSheet());
     /* a part whose every entry is archived (still counted): opened, it says so in one muted line */
     await page.evaluate(() => {

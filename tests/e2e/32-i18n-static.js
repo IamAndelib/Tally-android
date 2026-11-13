@@ -63,7 +63,10 @@ for (const c of codes) ok(!!ANDROID[c] && !!STORE[c], c + ": a known language co
 const en = cats.en;
 for (const c of codes) {
   const cat = cats[c],
-    rules = new Intl.PluralRules(c).resolvedOptions().pluralCategories;
+    pr = new Intl.PluralRules(c),
+    rules = pr.resolvedOptions().pluralCategories,
+    // a "_one" text may leave out {{count}} only where "one" means exactly 1 (not Russian's 21, 31, 101 …)
+    oneIsOne = ![...Array(1000).keys()].some(n => n > 1 && pr.select(n) === "one");
   const want = new Set(Object.keys(en).map(base)),
     got = new Set(Object.keys(cat).map(base));
   const missing = [...want].filter(k => !got.has(k)),
@@ -76,7 +79,13 @@ for (const c of codes) {
     else if (/[<>]|&\w+;|&#/.test(v)) bad.push(k + " has markup");
     const e = en[k] != null ? en[k] : en[base(k) + "_other"];
     if (e != null && vars(v) !== vars(e)) bad.push(k + " values " + vars(v) + " ≠ " + vars(e));
-    if (PLURAL.test(k) && !/\{\{count\}\}/.test(v) && rules.length > 1 && !k.endsWith("_one") && !k.endsWith("_zero"))
+    if (
+      PLURAL.test(k) &&
+      !/\{\{count\}\}/.test(v) &&
+      rules.length > 1 &&
+      !(k.endsWith("_one") && oneIsOne) &&
+      !k.endsWith("_zero")
+    )
       bad.push(k + " lacks {{count}}");
   }
   // plural keys: every form the language uses, and none it doesn't
@@ -198,6 +207,14 @@ for (const c of codes.filter(x => x !== "en")) {
   for (const k of Object.keys(s)) if (/(^|[^\\])'/.test(s[k].body)) bad.push(k + " has an unescaped '");
   ok(!bad.length, f + " matches English" + (bad.length ? ":\n  " + bad.join("\n  ") : ""));
 }
+/* the due-day notifications say "due date", as the page does; the hidden version also fits a monthly reminder */
+const dueS = ["n_payback_today", "n_payback_was", "n_lent_on", "n_borrowed_on"].map(k => (enS[k] || {}).body || "");
+ok(
+  dueS.every(b => /\bdue\b/i.test(b) && !/payback/i.test(b)) &&
+    dueS.slice(2).every(b => b.includes("no due date")) &&
+    !/\bis due\b/.test((enS.pub_dues || {}).body || ""),
+  "the due-day notifications say “due” (“no due date” without one), the hidden one not “is due” " + JSON.stringify(dueS)
+);
 const javaDir = path.join(ROOT, "app/src/main/java/app/tally/expenses");
 const java = fs
   .readdirSync(javaDir)

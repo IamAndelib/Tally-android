@@ -515,9 +515,10 @@
     "warnLend": "La suppression modifie le solde du compte et le prêt.",
     "warnBorrow": "La suppression modifie le solde du compte et l’emprunt.",
     "warnMany": "La suppression modifie les soldes des comptes.",
-    "delTitle_one": "Supprimer cette opération ?",
+    "delTitle_one": "Supprimer {{count}} opération ?",
     "delTitle_many": "Supprimer ces {{count}} d’opérations ?",
-    "delTitle_other": "Supprimer ces {{count}} opérations ?"
+    "delTitle_other": "Supprimer ces {{count}} opérations ?",
+    "delThis": "Supprimer cette opération ?"
   },
   "home": {
     "nothingYet": "Rien de noté pour l’instant.",

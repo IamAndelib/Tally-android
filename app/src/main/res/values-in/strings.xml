@@ -25,9 +25,9 @@
     <!-- %1$s: orangnya, %2$s: jumlah yang jatuh tempo -->
     <string name="n_owes_you">%1$s berutang %2$s padamu</string>
     <string name="n_you_owe">Kamu berutang %2$s pada %1$s</string>
-    <string name="n_payback_today">Hari ini tanggal kembalinya</string>
+    <string name="n_payback_today">Jatuh tempo hari ini</string>
     <!-- %1$s: tanggal, misalnya "Sen, 15 Jun" -->
-    <string name="n_payback_was">Seharusnya kembali %1$s</string>
+    <string name="n_payback_was">Sudah jatuh tempo %1$s</string>
     <string name="n_due_today">Jatuh tempo hari ini</string>
     <string name="n_due_was">Sudah jatuh tempo %1$s</string>
     <!-- %1$s: seluruh jumlah yang masih terutang -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 minggu</string>
     <string name="n_still_owes_you">%1$s masih berutang %2$s padamu</string>
     <string name="n_you_still_owe">Kamu masih berutang %2$s pada %1$s</string>
-    <string name="n_lent_on">Dipinjamkan %1$s · belum ada tanggal kembali</string>
-    <string name="n_borrowed_on">Dipinjam %1$s · belum ada tanggal kembali</string>
+    <string name="n_lent_on">Dipinjamkan %1$s · tanpa jatuh tempo</string>
+    <string name="n_borrowed_on">Dipinjam %1$s · tanpa jatuh tempo</string>
     <string name="n_set_due">Atur jatuh tempo</string>
     <string name="n_someone">Seseorang</string>
     <!-- di layar kunci yang menyembunyikan isi notifikasi: hanya jenisnya -->
     <string name="pub_check">Cek saldo</string>
-    <string name="pub_dues">Ada utang atau piutang yang jatuh tempo</string>
+    <string name="pub_dues">Pengingat utang atau piutang</string>
     <string name="pub_backup">Masalah cadangan</string>
     <string name="pub_nudge">Belum ada catatan hari ini</string>
 

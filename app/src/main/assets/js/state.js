@@ -619,14 +619,18 @@ function setAddOn(t, kind, amount) {
 /* whether entry t is in currency cur (its account's) */
 const inCur = (t, cur) => (acc(t.account) || {}).currency === cur;
 /* What counts as spending in currency cur, by the counting rule: every expense, in its part (spendCat()), and every part
-   of a loan worked out as spending (loanParts(), in CHARGES), each as {date, amount, cat, of}: of is the entry it comes
-   from (the expense, or the loan entry the part is worked out on), for Summary's opened rows (smPartRows()). */
+   of a loan worked out as spending (loanParts(), in CHARGES), each as {date, amount, cat, of, at}: of is the entry it
+   comes from (the expense, or the loan entry the part is worked out on) and at the draw it is dated on when that isn't
+   of's day (loanParts()), for Summary's opened rows (smPartRows()). */
 function spendItems(cur) {
   const out = S.txns
     .filter(t => isSpend(t) && inCur(t, cur))
     .map(t => ({ date: t.date, amount: t.amount, cat: spendCat(t), of: t.id }));
   loanParts().forEach(
-    p => p.as === "spend" && p.cur === cur && out.push({ date: p.date, amount: p.amount, cat: CHARGES, of: p.of })
+    p =>
+      p.as === "spend" &&
+      p.cur === cur &&
+      out.push({ date: p.date, amount: p.amount, cat: CHARGES, of: p.of, ...(p.at ? { at: p.at } : {}) })
   );
   return out;
 }

@@ -509,7 +509,8 @@
     "warnLend": "Menghapus akan mengubah saldo akun dan piutangnya.",
     "warnBorrow": "Menghapus akan mengubah saldo akun dan utangnya.",
     "warnMany": "Menghapus akan mengubah saldo akun terkait.",
-    "delTitle_other": "Hapus {{count}} transaksi ini?"
+    "delTitle_other": "Hapus {{count}} transaksi ini?",
+    "delThis": "Hapus transaksi ini?"
   },
   "home": {
     "nothingYet": "Belum ada yang dicatat.",

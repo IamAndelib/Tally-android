@@ -515,9 +515,10 @@
     "warnLend": "Eliminarlo cambia el saldo de la cuenta y el préstamo.",
     "warnBorrow": "Eliminarlo cambia el saldo de la cuenta y la deuda.",
     "warnMany": "Eliminarlos cambia los saldos de las cuentas.",
-    "delTitle_one": "¿Eliminar este movimiento?",
+    "delTitle_one": "¿Eliminar {{count}} movimiento?",
     "delTitle_many": "¿Eliminar estos {{count}} movimientos?",
-    "delTitle_other": "¿Eliminar estos {{count}} movimientos?"
+    "delTitle_other": "¿Eliminar estos {{count}} movimientos?",
+    "delThis": "¿Eliminar este movimiento?"
   },
   "home": {
     "nothingYet": "Aún no has anotado nada.",

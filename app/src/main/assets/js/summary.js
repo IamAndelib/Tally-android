@@ -146,12 +146,12 @@ function smRow([k, v], total, share) {
 /* The entries behind part k on screen (SM.span), from the very items Summary adds up (spendItems()), one row per entry,
    newest first: a purchase with its charge as one row with both (its whole amount in its category); on Charges, the
    entry a charge was paid with (a transfer, a loan payment) with that charge, or the loan entry a charge is worked out on
-   (loanParts()). Only the Summary's currency; an archived entry is not listed, as in History, though it counts. */
+   (loanParts()): a charge covered by credit, on the later draw it is dated on (at), as History lists it. Only the Summary's currency; an archived entry is not listed, as in History, though it counts. */
 function smPartRows(k) {
   const [s, e] = SM.span,
     by = new Map();
   spendItems(SM.cur).forEach(x => {
-    const t = x.cat === k && x.date >= s && x.date <= e && entry(x.of);
+    const t = x.cat === k && x.date >= s && x.date <= e && entry(x.at || x.of);
     if (!t) return;
     const r = histHost(t) || t,
       g = by.get(r.id) || { t: r, date: x.date, amount: 0 };
@@ -549,6 +549,7 @@ function smNav(d) {
   else e = monthEnd(shiftMonth(e.slice(0, 7), d));
   SM.end = e > t ? t : e;
   SM.sel = null;
+  SM.open = null; // other days: an opened row closes (also on a swipe)
   smRender();
 }
 function smOpen() {

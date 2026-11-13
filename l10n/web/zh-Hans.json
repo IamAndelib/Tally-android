@@ -509,7 +509,8 @@
     "warnLend": "删除会改变账户余额和这笔借出。",
     "warnBorrow": "删除会改变账户余额和这笔借入。",
     "warnMany": "删除会改变相关账户的余额。",
-    "delTitle_other": "删除{{count}}条记录？"
+    "delTitle_other": "删除{{count}}条记录？",
+    "delThis": "删除这条记录？"
   },
   "home": {
     "nothingYet": "还没有任何记录。",

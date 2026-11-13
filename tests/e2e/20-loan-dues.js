@@ -289,6 +289,48 @@ const ok = (c, m) => {
     "the payment card: prefilled with the 350 due, the line naming the extra it covers " + JSON.stringify(xline)
   );
 
+  // ---- saved data: a lending made from the form has its time; a draw saved with no due day keeps no empty one
+  await page.evaluate(() => closeSheet());
+  await settle();
+  await page.evaluate(() => {
+    loanForm("lend");
+    $("#f-person").value = "Noor";
+    $("#f-person").dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.fill("#f-amt", "100");
+  await settle();
+  await page.evaluate(() => saveLoan());
+  await settle();
+  const st = await state();
+  const nl = st.loans.find(l => l.person === "Noor") || {},
+    nd = st.txns.find(t => t.loan === nl.id && t.principal) || {};
+  ok(
+    nl.ts > 0 && nl.ts === nd.ts && !("due" in nd),
+    "a lending made from the form is saved with its time (its draw's), its draw with no due day " + JSON.stringify(nl)
+  );
+  const edited = async (id, clear) => {
+    await page.evaluate(
+      ([l, id, clear]) => {
+        closeSheet();
+        loanOpen(l);
+        loanDrawEdit(id);
+        if (clear) $("#ed-due").dataset.v = "";
+        saveLoanDraw();
+      },
+      [nl.id, id, clear]
+    );
+    await settle();
+    return (await state()).txns.find(t => t.id === id);
+  };
+  let ed = await edited(nd.id, false);
+  ok(ed && !("due" in ed), "a draw edited with no due day is saved without one " + JSON.stringify(ed));
+  await page.evaluate(id => {
+    entry(id).due = addDays(today(), 3);
+    save();
+  }, nd.id);
+  ed = await edited(nd.id, true);
+  ok(ed && !("due" in ed), "… and a due day cleared in the edit is removed, not saved empty " + JSON.stringify(ed));
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

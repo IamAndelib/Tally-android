@@ -512,8 +512,9 @@
     "warnLend": "Deleting changes the account balance and the loan.",
     "warnBorrow": "Deleting changes the account balance and the loan.",
     "warnMany": "Deleting changes the account balances.",
-    "delTitle_one": "Delete this entry?",
-    "delTitle_other": "Delete these {{count}} entries?"
+    "delTitle_one": "Delete {{count}} entry?",
+    "delTitle_other": "Delete these {{count}} entries?",
+    "delThis": "Delete this entry?"
   },
   "home": {
     "nothingYet": "Nothing written down yet.",

@@ -25,9 +25,9 @@
     <!-- %1$s : la personne, %2$s : le montant dû -->
     <string name="n_owes_you">%1$s vous doit %2$s</string>
     <string name="n_you_owe">Vous devez %2$s à %1$s</string>
-    <string name="n_payback_today">Retour prévu aujourd’hui</string>
+    <string name="n_payback_today">Échéance aujourd’hui</string>
     <!-- %1$s : une date, comme « lun. 15 juin » -->
-    <string name="n_payback_was">Retour attendu depuis le %1$s</string>
+    <string name="n_payback_was">Échéance du %1$s dépassée</string>
     <string name="n_due_today">À rembourser aujourd’hui</string>
     <string name="n_due_was">À rembourser depuis le %1$s</string>
     <!-- %1$s : tout ce qui reste dû -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 semaine</string>
     <string name="n_still_owes_you">%1$s vous doit encore %2$s</string>
     <string name="n_you_still_owe">Vous devez encore %2$s à %1$s</string>
-    <string name="n_lent_on">Prêté le %1$s · pas de date de retour</string>
-    <string name="n_borrowed_on">Emprunté le %1$s · pas de date de retour</string>
+    <string name="n_lent_on">Prêté le %1$s · sans échéance</string>
+    <string name="n_borrowed_on">Emprunté le %1$s · sans échéance</string>
     <string name="n_set_due">Fixer une date</string>
     <string name="n_someone">Quelqu’un</string>
     <!-- sur un écran de verrouillage qui masque le contenu des notifications : seulement le type -->
     <string name="pub_check">Point sur les soldes</string>
-    <string name="pub_dues">Un prêt ou un emprunt arrive à échéance</string>
+    <string name="pub_dues">Un rappel de prêt ou d’emprunt</string>
     <string name="pub_backup">Problème de sauvegarde</string>
     <string name="pub_nudge">Rien de noté aujourd’hui</string>
 

@@ -25,9 +25,9 @@
     <!-- %1$s: die Person, %2$s: der fällige Betrag -->
     <string name="n_owes_you">%1$s schuldet dir %2$s</string>
     <string name="n_you_owe">Du schuldest %1$s %2$s</string>
-    <string name="n_payback_today">Heute ist Rückzahlung</string>
+    <string name="n_payback_today">Heute fällig</string>
     <!-- %1$s: ein Datum, etwa „Mo., 15. Juni“ -->
-    <string name="n_payback_was">Rückzahlung war am %1$s fällig</string>
+    <string name="n_payback_was">War am %1$s fällig</string>
     <string name="n_due_today">Heute fällig</string>
     <string name="n_due_was">War am %1$s fällig</string>
     <!-- %1$s: der gesamte noch offene Betrag -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 Woche</string>
     <string name="n_still_owes_you">%1$s schuldet dir noch %2$s</string>
     <string name="n_you_still_owe">Du schuldest %1$s noch %2$s</string>
-    <string name="n_lent_on">Verliehen am %1$s · kein Rückzahlungstag</string>
-    <string name="n_borrowed_on">Geliehen am %1$s · kein Rückzahlungstag</string>
+    <string name="n_lent_on">Verliehen am %1$s · ohne Frist</string>
+    <string name="n_borrowed_on">Geliehen am %1$s · ohne Frist</string>
     <string name="n_set_due">Fälligkeit festlegen</string>
     <string name="n_someone">Jemand</string>
     <!-- auf einem Sperrbildschirm, der Inhalte verbirgt: nur die Art -->
     <string name="pub_check">Kontostand-Check</string>
-    <string name="pub_dues">Eine Rückzahlung ist fällig</string>
+    <string name="pub_dues">Erinnerung an eine Rückzahlung</string>
     <string name="pub_backup">Backup-Problem</string>
     <string name="pub_nudge">Heute nichts notiert</string>
 

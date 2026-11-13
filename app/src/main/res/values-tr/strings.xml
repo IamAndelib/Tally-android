@@ -25,9 +25,9 @@
     <!-- %1$s: kişi, %2$s: ödenecek tutar -->
     <string name="n_owes_you">%1$s sana %2$s borçlu</string>
     <string name="n_you_owe">%1$s: %2$s borcun var</string>
-    <string name="n_payback_today">Geri ödeme günü bugün</string>
+    <string name="n_payback_today">Vade bugün</string>
     <!-- %1$s: bir tarih, örneğin "15 Haz Pzt" -->
-    <string name="n_payback_was">Geri ödeme günü geçti: %1$s</string>
+    <string name="n_payback_was">Vade geçti: %1$s</string>
     <string name="n_due_today">Son ödeme günü bugün</string>
     <string name="n_due_was">Son ödeme günü geçti: %1$s</string>
     <!-- %1$s: hâlâ borçlu olunan toplam tutar -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 hafta</string>
     <string name="n_still_owes_you">%1$s sana hâlâ %2$s borçlu</string>
     <string name="n_you_still_owe">%1$s: hâlâ %2$s borcun var</string>
-    <string name="n_lent_on">Verildi: %1$s · geri ödeme günü yok</string>
-    <string name="n_borrowed_on">Alındı: %1$s · geri ödeme günü yok</string>
+    <string name="n_lent_on">Verildi: %1$s · vade yok</string>
+    <string name="n_borrowed_on">Alındı: %1$s · vade yok</string>
     <string name="n_set_due">Son gün belirle</string>
     <string name="n_someone">Biri</string>
     <!-- bildirim içeriğini gizleyen kilit ekranında: yalnızca türü -->
     <string name="pub_check">Bakiye kontrolü</string>
-    <string name="pub_dues">Bir borcun ya da alacağın vadesi geldi</string>
+    <string name="pub_dues">Bir borç ya da alacak hatırlatması</string>
     <string name="pub_backup">Yedekleme sorunu</string>
     <string name="pub_nudge">Bugün hiçbir şey yazılmadı</string>
 

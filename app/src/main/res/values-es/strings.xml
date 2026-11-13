@@ -25,9 +25,9 @@
     <!-- %1$s: la persona, %2$s: la cantidad que se debe -->
     <string name="n_owes_you">%1$s te debe %2$s</string>
     <string name="n_you_owe">Le debes %2$s a %1$s</string>
-    <string name="n_payback_today">Hoy es el día de cobro</string>
+    <string name="n_payback_today">Vence hoy</string>
     <!-- %1$s: una fecha, como «lun, 15 jun» -->
-    <string name="n_payback_was">El cobro era el %1$s</string>
+    <string name="n_payback_was">Vencía el %1$s</string>
     <string name="n_due_today">Vence hoy</string>
     <string name="n_due_was">Vencía el %1$s</string>
     <!-- %1$s: toda la cantidad que aún se debe -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 semana</string>
     <string name="n_still_owes_you">%1$s todavía te debe %2$s</string>
     <string name="n_you_still_owe">Todavía le debes %2$s a %1$s</string>
-    <string name="n_lent_on">Prestado el %1$s · sin día de devolución</string>
-    <string name="n_borrowed_on">Pedido el %1$s · sin día de devolución</string>
+    <string name="n_lent_on">Prestado el %1$s · sin fecha de pago</string>
+    <string name="n_borrowed_on">Pedido el %1$s · sin fecha de pago</string>
     <string name="n_set_due">Fijar una fecha</string>
     <string name="n_someone">Alguien</string>
     <!-- en una pantalla de bloqueo que oculta el contenido: solo el tipo -->
     <string name="pub_check">Revisión de saldos</string>
-    <string name="pub_dues">Vence un préstamo o una deuda</string>
+    <string name="pub_dues">Aviso de un préstamo o una deuda</string>
     <string name="pub_backup">Problema con la copia</string>
     <string name="pub_nudge">Hoy no anotaste nada</string>
 

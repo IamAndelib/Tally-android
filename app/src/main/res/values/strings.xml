@@ -25,9 +25,9 @@
     <!-- %1$s: the person, %2$s: the amount due -->
     <string name="n_owes_you">%1$s owes you %2$s</string>
     <string name="n_you_owe">You owe %1$s %2$s</string>
-    <string name="n_payback_today">Payback day is today</string>
+    <string name="n_payback_today">Due today</string>
     <!-- %1$s: a date, such as "Mon, Jun 15" -->
-    <string name="n_payback_was">Payback was due %1$s</string>
+    <string name="n_payback_was">Was due %1$s</string>
     <string name="n_due_today">Due today</string>
     <string name="n_due_was">Was due %1$s</string>
     <!-- %1$s: the whole amount still owed -->
@@ -37,13 +37,13 @@
     <string name="n_plus_week">+1 week</string>
     <string name="n_still_owes_you">%1$s still owes you %2$s</string>
     <string name="n_you_still_owe">You still owe %1$s %2$s</string>
-    <string name="n_lent_on">Lent on %1$s · no payback day set</string>
-    <string name="n_borrowed_on">Borrowed on %1$s · no payback day set</string>
+    <string name="n_lent_on">Lent on %1$s · no due date</string>
+    <string name="n_borrowed_on">Borrowed on %1$s · no due date</string>
     <string name="n_set_due">Set a due date</string>
     <string name="n_someone">Someone</string>
     <!-- on a lock screen that hides what notifications say: only the kind -->
     <string name="pub_check">Balance check</string>
-    <string name="pub_dues">A loan or lending is due</string>
+    <string name="pub_dues">A loan or lending reminder</string>
     <string name="pub_backup">Backup problem</string>
     <string name="pub_nudge">Nothing written today</string>
 

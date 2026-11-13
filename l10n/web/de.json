@@ -512,8 +512,9 @@
     "warnLend": "Löschen ändert den Kontostand und das Darlehen.",
     "warnBorrow": "Löschen ändert den Kontostand und die Schuld.",
     "warnMany": "Löschen ändert die Kontostände.",
-    "delTitle_one": "Diesen Eintrag löschen?",
-    "delTitle_other": "Diese {{count}} Einträge löschen?"
+    "delTitle_one": "{{count}} Eintrag löschen?",
+    "delTitle_other": "Diese {{count}} Einträge löschen?",
+    "delThis": "Diesen Eintrag löschen?"
   },
   "home": {
     "nothingYet": "Noch nichts notiert.",

@@ -283,6 +283,7 @@ document.addEventListener("click", ev => {
     case "sm-mode":
       SM.mode = v;
       SM.sel = null;
+      SM.open = null; // another tab shows other days: an opened row closes
       setPressed("sm-mode", v);
       smRender();
       break;
@@ -291,6 +292,7 @@ document.addEventListener("click", ev => {
       break;
     case "sm-pick":
       SM.sel = +v;
+      SM.open = null;
       smRender();
       break;
     case "sm-open":

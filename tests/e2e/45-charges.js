@@ -1842,6 +1842,61 @@ function variedV7() {
   } catch (e) {
     ok(false, "Summary's opened rows: " + e.message.split("\n")[0]);
   }
+  /* a borrow's charges on a later draw, covered by credit from an earlier payment: counted on the draw's day, so
+     Summary's Charges row opens to that draw, on that day, as History's Charges kind lists it (not the payment) */
+  try {
+    const o = {
+      v: 8,
+      settings: { ...settings, lastCheck: dd(0) },
+      accounts: [acct("a", "Bank", "bank", "BDT", 1000)],
+      types: [],
+      cats: cats8,
+      loans: [loanOf("L", "borrow", "Rafi", "a", dd(-150))],
+      txns: [
+        x("d1", 1, dd(-150), "loan", 100, "a", { dir: "in", loan: "L", principal: true }),
+        x("d2", 2, dd(-12), "loan", 100, "a", { dir: "in", loan: "L", principal: true, onTop: 20 }),
+        x("p", 3, dd(-130), "loan", 220, "a", { dir: "out", loan: "L" }),
+      ],
+      assets: [],
+    };
+    const r = await page.evaluate(
+      ([o, day]) => {
+        const keep = S,
+          keepV = { ...V };
+        try {
+          S = migrate(o);
+          RBC = LPC = null;
+          V.screen = "home";
+          render();
+          summarySheet();
+          Object.assign(SM, { cur: "BDT", end: day, mode: "d", sel: null });
+          smRender();
+          const row = [...document.querySelectorAll("#sm .smx")].find(b => b.dataset.v === CHARGES);
+          if (row) row.click();
+          const opened = [...document.querySelectorAll("#sm .smo .tx")].map(e => e.dataset.v),
+            rows = smPartRows(CHARGES).map(g => [g.t.id, g.date, g.amount]);
+          smAll(CHARGES);
+          const hist = histRows(histList()).map(t => t.id);
+          return { opened, rows, hist };
+        } finally {
+          S = keep;
+          Object.assign(V, keepV);
+          histClear();
+          RBC = LPC = null;
+          closeSheet();
+          render();
+        }
+      },
+      [o, dd(-12)]
+    );
+    ok(
+      J(r.opened) === J(["d2"]) && J(r.rows) === J([["d2", dd(-12), 20]]) && J(r.hist) === J(["d2"]),
+      "a charge covered by credit: Summary's Charges row opens to the later draw, on its day, as History lists it " +
+        J(r)
+    );
+  } catch (e) {
+    ok(false, "a charge covered by credit: " + e.message.split("\n")[0]);
+  }
 
   // ---- 16. a lend's transfer charge is lent money: never spending while the lending is open
   try {
