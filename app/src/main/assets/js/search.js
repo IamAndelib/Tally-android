@@ -595,8 +595,7 @@ function sugTokens(q) {
     .split(/\s+/)
     .filter(Boolean)
     .map(raw => {
-      const cmp = /^[<>]/.test(raw);
-      return { raw, cmp, f: cmp ? "" : srFold(raw).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "") };
+      return { raw, f: /^[<>]/.test(raw) ? "" : srFold(raw).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "") };
     });
 }
 /* which typed words find a name, by the rule of the entries (srHitFolded): it starts one of its words, or, in scripts

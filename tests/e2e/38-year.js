@@ -35,9 +35,8 @@ const ok = (c, m) => {
       for (let m = 1; m <= 12; m++) S.txns.push(t(y - 1 + "-" + pad(m) + "-01", 80, "food"));
       S.txns.push({ id: "in", ts: 1, date: y + "-02-03", type: "income", amount: 900, account: "a", cat: "income" });
       save();
-      location.reload();
     }, home);
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     return { ctx, page };
   };

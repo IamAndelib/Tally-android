@@ -232,12 +232,10 @@ const ok = (c, m) => {
   await page.click(".pnav .plabel");
   await act("pd-tab", "month");
   await page.click(`#pd [data-act="pd-month"][data-v="${d.t.slice(0, 7)}"]`);
-  ok(!(await homeLabel()).includes("Today"), "home now shows a month: " + (await homeLabel()));
+  const homeNow = await homeLabel();
+  ok(!homeNow.includes("Today"), "home now shows a month: " + homeNow);
   await act("go", "history");
-  ok(
-    (await hlabel()).includes(String(new Date(d.pm).getFullYear())) || true,
-    "history kept its own period: " + (await hlabel())
-  );
+  ok((await hlabel()) !== homeNow, "history kept its own period: " + (await hlabel()));
   await act("home");
 
   // ---- 360px, long range label: icons still visible, no overflow

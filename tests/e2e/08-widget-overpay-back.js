@@ -150,11 +150,8 @@ const ok = (c, m) => {
   await tap('.list [data-v="L1"]');
   const row = "#sheet .tx.exp:nth-child(1)";
   ok(
-    (await page.evaluate(s => {
-      const e = document.querySelector(s + " .s");
-      return e.scrollWidth > e.clientWidth;
-    }, row)) || true,
-    "subtitle truncated before expanding"
+    await page.evaluate(s => document.querySelector(s + " .more").offsetHeight === 0, row),
+    "a payment's details stay hidden before expanding"
   );
   await tap(row);
   const ex = await page.evaluate(s => {

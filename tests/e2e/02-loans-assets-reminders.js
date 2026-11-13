@@ -341,7 +341,7 @@ const ok = (c, m) => {
   await page.fill("#f-aname", "Gold");
   await page.fill("#f-aval", "20000");
   await sact("asset-save");
-  ok((await page.textContent(".sumcard")).includes("20,") || true, "asset added");
+  ok((await page.textContent("#app")).includes("Gold"), "asset added");
   S = await state();
   ok(S.assets[0].value === 20000, "asset saved");
 

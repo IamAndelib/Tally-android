@@ -1,15 +1,16 @@
 /*
- * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`: account, kind, then a
- * category, a person or a transfer's two sides), which entries they leave (`histList()`, `histMatch()`), which of those
- * are rows (`histRows()`: an add-on, a charge, a tip or a lend's transfer charge, is shown inside its entry, never as a
- * row, and an archived entry is not listed, though it counts in every total; search lists it too while Settings says
- * so: `listRows()`), the totals in words
- * (`histLines()`, `histHeadSay()`, `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
+ * history.js — History: its filters and totals, the Filters sheet and the screen. What filters History has (`HF`:
+ * account, kind, then a category, a person or a transfer's two sides), which entries they leave (`histList()`,
+ * `histMatch()`), which of those are rows (`histRows()`: an add-on, a charge, a tip or a lend's transfer charge, is
+ * shown inside its entry, never as a row, and an archived entry is not listed, though it counts in every total; search
+ * lists it too while Settings says so: `listRows()`), the totals in words (`histLines()`, `histHeadSay()`,
+ * `histColumn()`), and going back to the default view (`histClear()`, `histDrop()`, `openHistory()`); and the screen
  * itself (`historyView()`: period chip, Filters button, one chip per set filter, month headings with their totals; only
  * the first rows are drawn, the rest as the end comes near), with its pinned header (`histPin()`: the bar, the Filters
- * row and the month in view stay at the top while the entries scroll; Settings' bar and section headings the same way). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an account only on its own (a transfer's charge is its From account's).
- * Last, the Archived screen (`archiveView()`, `archOpen()`, `archBack()`): the archived entries, reached from
- * the Filters row's archive button.
+ * row and the month in view stay at the top while the entries scroll; Settings' bar and section headings the same
+ * way). A fee follows its entry everywhere: it has that entry's kind and matches whatever that entry matches, but an
+ * account only on its own (a transfer's charge is its From account's). Last, the Archived screen (`archiveView()`,
+ * `archOpen()`, `archBack()`): the archived entries, reached from the Filters row's archive button.
  */
 const histBlank = () => ({ acc: "", kind: "", cat: "", who: "", from: "", to: "", q: "", pay: "", amt: "" });
 let HF = histBlank();

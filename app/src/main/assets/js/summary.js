@@ -270,7 +270,6 @@ function smPie(split, total) {
       '"><title>' +
       esc(partName(split[0][0])) +
       "</title></circle>";
-  else if (!split.length) segs = '<circle cx="50" cy="50" r="' + RP + '" fill="var(--surface-highest)"/>';
   else
     split.forEach(([k, v]) => {
       const a1 = at + (v / total) * 2 * Math.PI;
@@ -336,7 +335,7 @@ function drawSm() {
   const split = catSplit(b.list),
     /* nothing spent in all that the chart shows: no chart (the total, the message and the button say it) */
     none = ONE ? !b.v : !max;
-  if (none) h += "";
+  if (none);
   else if (SM.mode === "w")
     h +=
       '<div class="smchart smrows">' +

@@ -406,10 +406,7 @@ const ok = (c, m) => {
       r.pie.paths >= 2 && r.pie.circles === 0 && !r.pie.hole && !r.pie.centre && r.pie.hidden === "true",
       loc + " months is a pie: wedges only, no hole, no hub " + JSON.stringify(r.pie)
     );
-    ok(
-      /12[,.\s\u202f]?400[.,]60/.test(r.pie.total) === false || true,
-      loc + " total stays under the chart: " + r.pie.total
-    );
+    ok(/13[,.\s\u202f]?877[.,]50/.test(r.pie.total), loc + " total stays under the chart: " + r.pie.total);
     ok(
       /\d/.test(r.pie.total) && !/7[,.\s\u202f]?777/.test(r.pie.total),
       loc + " Summary stays per currency: " + r.pie.total

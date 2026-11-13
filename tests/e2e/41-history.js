@@ -29,9 +29,8 @@ const ok = (c, m) => {
       S.txns.push(t(y - 3 + "-03-05", 11, "food"));
       S.txns.push(t(today(), 22, "food"));
       save();
-      location.reload();
     });
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     return { ctx, page };
   };
@@ -284,9 +283,8 @@ const ok = (c, m) => {
       t("l3", "2026-06-05", "loan", 100, "b", { loan: "L2", dir: "in", principal: true });
       t("l4", "2026-06-06", "loan", 30, "b", { loan: "L2", dir: "out" });
       save();
-      location.reload();
     });
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     const heads = async kind => {
       await page.evaluate(k => openHistory(k ? { kind: k } : {}), kind);
@@ -400,9 +398,8 @@ const ok = (c, m) => {
       S.txns.push({ id: "x", ts: 1, date: today(), type: "transfer", amount: 1000, account: "k", to: "b", note: "" });
       setAddOn(S.txns[0], "charge", 10);
       save();
-      location.reload();
     });
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     const look = f =>
       page.evaluate(f => {
@@ -477,9 +474,8 @@ const ok = (c, m) => {
       t("i1", y + "-06-10", "income", 100, "b", { cat: "gift" });
       t("x1", y + "-06-12", "transfer", 40, "b", { to: "c" });
       save();
-      location.reload();
     });
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     const act = (a, v) => page.click(`#app [data-act="${a}"]` + (v === undefined ? "" : `[data-v="${v}"]`));
     const sub = () =>
@@ -712,9 +708,8 @@ const ok = (c, m) => {
       t("loan", 30, "c", { loan: "L2", dir: "out", principal: true });
       t("loan", 30, "c", { loan: "L2", dir: "in" });
       save();
-      location.reload();
     });
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     await page.click('[data-act="go"][data-v="history"]');
     const sheet = () =>
@@ -3078,9 +3073,8 @@ const ok = (c, m) => {
         loanOf("W", "lend", "Joy", "k", 5, "writeoff")
       );
       save();
-      location.reload();
     });
-    await page.waitForLoadState();
+    await page.reload();
     await page.waitForTimeout(200);
     await page.evaluate(() => (window.CM = shiftMonth(today().slice(0, 7), -1))); // the month of the entries
     const rowsOf = f =>

@@ -1,5 +1,6 @@
 /*
- * screens.js — The screens: render() and Home, Assets, Liabilities, History and Settings, plus the entry rows they share.
+ * screens.js — The screens: render() and Home, Assets, Liabilities and Settings (History is in history.js), plus the
+ * entry rows they share (txLine, txOpenView, dayList, dayGroups) and the helpers that fit text (fitFigures, fitWrapped).
  */
 "use strict";
 

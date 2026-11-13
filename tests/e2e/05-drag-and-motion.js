@@ -157,7 +157,7 @@ const ok = (c, m) => {
   await tap('[data-act="undo"]');
   S = await state();
   ok(S.accounts.find(a => a.id === "c").archived, "Undo archives it again");
-  ok(!((await page.evaluate(() => document.getElementById("app").classList.contains("enter"))) && false) || true, "");
+  ok(!(await page.evaluate(() => document.getElementById("app").classList.contains("enter"))), "no enter anim on Undo");
 
   // ---- 2. drag archived -> accounts
   if (!(await page.$('.dropbox[data-zone="arch"]'))) await tap('[data-act="toggle-arch"]');
@@ -278,7 +278,7 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="tx-save"]');
   ok(!(await page.$(".popin,.bump")), "no pop/bump effects on save");
   ok(
-    await page.evaluate(() => !document.getElementById("app").classList.contains("enter") || true),
+    await page.evaluate(() => !document.getElementById("app").classList.contains("enter")),
     "no enter anim on in-place re-render"
   );
   const snackAnim = await page.evaluate(() => getComputedStyle(document.querySelector(".snack")).animationName);

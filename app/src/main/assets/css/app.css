@@ -255,11 +255,6 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.month .plabel {
-  font-size: 1.05rem;
-  margin: 0 auto;
-  padding: 0 8px 0 12px;
-}
 /* the period arrows keep their whole 48px to tap but lie over the label's padding (on top of it), so the label keeps
    its room next to them; .appbar has no gap for the same reason (each icon's box already spaces its glyph) */
 .pnav > .icon {
@@ -958,9 +953,6 @@ html[dir="rtl"] .strip.fade {
   line-height: 1.2;
   color: var(--on-surface-variant);
   text-align: start;
-}
-.strip .chip {
-  flex-shrink: 0;
 }
 .chip[aria-pressed="true"] {
   background: var(--secondary-container);
@@ -2365,14 +2357,6 @@ mark.hl {
 .welcome .fieldbtn {
   max-width: 320px;
   margin: 0 auto 16px;
-}
-.month {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--surface-container);
-  border-radius: 24px;
-  padding: 4px;
 }
 .seg {
   display: flex;
