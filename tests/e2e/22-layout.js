@@ -1028,7 +1028,7 @@ function inspect() {
     );
     // design round, task 9: Received's category chip with its grid open, a picked account's tint, the emblem's pen
     await shot("income-cats", async () => {
-      await page.evaluate(() => txSheet(null, "income"));
+      await page.evaluate(() => txSheet(null, "income", "income")); // a category picked, so the chip shows
       await page.click("#f-catchip");
     });
     await shot(
