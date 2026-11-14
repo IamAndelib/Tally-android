@@ -1,0 +1,2 @@
+- Eine neue Einnahme öffnet mit ihren Kategorien, ohne Vorauswahl, wie bei Ausgaben.
+- Die Tausch-Schaltfläche zwischen Von und Nach bei einer Überweisung sitzt mittig.

@@ -100,3 +100,4 @@ core, P2 minor, P3 cosmetic).
 - 2026-11-13 · P3 · Summary closes an opened row when the tab or the period changes · maintainer's pick: the rows under the new tab or period are other rows, so an open one would show the wrong entries
 - 2026-11-13 · P3 · Unticking the last selected row keeps the focus on that row, and selecting stays on · the person is still there with the same row under the finger (TalkBack too)
 - 2026-11-13 · P3 · Home's ring leaves the names out of the whole ring when any one doesn't fit whole, replacing shrinking and cutting with "…" · a name is never half a name, and every tile looks alike
+- 2026-11-14 · P3 · A new Received entry opens on its category grid with nothing picked, under "What was it?", as Spent does; it no longer starts with Salary · maintainer: the two forms behave the same

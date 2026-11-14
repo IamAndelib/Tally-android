@@ -1,0 +1,2 @@
+- Pemasukan baru terbuka dengan kategorinya tanpa pilihan awal, sama seperti pengeluaran.
+- Tombol tukar antara Dari dan Ke pada transfer kini berada di tengah.

@@ -1,0 +1,2 @@
+- Un nouveau revenu s’ouvre sur ses catégories, sans choix préalable, comme une dépense.
+- Le bouton d’échange entre De et Vers dans un virement est centré.
