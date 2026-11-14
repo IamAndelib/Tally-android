@@ -35,7 +35,8 @@ written with a space before it (“Wird gesichert …”).
 | net worth | Nettovermögen |
 | category | Kategorie |
 | payee (paid to / received from) | Bezahlt an / Erhalten von |
-| archive / archived | archivieren / archiviert |
+| archive / archived / unarchive | archivieren / archiviert / Archivierung aufheben |
+| Archived (the screen of archived entries) | Archiviert |
 | backup / auto backup / restore | Backup (verb: sichern) / Auto-Backup / wiederherstellen |
 | evening nudge | Abend-Erinnerung |
 | balance check | Kontostand-Check |

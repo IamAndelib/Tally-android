@@ -1,5 +1,5 @@
 // Loan dues per draw: payments go to the draw due soonest; reminders, status, the next due day and the suggested
-// payment follow what is really due, not the whole tab.
+// payment follow what is really due, not the whole tab. A tab with no payback day is reminded monthly.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("20-loan-dues");
 let fails = 0;
@@ -101,12 +101,27 @@ const ok = (c, m) => {
   await act("tab", "assets");
   await settle();
   const row = (await page.textContent('[data-act="loan-open"][data-v="L"]')).trim();
-  ok(row.includes((await m(300)) + " due") && row.includes(await m(1300)), "row shows 300 due and 1,300 left: " + row);
+  ok(
+    row.includes(await m(1300)) && !row.includes((await m(300)) + " due"),
+    "row shows the 1,300 left, not the part due: " + row
+  );
+  const sub = await page.$eval('[data-act="loan-open"][data-v="L"] .s', e => ({
+    text: e.textContent.trim(),
+    dot: !!e.querySelector(".adot"),
+  }));
+  ok(
+    sub.dot && /^\S.* · Due /.test(sub.text) && !/^(Into|From) /.test(sub.text) && !sub.text.includes(await m(300)),
+    "row line is ● account · Due date, with no Into/From word and no part-due amount: " + sub.text
+  );
+  ok(
+    (await page.textContent('[data-act="loan-open"][data-v="L"] .a small .st')).trim() === "Overdue",
+    "the row keeps its status chip under the amount"
+  );
   await act("loan-open", "L");
   await settle();
   const head = (await page.textContent("#loan-due")).trim();
-  ok(head.startsWith("Payback day") && head.endsWith(await m(300)), "due card names the 300: " + head);
-  ok((await page.inputValue("#f-amt")) === "300", "payment pre-filled with the 300 that is due");
+  ok(head.startsWith("Due") && head.endsWith(await m(300)), "due card names the 300: " + head);
+  ok((await page.inputValue("#f-amt")) === "300.00", "payment pre-filled with the 300 that is due");
   const m300 = await m(300),
     m1000 = await m(1000);
   for (const x of await page.$$("#sheet .tx.exp")) await x.click();
@@ -128,7 +143,7 @@ const ok = (c, m) => {
   // ---- 3. the rest of the 300 paid: the next due day moves on to the 1000's, no longer overdue
   await act("loan-open", "L");
   await settle();
-  ok((await page.inputValue("#f-amt")) === "200", "payment pre-filled with the 200 still due");
+  ok((await page.inputValue("#f-amt")) === "200.00", "payment pre-filled with the 200 still due");
   await sact("loan-pay");
   await settle();
   i = await info("L");
@@ -143,7 +158,7 @@ const ok = (c, m) => {
   );
   await act("loan-open", "L");
   await settle();
-  ok((await page.inputValue("#f-amt")) === "1,000", "nothing due yet: payment pre-filled with all that is left");
+  ok((await page.inputValue("#f-amt")) === "1,000.00", "nothing due yet: payment pre-filled with all that is left");
   ok(!(await page.textContent("#loan-due")).includes(m1000), "card heading has no amount once all that is left is due");
   for (const x of await page.$$("#sheet .tx.exp")) await x.click();
   mores = await page.$$eval("#sheet .tx.exp .more", els => els.map(e => e.textContent));
@@ -191,7 +206,16 @@ const ok = (c, m) => {
     i.rem.b2 === 0 && i.rem.a1 === 500 && i.nextDue === "" && i.st === "partly",
     "payment went to the dated draw: " + JSON.stringify(i)
   );
-  ok((await rem()).dues.length === 0, "nothing dated left, no reminder");
+  r = (await rem()).dues;
+  ok(
+    r.length === 1 &&
+      r[0].monthly === +d.m3.slice(8) &&
+      r[0].since === d.m3 &&
+      r[0].amount === (await m(500)) &&
+      !r[0].date &&
+      r[0].kind === "lend",
+    "nothing dated left: a monthly reminder on the day the 500 still out was lent: " + JSON.stringify(r)
+  );
 
   // ---- 7. a paid-off draw no longer keeps the tab overdue (the old bug)
   await seed(
@@ -202,6 +226,110 @@ const ok = (c, m) => {
   await settle();
   i = await info("L");
   ok(i.st === "partly" && i.nextDue === d.p5, "paid-off overdue draw no longer counts: " + JSON.stringify(i));
+
+  // ---- 8. no payback day at all: monthly from the oldest money still out, both directions; none once settled
+  await seed(
+    [lend("L", "Rahim", d.m3), Object.assign(lend("B", "Mina", d.m2), { kind: "borrow" }), lend("C", "Sam", d.m3)],
+    [
+      draw("a1", "L", 200, d.m3, ""),
+      draw("b2", "L", 400, d.m1, ""),
+      pay("p3", "L", 250, d.m1),
+      Object.assign(draw("c4", "B", 900, d.m2, ""), { dir: "in" }),
+      draw("e5", "C", 100, d.m3, ""),
+      pay("p6", "C", 100, d.m1),
+    ]
+  );
+  await page.reload();
+  await settle();
+  r = (await rem()).dues;
+  const by = id => r.find(x => x.id === id) || {};
+  ok(
+    by("L").monthly === +d.m1.slice(8) && by("L").since === d.m1 && by("L").amount === (await m(350)),
+    "the first 200 is paid back, so the day counts from the 400 still out, for all 350 left: " + JSON.stringify(by("L"))
+  );
+  ok(
+    by("B").kind === "borrow" && by("B").monthly === +d.m2.slice(8) && by("B").amount === (await m(900)),
+    "a loan without a payback day reminds too: " + JSON.stringify(by("B"))
+  );
+  ok(!by("C").id, "a settled tab has no reminder");
+  /* "Set a due date" from the notification opens the tab with its payback day picker */
+  await page.evaluate(() => window.tallyOpen("loan:L:due"));
+  await settle();
+  ok(
+    !!(await page.$('#sheet [data-act="loan-pay"]')) && !!(await page.$("#pop .dialog")),
+    "Set a due date opens the tab and its date picker"
+  );
+  await page.evaluate(() => {
+    S.settings.remind.dues = false;
+    save();
+    syncReminders();
+  });
+  ok((await rem()).dues.length === 0, "the due reminders switch turns the monthly ones off too");
+
+  // ---- what is due counts what a draw owes on top (a lend's extra): the reminder, the payment card's amount, its line
+  await page.evaluate(() => closePop());
+  await seed(
+    [lend("X", "Rafi", d.m3)],
+    [Object.assign(draw("x1", "X", 300, d.m3, d.m1), { onTop: 50 }), draw("x2", "X", 1000, d.t, d.p5)]
+  );
+  await page.reload();
+  await settle();
+  i = await info("X");
+  r = (await rem()).dues;
+  ok(
+    i.dueAmt === 350 && i.left === 1350 && (r.find(x => x.id === "X") || {}).amount === (await m(350)),
+    "300 + 50 extra due yesterday: 350 due, 1,350 in all, the reminder asks for 350 " + JSON.stringify([i, r])
+  );
+  await page.evaluate(() => loanOpen("X"));
+  await settle();
+  const xline = (await page.textContent("#sheet .aoline")).replace(/\u2060/g, "").trim();
+  ok(
+    (await page.inputValue("#f-amt")) === "350.00" &&
+      xline === "bKash +" + (await m(350)) + " · lending " + (await m(300)) + " + extra " + (await m(50)),
+    "the payment card: prefilled with the 350 due, the line naming the extra it covers " + JSON.stringify(xline)
+  );
+
+  // ---- saved data: a lending made from the form has its time; a draw saved with no due day keeps no empty one
+  await page.evaluate(() => closeSheet());
+  await settle();
+  await page.evaluate(() => {
+    loanForm("lend");
+    $("#f-person").value = "Noor";
+    $("#f-person").dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.fill("#f-amt", "100");
+  await settle();
+  await page.evaluate(() => saveLoan());
+  await settle();
+  const st = await state();
+  const nl = st.loans.find(l => l.person === "Noor") || {},
+    nd = st.txns.find(t => t.loan === nl.id && t.principal) || {};
+  ok(
+    nl.ts > 0 && nl.ts === nd.ts && !("due" in nd),
+    "a lending made from the form is saved with its time (its draw's), its draw with no due day " + JSON.stringify(nl)
+  );
+  const edited = async (id, clear) => {
+    await page.evaluate(
+      ([l, id, clear]) => {
+        closeSheet();
+        loanOpen(l);
+        loanDrawEdit(id);
+        if (clear) $("#ed-due").dataset.v = "";
+        saveLoanDraw();
+      },
+      [nl.id, id, clear]
+    );
+    await settle();
+    return (await state()).txns.find(t => t.id === id);
+  };
+  let ed = await edited(nd.id, false);
+  ok(ed && !("due" in ed), "a draw edited with no due day is saved without one " + JSON.stringify(ed));
+  await page.evaluate(id => {
+    entry(id).due = addDays(today(), 3);
+    save();
+  }, nd.id);
+  ed = await edited(nd.id, true);
+  ok(ed && !("due" in ed), "… and a due day cleared in the edit is removed, not saved empty " + JSON.stringify(ed));
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

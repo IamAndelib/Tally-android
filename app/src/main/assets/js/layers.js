@@ -123,6 +123,75 @@ function askDialog(title, text, okText, onOk, o) {
         esc(okText) +
         "</button></div></div></div>");
 }
+/* A question with stacked, full-width answers (the backup folder, an unreadable backup, restoring a file, Delete all
+   data): choiceDialog(title, text, buttons, o). Each button is {role, label, run, confirm}; its role sets how it looks:
+     keep    green: the safe answer that keeps data (Restore, Save backup)
+     destroy red: the answer that loses data (Overwrite, Delete)
+     main    filled in the accent colour: the plain next step (Choose another folder)
+     alt     tonal: a side road (Choose another file, Archive instead)
+     out     outlined: the way out (Cancel, Go back); with no `run` it only closes
+   `run` happens after the dialog has closed. With `confirm: {title, text, ok}` the button first asks again: a second
+   step replaces this one in place, with Cancel and the button itself (named `ok`, else its label) side by side.
+   o.row puts two buttons side by side, as that step does.
+   Back, Escape and a tap outside close the whole dialog from any step: Back on a confirm step is the same as its Cancel
+   (nothing was done, so there is nothing to step back to), so one Back always gets out of a dialog about data.
+   Focus goes into each step through layerFocus() (the redraw drops the pressed button, so it moves to the dialog) and
+   back to where it was when the dialog closes. */
+let CHOICE = null;
+const CHOICE_CLS = {
+  keep: "cd-keep",
+  destroy: "cd-destroy",
+  main: "cd-main",
+  alt: "cd-alt",
+  out: "cd-out",
+};
+function choiceDialog(title, text, buttons, o) {
+  CHOICE = buttons;
+  $("#pop").innerHTML =
+    '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="cd-t"' +
+    (text ? ' aria-describedby="cd-x"' : "") +
+    '><h3 class="dlg-t" id="cd-t">' +
+    esc(title) +
+    "</h3>" +
+    (text ? '<p class="dlg-x" id="cd-x">' + esc(text) + "</p>" : "") +
+    '<div class="cd-btns' +
+    (o && o.row ? " cd-row" : "") +
+    '">' +
+    buttons
+      .map(
+        (b, i) =>
+          '<button class="btn ' +
+          CHOICE_CLS[b.role] +
+          '" data-act="cd" data-v="' +
+          i +
+          '">' +
+          esc(b.label) +
+          "</button>"
+      )
+      .join("") +
+    "</div></div></div>";
+}
+function choiceTap(i) {
+  const b = CHOICE && CHOICE[i];
+  if (!b) return;
+  const c = b.confirm;
+  if (!c) {
+    closePop();
+    if (b.run) b.run();
+    if ($("#pop").innerHTML) sheetSwap = true; // it opened the next question (Save backup → Delete) in this same tap
+    return;
+  }
+  choiceDialog(
+    c.title,
+    c.text,
+    [
+      { role: "out", label: T("common.cancel") },
+      { role: b.role, label: c.ok || b.label, run: b.run },
+    ],
+    { row: true }
+  );
+  sheetSwap = true; // the second tap of a double tap must not answer the new question
+}
 const miniDialog = (label, body, okAct, okText) => {
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" role="dialog" aria-modal="true" aria-label="' +
@@ -178,19 +247,66 @@ function keepFocus(root, draw) {
   if (k && !(now && now !== document.body && now.isConnected)) refocus(root, k);
 }
 const focusKey = el => ({ id: el.id, act: el.dataset && el.dataset.act, v: el.dataset && el.dataset.v });
+const usable = b => !b.disabled && b.getClientRects().length > 0;
 function refocus(root, k) {
   const sel = k.id
-      ? "#" + CSS.escape(k.id)
-      : k.act
-        ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
-        : "",
-    usable = b => !b.disabled && b.getClientRects().length > 0;
+    ? "#" + CSS.escape(k.id)
+    : k.act
+      ? '[data-act="' + CSS.escape(k.act) + '"]' + (k.v != null ? '[data-v="' + CSS.escape(k.v) + '"]' : "")
+      : "";
   let el = sel && root.querySelector(sel);
   /* a button that just turned itself off (Next reaching today, Later at the newest period): its neighbour in the same
      bar takes the focus, so it isn't lost to the page */
   if (el && !usable(el)) el = [...el.parentElement.querySelectorAll("button")].find(usable) || null;
   if (el) el.focus({ preventScroll: true });
   return !!el;
+}
+/* After a change takes away the control that had the focus (rows deleted, archived or unarchived, the selection begun
+   or ended, an Undo, an entry saved out of the list), the focus lands on the next control that makes sense, never on
+   the page: the first of `to` that is drawn and usable in the top layer (else the screen), each an entry's row by its
+   id ({row}, so it holds however much of a list is drawn: one not drawn yet is drawn first, drawThrough), a selector
+   or an element; with none of them, the screen's first button (`last`). While a layer is still opening or closing,
+   layerFocus() places it once the layers have settled: it would give the focus back to the control that opened the
+   layer, which the change took away. Given by a script, the focus shows its ring only when the last input was a key
+   (Chromium's :focus-visible): a tap leaves none. A control out of sight (under what History keeps pinned:
+   scroll-padding-top) is scrolled just into view, and the row a redraw was holding in place is let go (toAnchor). */
+let LAND = null; // where the focus goes once the layers have settled
+const landRoot = () => ["#pop", "#sheet2", "#sheet"].map(s => $(s)).find(el => el.innerHTML) || $("#app");
+function landFocus(to) {
+  LAND = to;
+  if (LAYERS.some((id, i) => i > 1 && !!$(id).dataset.up !== !!$(id).innerHTML)) return;
+  LAND = null;
+  landNow(to, true);
+}
+function landNow(to, last) {
+  const root = landRoot(),
+    rows = new Map();
+  root.querySelectorAll(".tx.en[data-v]").forEach(r => rows.has(r.dataset.v) || rows.set(r.dataset.v, r));
+  let el = null;
+  for (const t of to) {
+    el = !t
+      ? null
+      : t.row
+        ? rows.get(t.row) || drawThrough(root, t.row)
+        : typeof t === "string"
+          ? root.querySelector(t)
+          : root.contains(t) && t;
+    if (el && usable(el)) break;
+    el = null;
+  }
+  if (!el && last && root === $("#app")) el = [...root.querySelectorAll("button")].find(usable);
+  if (!el) return false;
+  el.focus({ preventScroll: true });
+  const r = el.getBoundingClientRect(),
+    box = el.closest(".p"), // a sheet's panel scrolls itself
+    b = box
+      ? box.getBoundingClientRect()
+      : { top: parseFloat(document.documentElement.style.scrollPaddingTop) || 0, bottom: innerHeight };
+  if (r.top < b.top || r.bottom > b.bottom) {
+    HOLDS.forEach(stop => stop());
+    el.scrollIntoView({ block: "nearest" });
+  }
+  return true;
 }
 function setDateField(el, v, keepNow) {
   const shownAs = v ? shortDay(v) : el.dataset.none;
@@ -258,6 +374,7 @@ function dpSet(v) {
   closePop();
   if (!el) return;
   setDateField(el, v);
+  formPreview(); // a payment's day changes what it covers
   if (id === "f-due2" && F && F.kind === "loan") {
     /* the loan card's day: every draw still owed that's due by then (or by the day it showed, if later) moves to it,
        as a reminder's +1 day does; without any due day, the draw it's about. The sheet is drawn again. */
@@ -462,6 +579,7 @@ const closePop = () => {
   DP = null;
   ASK = null;
   ASK_ALT = null;
+  CHOICE = null;
 };
 /* a sheet in its layer (#sheet, or #sheet2 for pickers opened from inside one): handle, title, ✕ and body */
 function showSheet(layer, cls, bgAct, closeAct, title, body) {
@@ -494,8 +612,13 @@ function groupAmountInputs(root) {
 }
 function closeSheet() {
   closeSheet2();
+  if ($("#sheet #ent-list")) {
+    V.open = ""; // a row opened in the entries sheet goes with it (rowToggle)
+    rowsClose($("#app"));
+  }
   $("#sheet").innerHTML = "";
   F = null;
+  HFD = null; // History's Filters sheet: leaving it any way but Show drops its choices
   if (dayPending) {
     dayPending = false; // the day changed under the sheet: Home catches up now
     setTimeout(render, 0);

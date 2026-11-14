@@ -280,6 +280,40 @@ const ok = (c, m) => {
   S = await state();
   const undone = S.txns.find(t => t.id === draw3kId);
   ok(undone.amount === 3000 && undone.account === "w", "undo restored the draw's original amount and account");
+  // a lend's draw takes its form's add-ons on its edit: a transfer charge (lent money, out of its account) and an extra
+  await act("loan-open", L.id);
+  await settle();
+  const owed0 = await page.evaluate(id => loanInfo(loan(id)).total, L.id),
+    w0 = (await bal()).w;
+  await page.evaluate(id => loanDrawEdit(id), draw3kId);
+  await settle();
+  ok(
+    (await page.isVisible('#sheet2 [data-act="addon-add"][data-v="xcharge"]')) &&
+      (await page.isVisible('#sheet2 [data-act="addon-add"][data-v="extra"]')) &&
+      (await page.isHidden("#sheet2 .aocard")),
+    "a lend's draw edit: + Transfer charge and + Add an extra, no card yet"
+  );
+  await s2act("addon-add", "xcharge");
+  await page.fill("#ed-charge", "50");
+  await s2act("addon-add", "extra");
+  await page.fill("#ed-extra", "200");
+  await s2act("loandraw-save");
+  await settle();
+  S = await state();
+  const chg = S.txns.find(t => t.feeOf === draw3kId);
+  ok(
+    chg &&
+      chg.type === "loan" &&
+      chg.principal &&
+      chg.amount === 50 &&
+      chg.account === "w" &&
+      S.txns.find(t => t.id === draw3kId).onTop === 200 &&
+      (await page.evaluate(id => loanInfo(loan(id)).total, L.id)) === owed0 + 250 &&
+      (await bal()).w === w0 - 50,
+    "saved: a ৳50 transfer charge out of the draw's account and ৳200 on top, owed ৳250 more " + JSON.stringify(chg)
+  );
+  await act("undo");
+  await settle();
 
   // ---- 6. Delete is absent on a principal row when it is the loan's only remaining draw
   await act("tab", "liabs");
@@ -361,7 +395,7 @@ const ok = (c, m) => {
     !(await page.$('[data-act="calc-toggle"][data-v="f-toamt"]')),
     "no calculator on transfer's received amount (scope-trimmed)"
   );
-  ok(!(await page.$('[data-act="calc-toggle"][data-v="f-fee"]')), "no calculator on transfer's fee (scope-trimmed)");
+  ok(!!(await page.$('[data-act="calc-toggle"][data-v="f-charge"]')), "calculator on transfer's charge");
   await act("close");
 
   await act("loan-new", "lend");

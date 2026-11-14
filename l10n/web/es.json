@@ -22,7 +22,6 @@
     "save": "Guardar",
     "edit": "Editar",
     "note": "Nota",
-    "optional": "Opcional",
     "account": "Cuenta",
     "history": "Historial",
     "enterAmount": "Escribe una cantidad",
@@ -34,9 +33,7 @@
     "previous": "Anterior",
     "next": "Siguiente",
     "change": "Cambiar",
-    "done": "Listo",
-    "yes": "Sí",
-    "no": "No"
+    "done": "Listo"
   },
   "day": {
     "today": "Hoy",
@@ -47,7 +44,7 @@
     "fallbackName": "Cuenta",
     "addFirst": "Primero añade una cuenta",
     "archivedMsg": "Se archivó {{name}}",
-    "backMsg": "{{name}} vuelve a mostrarse",
+    "backMsg": "Se desarchivó {{name}}",
     "archiveQ": "¿Archivar {{name}}?",
     "archiveHas": "Aún tiene {{amount}}. Las cuentas archivadas no cuentan en tus totales; sus movimientos siguen en el Historial.",
     "archiveOwes": "Aún debe {{amount}}. Las cuentas archivadas no cuentan en tus totales; sus movimientos siguen en el Historial.",
@@ -55,10 +52,9 @@
     "archivedTag": "archivada",
     "startedWith": "Al empezar el día: {{amount}}",
     "mismatch": "¿No coincide?",
-    "mismatchHint": "Escribe lo que tienes de verdad ahora. Tally anota la diferencia como un ajuste de saldo.",
+    "mismatchHint": "Escribe lo que tienes ahora. La diferencia se anota como un ajuste de saldo.",
     "actual": "Saldo real",
     "update": "Actualizar saldo",
-    "unarchive": "Volver a mostrar",
     "edit": "Editar cuenta",
     "new": "Nueva cuenta",
     "typeNow": "Escribe lo que tienes ahora",
@@ -71,9 +67,9 @@
     "type": "Tipo",
     "opening": "Saldo inicial",
     "balanceNow": "Saldo actual",
-    "openingHint": "Lo que tenía antes de tu primer movimiento aquí. Para corregir el saldo de hoy, usa “¿No coincide?”.",
+    "openingHint": "Antes de tu primer movimiento aquí.",
     "cardHint": "¿Tarjeta de crédito? Escribe lo que debes como número negativo.",
-    "curLocked": "La moneda no se puede cambiar porque esta cuenta tiene movimientos.",
+    "curLockedAria": "Moneda: {{currency}}. Bloqueada: esta cuenta tiene movimientos",
     "add": "Añadir cuenta",
     "delete": "Eliminar cuenta",
     "nameIt": "Ponle un nombre a la cuenta",
@@ -104,17 +100,14 @@
     "to": "Hacia",
     "swap": "Intercambiar origen y destino",
     "sent": "Cantidad enviada",
-    "addFee": "Añadir comisión (cajero, retiro)",
     "ok": "Transferir",
     "title": "Transferencia",
     "edit": "Editar transferencia",
     "arrived": "Cantidad que llegó a {{account}} ({{cur}})",
-    "inclFee": "(incl. {{amount}} de comisión)",
     "pickBoth": "Elige las dos cuentas",
     "pickTwo": "Elige dos cuentas distintas",
     "enterSent": "Escribe la cantidad enviada",
     "enterArrived": "Escribe cuánto llegó en {{cur}}",
-    "feeNegative": "La comisión no puede ser negativa",
     "feeNote": "Comisión de transferencia",
     "done": "Transferiste {{amount}} a {{account}}"
   },
@@ -132,14 +125,15 @@
     "on": "Copia automática activada · cada día a las {{time}}",
     "found": {
       "title": "Esta carpeta ya tiene una copia de Tally",
-      "body": "¿Restaurarla en este teléfono, o reemplazarla con los datos de este teléfono a partir de ahora?",
-      "restore": "Restaurarla",
-      "replace": "Reemplazarla"
+      "body": "¿Restaurarla en este teléfono, o sobrescribirla con los datos de este teléfono?",
+      "overwriteQ": "¿Sobrescribir esta copia?",
+      "overwriteBody": "Los datos de esta copia se perderán, reemplazados por los de este teléfono."
     },
     "badFile": {
-      "title": "No se pudo leer la copia de esta carpeta",
-      "cantRead": "No se puede leer el archivo de copia.",
-      "replaceQ": "¿Reemplazarla con los datos de este teléfono a partir de ahora?"
+      "title": "Tally no puede leer la copia de esta carpeta",
+      "cantRead": "Puede estar dañada o haberse hecho con una versión más reciente de Tally.",
+      "other": "Elegir otra carpeta",
+      "overwriteBody": "No se puede leer, así que se perderá lo que contenga."
     },
     "unavailable": "Las copias no están disponibles aquí",
     "running": "Haciendo copia…",
@@ -153,7 +147,8 @@
       "title": "¿Proteger tus datos?",
       "body": "Activa la copia diaria: Tally guarda una copia en una carpeta que elijas, para no perder nada si pierdes el teléfono.",
       "ok": "Activar"
-    }
+    },
+    "overwrite": "Sobrescribir"
   },
   "data": {
     "saveFailed": {
@@ -187,8 +182,11 @@
     "day": "Día",
     "range": "Rango",
     "month": "Mes",
+    "year": "Año",
     "prevYear": "Año anterior",
     "nextYear": "Año siguiente",
+    "earlierYears": "Años anteriores",
+    "laterYears": "Años siguientes",
     "rangeEnd": "Ahora toca el último día",
     "rangeHint": "Arrastra por los días, o toca el inicio y luego el final"
   },
@@ -297,11 +295,14 @@
     "yellow": "Amarillo"
   },
   "ring": {
+    "charges": "Cargos",
     "add": "Añadir gasto en {{cat}}",
     "addShare": "Añadir gasto en {{cat}}, {{share}} de lo gastado",
     "tapCat": "Toca una categoría",
     "summary": "Resumen de gastos: {{spent}} gastado",
     "summaryGot": "Resumen de gastos: {{spent}} gastado, {{got}} recibido",
+    "summaryCharges": "Resumen de gastos: {{spent}} gastado, de lo cual {{charges}} en cargos",
+    "summaryChargesGot": "Resumen de gastos: {{spent}} gastado, de lo cual {{charges}} en cargos, {{got}} recibido",
     "switchCur": "Mostrando {{cur}}. Cambiar a {{next}}"
   },
   "donut": {
@@ -312,14 +313,55 @@
     "both": "Gastos + ingresos",
     "none": "Sin cifras"
   },
-  "fee": {
-    "label": "Comisión cobrada ({{cur}}) · no cuenta como gasto",
-    "notNumber": "Esa comisión no es un número"
+  "xcharge": {
+    "label": "Cargo por transferencia",
+    "calc": "Calculadora del cargo por transferencia",
+    "remove": "Quitar el cargo por transferencia"
+  },
+  "charge": {
+    "add": "Añadir un cargo",
+    "label": "Cargo",
+    "calc": "Calculadora del cargo",
+    "remove": "Quitar el cargo",
+    "notNumber": "Ese cargo no es un número",
+    "negative": "Un cargo no puede ser negativo"
+  },
+  "charges": {
+    "add": "Añadir cargos",
+    "label": "Cargos",
+    "calc": "Calculadora de los cargos",
+    "remove": "Quitar los cargos"
+  },
+  "extra": {
+    "add": "Añadir un extra",
+    "label": "Extra",
+    "calc": "Calculadora del extra",
+    "remove": "Quitar el extra",
+    "notNumber": "Ese extra no es un número",
+    "negative": "Un extra no puede ser negativo"
+  },
+  "addOn": {
+    "both": "Cargo por transferencia y extra"
+  },
+  "csv": {
+    "xchargeNote": "Cargo por transferencia",
+    "chargeNote": "Cargo",
+    "chargesNote": "Cargos",
+    "extraNote": "Extra"
+  },
+  "prev": {
+    "loanX": "deuda {{amount}} + cargo por transferencia {{charge}}",
+    "loanCharges": "deuda {{amount}} + cargos {{charges}}",
+    "loanChargesX": "deuda {{amount}} + cargos {{charges}} + cargo por transferencia {{charge}}",
+    "lendExtra": "préstamo {{amount}} + extra {{extra}}",
+    "lendOff": "préstamo {{amount}} − cargo {{charge}}",
+    "owes": "{{who}} debe {{amount}}",
+    "youOwe": "debes {{amount}}",
+    "youOweWho": "debes a {{who}} {{amount}}",
+    "spend": "{{amount}} + cargo {{charge}}"
   },
   "loan": {
     "noDueYet": "Aún sin fecha de pago",
-    "paybackHead": "Día de cobro · {{date}}",
-    "returnHead": "Plazo de pago · {{date}}",
     "st": {
       "active": "En curso",
       "partly": "Pago parcial",
@@ -332,11 +374,7 @@
     "blockPaid": "{{who}}: ya hay {{amount}} devuelto",
     "blockOrder": "{{who}}: hay un pago del {{date}} anterior al resto",
     "payDeleted": "Pago eliminado",
-    "from": "Desde {{account}}",
-    "into": "En {{account}}",
-    "dueAmount": "{{amount}} para el {{date}}",
-    "paybackOn": "Cobro el {{date}}",
-    "returnOn": "Plazo: {{date}}",
+    "rowDue": "Vencimiento {{date}}",
     "noDue": "Sin fecha de pago",
     "lentOn": "Prestado el {{date}}",
     "borrowedOn": "Recibido el {{date}}",
@@ -344,15 +382,11 @@
     "mergeBorrow": "Se suma a lo que te prestó {{who}}: ahora le debes {{amount}}.",
     "lentTo": "Prestado a",
     "borrowedFrom": "Prestado por",
-    "fromAccount": "Desde la cuenta",
-    "intoAccount": "En la cuenta",
-    "paybackDay": "Día de cobro",
-    "returnBy": "Plazo de pago",
     "pickDay": "Elige un día",
     "saveLend": "Guardar préstamo",
     "saveBorrow": "Guardar deuda",
     "newLend": "Prestar dinero",
-    "newBorrow": "Nueva deuda",
+    "newBorrow": "Pedir dinero prestado",
     "gone": "Eso ya se había eliminado",
     "youLent": "Prestaste desde {{account}} · {{date}}",
     "youBorrowed": "Lo recibiste en {{account}} · {{date}}",
@@ -369,10 +403,7 @@
     "gotBackQ": "¿Te devolvieron dinero?",
     "paidBackQ": "¿Devolviste una parte?",
     "partOk": "Una parte también vale.",
-    "payInto": "En",
-    "payFrom": "Desde",
-    "noPayAccount": "No hay ninguna cuenta en {{cur}} para anotarlo: añade una, o vuelve a mostrar una archivada.",
-    "addFee": "Añadir comisión (envío, retiro)",
+    "noPayAccount": "No hay ninguna cuenta en {{cur}} para anotarlo: añade una, o desarchiva una.",
     "record": "Anotar pago",
     "drawLent": "Prestado desde {{account}} el {{date}}",
     "drawBorrowed": "Recibido en {{account}} el {{date}}",
@@ -381,7 +412,13 @@
     "paidOff": "saldado",
     "intoAcc": "en {{account}}",
     "fromAcc": "desde {{account}}",
-    "feeAmt": "{{amount}} de comisión",
+    "xchargeAmt": "{{amount}} de cargo por transferencia",
+    "chargeAmt": "− {{amount}} de cargo",
+    "chargesAmt": "{{amount}} de cargos",
+    "extraAmt": "{{amount}} de extra",
+    "extraIncl": "incl. {{amount}} de extra",
+    "chargesIncl": "incl. {{amount}} de cargos",
+    "tipAmt": "+{{amount}} de extra",
     "clearedLend": "esto saldó el préstamo",
     "clearedBorrow": "esto saldó la deuda",
     "leftAfter": "{{amount}} pendiente después",
@@ -399,7 +436,6 @@
     "forgive": "Marcar como perdonada",
     "delLend": "Eliminar préstamo",
     "delBorrow": "Eliminar deuda",
-    "dueOptional": "Fecha de pago (opcional)",
     "editLend": "Editar préstamo",
     "editBorrow": "Editar deuda",
     "editPayment": "Editar pago",
@@ -410,17 +446,23 @@
     "whoLend": "¿A quién le prestaste?",
     "whoBorrow": "¿Quién te prestó el dinero?",
     "feeNote": "Comisión del pago",
-    "feeNegative": "La comisión no puede ser negativa",
     "noAccountIn": "No hay ninguna cuenta en {{cur}}",
     "noAccountRecord": "No hay ninguna cuenta en {{cur}} para anotarlo",
     "msg": {
       "lent": "Prestaste {{amount}} a {{who}}",
+      "lentOwes": "Prestaste {{amount}} a {{who}} · {{who}} debe {{owed}}",
       "borrowed": "{{who}} te prestó {{amount}}",
+      "borrowedOwe": "{{who}} te prestó {{amount}} · debes {{owed}}",
       "reopened": "Se reabrió",
       "writtenOff": "Dado por perdido",
       "forgiven": "Marcada como perdonada",
       "gotBack": "Cobraste {{amount}}",
+      "gotBackTip": "Cobraste {{amount}} + {{extra}} de extra",
+      "gotBackIncl": "Cobraste {{amount}}, incl. {{extra}} de extra",
       "paidBack": "Devolviste {{amount}}",
+      "paidBackX": "Devolviste {{amount}} + {{charge}} de cargo por transferencia",
+      "paidBackIncl": "Devolviste {{amount}}, incl. {{charges}} de cargos",
+      "paidBackInclX": "Devolviste {{amount}}, incl. {{charges}} de cargos + {{charge}} de cargo por transferencia",
       "allCleared": "todo saldado",
       "owesAgain": "{{who}} vuelve a deberte {{amount}}",
       "oweAgain": "Vuelves a deberle {{amount}} a {{who}}"
@@ -428,17 +470,16 @@
     "over": {
       "lendToLoan": "Préstamo a {{who}} saldado · le debes {{amount}} a {{who}}",
       "loanToLend": "Deuda saldada · {{who}} te debe {{amount}}",
-      "extraNote": "Extra de {{who}}",
-      "lendCleared": "Préstamo a {{who}} saldado",
-      "asFeeMsg": "Deuda saldada · {{amount}} como su comisión",
+      "asExtraMsg": "Préstamo a {{who}} saldado · {{amount}} como extra",
+      "asChargeMsg": "Deuda saldada · {{amount}} como su cargo",
       "theyPaid": "{{who}} pagó {{amount}} de más",
       "youPaid": "Pagaste {{amount}} de más",
-      "askLendOr": "¿Qué son esos {{amount}} de más? Una deuda con {{who}} (ahora se los debes), o un ingreso, como una comisión que te cubrió.",
-      "askBorrowOr": "¿Qué son esos {{amount}} de más? Un préstamo a {{who}} (ahora te los debe), o una comisión de este pago, como un gasto de envío o intereses.",
+      "askLendOr": "{{who}} te debía {{owed}}. ¿Esos {{amount}} de más son un extra, contado como ingreso, o una deuda con {{who}} que tienes que devolver?",
+      "askBorrowOr": "Le debías {{owed}} a {{who}}. ¿Esos {{amount}} de más son un cargo de este pago, contado como gasto, o un préstamo a {{who}} que ahora te debe?",
       "asLoan": "Anotar como deuda",
       "asLend": "Anotar como préstamo",
-      "asIncome": "Anotar como ingreso",
-      "asFee": "Anotar como comisión"
+      "asExtra": "Anotar como extra",
+      "asCharge": "Anotar como cargo"
     },
     "clear": {
       "titleLend": "¿Saldar el préstamo a {{who}}?",
@@ -457,8 +498,6 @@
   "entry": {
     "gone": "Ese movimiento ya se había eliminado",
     "whatFor": "¿Para qué fue?",
-    "into": "En",
-    "paidFrom": "Pagado desde",
     "paidTo": "Pagado a",
     "receivedFrom": "Recibido de",
     "notePh": "Nota (opcional)",
@@ -469,7 +508,17 @@
     "pickCat": "Elige una categoría"
   },
   "entries": {
-    "fullHistory": "Abrir historial completo"
+    "fullHistory": "Abrir historial completo",
+    "archiveInstead": "Archivar en su lugar",
+    "archived": "Archivado",
+    "warnOne": "Eliminarlo cambia el saldo de la cuenta.",
+    "warnLend": "Eliminarlo cambia el saldo de la cuenta y el préstamo.",
+    "warnBorrow": "Eliminarlo cambia el saldo de la cuenta y la deuda.",
+    "warnMany": "Eliminarlos cambia los saldos de las cuentas.",
+    "delTitle_one": "¿Eliminar {{count}} movimiento?",
+    "delTitle_many": "¿Eliminar estos {{count}} movimientos?",
+    "delTitle_other": "¿Eliminar estos {{count}} movimientos?",
+    "delThis": "¿Eliminar este movimiento?"
   },
   "home": {
     "nothingYet": "Aún no has anotado nada.",
@@ -479,7 +528,9 @@
     "addAccount": "Añadir una cuenta",
     "accounts": "Cuentas",
     "backToday": "Volver a hoy",
-    "balance": "Saldo",
+    "total": "Total",
+    "totalIn": "Total en {{cur}}",
+    "barSay": "{{entries}}. {{total}}",
     "entries_one": "{{count}} movimiento",
     "entries_many": "{{count}} movimientos",
     "entries_other": "{{count}} movimientos",
@@ -523,10 +574,18 @@
     "region": "Región",
     "choose": "Elegir",
     "week": "Primer día de la semana",
+    "opensOn": "Inicio abre en",
+    "opens": {
+      "day": "Hoy",
+      "month": "Este mes",
+      "year": "Este año"
+    },
     "clock": "Formato de hora",
     "h24": "24 horas",
     "h12": "12 horas",
     "reminders": "Recordatorios",
+    "searchArch": "Movimientos archivados en la búsqueda",
+    "searchArchHint": "La búsqueda también encuentra los movimientos que archivaste.",
     "outCats": "Categorías de gasto",
     "outCatsHint": "Colocadas igual que en tu pantalla de inicio. Toca para editar; mantén presionado y arrastra para mover.",
     "addOutCat": "Añadir categoría de gasto",
@@ -571,38 +630,91 @@
     "mode": {
       "d": "Días",
       "w": "Semanas",
-      "m": "Meses"
+      "m": "Meses",
+      "y": "Año"
     },
     "weekOf": "Semana del {{date}}",
-    "spent": "gastado",
+    "soFar": "{{year}} hasta hoy",
     "earlier": "Antes",
     "later": "Después",
     "same": {
       "d": "Igual que el día anterior",
       "w": "Igual que la semana pasada",
-      "m": "Igual que el mes pasado"
+      "m": "Igual que el mes pasado",
+      "y": "Igual que {{year}}",
+      "yp": "Igual que los mismos meses de {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} frente al día anterior",
       "w": "↑ {{pct}} frente a la semana pasada",
-      "m": "↑ {{pct}} frente al mes pasado"
+      "m": "↑ {{pct}} frente al mes pasado",
+      "y": "↑ {{pct}} frente a {{year}}",
+      "yp": "↑ {{pct}} frente a los mismos meses de {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} frente al día anterior",
       "w": "↓ {{pct}} frente a la semana pasada",
-      "m": "↓ {{pct}} frente al mes pasado"
+      "m": "↓ {{pct}} frente al mes pasado",
+      "y": "↓ {{pct}} frente a {{year}}",
+      "yp": "↓ {{pct}} frente a los mismos meses de {{year}}"
     },
     "avg": "Promedio: {{amount}} al día",
     "none": {
       "d": "No gastaste nada ese día.",
       "w": "No gastaste nada esa semana.",
-      "m": "No gastaste nada en {{month}}."
+      "m": "No gastaste nada en {{month}}.",
+      "y": "No gastaste nada en {{year}}."
     },
     "open": {
       "d": "Abrir este día en Inicio",
       "w": "Abrir esta semana en Inicio",
-      "m": "Abrir este mes en Inicio"
-    }
+      "m": "Abrir este mes en Inicio",
+      "y": "Abrir este año en Inicio"
+    },
+    "charges": "Cargos",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "menos del {{pct}}",
+    "showAll_one": "Ver {{count}} movimiento en el Historial",
+    "showAll_many": "Ver los {{count}} de movimientos en el Historial",
+    "showAll_other": "Ver los {{count}} movimientos en el Historial"
+  },
+  "search": {
+    "title": "Buscar",
+    "clear": "Borrar",
+    "spent": "{{amount}} gastados",
+    "received": "{{amount}} recibidos",
+    "field": "Buscar en el historial",
+    "suggestions": "Sugerencias",
+    "entries": "Movimientos",
+    "recent": "Búsquedas recientes",
+    "forget": "Olvidar: {{text}}",
+    "clearRecent": "Borrar todas las búsquedas recientes",
+    "forgotten": "«{{text}}» quitado de las búsquedas recientes",
+    "clearedAll": "Búsquedas recientes borradas",
+    "group": {
+      "pay": "Pagado a",
+      "payIn": "Recibido de",
+      "cat": "Categoría",
+      "acc": "Cuenta",
+      "who": "Persona",
+      "whoLend": "Prestado a",
+      "whoBorrow": "Prestado por",
+      "kind": "Tipo",
+      "period": "Periodo",
+      "amount": "Cantidad"
+    },
+    "sugLine_one": "{{group}} · {{count}} movimiento",
+    "sugLabel_one": "{{group}} {{title}}, {{count}} movimiento",
+    "sugLine_many": "{{group}} · {{count}} movimientos",
+    "sugLabel_many": "{{group}} {{title}}, {{count}} movimientos",
+    "sugLine_other": "{{group}} · {{count}} movimientos",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} movimientos",
+    "nothing": "Nada coincide con «{{q}}»",
+    "noteLine": "Nota: {{note}}",
+    "fixBtn_one": "Buscar «{{word}}» · {{count}} movimiento",
+    "fixBtn_many": "Buscar «{{word}}» · {{count}} movimientos",
+    "fixBtn_other": "Buscar «{{word}}» · {{count}} movimientos"
   },
   "nav": {
     "home": "Inicio",
@@ -612,9 +724,8 @@
   "assets": {
     "dragTip": "Consejo: mantén presionada una fila y arrástrala hasta el hueco vacío para recuperarla.",
     "netWorth": "Patrimonio",
-    "netWorthHint": "Lo que tienes y te deben, menos lo que debes",
     "noAccounts": "Aún no hay cuentas",
-    "dropShow": "Suelta aquí para volver a mostrarla",
+    "dropShow": "Suelta aquí para desarchivar",
     "showArchived": "Mostrar archivadas ({{count}})",
     "hideArchived": "Ocultar archivadas ({{count}})",
     "dropArchive": "Suelta aquí para archivar",
@@ -634,7 +745,7 @@
     "owe": "Debes",
     "loans": "Deudas",
     "loansHint": "El dinero que te prestan aparece aquí hasta que lo devuelves.",
-    "borrowBtn": "Anotar una deuda",
+    "borrowBtn": "Pedir dinero prestado",
     "cards": "Tarjetas de crédito"
   },
   "tx": {
@@ -642,10 +753,37 @@
     "borrowedFrom": "Prestado por {{who}}",
     "theyPaidBack": "Devolución de {{who}}",
     "youPaidBack": "Devolución a {{who}}",
-    "lending": "Préstamo",
-    "loan": "Deuda",
-    "feeGotBack": "devolución de {{who}}",
-    "feePaidBack": "devolución a {{who}}"
+    "addedAt": "Añadido a las {{time}}",
+    "addedOn": "Añadido el {{date}} a las {{time}}",
+    "leftAfter": "Queda después",
+    "inAcc": "en {{account}}",
+    "xchargeOn": "+ {{amount}} de cargo por transferencia",
+    "chargeIncl": "incl. {{amount}} de cargo",
+    "chargesIncl": "incl. {{amount}} de cargos",
+    "extraIncl": "incl. {{amount}} de extra",
+    "extraOn": "+ {{amount}} de extra",
+    "chargeOff": "− {{amount}} de cargo",
+    "sent": "Enviado",
+    "paidBack": "Devuelto",
+    "gotBack": "Recuperado",
+    "lent": "Prestado",
+    "borrowed": "Te prestaron",
+    "charge": "Cargo",
+    "xcharge": "Cargo por transferencia",
+    "charges": "Cargos",
+    "extra": "Extra",
+    "asIncome": "contado como ingreso",
+    "asSpending": "contado como gasto",
+    "leftExtra": "Falta: {{money}} del dinero y luego {{extra}} de extra",
+    "leftCharges": "Falta: {{money}} del dinero y luego {{charges}} de cargos",
+    "due": "Vencimiento",
+    "was": "Antes",
+    "now": "Ahora",
+    "youOwe": "Debes a {{who}}",
+    "owesYou": "{{who}} te debe",
+    "cleared": "Saldado",
+    "paidOf": "{{paid}} de {{total}} pagados",
+    "backOf": "{{paid}} de {{total}} devueltos"
   },
   "history": {
     "stopSel": "Dejar de seleccionar",
@@ -653,17 +791,89 @@
     "selected_many": "{{count}} seleccionados",
     "selected_other": "{{count}} seleccionados",
     "selAll": "Seleccionar todo",
+    "clearSel": "Borrar selección",
     "delSel": "Eliminar selección",
+    "archSel": "Archivar selección",
     "select": "Seleccionar movimientos",
-    "all": "Todas",
+    "allTime": "Todo el tiempo",
     "none": {
-      "day": "No anotaste nada ese día.",
-      "month": "No anotaste nada ese mes.",
-      "range": "No anotaste nada en esos días."
+      "all": "Aún no hay nada anotado.",
+      "archived": "Todos los movimientos están archivados."
     },
     "deleted_one": "Se eliminó {{count}} movimiento",
     "deleted_many": "Se eliminaron {{count}} movimientos",
-    "deleted_other": "Se eliminaron {{count}} movimientos"
+    "deleted_other": "Se eliminaron {{count}} movimientos",
+    "words": {
+      "moved": "Transferido {{amount}}",
+      "lent": "{{amount}} prestados",
+      "gotBack": "{{amount}} recuperados",
+      "borrowed": "{{amount}} recibidos",
+      "paidBack": "{{amount}} devueltos",
+      "added": "{{amount}} sumados",
+      "takenOff": "{{amount}} restados",
+      "charges": "Cargos {{amount}}",
+      "extras": "Extras {{amount}}"
+    },
+    "headSay": "{{title}}, {{parts}}",
+    "filters": "Filtros",
+    "filtersN": "Filtros · {{count}}",
+    "choosePeriod": "Elegir periodo: {{period}}",
+    "showAll": "Ver todo el tiempo",
+    "removeFilter": "Quitar filtro: {{name}}",
+    "clearAll": "Borrar todo",
+    "noMatch": "Ningún movimiento coincide con estos filtros",
+    "count_many": "{{count}} movimientos",
+    "count_one": "{{count}} movimiento",
+    "count_other": "{{count}} movimientos",
+    "kind": {
+      "out": "Gastos",
+      "in": "Ingresos",
+      "xfer": "Transferencias",
+      "lend": "Préstamos",
+      "borrow": "Deudas",
+      "fix": "Ajustes de saldo",
+      "charges": "Cargos",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "cargo, comisión, comisiones, tarifa, interés, intereses",
+      "extras": "propina, propinas, interés, intereses"
+    },
+    "fromAcc": "Desde {{account}}",
+    "toAcc": "Hacia {{account}}",
+    "payOut": "Pagado a {{name}}",
+    "payIn": "Recibido de {{name}}",
+    "amtRange": "{{from}} a {{to}}",
+    "amtMore": "Más de {{amount}}",
+    "amtLess": "Menos de {{amount}}",
+    "lentTo": "Prestado a {{who}}",
+    "borrowedFrom": "Prestado por {{who}}",
+    "all": "Todo",
+    "transactions": "Movimientos",
+    "category": "Categoría",
+    "lentSec": "Prestado a",
+    "borrowedSec": "Prestado por",
+    "between": "Entre",
+    "everyone": "Todos",
+    "anyAccount": "Cualquier cuenta",
+    "fromAny": "Desde cualquier cuenta",
+    "toAny": "A cualquier cuenta",
+    "oneSide": "Una de las cuentas es {{account}}",
+    "showNone": "Ningún movimiento",
+    "swap": "Intercambiar origen y destino",
+    "show_many": "Ver {{count}} movimientos",
+    "show_one": "Ver {{count}} movimiento",
+    "show_other": "Ver {{count}} movimientos",
+    "savedGone": "Guardado · ya no está en esta lista"
+  },
+  "archive": {
+    "title": "Archivados",
+    "open": "Movimientos archivados",
+    "unarchive": "Desarchivar",
+    "back": "De vuelta en el historial",
+    "none": "No hay nada archivado.",
+    "noneHint": "Los movimientos que archives esperan aquí, con todos los saldos tal como están.",
+    "mark": "Archivado"
   },
   "remind": {
     "nudge": "Aviso de la noche",
@@ -671,7 +881,7 @@
     "check": "Revisión de saldos",
     "checkHint": "¿Siguen coincidiendo tus saldos?",
     "dues": "Pagos de préstamos y deudas",
-    "duesHint": "Ese día, con +1 día / +1 semana",
+    "duesHint": "El día del vencimiento, o cada mes si no hay",
     "nudgeAt": "Aviso de la noche a las",
     "checkAt": "Revisión de saldos a las",
     "duesAt": "Avisos de pago a las"
@@ -688,8 +898,8 @@
     "entries_other": "{{count}} movimientos",
     "autoQ": "¿Restaurar {{file}}?",
     "q": "¿Restaurar esta copia?",
-    "body": "Reemplaza todo lo que hay en este teléfono por {{accounts}} y {{entries}}.",
-    "bodySaved": "Reemplaza todo lo que hay en este teléfono por {{accounts}} y {{entries}} · guardada: {{when}}.",
+    "body": "Los datos de este teléfono se reemplazarán por los de la copia: {{accounts}} y {{entries}}.",
+    "bodySaved": "Los datos de este teléfono se reemplazarán por los de la copia: {{accounts}} y {{entries}}, guardada: {{when}}.",
     "lost_one": "{{count}} elemento no se puede leer y se dejará fuera.",
     "lost_many": "{{count}} elementos no se pueden leer y se dejarán fuera.",
     "lost_other": "{{count}} elementos no se pueden leer y se dejarán fuera.",
@@ -718,12 +928,12 @@
     },
     "none": {
       "title": "Aún no hay ninguna copia",
-      "body": "¿Guardar una copia de tus datos antes de eliminarlos?"
+      "body": "¿Guardar una copia antes de eliminarlo todo?"
     },
-    "skip": "Omitir",
     "title": "¿Eliminar todos los datos?",
-    "body": "Todas las cuentas y movimientos de este teléfono. No se puede deshacer.",
-    "done": "Se eliminaron todos los datos"
+    "body": "Se perderán todas las cuentas y movimientos de este teléfono.",
+    "done": "Se eliminaron todos los datos",
+    "noBackup": "Eliminar sin copia"
   },
   "native": {
     "err": {
@@ -764,5 +974,9 @@
   },
   "lang": {
     "name": "Español"
+  },
+  "suggest": {
+    "removeName": "Quitar «{{name}}» de las sugerencias",
+    "removed": "«{{name}}» quitado de las sugerencias"
   }
 }

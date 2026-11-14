@@ -35,7 +35,10 @@ function nearestInSlice(a, start, w) {
   if (rel >= e && rel <= w - e) return a;
   return circDist(a, start + e) < circDist(a, start + w - e) ? start + e : start + w - e;
 }
+/* a slice's colour: its category's, or the Charges part's grey */
+const sliceCol = id => (id === CHARGES ? CHARGES_C : cat(id).c);
 let RE = null; /* the Settings preview's layout + order while it is on screen */
+let HOME_RING = null; /* what Home's ring was last drawn from, to draw it again smaller (fitChargeLabel) */
 /* what the middle of the Home donut shows (settings.donut, always one of these: migrate()); tapping the Settings
    donut steps through them in order */
 const DONUT_MODES = ["out", "in", "both", "none"];
@@ -43,6 +46,39 @@ function cycleDonut() {
   S.settings.donut = DONUT_MODES[(DONUT_MODES.indexOf(S.settings.donut) + 1) % DONUT_MODES.length];
   save();
   render();
+}
+/* how wide a ring label is at label size f (as --f writes it), in the labels' font: measured on a canvas, so drawing
+   the ring lays nothing out */
+let RING_TEXT = null;
+function ringTextW(s, f, bold) {
+  if (!RING_TEXT) RING_TEXT = { g: document.createElement("canvas").getContext("2d"), family: "" };
+  if (!RING_TEXT.family) RING_TEXT.family = getComputedStyle(document.body).fontFamily;
+  RING_TEXT.g.font = (bold ? "700 " : "") + f.toFixed(1) + "px " + RING_TEXT.family;
+  return RING_TEXT.g.measureText(s).width;
+}
+/* whether every tile's name fits whole (docs/decisions.md, 2026-11-05: ring names are whole or left out): on its one
+   line within its tile (.rt .cn: 92%), with it and the % under it (Home) clear of the next tile's icon, name and %,
+   by a pixel across. Laid out as .rt does it: the icon (d) 4px from the top, then 2px apart the name's line (1.3) and
+   the %'s (1.1), each centred. */
+function ringNamesFit(L, cats, d, f, share) {
+  const { u, slots } = L,
+    n = cats.length,
+    rect = (x, w, t, h) => ({ l: x - w / 2, r: x + w / 2, t, b: t + h });
+  const tiles = cats.map((c, i) => {
+    const { x, y } = slots[i],
+      w = ringTextW(catName(c), f),
+      t = y - u / 2 + 6 + d, // the name's line
+      p = share(c),
+      lines = [rect(x, w, t, 1.3 * f)];
+    if (p) lines.push(rect(x, ringTextW(p, f, true), t + 1.3 * f + 2, 1.1 * f));
+    return { w, icon: rect(x, d, y - u / 2 + 4, d), lines };
+  });
+  const meet = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > -1 && Math.min(a.b, b.b) > Math.max(a.t, b.t),
+    clear = (a, b) => a.lines.every(l => !meet(l, b.icon) && b.lines.every(m => !meet(l, m)));
+  return tiles.every((a, i) => {
+    const b = tiles[(i + 1) % n];
+    return a.w + 1 <= u * 0.92 && (n < 2 || (clear(a, b) && clear(b, a)));
+  });
 }
 function ringHTML(cats, o) {
   const home = o.mode === "home",
@@ -64,9 +100,15 @@ function ringHTML(cats, o) {
     room = Math.min(u, pitch - 2) - 4 - f * rows,
     d0 = Math.round(u * (u < 70 ? 0.5 : 0.56)),
     dfit = Math.round(Math.max(u * 0.42, Math.min(d0, room))),
-    names = room >= dfit - 1,
-    /* no name: only the % on Home, which still has to fit */
-    d = names ? dfit : Math.round(Math.max(u * 0.42, Math.min(d0, room + (home ? 1.3 * f : f * rows))));
+    /* and across: every name whole and clear of the next tile, or no name on the whole ring */
+    share = c => {
+      const v = home ? o.by[c.id] || 0 : 0;
+      return v ? percent(Math.max(1, Math.round((v / o.spent) * 100))) : "";
+    },
+    names = room >= dfit - 1 && ringNamesFit(L, cats, dfit, f, share),
+    /* no name: only the % on Home, which still has to fit, clear of the next icon on the diagonal too (a small
+       ring on a phone held sideways): the name's line less a little */
+    d = names ? dfit : Math.round(Math.max(u * 0.42, Math.min(d0, room + (home ? 1 * f : f * rows))));
   const pos = cats.map((c, i) => {
     const s = L.slots[i];
     return {
@@ -79,7 +121,7 @@ function ringHTML(cats, o) {
     };
   });
   const tile = p => {
-    const v = home ? o.by[p.c.id] || 0 : 0;
+    const v = share(p.c);
     return (
       '<button class="cat rt' +
       (home ? (FX.cat === p.c.id ? " saved" : "") : " tile") +
@@ -102,9 +144,7 @@ function ringHTML(cats, o) {
       '"' +
       (home
         ? ' aria-label="' +
-          (v
-            ? TH("ring.addShare", { cat: catName(p.c), share: percent(Math.max(1, Math.round((v / o.spent) * 100))) })
-            : TH("ring.add", { cat: catName(p.c) })) +
+          (v ? TH("ring.addShare", { cat: catName(p.c), share: v }) : TH("ring.add", { cat: catName(p.c) })) +
           '"'
         : "") +
       ">" +
@@ -114,12 +154,16 @@ function ringHTML(cats, o) {
         ? '<span class="cp" style="color:' +
           inkOn(p.c.c) + // the category's colour, readable on the surface
           '">' +
-          (v ? esc(percent(Math.max(1, Math.round((v / o.spent) * 100)))) : "") +
+          esc(v) +
           "</span>"
         : "") +
       "</button>"
     );
   };
+  /* the period's charges outside purchases (docs/specs/charges.md, Home): a grey slice after the categories', true to
+     size, and a label in the ring's top right corner (or on a line of its own: fitChargeLabel) */
+  const chg = home && o.spent > 0 ? rnd(o.by[CHARGES] || 0) : 0;
+  if (home) HOME_RING = [cats, o];
   const R = 40,
     C = 2 * Math.PI * R,
     Rout = (D / 2) * 0.92; /* stroke outer edge: (40+6)/50 of the radius */
@@ -132,7 +176,8 @@ function ringHTML(cats, o) {
     const ent = Object.entries(o.by)
       .filter(([, v]) => v > 0)
       .map(([id, v]) => ({ id, v, w: v / o.spent, p: posOf(id) }))
-      .sort((a, b) => (a.p ? a.p.ang : 2) - (b.p ? b.p.ang : 2));
+      /* a hidden category (no tile) after the tiles' slices, and CHARGES last of all */
+      .sort((a, b) => (a.p ? a.p.ang : a.id === CHARGES ? 3 : 2) - (b.p ? b.p.ang : b.id === CHARGES ? 3 : 2));
     let off = 0;
     ent.forEach(s => {
       s.start = off;
@@ -175,7 +220,7 @@ function ringHTML(cats, o) {
         '<circle r="' +
         R +
         '" cx="50" cy="50" fill="none" stroke="' +
-        cat(s.id).c +
+        sliceCol(s.id) +
         '" stroke-width="12" stroke-dasharray="' +
         l.toFixed(2) +
         " " +
@@ -275,7 +320,20 @@ function ringHTML(cats, o) {
         (!o.spent && !o.got ? '<div class="hint">' + TH("ring.tapCat") + "</div>" : "");
     center =
       '<button class="dwrap" data-act="summary" aria-label="' +
-      TH(o.got ? "ring.summaryGot" : "ring.summary", { spent: money(o.spent, o.cur), got: money(o.got, o.cur) }) +
+      TH(
+        chg > 0
+          ? o.got
+            ? "ring.summaryChargesGot"
+            : "ring.summaryCharges"
+          : o.got
+            ? "ring.summaryGot"
+            : "ring.summary",
+        {
+          spent: money(o.spent, o.cur),
+          got: money(o.got, o.cur),
+          charges: money(chg, o.cur),
+        }
+      ) +
       '" style="' +
       box +
       '">' +
@@ -335,6 +393,71 @@ function ringHTML(cats, o) {
     "</svg>" +
     center +
     pos.map(tile).join("") +
+    /* not a button nor a tile: a grey dot, the word and the amount under it, the size of the tiles' names; TalkBack
+       hears it in the donut's label */
+    (chg > 0
+      ? '<div class="rchg" aria-hidden="true" style="--f:' +
+        f.toFixed(1) +
+        'px"><i style="background:' +
+        CHARGES_C +
+        '"></i><span dir="auto">' +
+        TH("ring.charges") +
+        "</span><b>" +
+        esc(money(chg, o.cur, true)) +
+        "</b></div>"
+      : "") +
     "</div>"
   );
+}
+/* Home's Charges label (measured: fitFigures). The tiles leave the ring's top right corner free in most rings, but not
+   all: with 4 to 7 tiles, or many on a phone held sideways, a large text size or a long word reaches the tile just
+   right of 12 o'clock. Then the label takes a line of its own above the ring, right-aligned: the ring moves down by
+   it (still 6px under the account chips). On a phone held sideways the ring stays centred in the window's height and
+   the label sits in the room above it; where that room is too small, the ring is drawn again smaller by just what the
+   label needs. It is never left out: the grey slice is never shown by its colour alone. */
+function fitChargeLabel(root) {
+  const lab = root.querySelector("#ring .rchg");
+  if (!lab) return;
+  const ring = lab.parentNode;
+  lab.classList.remove("up");
+  lab.style.top = "";
+  if (ring.dataset.mt != null) ring.style.marginTop = ring.dataset.mt;
+  const L = lab.getBoundingClientRect(),
+    box = e => {
+      const b = e.getBoundingClientRect();
+      if (e.classList.contains("ci")) return b;
+      const r = document.createRange(); // a name's or a %'s text, not its box
+      r.selectNodeContents(e);
+      const t = r.getBoundingClientRect();
+      return { left: Math.max(b.left, t.left), right: Math.min(b.right, t.right), top: t.top, bottom: t.bottom };
+    };
+  const taken = [...ring.querySelectorAll(".rt .ci, .rt .cn, .rt .cp")].some(e => {
+    if (!e.getClientRects().length || (!e.classList.contains("ci") && !e.textContent.trim())) return false;
+    const b = box(e);
+    return (
+      Math.min(b.right, L.right + 2) > Math.max(b.left, L.left - 2) &&
+      Math.min(b.bottom, L.bottom + 2) > Math.max(b.top, L.top - 2)
+    );
+  });
+  if (!taken) return;
+  const h = Math.ceil(L.height);
+  if (document.body.classList.contains("land")) {
+    const pane = ring.parentNode,
+      room = ring.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    /* once per render: the ring a little smaller, centred as before, with the room above it the label needs; never
+       under 240px, so in a window too short for that (about 336px tall at the largest text) the label comes closer
+       to the top than 6px (5px at 800×336) */
+    if (room < h + 8 && !ring.dataset.cut && HOME_RING && RINGW) {
+      RINGW = Math.max(240, RINGW - Math.ceil(2 * (h + 8 - room)));
+      ring.outerHTML = ringHTML(HOME_RING[0], HOME_RING[1]);
+      pane.querySelector("#ring").dataset.cut = "1";
+      fitFigures(pane);
+      return;
+    }
+  } else {
+    if (ring.dataset.mt == null) ring.dataset.mt = ring.style.marginTop;
+    ring.style.marginTop = parseFloat(getComputedStyle(ring).marginTop) + h + 4 + "px";
+  }
+  lab.classList.add("up");
+  lab.style.top = -(h + 2) + "px";
 }

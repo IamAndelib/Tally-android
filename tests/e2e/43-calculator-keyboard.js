@@ -1,7 +1,9 @@
 // The calculator and the system keyboard never show together: focusing any field that isn't the calculator's own
-// closes the calculator, "Add a fee" included (it used to focus the fee with the keypad still up, so Android's keyboard
-// stacked over it). A tap on a field above the keypad must not close the form: the keypad closing shrinks the sheet
-// under the finger, so the tap can end on the backdrop, which closes its layer only when the tap began on it.
+// closes the calculator, "+ Transfer charge" and "+ Add an extra" included (it used to focus the fee with the keypad still up, so Android's keyboard
+// stacked over it). The fee field has its own calculator, which opens for the fee and closes the amount's. A tap on a
+// field above the keypad must not close the form: the keypad closing shrinks the sheet under the finger, so the tap can
+// end on the backdrop, which closes its layer only when the tap began on it. The transfer's "+ Transfer charge" card works
+// the same way, and while it is open the keypad's bar names its field (charges.md → The card).
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("43-calculator-keyboard");
 let fails = 0;
@@ -75,9 +77,9 @@ const ok = (c, m) => {
   await page.reload();
   await settle();
 
-  const snap = () =>
-    page.evaluate(() => {
-      const f = document.getElementById("f-fee");
+  const snap = (fid = "f-extra") =>
+    page.evaluate(fid => {
+      const f = document.getElementById(fid);
       const vis = id => {
         const p = document.getElementById(id);
         return !!p && !p.hidden;
@@ -85,61 +87,181 @@ const ok = (c, m) => {
       return {
         open: document.body.classList.contains("calcopen"),
         panelAmt: vis("calc-f-amt"),
+        panelFee: vis("calc-" + fid),
         feeFocus: !!f && document.activeElement === f,
         feeMode: f ? f.getAttribute("inputmode") : null,
         feeRO: f ? f.readOnly : null,
-        amtRO: document.getElementById("f-amt").readOnly,
-        amtMode: document.getElementById("f-amt").getAttribute("inputmode"),
-        keypads: document.querySelectorAll(".calc:not([hidden])").length,
       };
-    });
+    }, fid);
 
-  // one run of the checks on a form that has "Add a fee"
-  async function feeChecks(name) {
+  // one run of the checks on a form with an add-on button ("+ Transfer charge", "+ Add an extra")
+  async function feeChecks(name, addSel, fid) {
     await click('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
-    let s = await snap();
+    let s = await snap(fid);
     ok(s.open && s.panelAmt, name + ": the amount's calculator is open");
-    await click('#sheet [data-act="add-fee"]');
-    s = await snap();
-    ok(!s.open && !s.panelAmt && !s.keypads, name + ": Add a fee closes the calculator (no keypad over the keyboard)");
-    ok(s.feeFocus, name + ": the fee is focused");
-    ok(!s.amtRO && s.amtMode === "decimal", name + ": the amount is a normal field again (" + s.amtMode + ")");
+    await click(addSel);
+    s = await snap(fid);
+    ok(
+      !s.open && !s.panelAmt && !s.panelFee,
+      name + ": the add-on button closes the calculator (no keypad over the keyboard)"
+    );
+    ok(s.feeFocus && s.feeMode === "decimal" && !s.feeRO, name + ": the fee is focused, with the system keyboard");
+    ok(
+      !!(await page.$('#sheet [data-act="calc-toggle"][data-v="' + fid + '"]')),
+      name + ": the fee has its own calculator button"
+    );
     await click('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
-    s = await snap();
-    ok(s.open && s.panelAmt, name + ": the amount's calculator opens again");
-    await page.focus("#f-fee");
-    s = await snap();
-    ok(!s.open && !s.keypads, name + ": focusing the fee closes the amount's calculator");
+    s = await snap(fid);
+    ok(s.open && s.panelAmt && !s.panelFee, name + ": the amount's calculator opens again");
+    await click('#sheet [data-act="calc-toggle"][data-v="' + fid + '"]');
+    s = await snap(fid);
+    ok(s.open && s.panelFee && !s.panelAmt, name + ": the fee's calculator opens and closes the amount's");
+    ok(s.feeMode === "none" && s.feeRO && s.feeFocus, name + ": the fee shows no system keyboard while it is open");
+    await page.click("#calc-" + fid + ' [data-act="calc-key"][data-v="7"]');
+    await page.click("#calc-" + fid + ' [data-act="calc-key"][data-v="+"]');
+    await page.click("#calc-" + fid + ' [data-act="calc-key"][data-v="3"]');
+    await click('#sheet [data-act="calc-kbd"][data-v="' + fid + '"]');
+    s = await snap(fid);
+    ok(
+      !s.open && (await page.inputValue("#" + fid)) === "10",
+      name + ": the keyboard button works the sum out: " + (await page.inputValue("#" + fid))
+    );
+    await click('#sheet [data-act="calc-toggle"][data-v="' + fid + '"]');
+    await page.focus("#f-amt");
+    s = await snap(fid);
+    ok(!s.open && !s.panelFee, name + ": focusing the amount closes the fee's calculator");
   }
 
   await page.evaluate(() => trSheet(null));
   await settle();
-  await feeChecks("transfer");
+  await feeChecks("transfer", '#sheet [data-act="addon-add"][data-v="xcharge"]', "f-charge");
+
+  // the keypad on the transfer charge's card: its bar names the field with the live result right after the name, the
+  // amount looks idle, the preview counts the result and stays in view above the keypad; the amount's keypad says
+  // "Amount sent" while the card is open and keeps today's bar while it is closed; Back closes the keypad first
+  await page.evaluate(() => closeSheet());
+  await settle();
+  await page.evaluate(() => trSheet(null));
+  await settle();
+  await page.fill("#f-amt", "1000");
+  const key = async (id, ks) => {
+    for (const k of ks) await page.click("#calc-" + id + ' [data-act="calc-key"][data-v="' + k + '"]');
+  };
+  const look = id =>
+    page.evaluate(id => {
+      const col = v => {
+        const d = document.createElement("i");
+        d.style.color = "var(" + v + ")";
+        document.body.appendChild(d);
+        const c = getComputedStyle(d).color;
+        d.remove();
+        return c;
+      };
+      const res = $("#cr-" + id),
+        nm = res.querySelector(".calcname"),
+        eq = res.querySelector(".calceq"),
+        kb = $("#calc-" + id + " .kbdbtn").getBoundingClientRect(),
+        pad = $("#calc-" + id).getBoundingClientRect(),
+        aw = $("#sheet .amtwrap"),
+        card = $("#sheet .aocard"),
+        row = card && card.querySelector(".aorow"),
+        prev = card && card.querySelector(".aoprev");
+      return {
+        text: res.textContent,
+        name: nm ? nm.textContent : null,
+        eq: eq ? eq.textContent : null,
+        after: nm && eq ? eq.getBoundingClientRect().left - nm.getBoundingClientRect().right : null,
+        kbdRight: Math.round(pad.right - kb.right),
+        amtIdle:
+          getComputedStyle(aw).borderBottomWidth === "1px" &&
+          getComputedStyle($("#f-amt")).color === col("--on-surface-variant"),
+        cardIdle: !!row && getComputedStyle($("#f-charge")).color === col("--on-surface-variant"),
+        cardOn:
+          !!row &&
+          getComputedStyle(row).borderBottomColor === col("--primary") &&
+          getComputedStyle(row.querySelector(".aol")).color === col("--primary"),
+        cardCalc: !!(card && card.querySelector('[data-act="calc-toggle"]').offsetParent),
+        prev: prev ? prev.textContent.replace(/\u2060/g, "").replace(/\s+/g, " ") : "",
+        prevInView:
+          !!prev && prev.getBoundingClientRect().bottom <= pad.top + 1 && prev.getBoundingClientRect().top >= 0,
+      };
+    }, id);
+  await click('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
+  await key("f-amt", ["+", "5"]);
+  let b = await look("f-amt");
+  ok(
+    b.name === null && b.text === "= 1,005" && !b.amtIdle,
+    "no card: the amount's keypad keeps today's bar " + JSON.stringify(b)
+  );
+  await click('#sheet [data-act="calc-kbd"][data-v="f-amt"]');
+  await page.fill("#f-amt", "1000");
+  await click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await click('#sheet [data-act="calc-toggle"][data-v="f-charge"]');
+  b = await look("f-charge");
+  ok(
+    b.name === "Transfer charge" && b.eq === null,
+    "the card's keypad: its bar says Transfer charge " + JSON.stringify(b)
+  );
+  ok(
+    b.amtIdle && b.cardOn && !b.cardCalc,
+    "the amount looks idle, the card's line and label take the accent " + JSON.stringify(b)
+  );
+  await key("f-charge", ["1", "0", "+", "5"]);
+  b = await look("f-charge");
+  ok(
+    b.name === "Transfer charge" && b.eq === "= 15" && b.after >= 0 && b.after < 24 && b.kbdRight < 30,
+    "typing 10+5: = 15 right after the name, the keyboard button at the right end " + JSON.stringify(b)
+  );
+  ok(
+    /−\S*1,015\.00/.test(b.prev.replace(/BDT /g, "BDT")) && b.prevInView,
+    "the preview counts the result, in view above the keypad " + JSON.stringify(b)
+  );
+  await page.evaluate(() => goBack());
+  await settle();
+  let s = await snap("f-charge");
+  ok(
+    !s.open && (await page.evaluate(() => !!$("#sheet").innerHTML)) && (await page.inputValue("#f-charge")) === "15",
+    "Back closes the keypad first (the sum worked out), the form stays"
+  );
+  await click('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
+  await key("f-amt", ["+", "2", "5", "0"]);
+  b = await look("f-amt");
+  ok(
+    b.name === "Amount sent" && b.eq === "= 1,250" && b.cardIdle && !b.amtIdle,
+    "the amount's keypad while the card is open: Amount sent, = 1,250, the card idle " + JSON.stringify(b)
+  );
+  await click('#sheet [data-act="addon-remove"][data-v="xcharge"]');
+  b = await look("f-amt");
+  ok(b.name === null && b.text === "= 1,250", "the card closed: today's bar again " + JSON.stringify(b));
+  await page.evaluate(() => goBack());
+  await page.evaluate(() => goBack());
+  await settle();
+  ok(!(await page.evaluate(() => !!$("#sheet").innerHTML)), "then Back closes the form");
   await page.evaluate(() => closeSheet());
   await settle();
 
   await page.evaluate(() => loanOpen("L"));
   await settle();
   await page.fill("#f-amt", "100");
-  await feeChecks("loan payment");
+  await feeChecks("lending payment", '#sheet [data-act="addon-add"][data-v="extra"]', "f-extra");
   await page.evaluate(() => closeSheet());
   await settle();
 
-  // any other field closes the calculator, and the sum typed so far is kept
+  // any other field closes the calculator
   await page.evaluate(() => txSheet(null, "expense"));
   await settle();
   await click('#sheet [data-act="calc-toggle"][data-v="f-amt"]');
   ok((await snap()).open, "entry form: calculator open");
-  await page.click('#calc-f-amt [data-act="calc-key"][data-v="7"]');
-  await page.click('#calc-f-amt [data-act="calc-key"][data-v="+"]');
-  await page.click('#calc-f-amt [data-act="calc-key"][data-v="3"]');
-  ok(!!(await page.$("#f-note")), "entry form has a note field");
-  await page.focus("#f-note");
-  ok(!(await snap()).open, "entry form: focusing the note closes the calculator");
-  ok((await page.inputValue("#f-amt")) === "10", "the sum is worked out: " + (await page.inputValue("#f-amt")));
+  const other = await page.evaluate(() => {
+    const el = document.querySelector("#f-note");
+    return el ? el.id : null;
+  });
+  ok(!!other, "entry form has another field: " + other);
+  await page.focus("#" + other);
+  ok(!(await snap()).open, "entry form: focusing another field closes the calculator");
 
   await page.evaluate(() => closeSheet());
-  await settle();
+  await page.waitForTimeout(150);
 
   // a tap on a field above the keypad (mouse and touch, phone size) keeps the form open and works the sum out
   for (const touch of [false, true]) {

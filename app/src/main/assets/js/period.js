@@ -1,6 +1,6 @@
 /*
  * period.js — What Home and History are looking at: the view state (V for Home, HP for History), period maths (day / range /
- * month) and the Day | Range | Month dialog.
+ * month / year) and the Day | Range | Month | Year dialog.
  */
 "use strict";
 
@@ -18,16 +18,23 @@ const V = {
   rs: null,
   re: null,
   cur: null,
-  hAcc: "",
   showArchived: false,
   sel: null,
+  find: false, // search mode (search.js): History with a field in its top bar
+  open: "", // the entry whose row is opened in place (txOpenView), one at a time
 };
-/* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month", anchor, rs, re} */
-const HP = { period: "month", anchor: today(), rs: null, re: null };
+/* Home (V) and History (HP) each have their own period: {period:"day"|"range"|"month"|"year", anchor, rs, re}; History
+   alone also has "all" (all time, its default), which Home never takes. Only Home steps (‹ ›, swipes); History's
+   period is picked in the dialog */
+const HP = {};
+const histAllTime = () => Object.assign(HP, { period: "all", anchor: today(), rs: null, re: null });
+histAllTime();
 function range(p = V) {
   const a = p.anchor;
+  if (p.period === "all") return ["0000-01-01", "9999-12-31"];
   if (p.period === "day") return [a, a];
   if (p.period === "range") return [p.rs, p.re];
+  if (p.period === "year") return [a.slice(0, 4) + "-01-01", a.slice(0, 4) + "-12-31"];
   const m = a.slice(0, 7);
   return [m + "-01", monthEnd(m)];
 }
@@ -37,13 +44,16 @@ function periodLabel(p = V) {
 function periodText(p) {
   const t = today(),
     [s, e] = range(p);
+  if (p.period === "all") return T("history.allTime");
   if (p.period === "day") return dayName(p.anchor);
   if (p.period === "range") return s === e ? dayName(s) : rangeLabel(s, e);
+  if (p.period === "year") return p.anchor.slice(0, 4);
   const m = p.anchor.slice(0, 7);
   if (p === HP || m.slice(0, 4) === t.slice(0, 4)) return monthLabel(m, p === HP);
   return parseISO(m + "-01").toLocaleDateString(DATE_LOC, { month: "short", year: "numeric" });
 }
-function shiftPeriod(n, p = V) {
+function shiftPeriod(n) {
+  const p = V;
   if (p.period === "day") p.anchor = addDays(p.anchor, n);
   else if (p.period === "range") {
     const len = daysBetween(p.rs, p.re) + 1;
@@ -54,10 +64,21 @@ function shiftPeriod(n, p = V) {
       p.rs = addDays(p.re, 1 - len);
     }
     return;
-  } else p.anchor = shiftMonth(p.anchor.slice(0, 7), n) + "-01";
+  } else if (p.period === "year") p.anchor = +p.anchor.slice(0, 4) + n + "-01-01";
+  else p.anchor = shiftMonth(p.anchor.slice(0, 7), n) + "-01";
   if (p.anchor > today()) p.anchor = today();
 }
-const canNext = (p = V) => range(p)[1] < today();
+const canNext = () => range(V)[1] < today();
+/* what Home opens on (Settings → Region): today, this month or this year; its Today chip comes back to it */
+function homePeriod() {
+  V.period = S.settings.home;
+  V.anchor = today();
+}
+const atHomePeriod = () => {
+  const [s, e] = range(),
+    t = today();
+  return V.period === S.settings.home && s <= t && t <= e;
+};
 /* the date a new entry gets: the day being looked at (today when it is in view) */
 function entryDate() {
   const t = today(),
@@ -80,8 +101,9 @@ function catchUpToday() {
     V.rs = addDays(V.rs, daysBetween(was, t));
     V.re = t;
   }
-  /* History likewise: its month, its day, or a range that ended today */
-  if (HP.period === "month" && HP.anchor.slice(0, 7) === was.slice(0, 7)) HP.anchor = t;
+  /* History likewise (all time stays): its year, its month, its day, or a range that ended today */
+  if (HP.period === "year" && HP.anchor.slice(0, 4) === was.slice(0, 4)) HP.anchor = t;
+  else if (HP.period === "month" && HP.anchor.slice(0, 7) === was.slice(0, 7)) HP.anchor = t;
   else if (HP.period === "day" && HP.anchor === was) HP.anchor = t;
   else if (HP.period === "range" && HP.re === was) {
     HP.rs = addDays(HP.rs, daysBetween(was, t));
@@ -117,11 +139,13 @@ function periodTxns() {
   const [s, e] = range();
   return S.txns.filter(t => t.date >= s && t.date <= e);
 }
-/* period picker: Day / Range / Month */
+/* period picker: Day / Range / Month / Year. yEnd: the last of the 12 years the Year tab shows (this year's page first) */
 let PD = null;
 function periodDialog(p) {
-  const ref = p.period === "range" ? p.re : p.anchor;
-  PD = { p, tab: p.period, month: ref.slice(0, 7), year: +ref.slice(0, 4), pick: null };
+  const ref = p.period === "range" ? p.re : p.anchor,
+    now = +today().slice(0, 4);
+  PD = { p, tab: p.period === "all" ? "month" : p.period, month: ref.slice(0, 7), year: +ref.slice(0, 4), pick: null };
+  PD.yEnd = now - Math.floor(Math.max(0, now - PD.year) / 12) * 12;
   $("#pop").innerHTML =
     '<div class="pop scrim" data-act="pop-bg"><div class="dialog" id="pd" role="dialog" aria-modal="true" aria-label="' +
     TH("period.title") +
@@ -138,7 +162,7 @@ function drawPd() {
     tm = t.slice(0, 7);
   let h =
     '<div class="seg">' +
-    ["day", "range", "month"]
+    ["day", "range", "month", "year"]
       .map(
         k =>
           '<button data-act="pd-tab" data-v="' +
@@ -186,6 +210,49 @@ function drawPd() {
         );
       }).join("") +
       "</div>";
+  } else if (PD.tab === "year") {
+    /* 12 years like the month grid: this one ringed, the one shown picked, years with nothing written down faded */
+    const now = +t.slice(0, 4),
+      used = new Set(S.txns.map(x => +x.date.slice(0, 4)));
+    h +=
+      '<div class="cal-h"><button class="icon" data-act="pd-years" data-v="-12" aria-label="' +
+      TH("period.earlierYears") +
+      '">' +
+      ic("left") +
+      "</button><b>" +
+      (PD.yEnd - 11) +
+      " – " +
+      PD.yEnd +
+      '</b><button class="icon" data-act="pd-years" data-v="12" aria-label="' +
+      TH("period.laterYears") +
+      '"' +
+      (PD.yEnd >= now ? " disabled" : "") +
+      ">" +
+      ic("right") +
+      "</button></div>" +
+      '<div class="mgrid">' +
+      Array.from({ length: 12 }, (_, i) => {
+        const y = PD.yEnd - 11 + i,
+          cls = [
+            PD.p.period === "year" && +PD.p.anchor.slice(0, 4) === y ? "sel" : "",
+            y === now ? "now" : "",
+            used.has(y) ? "" : "dim",
+          ]
+            .join(" ")
+            .trim();
+        return (
+          '<button class="' +
+          cls +
+          '" data-act="pd-yr" data-v="' +
+          y +
+          '"' +
+          (y > now ? " disabled" : "") +
+          ">" +
+          y +
+          "</button>"
+        );
+      }).join("") +
+      "</div>";
   } else
     h +=
       calendar() +
@@ -203,6 +270,7 @@ function drawPd() {
   el.innerHTML = h;
   el.classList.toggle("rg", PD.tab === "range"); // dragging across days: the calendar doesn't scroll
   fitCal(el);
+  fitFigures(el); // its four tabs on a small phone at a large text size
 }
 function calendar() {
   const rg = PD.tab === "range",

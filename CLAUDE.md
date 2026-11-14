@@ -1,11 +1,12 @@
 # CLAUDE.md
 
 Guidance for Claude Code working in this repository. Read [README.md](README.md) (features, install, privacy) and
-[CONTRIBUTING.md](CONTRIBUTING.md) (architecture, data model, conventions, design principles, tests, releasing) first;
+[CONTRIBUTING.md](CONTRIBUTING.md) (architecture, data model, conventions, tests, releasing) and
+[docs/design.md](docs/design.md) (the design principles and how the interface follows them) first;
 this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
 what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 
-Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: the first unticked box), then
+Current work: [the 1.5.0 plan](docs/plans/2026-11-01-release-1.5.0.md) (next: the first unticked box), then
 [the roadmap](docs/roadmap.md). Notes per feature are in `docs/specs/`, decisions and their reasons in
 [docs/decisions.md](docs/decisions.md); add to them as you go.
 
@@ -14,6 +15,9 @@ Current work: [the 1.4.4 plan](docs/plans/2026-11-01-release-1.4.4.md) (next: th
 - **Ask first, in plain words.** Before anything that shows up publicly or that the maintainer didn't ask for (links,
   names, extra lines in commits or PRs, new services, anything posted online), ask in simple everyday language, no
   jargon, and wait for a yes.
+- **Demo before code.** Every interface or feature change starts with screenshots of the proposal (the real app with
+  the change mocked on top by a throwaway script in the scratchpad), discussed with the maintainer; only what they
+  agree is built (docs/plans/2026-11-01-release-1.5.0.md → How each item is built).
 - **No analytics, tracking or network use, ever.** Tally has no `INTERNET` permission and a CSP that blocks every
   request; README, the privacy policy and the store listings promise this.
 - **No Claude session links anywhere public** (no `Claude-Session:` line or `claude.ai/code/session_…` URL in commits,
@@ -51,9 +55,10 @@ judged for everyone who might install it, not for one person's phone, country or
 ## Scope
 
 A pocket notebook for money: balances at the top, one tap per expense, live roll-over to the next day. Small, calm and
-fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers and loan payments
-(with their fees) and balance fixes never count as spending or income; loans and lendings move money but are never
-spending either.
+fast; short labels, no clutter. Budgets and statement import are left out on purpose. Transfers, the money loans and
+lendings move, and balance fixes never count as spending or income; a charge you pay with an entry is spending (in a
+purchase's own category or the grey Charges part; a lend's transfer charge only once written off, a borrow's charges
+once paid back), and an extra you receive on top of what you lent is income.
 
 ## Details that are easy to break
 
@@ -79,7 +84,9 @@ spending either.
 - The WebView's text zoom is off (`setTextZoom(100)`): the page follows the phone's text size itself
   (`Android.fontScale()` → `applyTextScale()` sets the root font size, capped at `TEXT_MAX`). So every font size in
   CSS is in `rem` (only the lines under a row's amount are in `em`, to shrink with it in `fitFigures()`), and a box
-  holding text grows with it (`min-height`, not `height`).
+  holding text grows with it (`min-height`, not `height`). Words wrap, they are never cut or set smaller: only figures
+  shrink (`fitFigures()`), Home's ring keeps names whole or leaves them out, a list under 20rem is `.tight` (its rows
+  stack), and a box around a wrapped name takes its longest line (`fitWrapped()`); `22-layout.js` checks all of it.
 
 **Reminders, widget and backup**
 - Every reminder and backup alarm goes through `ReminderReceiver.arm()`: exact when allowed, else inexact (only the
@@ -104,12 +111,14 @@ spending either.
 - Saved data is never silently dropped: unreadable text is kept and offered as a file. `migrate()` upgrades and
   sanitises every saved state and backup without changing balances. Accounts with entries are archived, never deleted.
 - Every category keeps its id when renamed, and a built-in one can be renamed into anything, so Tally never files an
-  entry under a category by itself: fees link to their transfer or payment (`feeOf`), and anything else lets the user
-  pick (the entry form, prefilled: `txSheet(…, pre)`).
+  entry under a category by itself: a charge or an extra links to the entry it came with (`feeOf`) or is owed on
+  top of a draw (`onTop`), and counts in that entry's own category (a purchase), the fixed Charges part or received, and
+  anything else lets the user pick (the entry form).
 - `S.settings.cur` is `""` until a new notebook chooses its currency: new accounts and assets go through `accForm()` /
   `assetForm()`, which ask for it first. Week start (`settings.week`) and time format (`settings.clock`) are read
   from settings only, never from the phone (only `migrate()` reads the phone's clock, for older saves).
-- Loan amounts, due amounts and status are always derived by `loanInfo()` (payments go to the draw due soonest);
+- Loan amounts, due amounts and status are always derived by `loanInfo()` (payments go to the draw due soonest), and
+  the amounts on top of a draw (`onTop`), the share-out of payments and the parts counted as income or spending;
   nothing about them is stored on the loan.
 - Amounts are kept to 3 decimals (`rnd()`) and shown in the currency's own (`money()`). Amount fields show the
   phone's separators (`NUMSEP`): put a number in with `groupDigits(String(n))`, read one with `evalAmt()`, never

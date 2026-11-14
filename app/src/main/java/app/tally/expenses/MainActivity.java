@@ -43,6 +43,7 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -84,6 +85,8 @@ public class MainActivity extends Activity {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     /** What the permission prompts remember (the notification prompt asked once, the first-open dialog shown). */
     private static final String PERMS_PREFS = "tally_perms";
+    /** History search's recent searches: this phone only, left out of Android's backup and device transfer. */
+    private static final String RECENT_PREFS = "tally_recent";
     /** Renderer losses (onRenderProcessGone) in the minute since goneSince; static, since each loss recreates this. */
     private static long goneSince;
     private static int goneCount;
@@ -369,7 +372,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** "loan:<id>[:pay]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
+    /** "loan:<id>[:pay|:due]", "add:out", "check"… from the widget or a reminder: handed to the page (window.tallyOpen). */
     private void open(String what) {
         if (what != null) callPage("window.tallyOpen&&window.tallyOpen(" + JSONObject.quote(what) + ")");
     }
@@ -741,6 +744,31 @@ public class MainActivity extends Activity {
             } catch (JSONException e) {
                 return "{}";
             }
+        }
+
+        /** The recent searches, a JSON array of strings ("[]" when there are none). Never logged. */
+        @JavascriptInterface
+        public String recentGet() {
+            return getSharedPreferences(RECENT_PREFS, MODE_PRIVATE).getString("list", "[]");
+        }
+
+        /**
+         * Keeps the recent searches: a JSON array of at most 5 non-empty strings of at most 100 characters each;
+         * anything else is ignored. Never logged.
+         */
+        @JavascriptInterface
+        public void recentSet(String json) {
+            try {
+                JSONArray a = new JSONArray(json);
+                if (a.length() > 5) return;
+                for (int i = 0; i < a.length(); i++) {
+                    Object o = a.get(i);
+                    if (!(o instanceof String)) return;
+                    String s = (String) o;
+                    if (s.length() > 100 || s.trim().isEmpty()) return;
+                }
+                getSharedPreferences(RECENT_PREFS, MODE_PRIVATE).edit().putString("list", a.toString()).apply();
+            } catch (JSONException | RuntimeException ignored) { } // not an array (or null): ignored
         }
 
         @JavascriptInterface

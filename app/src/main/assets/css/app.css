@@ -179,6 +179,38 @@ a {
   height: 64px;
   margin: 0 -8px;
 }
+/* Search: the box fills the top bar beside Back */
+.srbox {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  margin-left: 4px;
+  padding: 0 0 0 14px;
+  border-radius: 24px;
+  background: var(--surface-high);
+  color: var(--on-surface-variant);
+}
+.srbox:focus-within {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.srbox input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  font-size: 1rem;
+  color: var(--on-surface);
+}
+.srbox input:focus {
+  border: 0;
+}
+.srbox input::-webkit-search-cancel-button {
+  display: none;
+}
 .appbar h1 {
   font-size: 1.35rem;
   font-weight: 600;
@@ -223,25 +255,30 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.month .plabel {
-  font-size: 1.05rem;
-  margin: 0 auto;
-  padding: 0 8px 0 12px;
-}
 /* the period arrows keep their whole 48px to tap but lie over the label's padding (on top of it), so the label keeps
    its room next to them; .appbar has no gap for the same reason (each icon's box already spaces its glyph) */
 .pnav > .icon {
   z-index: 1;
 }
 .pnav > .icon:first-child {
-  margin-right: -10px;
+  margin-right: -16px; /* the glyph is 24px in its 48px: 4px from the date */
 }
 .pnav > .icon:last-child {
-  margin-left: -6px;
+  margin-left: -12px;
 }
+/* with Search, History and Settings beside it, a little smaller on the narrowest phones (320px: Today still whole) */
 .pnav .plabel {
-  font-size: clamp(1.05rem, 4.6vw, 1.25rem);
-  padding: 0 6px 0 10px;
+  font-size: clamp(0.9rem, 4.5vw, 1.25rem);
+  padding: 0 4px 0 8px;
+}
+/* no ‹ › on a phone held sideways (its narrow right side has no room for them beside the icons), nor where the date
+   doesn't fit beside them (fitFigures: .noarr): a swipe on the ring and the period dialog still move the period */
+body.land .pnav > .icon,
+.pnav.noarr > .icon {
+  display: none;
+}
+.pnav.noarr .plabel {
+  padding-left: 12px;
 }
 /* a phone held sideways: the upright phone's size (vw is the long side there) */
 body.land .pnav .plabel {
@@ -264,6 +301,15 @@ body.land .pnav .plabel.long {
   padding: 4px 16px 8px;
   scrollbar-width: none;
 }
+/* it fades toward the edge it still scrolls to: the end of the line (the left in a right-to-left language) */
+.strip.fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+}
+html[dir="rtl"] .strip.fade {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+}
 .strip::-webkit-scrollbar {
   display: none;
 }
@@ -278,21 +324,41 @@ body.land .pnav .plabel.long {
   flex-direction: column;
   gap: 2px;
 }
-/* the emblem, then the name in its own direction (a right-to-left one cut at its own end) */
+/* an account's chip: its icon on the left in the middle; beside it the name (two lines if need be, in a box as wide as
+   its longest line: fitWrapped) and the balance below it, starting together, the pair in the middle of the chip */
+.acc:not(.add) {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-content: center;
+  justify-content: start;
+  padding: 10px 14px 10px 12px;
+}
 .acc .n {
-  display: flex;
-  align-items: center;
-  max-width: 152px; /* a long name is cut; the balance below never is */
+  display: contents;
   font-size: 0.78rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
+}
+.acc .n > .emb {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  margin: 0;
 }
 .acc .n > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  max-width: 7.5rem; /* grows with the text size */
+  line-height: 1.2;
+  overflow-wrap: break-word;
 }
 .acc .b {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
   font-weight: 600;
   font-size: 1rem;
   white-space: nowrap;
@@ -384,10 +450,6 @@ body.land .pnav .plabel.long {
   margin: 4px -4px 0;
   touch-action: pan-y;
 }
-/* History: sideways swipes belong to the app (they switch the account filter); the chip strip still scrolls itself */
-body.hist #app {
-  touch-action: pan-y;
-}
 .ring.edit {
   margin: 0 -4px;
   background: var(--surface-container);
@@ -418,13 +480,21 @@ body.hist #app {
   place-items: center;
   font-size: 1.45rem;
 }
+/* a category's name under its icon: on up to two lines, hyphenated in the page's language, never set smaller (on
+   Home's ring, .rt, names are whole or left out instead) */
 .cat .cn {
   font-size: 0.72rem;
   color: var(--on-surface-variant);
   max-width: 100%;
-  white-space: nowrap;
+  text-align: center;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .cat .cp {
   font-size: 0.72rem;
@@ -474,9 +544,42 @@ body.hist #app {
   line-height: 1.1; /* digits only, no descenders: the tightest line */
 }
 .rt .cn {
-  line-height: 1.3; /* tall enough for descenders (g, y) inside the clipped name */
+  display: block; /* one line, not a tile's two: whole or not at all (ringHTML leaves out a name that has no room) */
+  white-space: nowrap; /* never an ellipsis: ringHTML shows a name only where it fits whole */
+  line-height: 1.3; /* tall enough for descenders (g, y) */
   max-width: 92%; /* a little air between neighbouring names in a full ring */
-  flex-shrink: 0; /* whole or not at all (ringHTML leaves out a name that has no room) */
+  flex-shrink: 0;
+}
+/* Home: the Charges part's label in the ring's top right corner, outside the donut, or above the ring where a tile
+   reaches into that corner (fitChargeLabel: .up; sideways, the ring gives it room); a grey dot, the word
+   and the amount under it, the size of the tiles' names, in muted text (the grey is the dot's only) */
+.rchg {
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 5px;
+  align-items: center;
+  font-size: var(--f);
+  line-height: 1.3;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+  text-align: start;
+  pointer-events: none;
+}
+.rchg i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.rchg span {
+  font-weight: 500;
+}
+.rchg b {
+  grid-column: 2;
+  font-weight: 700;
 }
 .dcenter {
   position: absolute;
@@ -560,32 +663,75 @@ body.hist #app {
 }
 
 /* balance bar + fabs */
-/* a balance too long for the line moves under the label, still on the right */
+/* "4 entries ›" on the left, the totals on the right (one currency: "Total in USD" over the figure; several: "Total", then
+   a line each, the code in a column and the figures right-aligned in the other); the bar grows downward, and a block too
+   wide for the line moves under the label, still on the right */
 .balbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   width: 100%;
   margin-top: 12px;
   background: var(--secondary-container);
   color: var(--on-secondary-container);
   border-radius: 20px;
-  padding: 14px 16px;
+  padding: 12px 16px;
+  min-height: 56px;
   text-align: left;
 }
 .balbar .l {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
   font-size: 0.9rem;
+  font-weight: 600;
+}
+.balbar .l .ic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-inline-end: -2px;
+}
+.balbar .bt {
+  margin-inline-start: auto;
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  row-gap: 1px;
+  align-items: baseline;
+  justify-items: end;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.balbar .bt.one {
+  grid-template-columns: auto;
+}
+.balbar .bcap {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  opacity: 0.85;
+}
+.balbar .bcl {
+  display: contents;
+}
+.balbar .bcc {
+  justify-self: start;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
 }
 .balbar b {
-  margin-left: auto;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .balbar .ic {
-  opacity: 0.7;
+  opacity: 1;
 }
 .fabs {
   display: flex;
@@ -686,6 +832,17 @@ body.hist #app {
   flex: 1;
   min-width: 0;
 }
+/* two fields or buttons side by side go below each other when either's label doesn't fit (a small phone, a large
+   text size, a long language) instead of being cut or set smaller */
+.row:not(.notedate):not(.catrow) {
+  flex-wrap: wrap;
+}
+.row > .field {
+  flex: 1 1 9rem;
+}
+.row > .btn {
+  flex: 1 1 8.5rem;
+}
 /* note and date side by side, the date below the note on a narrow screen */
 .row.notedate {
   flex-wrap: wrap;
@@ -709,8 +866,7 @@ body.hist #app {
 .row.catrow > input {
   flex: 1 1 128px;
 }
-#f-payee-sug,
-.payee-in {
+#f-payee-sug {
   margin-top: 8px;
 }
 .gap {
@@ -724,6 +880,64 @@ body.hist #app {
 #f-person-sug {
   margin-top: 8px;
 }
+/* the names offered under a field (sheets.js nameChip): the Filters sheet's compact chip (34px to see; the row gap makes
+   up 48px to tap, each button's ::after reaches 8px up and down), the name that picks it and its own ✕ */
+#f-payee-sug,
+#f-person-sug {
+  gap: 14px 8px;
+}
+.nchip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--on-surface-variant);
+}
+.nchip-pick,
+.nchip-x {
+  position: relative;
+  overflow: visible; /* the ::after tap area reaches past the chip (button{overflow:hidden} would clip it) */
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.nchip-pick {
+  min-width: 48px; /* a one-character name (common in Chinese) still has a 48px target to tap */
+  padding: 0 4px 0 12px;
+  text-align: start;
+}
+.nchip-x {
+  flex: none;
+  justify-content: center;
+  width: 40px;
+}
+.nchip-pick::after,
+.nchip-x::after {
+  content: "";
+  position: absolute;
+  inset: -8px -8px;
+}
+.nchip-pick::after {
+  inset: -8px 0 -8px -1px;
+}
+.nchip-x::after {
+  inset: -8px -8px -8px 0; /* from the ✕'s own edge outwards, so it never covers the name's target */
+}
+.nchip .chn {
+  min-width: 0;
+  padding: 4px 0;
+  overflow-wrap: anywhere;
+}
+.nchip-x .ic {
+  width: 18px;
+  height: 18px;
+}
 /* Material 3 filter chip: 16px either side, 8px before a leading emblem or icon and between it and the name */
 .chip {
   min-height: 48px;
@@ -736,11 +950,9 @@ body.hist #app {
   gap: 8px;
   font-size: 0.9rem;
   font-weight: 500;
+  line-height: 1.2;
   color: var(--on-surface-variant);
-  white-space: nowrap;
-}
-.strip .chip {
-  flex-shrink: 0;
+  text-align: start;
 }
 .chip[aria-pressed="true"] {
   background: var(--secondary-container);
@@ -749,17 +961,17 @@ body.hist #app {
 }
 /* picked: a ✓ after the name, or in a chip that leads with an emblem (.lead) a check in place of its glyph, so the
    chip keeps its width and doesn't jump to the next line when tapped */
-.chip[aria-pressed="true"]:not(.lead)::after {
+.chip[aria-pressed="true"]:not(.lead):not(.hfc)::after {
   content: "✓";
   font-size: 0.8rem;
   flex: none;
 }
-/* a name in its chip (an account, person, type or category): cut with "…" when it doesn't fit, the emblem and ✓
-   stay whole */
+/* a name in its chip (an account, person, type or category): a chip fits its name; one longer than the line wraps,
+   in a box as wide as its longest line (fitWrapped); the emblem and ✓ stay whole beside it */
 .chip .chn {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 6px 0;
+  overflow-wrap: anywhere; /* a name is the person's own: any letter may break */
 }
 .chip > .emb:first-child,
 .chip > .ic:first-child {
@@ -776,13 +988,6 @@ body.hist #app {
   display: block;
   width: 72%;
   height: 72%;
-}
-.smc {
-  display: flex;
-  align-items: stretch;
-  height: 170px;
-  border-bottom: 1px solid var(--outline-variant);
-  margin: 4px 0 0;
 }
 .smcol {
   flex: 1;
@@ -829,6 +1034,48 @@ body.hist #app {
 .smchart {
   touch-action: pan-y;
 }
+/* the Year tab's 12 months: wide columns that scroll sideways, the edges fading where more months are (.fl / .fr) */
+.smchart.smy {
+  position: relative; /* the months' offsets count from it */
+  display: flex;
+  gap: 4px;
+  height: 200px;
+  margin: 4px 0 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.smy::-webkit-scrollbar {
+  display: none;
+}
+.smy.fl {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4rem);
+  mask-image: linear-gradient(to right, transparent, #000 4rem);
+}
+.smy.fr {
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 4rem);
+  mask-image: linear-gradient(to left, transparent, #000 4rem);
+}
+.smy.fl.fr {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
+}
+/* five months in view (gaps 4 × 4px) */
+.smy .smcol {
+  flex: 0 0 calc((100% - 16px) / 5);
+  padding: 8px 0;
+}
+.smy .smcol .v {
+  font-size: 0.78rem;
+}
+.smy .smcol .x {
+  font-size: 0.82rem;
+}
+.smy .smcol .b {
+  width: 1.75rem;
+}
 .smrows {
   display: flex;
   flex-direction: column;
@@ -837,19 +1084,22 @@ body.hist #app {
 }
 .smrow {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: var(--smx, auto) 1fr var(--smv, auto); /* the same label and figure widths in every row */
   align-items: center;
   gap: 10px;
-  height: 36px;
-  padding: 0 8px;
+  min-height: 36px;
+  padding: 2px 8px;
   border-radius: 10px;
   text-align: left;
 }
 .smrow .x {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
   min-width: 92px;
+}
+.smrows.meas .smrow .x,
+.smrows.meas .smrow .v {
+  white-space: nowrap; /* while the widest is measured */
 }
 .smrow .tr {
   height: 10px;
@@ -889,22 +1139,6 @@ body.hist #app {
   height: 100%;
   display: block;
 }
-.smpie .c {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.smpie .c b {
-  font-size: 1.5rem;
-  letter-spacing: -0.01em;
-}
-.smpie .c span {
-  font-size: 0.8rem;
-  color: var(--on-surface-variant);
-}
 .smd {
   text-align: center;
   padding: 14px 0 6px;
@@ -914,8 +1148,95 @@ body.hist #app {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.smtop .tx {
+.smtop > .tx {
   padding: 10px 14px;
+}
+/* a part in the Summary (smRow, a button): its name and share on the whole line (wrapping), its bar and amount below,
+   and a chevron at the end that turns up while the part's entries show under it */
+.smtop > .tx {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 20px;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+}
+/* the emblem's place; for Charges, which is no category, a grey dot in it (docs/specs/charges.md, Summary) */
+.smtop > .tx > .smi {
+  grid-row: 1 / -1;
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+}
+.smi .chdot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.smtop > .tx .mid {
+  display: contents;
+}
+.smtop > .tx .d {
+  grid-column: 2 / 4;
+  grid-row: 1;
+  line-height: 1.25;
+}
+.smtop > .tx .pbar {
+  grid-column: 2;
+  grid-row: 2;
+}
+.smtop > .tx > .a {
+  grid-column: 3;
+  grid-row: 2;
+}
+.smtop > .tx > .chev {
+  grid-column: 4;
+  grid-row: 1 / -1;
+  width: 20px;
+  height: 20px;
+  fill: var(--on-surface-variant);
+  transition: transform 0.2s;
+}
+.smtop > .tx[aria-expanded="true"] > .chev {
+  transform: rotate(180deg);
+}
+/* an opened part (smEntries): its entries under the names' column, their amounts under the part's, on the opened
+   row's colour. A title the amount beside it would cut stacks (.stacked, fitFigures), as in History; read-only, so a
+   stacked one is never cut (no tap would show the rest) */
+.smo {
+  background: var(--surface-high);
+  padding: 0 0 6px;
+  padding-inline: 66px 46px;
+}
+.smo + .tx {
+  border-top: 1px solid var(--outline-variant);
+}
+.smo .list {
+  background: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.smo .tx.en {
+  padding: 10px 0;
+}
+.smo .tx.en.stacked .d,
+.smo .list.tight .tx.en .d {
+  display: block;
+  overflow: visible;
+}
+.smo .smnone {
+  margin: 0;
+  padding: 10px 0 8px;
+}
+.smo > .btn {
+  width: auto;
+  max-width: calc(100% + 12px);
+  margin: 4px 0 0;
+  margin-inline-start: -12px;
+  padding: 6px 12px;
+  justify-content: flex-start;
+  text-align: start;
 }
 .pbar {
   display: block;
@@ -1137,6 +1458,35 @@ input {
   font-weight: 600;
   font-size: 1.15rem;
 }
+/* a short upright window (split screen): the keys get lower, down to 40px, so the amount stays in view above them */
+@media (max-height: 420px) {
+  body:not(.land) .calc {
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  body:not(.land) .calc button {
+    height: max(40px, min(56px, calc((100vh - 210px) / 4)));
+  }
+  body:not(.land) .calc .kbdbtn {
+    height: 48px; /* the button back to the keyboard keeps its size while the keys get lower */
+  }
+  body:not(.land) .calc button.op {
+    font-size: 1.35rem;
+  }
+  body:not(.land) .calcbar {
+    min-height: 32px;
+  }
+  /* and the amount's figures a size smaller (figures may shrink; words don't) */
+  body:not(.land) .amtwrap input {
+    height: 48px;
+    font-size: min(1.8rem, 10vw);
+  }
+  body:not(.land) .caretmirror {
+    line-height: 48px;
+    font-size: min(1.8rem, 10vw);
+  }
+}
 .calc button.op {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
@@ -1151,7 +1501,7 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 44px;
+  min-height: 44px; /* grows when a named field's result wraps under its name */
   padding-left: 6px;
 }
 .calcres {
@@ -1163,12 +1513,46 @@ input {
   font-weight: 600;
   color: var(--on-surface-variant);
 }
+/* while a card is open the bar names its field, the result right after the name, or under it when they don't fit */
+.calcres.named {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  white-space: normal;
+  overflow: visible;
+  line-height: 1.25;
+}
+.calcname {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.calceq {
+  white-space: nowrap; /* "= 1,250" stays whole */
+}
+/* the button back to the keyboard: a 52×44 pill (its ::after, the state layer its ::before) on a 48px tall button, whose
+   extra 2px above and below reach into the bar's padding and the keys' gap, so the bar stays as tall */
 .calc .kbdbtn {
+  flex: none;
   width: 52px;
-  height: 44px;
+  height: 48px;
+  margin: -2px 0;
+  border-radius: 14px;
+  color: var(--on-primary-container);
+  background: none; /* the pill is its ::after; the keys' own background would show 2px above and below it */
+  isolation: isolate;
+}
+.calc .kbdbtn::before,
+.calc .kbdbtn::after {
+  inset: 2px 0;
+}
+.calc .kbdbtn::after {
+  content: "";
+  position: absolute;
   border-radius: 14px;
   background: var(--primary-container);
-  color: var(--on-primary-container);
+  z-index: -1;
 }
 .calc .kbdbtn .ic {
   width: 26px;
@@ -1189,6 +1573,146 @@ input {
 .preview:empty {
   display: none;
 }
+/* Charges and extras (docs/specs/charges.md → The card): a form's preview line, the "+" buttons, and the tonal card,
+   each row a small label over a medium figure (the currency code before it) with its calculator and ✕ at the end and a
+   thin line under it, then the preview */
+.aoline,
+.aoprev {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  line-height: 1.45;
+}
+.aoline b,
+.aoprev b {
+  color: var(--on-surface);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.aoline {
+  padding: 10px 2px 2px;
+}
+.aoprev {
+  padding: 10px 16px 4px;
+}
+.aoline:empty,
+.aoprev:empty {
+  display: none;
+}
+.aoadds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  margin-top: 6px;
+}
+.aoadds .aoadd {
+  width: auto;
+  max-width: 100%;
+  padding: 0 12px;
+  text-align: start;
+}
+/* its label wraps, hyphenated in the page's language, a word longer than the card ("Überweisungsgebühr" in the loan
+   sheet's card at 320 px, 1.3×) breaking only as a last resort: never cut, never smaller */
+.aoadd .aoat {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+.aocard {
+  margin-top: 12px;
+  background: var(--surface-high);
+  border-radius: 16px;
+  padding-bottom: 8px; /* room under the last line, inside the rounded shape */
+}
+/* each row's line is inset 16px from both sides of the card */
+.aorow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 16px;
+  padding: 4px 0 0;
+  border-bottom: 1px solid var(--outline);
+}
+.aof {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0 4px;
+}
+.aol {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  line-height: 1.3;
+}
+.aov {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.aocur {
+  flex: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+.aov input,
+.aov input:focus {
+  height: 1.8em;
+  border: 0;
+  padding: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  caret-color: var(--primary);
+}
+.aov .caretmirror {
+  font-size: 1.35rem;
+  line-height: 1.8em;
+  letter-spacing: 0;
+  padding-right: 4px;
+}
+.aov .caretmirror .blink {
+  width: 2px;
+  height: 1.15em;
+}
+.aocalc {
+  padding: 4px;
+  background: var(--secondary-container);
+  background-clip: content-box;
+  color: var(--on-secondary-container);
+}
+/* the row is inset to keep its line inside the card; the remove button keeps its place near the card's edge */
+.aorow .aox {
+  margin-inline-end: -12px;
+}
+.aocalc .ic,
+.aox .ic {
+  width: 22px;
+  height: 22px;
+}
+/* the field being typed or filled by the keypad: the line and the label take the accent; the keypad's own button is
+   its keyboard switch meanwhile */
+.aorow:focus-within,
+.aorow.calcing {
+  border-bottom: 2px solid var(--primary);
+  margin-bottom: -1px;
+}
+.aorow:focus-within .aol,
+.aorow.calcing .aol {
+  color: var(--primary);
+}
+.aorow.calcing .aocalc {
+  display: none;
+}
+/* while the keypad fills another amount of the form: a thin grey line and grey figures */
+.amtwrap.aoidle {
+  border-bottom: 1px solid var(--outline);
+  margin-bottom: 1px;
+}
+.amtwrap.aoidle input,
+.aorow.aoidle input {
+  color: var(--on-surface-variant);
+}
 .hint {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
@@ -1198,6 +1722,7 @@ input {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+  align-items: start;
 }
 /* room under the icon for the selected ring (5px) without the label moving when a category is picked */
 .catgrid .cat {
@@ -1267,7 +1792,8 @@ input {
 .tx + .tx {
   border-top: 1px solid var(--outline-variant);
 }
-.tx .em {
+.tx .em,
+.sug .em {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1277,21 +1803,376 @@ input {
   flex: none;
   background: var(--surface-high);
 }
-.tx .mid {
+.tx .mid,
+.sug .mid {
   flex: 1;
   min-width: 0;
 }
+/* a suggestion in search mode (search.js findSugs): emblem, what it is, then its group and how many entries it leaves */
+.sug {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 0;
+}
+.sug + .sug {
+  border-top: 1px solid var(--outline-variant);
+}
+.sug .sgt,
+.sug .s {
+  display: block;
+  overflow-wrap: break-word;
+}
+.sug .s {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  line-height: 1.35;
+}
+/* a recent search in search mode (search.js recentView): the clock and the words, then a ✕ that forgets it */
+.rec {
+  display: flex;
+  align-items: center;
+}
+.rec + .rec {
+  border-top: 1px solid var(--outline-variant);
+}
+.recq {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 0 12px 14px;
+  text-align: left;
+  border-radius: 0;
+}
+.recq .ic {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  flex: none;
+  color: var(--on-surface-variant);
+}
+/* the heading of the recent searches with its Clear all at the end (it goes below the heading when the line is full) */
+.rechead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.rechead .sec {
+  margin-top: 0;
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.recall {
+  flex: none;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-align: end;
+}
+.recq .recem {
+  width: 24px;
+  height: 24px;
+  font-size: 0.7rem;
+}
+.recw {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.recx {
+  margin-right: 4px;
+}
+/* a row's texts wrap rather than lose letters; the icon stays in the middle of the row however tall it gets */
 .tx .d {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 .tx .s {
   font-size: 0.8rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+}
+/* an entry's row (txLine): what it was | how much, then its category and account under the title */
+.tx.en .mid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 3px;
+  align-items: baseline;
+}
+.tx.en .d {
+  grid-column: 1;
+  grid-row: 1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* a long note: the whole of it is one tap away */
   overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.tx.en .a {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: none;
+}
+.tx.en .s {
+  grid-column: 1;
+  grid-row: 2;
+}
+.tx.en .ar {
+  margin: 0 2px;
+}
+/* search mode (search.js hl): the part of a title or second line a word matched; the row's own text colour stays */
+mark.hl {
+  background: var(--mark-bg);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0;
+}
+/* a loan's or balance fix's note that a word matched, a third line under the second (search mode only) */
+.hnote {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+  line-height: 1.35;
+}
+.tx.en .hnote {
+  grid-column: 1;
+  grid-row: 3;
+}
+.list.tight .tx.en .hnote,
+.tx.en.stacked .hnote {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
+/* the account's colour as a dot before its name: the name says which account, the colour only helps to spot it */
+.adot {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+  background: rgb(var(--acr));
+}
+/* a tight list (fitFigures: under 20rem wide, a small phone or a large text size): the title has the whole width, the
+   amount starts the line below it, then the category and account. So does a row of a wider list whose title the amount
+   beside it would cut (.stacked, fitFigures: measured per row) */
+.list.tight .tx.en .d,
+.list.tight .tx.en .s,
+.tx.en.stacked .d,
+.tx.en.stacked .s {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
+.list.tight .tx.en .d,
+.tx.en.stacked .d {
+  -webkit-line-clamp: 3;
+}
+.list.tight .tx.en .a,
+.tx.en.stacked .a {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  align-self: auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  justify-self: start;
+}
+/* the opened part of a row (txOpenView): a soft panel under it, the row above it the same colour */
+.tx[aria-expanded="true"],
+.txo {
+  background: var(--surface-high);
+}
+.txo {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.txo + .tx {
+  border-top: 1px solid var(--outline-variant);
+}
+.txo .added {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--on-surface);
+}
+.txo .added .ic {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+.txo .added b {
+  font-weight: 600;
+}
+.txo .onote {
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+.txo .frow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.txo .fbox,
+.txo .lbox {
+  background: var(--surface-low);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.txo .fbox {
+  flex: 1 1 8rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.txo .bcap,
+.txo .bin,
+.txo .lfoot {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+}
+.txo .bval {
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.txo .lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--on-surface-variant);
+}
+.txo .lhead b {
+  font-size: 1.05rem;
+  color: var(--on-surface);
+}
+.txo .ltrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--outline-variant);
+  margin: 8px 0 6px;
+  overflow: hidden;
+}
+.txo .ltrack span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+}
+/* a draw's own parts inside its loan's box, and a tab's under the loan sheet's figure (lend-refine): small outlined
+   boxes, a label over a bold figure, that wrap and grow with the text */
+.txo .lparts,
+.hero .lparts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.hero .lparts {
+  justify-content: center;
+  margin-bottom: 6px;
+  text-align: start;
+}
+.txo .lpart,
+.hero .lpart {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 4px 10px;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+.txo .lpc,
+.hero .lpc {
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+}
+.txo .lpv,
+.hero .lpv {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+.txo .lbox .lfoot + .lfoot {
+  margin-top: 4px;
+}
+.txo .acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.txo .acts .btn {
+  width: auto;
+  flex: none;
+  padding: 6px 16px;
+}
+.txo .acts .btn .ic {
+  width: 18px;
+  height: 18px;
+}
+/* an account, lending or asset row (.stk) in a tight list: the icon on the left in the middle; its name, balance and
+   type below each other from the left */
+.list.tight .tx.stk {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "em d" "em a" "em s";
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: center;
+}
+.list.tight .tx.stk > .em {
+  grid-area: em;
+}
+.list.tight .tx.stk .mid {
+  display: contents;
+}
+.list.tight .tx.stk .d {
+  grid-area: d;
+}
+.list.tight .tx.stk .s {
+  grid-area: s;
+}
+.list.tight .tx.stk > .a {
+  grid-area: a;
+  justify-self: start;
+  text-align: left;
+  max-width: none;
+}
+.list.tight .tx.stk > .a small {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 /* an amount and a balance are never cut: the title, then the account name in the balance line give way to them */
 .tx .a {
@@ -1317,40 +2198,43 @@ input {
 .tx > .ic {
   color: var(--primary);
 }
-/* the lines under an amount are sized in em, not rem: they follow the amount when fitFigures() sets it smaller */
+/* the line under an amount (a converted amount, a status) is sized in em, not rem: it follows the amount when
+   fitFigures() sets it smaller */
 .tx .a small {
   display: block;
   font-weight: 400;
   font-size: 0.75em;
   color: var(--on-surface-variant);
 }
-/* the balance line: [arrow] name balance. The name's column shrinks to nothing (its name cut with "…") but may grow
-   as wide as the name, so a long name never makes the amount's column wider than the amount and balance need */
-.tx .a .rb {
-  display: grid;
-  grid-template-columns: minmax(0, max-content) auto;
-  justify-content: end;
-  column-gap: 0.3em;
-  font-weight: 500;
-  font-size: 0.72em;
-  color: var(--on-surface-variant);
-}
-.tx .a .rb.ar {
-  grid-template-columns: auto minmax(0, max-content) auto;
-}
-.tx .a .rbn {
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* an extra a payment brought (covered or on top): green, always with "+" or "incl." and the word "extra" */
+.tx .a small.xtra {
+  color: var(--got);
 }
 .tx .s .st {
   margin-right: 2px;
   vertical-align: 1px;
 }
+/* an archived entry that search lists (Settings → History): the outlined archive box and the word, in the line's own
+   colour, kept together at the start of its second line (the word says it; the box only helps to spot it) */
+.tx .s .tarch {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tx .s .tarch .ic {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  margin-inline-end: 3px;
+}
+/* while selecting, an archived match search lists can't be selected: faded (it also says "Archived", and is
+   aria-disabled), never hidden, so no row moves under the finger */
+.tx.unsel {
+  opacity: 0.5;
+}
 /* alone on its line (a loan card's payment rows): in a narrow row it ends in "…" rather than lose letters */
 .tx.exp .s .st {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   vertical-align: top;
 }
 .tx.exp {
@@ -1367,6 +2251,33 @@ input {
   padding: 12px 14px;
   text-align: left;
   border-radius: 0;
+}
+/* a lending's history row in a tight list: what it was, then its amount below it, the arrow on the right */
+.list.tight .tx .txh {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "em d chev" "em a chev" "em s chev";
+  row-gap: 2px;
+}
+.list.tight .tx .txh > .em {
+  grid-area: em;
+}
+.list.tight .tx .txh .mid {
+  display: contents;
+}
+.list.tight .tx .txh .d {
+  grid-area: d;
+}
+.list.tight .tx .txh .s {
+  grid-area: s;
+}
+.list.tight .tx .txh > .a {
+  grid-area: a;
+  justify-self: start;
+  text-align: left;
+}
+.list.tight .tx .txh > .chev {
+  grid-area: chev;
 }
 .tx .more {
   display: none;
@@ -1420,6 +2331,11 @@ input {
   color: var(--primary);
   margin: 24px 4px 8px;
 }
+/* the heading search puts the focus on after Enter (tabindex -1): read by TalkBack, never ringed */
+.sec[tabindex="-1"],
+.hmon[tabindex="-1"] {
+  outline: none;
+}
 .sec.center {
   text-align: center;
 }
@@ -1442,22 +2358,18 @@ input {
   max-width: 320px;
   margin: 0 auto 16px;
 }
-.month {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--surface-container);
-  border-radius: 24px;
-  padding: 4px;
-}
 .seg {
   display: flex;
   border: 1px solid var(--outline);
   border-radius: 24px;
   overflow: hidden;
 }
+/* each tab as wide as its word needs, the rest shared: a long word ("Zeitraum") is whole at its full size */
 .seg button {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: min-content;
+  padding-left: 6px;
+  padding-right: 6px;
   min-height: 48px;
   font-weight: 500;
   font-size: 0.9rem;
@@ -1465,6 +2377,18 @@ input {
 }
 .seg button + button {
   border-left: 1px solid var(--outline);
+}
+/* four tabs that don't fit in a row (fitFigures): two rows of two, each word whole */
+.seg.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 20px;
+}
+.seg.two > button:nth-child(3) {
+  border-left: 0;
+}
+.seg.two > button:nth-child(n + 3) {
+  border-top: 1px solid var(--outline);
 }
 .seg button[aria-pressed="true"] {
   background: var(--secondary-container);
@@ -1488,6 +2412,14 @@ input {
   border-radius: 20px;
   padding: 16px;
   margin-top: 12px;
+}
+/* a sheet's card with account chips reaches 8px past the sheet's padding and keeps 12px inside, so the chip row is as
+   wide as in the entry form (the loan sheet's cards; the due card above shares the edge). Not a blanket `#sheet .card`:
+   the Settings card and the balance-fix card hold no chips. */
+.sheet .card.out {
+  margin-left: -8px;
+  margin-right: -8px;
+  padding: 16px 12px;
 }
 .card h3 {
   margin: 0 0 4px;
@@ -1536,7 +2468,9 @@ input {
   font-size: 1.3rem;
   font-weight: 600;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 @keyframes up {
   from {
@@ -1614,11 +2548,47 @@ input {
   margin-right: 6px;
 }
 .acc .n .emb.sm {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
+}
+/* the category / account / asset form's emblem: the whole of it is the button (72px, over the 48dp minimum), a
+   half-dark veil over it with a white pen says "change" (over a dark glyph the pen sits on the glyph) */
+.embedit {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 4px;
 }
 .cprevbtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  min-width: 48px;
+  min-height: 48px;
   border-radius: 50%;
+}
+.cprevbtn .cprev {
+  margin: 0;
+}
+.cprevbtn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+}
+.cprevbtn > .ic {
+  position: absolute;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+}
+/* an account's colour tints its picked chip in a form, as the Filters sheet's chips do (--acr from accVar) */
+.chip.acchip[aria-pressed="true"] {
+  background: rgb(var(--acr) / calc(var(--tint-a) * var(--tint-k, 1)));
+  color: var(--on-surface);
 }
 .icgrid {
   display: grid;
@@ -1823,6 +2793,13 @@ body.hasnav .snack {
   width: 32px;
   height: 32px;
 }
+/* a word too long beside its icon (German, Russian at a large text size): the icon above it (fitFigures) */
+.loanbtns.stack .fbtn {
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  overflow-wrap: break-word;
+}
 .todayrow {
   display: flex;
   justify-content: flex-end;
@@ -1896,7 +2873,7 @@ body.hasnav .snack {
   padding: 16px 18px;
   margin-top: 4px;
 }
-.sumcard.owe {
+.sumcard.soft {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
 }
@@ -2070,6 +3047,8 @@ body.hasnav .snack {
   background-clip: padding-box;
   box-shadow: inset 0 0 0 2px var(--outline);
   flex: none;
+  overflow: visible; /* (not clipped like other buttons: Chrome brings a clipped box's inside into view, without its
+     clear bands, so a switch the focus moves to could stay half under a pinned heading) */
 }
 .sw::after {
   content: "";
@@ -2113,16 +3092,15 @@ body.hasnav .snack {
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  height: 52px;
-  padding: 0 10px 0 14px;
+  min-height: 52px; /* a long value takes a second line */
+  padding: 8px 10px 8px 14px;
   border: 1px solid var(--outline);
   border-radius: 12px;
   text-align: left;
 }
 .fieldbtn span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 .fieldbtn .ic {
   color: var(--on-surface-variant);
@@ -2132,6 +3110,7 @@ body.hasnav .snack {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+  align-items: start;
   background: var(--surface-container);
   border-radius: 20px;
   padding: 8px 4px;
@@ -2143,10 +3122,12 @@ body.hasnav .snack {
 .tile.placeholder {
   opacity: 0.25;
 }
-.tx.placeholder {
+.tx.placeholder,
+.acc.placeholder {
   opacity: 0.3;
 }
-.ghost.gh-row {
+.ghost.gh-row,
+.ghost.gh-chip {
   transform: none;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
@@ -2289,8 +3270,8 @@ body.hasnav .snack {
   place-items: center;
   padding: 16px;
 }
-html.lock,
-body.lock {
+/* the root only: with overflow on <body> too it becomes a scroll container and the sticky blocks lose their place */
+html.lock {
   overflow: hidden;
 }
 .dialog {
@@ -2357,6 +3338,12 @@ body.lock {
   font-size: 0.9rem;
   border-radius: 0;
   isolation: isolate;
+}
+/* a screen under 320px (a foldable's cover screen): a day's 35px column holds a 34px circle */
+@media (max-width: 319px) {
+  .dd {
+    --dd: min(34px, var(--row, 48px));
+  }
 }
 .dd::before {
   inset: 0;
@@ -2450,6 +3437,11 @@ body.lock {
   border-radius: 24px;
   font-weight: 500;
 }
+/* a year with nothing written down in it (Year tab): quieter, still readable and tappable */
+.mgrid button.dim {
+  color: var(--on-surface-variant);
+  font-weight: 400;
+}
 .mgrid button.now {
   box-shadow: inset 0 0 0 1px var(--primary);
   color: var(--primary);
@@ -2457,6 +3449,49 @@ body.lock {
 .mgrid button.sel {
   background: var(--primary);
   color: var(--on-primary);
+}
+/* choiceDialog(): stacked full-width answers, or two side by side (a confirm step); each role has its own look */
+.cd-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.cd-btns.cd-row {
+  flex-direction: row;
+}
+.cd-btns .btn {
+  flex: 0 0 auto;
+  min-height: 48px; /* grows with large text rather than cutting a word */
+  height: auto;
+  padding: 10px 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cd-btns.cd-row .btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.btn.cd-keep {
+  background: var(--got);
+  color: var(--surface);
+}
+.btn.cd-destroy {
+  background: var(--spent);
+  color: var(--surface);
+}
+.btn.cd-main {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn.cd-alt {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.btn.cd-out {
+  background: none;
+  border: 1px solid var(--outline);
+  color: var(--on-surface);
 }
 .dlg-act {
   display: flex;
@@ -2632,6 +3667,10 @@ body.land #pd > .seg {
   grid-area: head;
   align-self: start;
 }
+/* its tabs keep their height (two rows of them too): a box that clips may otherwise be squeezed by a short grid */
+body.land #pd > .seg {
+  min-height: min-content;
+}
 body.land #dp > .cal-h,
 body.land #pd > .cal-h {
   grid-area: calh;
@@ -2667,4 +3706,401 @@ body.land.calcopen #snack .snack {
 [role="dialog"]:focus,
 [role="alertdialog"]:focus {
   outline: none;
+}
+
+/* History: the period chip (label and ✕ are two targets), Filters, one chip per set filter, and a
+   heading for each month */
+.hbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+/* the filter chips are items of the bar's own line, after Filters (a wrapper only for the code that finds them) */
+.hchips {
+  display: contents;
+}
+/* the way to the Archived screen, last on the Filters line: an outlined square, the archive box in its middle */
+.chip.harch {
+  width: 48px;
+  padding: 0;
+  justify-content: center;
+  flex: none;
+}
+/* icon-only: the icon sits in the middle, not pulled left like a chip's leading icon */
+.chip.harch > .ic:first-child {
+  margin-inline-start: 0;
+}
+/* selecting: the same row, dimmed and out of reach */
+.hbar.hoff {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.hp {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.hp.set {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  border-color: transparent;
+}
+.hpl {
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 12px 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+}
+.hpl > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hp.set .hpl {
+  padding-right: 4px;
+}
+.hpx {
+  flex: none;
+  width: 48px;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+}
+.hp .ic,
+.hchip .ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.hfbtn.on,
+.hchip {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  border-color: transparent;
+}
+.hchip[data-v="acc"] {
+  background: rgb(var(--acr) / calc(var(--tint-a) * var(--tint-k, 1)));
+  color: var(--on-surface);
+}
+.hchip .chn {
+  flex: 0 1 auto;
+}
+.hclear {
+  flex: none;
+  width: auto;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+}
+.empty .hclear {
+  margin: 0 auto;
+}
+.hchip > .adot {
+  flex: none;
+  margin: 0 -2px 0 0;
+}
+.hmore {
+  height: 1px; /* the marker after the last row drawn (histWatch) */
+}
+/* History's pinned block (histPin): the bar and the period / Filters row stay at the top while the entries scroll under
+   them; it reaches the window's edges (main's 16px padding), so nothing shows beside it. Settings' bar too */
+.hpin {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  background: var(--surface);
+}
+/* a month's heading, at the top of its section (.hsec): pinned under the block while its month scrolls (not while
+   selecting), until the next month's heading pushes it up. It reaches the edges too, with a thin line under it; the
+   same box when it scrolls, so nothing moves when selecting starts or ends */
+.hmon {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 8px -16px 0;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--outline-variant);
+  background: var(--surface);
+  font-weight: 600;
+}
+.hsec.pin > .hmon {
+  position: sticky;
+  top: var(--hpin, 0px);
+  z-index: 2;
+}
+/* Settings (docs/specs/history-archive.md, D): the bar in the same block, and each section's heading (.ssec, its own
+   block) pinned under it while its section scrolls, until the next one pushes it up. Out to the edges like a month's
+   heading, in the place the heading has unpinned (24px above the words, 8px under them), with the thin line only
+   while it is held there (.held, secHeld) */
+.ssec > .sec {
+  position: sticky;
+  top: var(--hpin, 0px);
+  z-index: 2;
+  margin: 16px -16px 0;
+  padding: 8px 20px 7px;
+  border-bottom: 1px solid transparent;
+  background: var(--surface);
+}
+.ssec > .sec.held {
+  border-bottom-color: var(--outline-variant);
+}
+.ssec > .sec + .lbl.set {
+  margin-top: 4px; /* 12px under the words, as when its margin met the heading's */
+}
+/* (not where the block and a heading would cover over half the window: histPinSet) */
+#app.hfree .hsec.pin > .hmon,
+#app.hfree .ssec > .sec {
+  position: static;
+}
+/* a phone held sideways: only the bar stays (the block's own box is gone, so the bar sticks to the page), with the
+   month on one line under it; the Filters row scrolls away with the entries and slides back under the bar as soon as
+   the list scrolls up (.back) */
+body.land .hpin {
+  display: contents;
+}
+body.land .hpin > .appbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--surface);
+  box-shadow:
+    -8px 0 var(--surface),
+    8px 0 var(--surface); /* out to the window's edges, as the block reaches them upright */
+}
+body.land .hhd {
+  display: flow-root; /* the Filters row's margin stays inside, where it is when it comes back */
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  background: var(--surface);
+}
+body.land .hhd.back {
+  position: sticky;
+  top: 64px; /* under the bar (.appbar's height) */
+  z-index: 3;
+  animation: hback 0.15s ease-out;
+}
+@keyframes hback {
+  from {
+    transform: translateY(-100%);
+  }
+}
+body.land .hmon {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+body.land .hmon .hcol {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: 14px;
+}
+/* the stacked column at the right of a month or day heading (histColumn): + green over − red, one line per currency, or
+   words (Transfers). Figures stay on one line and shrink in fitFigures(); words wrap. */
+.hcol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-inline-start: auto;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: end;
+}
+.hcl {
+  display: block;
+  max-width: 100%;
+}
+.hcf {
+  white-space: nowrap;
+}
+.hc-in {
+  color: var(--got);
+}
+.hc-out {
+  color: var(--spent);
+}
+.hc-mv {
+  color: var(--xfer);
+}
+.hc-fee {
+  font-weight: 400;
+  color: var(--on-surface-variant);
+}
+.dayh {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2px 12px;
+}
+.dayh .hcol {
+  font-size: 0.8rem;
+}
+
+/* History's Filters sheet: compact chips (34px to see; the row gap makes up 48px to tap, each chip's ::after reaches
+   7px up and down), the sticky foot, and the From / To menu */
+.hfrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 8px;
+  margin: 0 4px;
+}
+.hfc {
+  position: relative;
+  overflow: visible; /* the ::after tap area reaches past the chip (button{overflow:hidden} would clip it) */
+  min-height: 34px;
+  min-width: 48px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.hfc::after {
+  content: "";
+  position: absolute;
+  inset: -8px -1px; /* the border box and 7px more above and below: 48px with the row gap */
+}
+.hfc.lock::after {
+  display: none;
+}
+/* picked here the ✓ comes first (.hftk, a real element before the dot and the name; the rest of the app puts it
+   last); it takes some of the leading padding so the chip stays about as wide and doesn't jump to the next line when
+   tapped. A chosen From / To (a tinted button) leads with it too. The ::after is the touch target above; ::before stays
+   the state layer. */
+.hfc.tk {
+  padding-inline-start: 2px;
+}
+.hftk {
+  flex: none;
+  margin-inline-start: 6px;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+.hfc.acct[aria-pressed="true"],
+.hfc.tinted {
+  background: rgb(var(--acr) / calc(var(--tint-a) * var(--tint-k, 1)));
+  color: var(--on-surface);
+  border-color: transparent;
+}
+.hfc > .adot,
+.hmi > .adot {
+  flex: none;
+  margin: 0 -2px 0 0;
+}
+.hfc .ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.hfc .chn {
+  padding: 4px 0;
+}
+.hfc.lead > .emb.sm {
+  width: 20px;
+  height: 20px;
+}
+.hfn {
+  flex: none;
+  min-width: 1.4em;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--surface-container, rgba(127, 127, 127, 0.16));
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+.hfc.dim,
+.hmi.dim {
+  opacity: 0.45;
+}
+.hfsides {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.hfsides > .chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.hfswap {
+  flex: none;
+  width: 48px;
+  height: 48px;
+}
+.hfhint {
+  margin: 10px 4px 0;
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+}
+.hfs-foot {
+  position: sticky;
+  bottom: calc(-20px - env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px -20px calc(-20px - env(safe-area-inset-bottom, 0px));
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface-low);
+}
+.hfs-foot .btn {
+  flex: 1 1 8rem;
+  min-width: min-content; /* a long word in the label takes its room; the foot wraps instead of cutting it */
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.hmenu {
+  position: fixed;
+  z-index: 16;
+  min-width: 200px;
+  max-width: calc(100% - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0;
+  border-radius: 12px;
+  background: var(--surface-low);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.hmi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  text-align: start;
+  font-size: 0.95rem;
+}
+.hmi .chn {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hmi .ic {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.hmi[aria-pressed="true"] {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
 }

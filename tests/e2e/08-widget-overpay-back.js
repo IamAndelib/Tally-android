@@ -150,11 +150,8 @@ const ok = (c, m) => {
   await tap('.list [data-v="L1"]');
   const row = "#sheet .tx.exp:nth-child(1)";
   ok(
-    (await page.evaluate(s => {
-      const e = document.querySelector(s + " .s");
-      return e.scrollWidth > e.clientWidth;
-    }, row)) || true,
-    "subtitle truncated before expanding"
+    await page.evaluate(s => document.querySelector(s + " .more").offsetHeight === 0, row),
+    "a payment's details stay hidden before expanding"
   );
   await tap(row);
   const ex = await page.evaluate(s => {
@@ -192,15 +189,15 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="f-acc"][data-v="k"]');
   await tap('#sheet [data-act="loan-pay"]');
   ok(
-    (await page.isVisible('#pop [data-act="ask-ok"]')) && (await txt("#pop")).includes("300"),
+    (await page.isVisible('#pop [data-act="cd"]')) && (await txt("#pop")).includes("300"),
     "paid more than owed → asks: " + (await txt("#pop")).replace(/\s+/g, " ")
   );
   await page.screenshot({ path: OUT + "/overpay.png" });
-  await tap('#pop [data-act="pd-close"]');
+  await tap('#pop [data-act="cd"][data-v="2"]'); // Go back
   ok((await page.isVisible("#f-amt")) && (await state()).txns.length === 6, "Go back: nothing saved");
   const kb = await bal("k");
   await tap('#sheet [data-act="loan-pay"]');
-  await tap('#pop [data-act="ask-ok"]');
+  await tap('#pop [data-act="cd"][data-v="1"]'); // Track as loan
   let S = await state();
   const nl = S.loans.find(l => l.kind === "borrow" && l.person === "Swarna");
   const pay = S.txns
@@ -224,7 +221,7 @@ const ok = (c, m) => {
   await page.fill("#f-amt", "1200");
   await tap('#sheet [data-act="f-acc"][data-v="w"]');
   await tap('#sheet [data-act="loan-pay"]');
-  await tap('#pop [data-act="ask-ok"]');
+  await tap('#pop [data-act="cd"][data-v="1"]'); // Track as lending
   S = await state();
   const ml = S.loans.find(l => l.kind === "lend" && l.person === "Mimi");
   ok(
@@ -233,65 +230,46 @@ const ok = (c, m) => {
   );
   await tap('[data-act="undo"]');
 
-  // ---- 4b. the extra as income: the income form, where the user picks the category (none is assumed)
+  // ---- 4b. they paid more: the extra on top of the payment that clears the lending, with no form to fill
   await tap('[data-act="tab"][data-v="assets"]');
   await tap('.list [data-v="L1"]');
   await page.fill("#f-amt", "800");
   await tap('#sheet [data-act="f-acc"][data-v="k"]');
   await tap('#sheet [data-act="loan-pay"]');
-  ok((await txt('#pop [data-act="ask-alt"]')).includes("Track as income"), "the lending's extra: Track as income");
-  await tap('#pop [data-act="ask-alt"]');
-  const form = await page.evaluate(() => ({
-    title: document.querySelector("#sheet h2").textContent,
-    amt: document.querySelector("#f-amt").value,
-    note: document.querySelector("#f-note").value,
-    picked: document.querySelectorAll('#sheet [data-act="f-cat"][aria-pressed="true"]').length,
-    acc: (document.querySelector('#sheet [data-act="f-acc"][aria-pressed="true"]') || {}).dataset.v,
-  }));
-  ok(
-    form.title === "Money in" && /^300(\.00)?$/.test(form.amt) && form.note === "Extra from Swarna" && !form.picked,
-    "the income form: 300, its note, no category picked for the user " + JSON.stringify(form)
-  );
-  ok(form.acc === "k", "into the account the payment went to");
-  await tap('#sheet [data-act="tx-save"]');
-  ok((await txt("#snack")).includes("Pick a category") && (await state()).txns.length === 6, "it asks for one");
-  await tap('#sheet [data-act="close"]');
-  await page.waitForTimeout(150);
-  ok(
-    (await state()).txns.length === 6 && (await txt("#sheet h2")) === "Swarna",
-    "closing the form saves nothing and goes back to the lending"
-  );
-  await page.fill("#f-amt", "800");
-  await tap('#sheet [data-act="f-acc"][data-v="k"]');
-  await tap('#sheet [data-act="loan-pay"]');
-  await tap('#pop [data-act="ask-alt"]');
-  await tap('#sheet [data-act="f-cat"][data-v="gift"]');
-  await tap('#sheet [data-act="tx-save"]');
+  ok((await txt('#pop [data-act="cd"][data-v="0"]')).includes("Track as extra"), "the lending's extra: Track as extra");
+  await tap('#pop [data-act="cd"][data-v="0"]');
   S = await state();
-  const inc = S.txns.filter(t => t.type === "income");
+  const xp = S.txns.find(t => t.loan === "L1" && !t.principal && t.feeId);
+  const xt = xp && S.txns.find(t => t.id === xp.feeId);
   ok(
-    inc.length === 1 &&
-      inc[0].amount === 300 &&
-      inc[0].cat === "gift" &&
-      inc[0].account === "k" &&
-      S.txns.some(t => t.loan === "L1" && !t.principal && t.amount === 500) &&
+    xp &&
+      xp.amount === 500 &&
+      xt &&
+      xt.type === "income" &&
+      xt.amount === 300 &&
+      xt.feeOf === xp.id &&
+      xt.account === "k" &&
       !S.loans.some(l => l.kind === "borrow" && l.person === "Swarna"),
-    "saved together: the 500 that clears the lending, and 300 income under the chosen category (no new loan)"
+    "the 500 clears the lending, the 300 is its extra on top (no new loan) " + JSON.stringify([xp, xt])
   );
+  ok(!(await page.isVisible("#f-amt")), "no form to fill");
   ok((await bal("k")) === kb + 800, "Bkash got the full 800");
-  ok((await txt("#snack")).includes("lending cleared"), "one message: " + (await txt("#snack")));
+  ok(
+    (await txt("#snack")).includes("Swarna’s lending cleared · ") && (await txt("#snack")).includes("as an extra"),
+    "one message: " + (await txt("#snack"))
+  );
   await tap('[data-act="undo"]');
   ok((await state()).txns.length === 6, "one Undo removes both");
 
-  // ---- 4c. you paid more: the extra as that payment's fee (never spending)
+  // ---- 4c. you paid more: the extra as that payment's transfer charge (spending in Charges, under no category)
   await tap('[data-act="tab"][data-v="liabs"]');
   await tap('.list [data-v="B1"]');
   const wb = await bal("w");
   await page.fill("#f-amt", "1200");
   await tap('#sheet [data-act="f-acc"][data-v="w"]');
   await tap('#sheet [data-act="loan-pay"]');
-  ok((await txt('#pop [data-act="ask-alt"]')).includes("Track as a fee"), "the loan's extra: Track as a fee");
-  await tap('#pop [data-act="ask-alt"]');
+  ok((await txt('#pop [data-act="cd"][data-v="0"]')).includes("Track as charge"), "the loan's extra: Track as charge");
+  await tap('#pop [data-act="cd"][data-v="0"]');
   S = await state();
   const fp = S.txns.find(t => t.loan === "B1" && !t.principal && t.feeId);
   const ff = fp && S.txns.find(t => t.id === fp.feeId);
@@ -303,7 +281,10 @@ const ok = (c, m) => {
     (await bal("w")) === wb - 1200 && !S.loans.some(l => l.kind === "lend" && l.person === "Mimi"),
     "Wallet paid 1200, no new lending"
   );
-  ok(await page.evaluate(id => !isSpend(S.txns.find(t => t.id === id)), ff.id), "the fee is not spending");
+  ok(
+    await page.evaluate(id => isSpend(entry(id)) && spendCat(entry(id)) === CHARGES, ff.id),
+    "the fee is spending, in Charges"
+  );
   await tap('[data-act="undo"]');
   ok(!(await state()).txns.some(t => t.feeOf), "Undo removes the payment and its fee");
 
@@ -375,15 +356,18 @@ const ok = (c, m) => {
   await tap(".balbar");
   ok(await page.isVisible('#sheet [data-v="e1"]'), "banner opens today's entries");
   await tap('#sheet [data-v="e1"]');
+  await tap('#sheet .txo [data-act="tx-open"]');
   ok(await page.isVisible("#f-amt"), "entry opens");
   await tap('#sheet [data-act="close"]');
   await page.waitForTimeout(80);
   ok(await page.isVisible('#sheet [data-v="e1"]'), "✕ returns to the entries list");
   await tap('#sheet [data-v="e1"]');
+  await tap('#sheet .txo [data-act="tx-open"]');
   await page.evaluate(() => window.tallyBack());
   await page.waitForTimeout(80);
   ok(await page.isVisible('#sheet [data-v="e1"]'), "Android back returns to the list");
   await tap('#sheet [data-v="e1"]');
+  await tap('#sheet .txo [data-act="tx-open"]');
   await page.fill("#f-amt", "150");
   await tap('#sheet [data-act="tx-save"]');
   await page.waitForTimeout(80);
@@ -393,6 +377,8 @@ const ok = (c, m) => {
   );
   await tap('#sheet [data-v="e1"]');
   await tap('#sheet [data-act="tx-del"]');
+  await page.click("#pop .cd-destroy"); // Delete
+  await page.waitForTimeout(350);
   await page.waitForTimeout(80);
   ok(
     !!(await page.$("#sheet #ent-list")) &&
@@ -407,7 +393,7 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="go"][data-v="history"]');
   await page.waitForTimeout(80);
   ok(
-    (await page.isVisible(".month .plabel")) && !(await page.isVisible("#sheet .p")),
+    (await page.isVisible("#app .hpl")) && !(await page.isVisible("#sheet .p")),
     "Open full history still goes to History"
   );
   await tap('[data-act="home"]');

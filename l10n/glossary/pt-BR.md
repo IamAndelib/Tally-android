@@ -37,7 +37,8 @@ The same text is shown in Portugal, so slang that only works in Brazil is avoide
 | net worth | patrimônio líquido |
 | category | categoria |
 | payee (paid to / received from) | Pago a / Recebido de |
-| archive / archived | arquivar / arquivada |
+| archive / archived / unarchive | arquivar / arquivada / desarquivar |
+| Archived (the screen of archived entries) | Arquivados (lançamentos) |
 | backup / auto backup / restore | backup / backup automático / restaurar |
 | evening nudge | lembrete da noite |
 | balance check | conferir saldos (“Seus saldos ainda conferem?”) |

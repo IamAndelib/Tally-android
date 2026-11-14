@@ -22,7 +22,6 @@
     "save": "保存",
     "edit": "编辑",
     "note": "备注",
-    "optional": "选填",
     "account": "账户",
     "history": "明细",
     "enterAmount": "请输入金额",
@@ -34,9 +33,7 @@
     "previous": "上一个",
     "next": "下一个",
     "change": "更改",
-    "done": "完成",
-    "yes": "是",
-    "no": "否"
+    "done": "完成"
   },
   "day": {
     "today": "今天",
@@ -47,18 +44,17 @@
     "fallbackName": "账户",
     "addFirst": "请先添加账户",
     "archivedMsg": "{{name}}已归档",
-    "backMsg": "{{name}}已重新显示",
+    "backMsg": "{{name}}已取消归档",
     "archiveQ": "归档{{name}}？",
     "archiveHas": "账户里还有{{amount}}。归档的账户不计入总额，记录仍保留在明细中。",
     "archiveOwes": "账户还欠{{amount}}。归档的账户不计入总额，记录仍保留在明细中。",
     "archive": "归档",
     "archivedTag": "已归档",
-    "startedWith": "今天起始余额{{amount}}",
+    "startedWith": "今天开始时：{{amount}}",
     "mismatch": "对不上？",
-    "mismatchHint": "输入你现在实际有多少。Tally 会把差额记为一笔余额校正。",
+    "mismatchHint": "输入你现在有多少。差额会记为余额校正。",
     "actual": "实际余额",
     "update": "更新余额",
-    "unarchive": "重新显示",
     "edit": "编辑账户",
     "new": "新账户",
     "typeNow": "输入现在有多少",
@@ -71,9 +67,9 @@
     "type": "类型",
     "opening": "初始余额",
     "balanceNow": "当前余额",
-    "openingHint": "在这里记第一笔之前的余额。要更正今天的余额，请改用“对不上？”。",
+    "openingHint": "在这里记第一笔之前。",
     "cardHint": "信用卡？请把欠款输入为负数。",
-    "curLocked": "这个账户已有记录，货币无法更改。",
+    "curLockedAria": "货币：{{currency}}。已锁定：这个账户已有记录",
     "add": "添加账户",
     "delete": "删除账户",
     "nameIt": "请给账户起个名字",
@@ -104,17 +100,14 @@
     "to": "转入",
     "swap": "交换转出和转入",
     "sent": "转出金额",
-    "addFee": "添加手续费（ATM、提现）",
     "ok": "转账",
     "title": "转账",
     "edit": "编辑转账",
     "arrived": "{{account}}到账金额（{{cur}}）",
-    "inclFee": "（含手续费{{amount}}）",
     "pickBoth": "请选择两个账户",
     "pickTwo": "请选择两个不同的账户",
     "enterSent": "请输入转出金额",
     "enterArrived": "请输入到账金额（{{cur}}）",
-    "feeNegative": "手续费不能为负",
     "feeNote": "转账手续费",
     "done": "已转{{amount}}到{{account}}"
   },
@@ -132,14 +125,15 @@
     "on": "自动备份已开启 · 每天{{time}}",
     "found": {
       "title": "这个文件夹里已有 Tally 备份",
-      "body": "要在这部手机上恢复它，还是从现在起用这部手机的数据替换它？",
-      "restore": "恢复它",
-      "replace": "替换它"
+      "body": "要在这部手机上恢复它，还是用这部手机的数据覆盖它？",
+      "overwriteQ": "覆盖这个备份？",
+      "overwriteBody": "这个备份中的数据将丢失，被这部手机的数据替换。"
     },
     "badFile": {
-      "title": "无法读取这个文件夹里的备份",
-      "cantRead": "备份文件无法读取。",
-      "replaceQ": "从现在起用这部手机的数据替换它？"
+      "title": "Tally 无法读取这个文件夹里的备份",
+      "cantRead": "它可能已损坏，或由更新版本的 Tally 创建。",
+      "other": "选择其他文件夹",
+      "overwriteBody": "它无法读取，所以其中的所有内容都会丢失。"
     },
     "unavailable": "这里无法使用备份",
     "running": "正在备份…",
@@ -153,7 +147,8 @@
       "title": "要保护好你的数据吗？",
       "body": "开启每日备份：Tally 会在你选的文件夹里保存一份副本，手机丢了数据也不会丢。",
       "ok": "开启"
-    }
+    },
+    "overwrite": "覆盖"
   },
   "data": {
     "saveFailed": {
@@ -187,8 +182,11 @@
     "day": "日",
     "range": "时段",
     "month": "月",
+    "year": "年",
     "prevYear": "上一年",
     "nextYear": "下一年",
+    "earlierYears": "更早的年份",
+    "laterYears": "更晚的年份",
     "rangeEnd": "再点一下结束日",
     "rangeHint": "在日期上拖动，或先点开始日再点结束日"
   },
@@ -295,11 +293,14 @@
     "yellow": "黄色"
   },
   "ring": {
+    "charges": "费用",
     "add": "记一笔{{cat}}",
     "addShare": "记一笔{{cat}}，占支出的{{share}}",
     "tapCat": "点一个分类",
     "summary": "支出概览：已花{{spent}}",
     "summaryGot": "支出概览：已花{{spent}}，收入{{got}}",
+    "summaryCharges": "支出概览：已花{{spent}}，其中费用{{charges}}",
+    "summaryChargesGot": "支出概览：已花{{spent}}，其中费用{{charges}}，收入{{got}}",
     "switchCur": "当前显示{{cur}}。切换到{{next}}"
   },
   "donut": {
@@ -310,14 +311,55 @@
     "both": "支出 + 收入",
     "none": "不显示统计"
   },
-  "fee": {
-    "label": "手续费（{{cur}}）· 不计入支出",
-    "notNumber": "手续费不是有效的数字"
+  "xcharge": {
+    "label": "转账费用",
+    "calc": "转账费用计算器",
+    "remove": "移除转账费用"
+  },
+  "charge": {
+    "add": "添加费用",
+    "label": "费用",
+    "calc": "费用计算器",
+    "remove": "移除费用",
+    "notNumber": "费用不是有效的数字",
+    "negative": "费用不能为负"
+  },
+  "charges": {
+    "add": "添加费用",
+    "label": "费用",
+    "calc": "费用计算器",
+    "remove": "移除费用"
+  },
+  "extra": {
+    "add": "添加额外款",
+    "label": "额外款",
+    "calc": "额外款计算器",
+    "remove": "移除额外款",
+    "notNumber": "额外款不是有效的数字",
+    "negative": "额外款不能为负"
+  },
+  "addOn": {
+    "both": "转账费用和额外款"
+  },
+  "csv": {
+    "xchargeNote": "转账费用",
+    "chargeNote": "费用",
+    "chargesNote": "费用",
+    "extraNote": "额外款"
+  },
+  "prev": {
+    "loanX": "借入{{amount}} + 转账费用{{charge}}",
+    "loanCharges": "借入{{amount}} + 费用{{charges}}",
+    "loanChargesX": "借入{{amount}} + 费用{{charges}} + 转账费用{{charge}}",
+    "lendExtra": "借出{{amount}} + 额外款{{extra}}",
+    "lendOff": "借出{{amount}} − 费用{{charge}}",
+    "owes": "{{who}}欠{{amount}}",
+    "youOwe": "你欠{{amount}}",
+    "youOweWho": "你欠{{who}}{{amount}}",
+    "spend": "{{amount}} + 费用{{charge}}"
   },
   "loan": {
     "noDueYet": "还没有到期日",
-    "paybackHead": "还款日 · {{date}}",
-    "returnHead": "归还期限 · {{date}}",
     "st": {
       "active": "进行中",
       "partly": "部分已还",
@@ -330,11 +372,7 @@
     "blockPaid": "{{who}}：已还{{amount}}",
     "blockOrder": "{{who}}：{{date}}的还款会早于剩下的借款",
     "payDeleted": "还款已删除",
-    "from": "从{{account}}转出",
-    "into": "转入{{account}}",
-    "dueAmount": "{{date}}应还{{amount}}",
-    "paybackOn": "{{date}}还款",
-    "returnOn": "{{date}}前归还",
+    "rowDue": "{{date}}到期",
     "noDue": "无到期日",
     "lentOn": "{{date}}借出",
     "borrowedOn": "{{date}}借入",
@@ -342,10 +380,6 @@
     "mergeBorrow": "将计入你向{{who}}借的钱，你现在共欠{{amount}}。",
     "lentTo": "借给谁",
     "borrowedFrom": "向谁借",
-    "fromAccount": "转出账户",
-    "intoAccount": "转入账户",
-    "paybackDay": "还款日",
-    "returnBy": "归还期限",
     "pickDay": "选择日期",
     "saveLend": "保存借出",
     "saveBorrow": "保存借入",
@@ -363,10 +397,7 @@
     "gotBackQ": "收到还款了？",
     "paidBackQ": "还了一些？",
     "partOk": "只还一部分也可以。",
-    "payInto": "存入账户",
-    "payFrom": "付款账户",
-    "noPayAccount": "没有{{cur}}账户可以记录：请添加一个，或重新显示已归档的账户。",
-    "addFee": "添加手续费（转账费、提现）",
+    "noPayAccount": "没有{{cur}}账户可以记录：请添加一个，或将已归档的账户取消归档。",
     "record": "记录还款",
     "drawLent": "{{date}}从{{account}}借出",
     "drawBorrowed": "{{date}}借入到{{account}}",
@@ -375,7 +406,13 @@
     "paidOff": "已还清",
     "intoAcc": "存入{{account}}",
     "fromAcc": "从{{account}}付款",
-    "feeAmt": "手续费{{amount}}",
+    "xchargeAmt": "转账费用{{amount}}",
+    "chargeAmt": "−费用{{amount}}",
+    "chargesAmt": "费用{{amount}}",
+    "extraAmt": "额外款{{amount}}",
+    "extraIncl": "含额外款{{amount}}",
+    "chargesIncl": "含费用{{amount}}",
+    "tipAmt": "+额外款{{amount}}",
     "clearedLend": "借出已结清",
     "clearedBorrow": "借入已结清",
     "leftAfter": "还剩{{amount}}",
@@ -393,7 +430,6 @@
     "forgive": "标记为免还",
     "delLend": "删除借出",
     "delBorrow": "删除借入",
-    "dueOptional": "到期日（选填）",
     "editLend": "编辑借出",
     "editBorrow": "编辑借入",
     "editPayment": "编辑还款",
@@ -404,17 +440,23 @@
     "whoLend": "你借给了谁？",
     "whoBorrow": "谁借给你的？",
     "feeNote": "还款手续费",
-    "feeNegative": "手续费不能为负",
     "noAccountIn": "没有{{cur}}账户",
     "noAccountRecord": "没有{{cur}}账户可以记录",
     "msg": {
       "lent": "已借给{{who}}{{amount}}",
+      "lentOwes": "已借给{{who}}{{amount}} · {{who}}欠{{owed}}",
       "borrowed": "已向{{who}}借入{{amount}}",
+      "borrowedOwe": "已向{{who}}借入{{amount}} · 你欠{{owed}}",
       "reopened": "已重新打开",
       "writtenOff": "已记为坏账",
       "forgiven": "已标记为免还",
       "gotBack": "已收回{{amount}}",
+      "gotBackTip": "已收回{{amount}} + 额外款{{extra}}",
+      "gotBackIncl": "已收回{{amount}}，含额外款{{extra}}",
       "paidBack": "已还款{{amount}}",
+      "paidBackX": "已还款{{amount}} + 转账费用{{charge}}",
+      "paidBackIncl": "已还款{{amount}}，含费用{{charges}}",
+      "paidBackInclX": "已还款{{amount}}，含费用{{charges}} + 转账费用{{charge}}",
       "allCleared": "已全部结清",
       "owesAgain": "{{who}}又欠你{{amount}}了",
       "oweAgain": "你又欠{{who}}{{amount}}了"
@@ -422,17 +464,16 @@
     "over": {
       "lendToLoan": "借给{{who}}的钱已结清 · 你欠{{who}}{{amount}}",
       "loanToLend": "借入已结清 · {{who}}欠你{{amount}}",
-      "extraNote": "{{who}}多还的钱",
-      "lendCleared": "借给{{who}}的钱已结清",
-      "asFeeMsg": "借入已结清 · {{amount}}记为手续费",
+      "asExtraMsg": "借给{{who}}的钱已结清 · {{amount}}记为额外款",
+      "asChargeMsg": "借入已结清 · {{amount}}记为费用",
       "theyPaid": "{{who}}多还了{{amount}}",
       "youPaid": "你多还了{{amount}}",
-      "askLendOr": "多出的{{amount}}算什么？算作向{{who}}的借入（你现在欠对方），或者算作收入，比如对方承担的手续费。",
-      "askBorrowOr": "多出的{{amount}}算什么？算作借给{{who}}的钱（对方欠你），或者算作这笔还款的手续费，比如转账费或利息。",
+      "askLendOr": "{{who}}欠你{{owed}}。多出的{{amount}}是额外款（计为收入），还是向{{who}}借入、你要还的钱？",
+      "askBorrowOr": "你欠{{who}}{{owed}}。多出的{{amount}}是这笔还款的费用（计为支出），还是借给{{who}}、对方要还你的钱？",
       "asLoan": "记为借入",
       "asLend": "记为借出",
-      "asIncome": "记为收入",
-      "asFee": "记为手续费"
+      "asExtra": "记为额外款",
+      "asCharge": "记为费用"
     },
     "clear": {
       "titleLend": "结清借给{{who}}的钱？",
@@ -451,8 +492,6 @@
   "entry": {
     "gone": "这条记录已被删除",
     "whatFor": "属于哪一类？",
-    "into": "存入账户",
-    "paidFrom": "付款账户",
     "paidTo": "收款方",
     "receivedFrom": "付款方",
     "notePh": "备注（选填）",
@@ -463,7 +502,15 @@
     "pickCat": "请选择分类"
   },
   "entries": {
-    "fullHistory": "查看全部明细"
+    "fullHistory": "查看全部明细",
+    "archiveInstead": "改为归档",
+    "archived": "已归档",
+    "warnOne": "删除会改变账户余额。",
+    "warnLend": "删除会改变账户余额和这笔借出。",
+    "warnBorrow": "删除会改变账户余额和这笔借入。",
+    "warnMany": "删除会改变相关账户的余额。",
+    "delTitle_other": "删除{{count}}条记录？",
+    "delThis": "删除这条记录？"
   },
   "home": {
     "nothingYet": "还没有任何记录。",
@@ -473,7 +520,9 @@
     "addAccount": "添加账户",
     "accounts": "账户",
     "backToday": "回到今天",
-    "balance": "余额",
+    "total": "总计",
+    "totalIn": "{{cur}}总计",
+    "barSay": "{{entries}}。{{total}}",
     "entries_other": "{{count}}条记录",
     "addOut": "记支出",
     "transferLabel": "在账户之间转账",
@@ -515,10 +564,18 @@
     "region": "地区",
     "choose": "选择",
     "week": "每周第一天",
+    "opensOn": "首页默认显示",
+    "opens": {
+      "day": "今天",
+      "month": "本月",
+      "year": "今年"
+    },
     "clock": "时间格式",
     "h24": "24 小时制",
     "h12": "12 小时制",
     "reminders": "提醒",
+    "searchArch": "搜索包括已归档的记录",
+    "searchArchHint": "搜索时也会找到你归档的记录。",
     "outCats": "支出分类",
     "outCatsHint": "排列方式和首页完全一样。点按可编辑，长按拖动可移动。",
     "addOutCat": "添加支出分类",
@@ -561,38 +618,83 @@
     "mode": {
       "d": "按日",
       "w": "按周",
-      "m": "按月"
+      "m": "按月",
+      "y": "按年"
     },
     "weekOf": "{{date}}起的一周",
-    "spent": "支出",
+    "soFar": "{{year}}年至今",
     "earlier": "更早",
     "later": "更晚",
     "same": {
       "d": "与前一天持平",
       "w": "与上周持平",
-      "m": "与上月持平"
+      "m": "与上月持平",
+      "y": "与{{year}}年持平",
+      "yp": "与{{year}}年同期持平"
     },
     "up": {
       "d": "↑ 比前一天多{{pct}}",
       "w": "↑ 比上周多{{pct}}",
-      "m": "↑ 比上月多{{pct}}"
+      "m": "↑ 比上月多{{pct}}",
+      "y": "↑ 比{{year}}年多{{pct}}",
+      "yp": "↑ 比{{year}}年同期多{{pct}}"
     },
     "down": {
       "d": "↓ 比前一天少{{pct}}",
       "w": "↓ 比上周少{{pct}}",
-      "m": "↓ 比上月少{{pct}}"
+      "m": "↓ 比上月少{{pct}}",
+      "y": "↓ 比{{year}}年少{{pct}}",
+      "yp": "↓ 比{{year}}年同期少{{pct}}"
     },
     "avg": "日均{{amount}}",
     "none": {
       "d": "那天没有支出。",
       "w": "那周没有支出。",
-      "m": "{{month}}没有支出。"
+      "m": "{{month}}没有支出。",
+      "y": "{{year}}年没有支出。"
     },
     "open": {
       "d": "在首页打开这一天",
       "w": "在首页打开这一周",
-      "m": "在首页打开这个月"
-    }
+      "m": "在首页打开这个月",
+      "y": "在首页打开这一年"
+    },
+    "charges": "费用",
+    "say": "{{name}}，{{amount}}",
+    "sayShare": "{{name}}，{{amount}}，{{share}}",
+    "under": "低于{{pct}}",
+    "showAll_other": "在明细中查看全部{{count}}条"
+  },
+  "search": {
+    "title": "搜索",
+    "clear": "清除",
+    "spent": "支出{{amount}}",
+    "received": "收入{{amount}}",
+    "field": "搜索明细",
+    "suggestions": "建议",
+    "entries": "记录",
+    "recent": "最近搜索",
+    "forget": "删除：{{text}}",
+    "clearRecent": "清除所有最近搜索",
+    "forgotten": "已从最近搜索中移除“{{text}}”",
+    "clearedAll": "已清除最近搜索",
+    "group": {
+      "pay": "收款方",
+      "payIn": "付款方",
+      "cat": "分类",
+      "acc": "账户",
+      "who": "人员",
+      "whoLend": "借出",
+      "whoBorrow": "借入",
+      "kind": "类型",
+      "period": "时间段",
+      "amount": "金额"
+    },
+    "sugLine_other": "{{group}} · {{count}}条记录",
+    "sugLabel_other": "{{group}} {{title}}, {{count}}条记录",
+    "nothing": "没有与“{{q}}”相符的内容",
+    "noteLine": "备注：{{note}}",
+    "fixBtn_other": "搜索“{{word}}” · {{count}}条记录"
   },
   "nav": {
     "home": "首页",
@@ -602,9 +704,8 @@
   "assets": {
     "dragTip": "提示：长按一行，拖到上方空位即可恢复。",
     "netWorth": "净资产",
-    "netWorthHint": "你拥有的加上别人欠你的，减去你欠别人的",
     "noAccounts": "还没有账户",
-    "dropShow": "拖到这里重新显示",
+    "dropShow": "拖到这里取消归档",
     "showArchived": "显示已归档（{{count}}）",
     "hideArchived": "隐藏已归档（{{count}}）",
     "dropArchive": "拖到这里归档",
@@ -624,7 +725,7 @@
     "owe": "你欠的",
     "loans": "借入",
     "loansHint": "你借入的钱会显示在这里，直到还清。",
-    "borrowBtn": "记一笔借入",
+    "borrowBtn": "借入",
     "cards": "信用卡"
   },
   "tx": {
@@ -632,24 +733,119 @@
     "borrowedFrom": "向{{who}}借入",
     "theyPaidBack": "{{who}}还款",
     "youPaidBack": "还给{{who}}",
-    "lending": "借出",
-    "loan": "借入",
-    "feeGotBack": "从{{who}}收回",
-    "feePaidBack": "还给{{who}}"
+    "addedAt": "添加于{{time}}",
+    "addedOn": "添加于{{date}} {{time}}",
+    "leftAfter": "之后剩余",
+    "inAcc": "在{{account}}",
+    "xchargeOn": "+转账费用{{amount}}",
+    "chargeIncl": "含费用{{amount}}",
+    "chargesIncl": "含费用{{amount}}",
+    "extraIncl": "含额外款{{amount}}",
+    "extraOn": "+额外款{{amount}}",
+    "chargeOff": "−费用{{amount}}",
+    "sent": "转出",
+    "paidBack": "已还",
+    "gotBack": "已收回",
+    "lent": "借出",
+    "borrowed": "借入",
+    "charge": "费用",
+    "xcharge": "转账费用",
+    "charges": "费用",
+    "extra": "额外款",
+    "asIncome": "计为收入",
+    "asSpending": "计为支出",
+    "leftExtra": "剩余：本金{{money}}，然后是额外款{{extra}}",
+    "leftCharges": "剩余：本金{{money}}，然后是费用{{charges}}",
+    "due": "到期",
+    "was": "原来",
+    "now": "现在",
+    "youOwe": "你欠{{who}}",
+    "owesYou": "{{who}}欠你",
+    "cleared": "已结清",
+    "paidOf": "已还{{paid}}，共{{total}}",
+    "backOf": "已收回{{paid}}，共{{total}}"
   },
   "history": {
     "stopSel": "退出选择",
-    "selected_other": "已选{{count}}项",
+    "selected_other": "已选 {{count}} 项",
     "selAll": "全选",
+    "clearSel": "清除选择",
     "delSel": "删除所选",
+    "archSel": "归档所选",
     "select": "选择记录",
-    "all": "全部",
+    "allTime": "全部时间",
     "none": {
-      "day": "那天没有记录。",
-      "month": "那个月没有记录。",
-      "range": "这段时间没有记录。"
+      "all": "还没有记录。",
+      "archived": "所有记录都已归档。"
     },
-    "deleted_other": "已删除{{count}}条记录"
+    "deleted_other": "已删除{{count}}条记录",
+    "words": {
+      "moved": "转账{{amount}}",
+      "lent": "借出{{amount}}",
+      "gotBack": "收回{{amount}}",
+      "borrowed": "借入{{amount}}",
+      "paidBack": "还款{{amount}}",
+      "added": "增加{{amount}}",
+      "takenOff": "减少{{amount}}",
+      "charges": "费用{{amount}}",
+      "extras": "额外款{{amount}}"
+    },
+    "headSay": "{{title}}，{{parts}}",
+    "filters": "筛选",
+    "filtersN": "筛选 · {{count}}",
+    "choosePeriod": "选择时间段：{{period}}",
+    "showAll": "显示全部时间",
+    "removeFilter": "移除筛选：{{name}}",
+    "clearAll": "全部清除",
+    "noMatch": "没有符合这些筛选的记录",
+    "count_other": "{{count}}条记录",
+    "kind": {
+      "out": "支出",
+      "in": "收入",
+      "xfer": "转账",
+      "lend": "借出",
+      "borrow": "借入",
+      "fix": "余额校正",
+      "charges": "费用",
+      "extras": "额外款"
+    },
+    "kindWords": {
+      "charges": "手续费, 服务费, 佣金, 利息",
+      "extras": "小费, 利息"
+    },
+    "fromAcc": "转出：{{account}}",
+    "toAcc": "转入：{{account}}",
+    "payOut": "付给{{name}}",
+    "payIn": "来自{{name}}",
+    "amtRange": "{{from}}至{{to}}",
+    "amtMore": "高于{{amount}}",
+    "amtLess": "低于{{amount}}",
+    "lentTo": "借给{{who}}",
+    "borrowedFrom": "向{{who}}借入",
+    "all": "全部",
+    "transactions": "类型",
+    "category": "分类",
+    "lentSec": "借给谁",
+    "borrowedSec": "向谁借",
+    "between": "之间",
+    "everyone": "所有人",
+    "anyAccount": "任意账户",
+    "fromAny": "转出：任意账户",
+    "toAny": "转入：任意账户",
+    "oneSide": "其中一方是{{account}}",
+    "showNone": "没有记录",
+    "swap": "交换转出和转入",
+    "show_other": "显示{{count}}条记录",
+    "savedGone": "已保存 · 已不在此列表中"
+  },
+  "archive": {
+    "title": "已归档",
+    "open": "已归档的记录",
+    "unarchive": "取消归档",
+    "back": "已放回明细",
+    "none": "没有已归档的记录。",
+    "noneHint": "你归档的记录会留在这里，所有余额都保持不变。",
+    "mark": "已归档"
   },
   "remind": {
     "nudge": "晚间提醒",
@@ -657,7 +853,7 @@
     "check": "余额核对",
     "checkHint": "你的余额还对得上吗？",
     "dues": "借贷到期日",
-    "duesHint": "到期当天提醒，可选 +1 天 / +1 周",
+    "duesHint": "到期当天提醒；没有到期日则每月提醒",
     "nudgeAt": "晚间提醒时间",
     "checkAt": "余额核对时间",
     "duesAt": "到期提醒时间"
@@ -670,8 +866,8 @@
     "entries_other": "{{count}}条记录",
     "autoQ": "恢复“{{file}}”？",
     "q": "恢复这个备份？",
-    "body": "将用{{accounts}}和{{entries}}替换这部手机上的所有内容。",
-    "bodySaved": "将用{{accounts}}和{{entries}}替换这部手机上的所有内容 · 保存于{{when}}。",
+    "body": "这部手机的数据将被备份中的数据替换：{{accounts}}和{{entries}}。",
+    "bodySaved": "这部手机的数据将被备份中的数据替换：{{accounts}}和{{entries}}，保存于{{when}}。",
     "lost_other": "其中有{{count}}项无法读取，将被略过。",
     "newer": "这个备份来自更新版本的 Tally：请先更新 Tally，以免遗漏内容。",
     "ok": "恢复",
@@ -698,12 +894,12 @@
     },
     "none": {
       "title": "还没有备份",
-      "body": "删除数据前，要先保存一份备份吗？"
+      "body": "删除全部内容前，要先保存一份备份吗？"
     },
-    "skip": "跳过",
     "title": "删除所有数据？",
-    "body": "这部手机上的所有账户和记录都会被删除，且无法撤销。",
-    "done": "所有数据已删除"
+    "body": "这部手机上的所有账户和记录都将丢失。",
+    "done": "所有数据已删除",
+    "noBackup": "不备份直接删除"
   },
   "native": {
     "err": {
@@ -744,5 +940,9 @@
   },
   "lang": {
     "name": "简体中文"
+  },
+  "suggest": {
+    "removeName": "从建议中移除“{{name}}”",
+    "removed": "已从建议中移除“{{name}}”"
   }
 }

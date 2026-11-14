@@ -1,0 +1,5 @@
+- Recherche dans l’Historique, et l’Historique depuis le début avec des Filtres : compte, type, catégorie, personne.
+- Archivez une opération au lieu de la supprimer : les soldes restent tels quels.
+- Une année comme période sur l’Accueil, dans l’Historique et dans le résumé des dépenses.
+- Frais et suppléments : frais de distributeur, TVA ou pourboire, comptés comme dépense ou revenu.
+- Maintenez et faites glisser pour réordonner les comptes, les emprunts et les soldes de l’Accueil.

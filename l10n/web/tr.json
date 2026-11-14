@@ -22,7 +22,6 @@
     "save": "Kaydet",
     "edit": "Düzenle",
     "note": "Not",
-    "optional": "İsteğe bağlı",
     "account": "Hesap",
     "history": "Geçmiş",
     "enterAmount": "Bir tutar gir",
@@ -34,9 +33,7 @@
     "previous": "Önceki",
     "next": "Sonraki",
     "change": "Değiştir",
-    "done": "Bitti",
-    "yes": "Evet",
-    "no": "Hayır"
+    "done": "Bitti"
   },
   "day": {
     "today": "Bugün",
@@ -53,12 +50,11 @@
     "archiveOwes": "Hâlâ {{amount}} borcu var. Arşivdeki hesaplar toplamlara katılmaz; kayıtları Geçmiş’te kalır.",
     "archive": "Arşivle",
     "archivedTag": "arşivde",
-    "startedWith": "Güne {{amount}} ile başladı",
+    "startedWith": "Günün başında: {{amount}}",
     "mismatch": "Tutmuyor mu?",
-    "mismatchHint": "Şu an gerçekte ne kadar varsa onu yaz. Tally farkı bakiye düzeltmesi olarak kaydeder.",
+    "mismatchHint": "Şu an ne kadar varsa onu yaz. Fark bakiye düzeltmesi olur.",
     "actual": "Gerçek bakiye",
     "update": "Bakiyeyi güncelle",
-    "unarchive": "Tekrar göster",
     "edit": "Hesabı düzenle",
     "new": "Yeni hesap",
     "typeNow": "Şu an ne kadar var, yaz",
@@ -71,9 +67,9 @@
     "type": "Tür",
     "opening": "Başlangıç bakiyesi",
     "balanceNow": "Şu anki bakiye",
-    "openingHint": "Buradaki ilk kayıttan önce içinde ne vardı. Bugünkü bakiyeyi düzeltmek içinse “Tutmuyor mu?” seçeneğini kullan.",
+    "openingHint": "Buradaki ilk kayıttan önce.",
     "cardHint": "Kredi kartı mı? Borcunu eksi sayı olarak gir.",
-    "curLocked": "Bu hesapta kayıt olduğu için para birimi değiştirilemez.",
+    "curLockedAria": "Para birimi: {{currency}}. Kilitli: bu hesapta kayıt var",
     "add": "Hesap ekle",
     "delete": "Hesabı sil",
     "nameIt": "Hesaba bir ad ver",
@@ -104,17 +100,14 @@
     "to": "Nereye",
     "swap": "Yönü değiştir",
     "sent": "Gönderilen tutar",
-    "addFee": "Masraf ekle (ATM, para çekme)",
     "ok": "Transfer et",
     "title": "Transfer",
     "edit": "Transferi düzenle",
     "arrived": "{{account}} hesabına geçen tutar ({{cur}})",
-    "inclFee": "({{amount}} masraf dahil)",
     "pickBoth": "İki hesabı da seç",
     "pickTwo": "İki farklı hesap seç",
     "enterSent": "Gönderilen tutarı gir",
     "enterArrived": "{{cur}} olarak ne kadar geçtiğini gir",
-    "feeNegative": "Masraf eksi olamaz",
     "feeNote": "Transfer masrafı",
     "done": "{{account}} hesabına {{amount}} aktarıldı"
   },
@@ -132,14 +125,15 @@
     "on": "Otomatik yedek açık · her gün {{time}}",
     "found": {
       "title": "Bu klasörde zaten bir Tally yedeği var",
-      "body": "Bu telefona geri yüklensin mi, yoksa bundan sonra bu telefonun verileriyle değiştirilsin mi?",
-      "restore": "Geri yükle",
-      "replace": "Değiştir"
+      "body": "Bu telefona geri yüklensin mi, yoksa bu telefonun verileriyle üzerine mi yazılsın?",
+      "overwriteQ": "Bu yedeğin üzerine yazılsın mı?",
+      "overwriteBody": "Bu yedekteki veriler kaybolacak, yerine bu telefonun verileri gelecek."
     },
     "badFile": {
-      "title": "Bu klasördeki yedek okunamadı",
-      "cantRead": "Yedek dosyası okunamıyor.",
-      "replaceQ": "Bundan sonra bu telefonun verileriyle değiştirilsin mi?"
+      "title": "Tally bu klasördeki yedeği okuyamıyor",
+      "cantRead": "Hasarlı olabilir ya da Tally'nin daha yeni bir sürümüyle yapılmış olabilir.",
+      "other": "Başka klasör seç",
+      "overwriteBody": "Okunamıyor, bu yüzden içindeki her şey kaybolacak."
     },
     "unavailable": "Yedekleme burada kullanılamıyor",
     "running": "Yedekleniyor…",
@@ -153,7 +147,8 @@
       "title": "Verilerin güvende olsun mu?",
       "body": "Günlük yedeği aç: Tally seçtiğin bir klasörde bir kopya tutar, telefon gitse de hiçbir şey kaybolmaz.",
       "ok": "Aç"
-    }
+    },
+    "overwrite": "Üzerine yaz"
   },
   "data": {
     "saveFailed": {
@@ -187,8 +182,11 @@
     "day": "Gün",
     "range": "Aralık",
     "month": "Ay",
+    "year": "Yıl",
     "prevYear": "Önceki yıl",
     "nextYear": "Sonraki yıl",
+    "earlierYears": "Önceki yıllar",
+    "laterYears": "Sonraki yıllar",
     "rangeEnd": "Şimdi bitiş gününe dokun",
     "rangeHint": "Günlerin üzerinde sürükle ya da önce başlangıca, sonra bitişe dokun"
   },
@@ -296,11 +294,14 @@
     "yellow": "Sarı"
   },
   "ring": {
+    "charges": "Masraflar",
     "add": "{{cat}} ekle",
     "addShare": "{{cat}} ekle, harcamadaki payı {{share}}",
     "tapCat": "Bir kategoriye dokun",
     "summary": "Harcama özeti: {{spent}} harcandı",
     "summaryGot": "Harcama özeti: {{spent}} harcandı, {{got}} geldi",
+    "summaryCharges": "Harcama özeti: {{spent}} harcandı, bunun {{charges}} tutarı masraf",
+    "summaryChargesGot": "Harcama özeti: {{spent}} harcandı, bunun {{charges}} tutarı masraf, {{got}} geldi",
     "switchCur": "{{cur}} gösteriliyor. {{next}} para birimine geç"
   },
   "donut": {
@@ -311,14 +312,55 @@
     "both": "Harcama + gelir",
     "none": "İstatistik yok"
   },
-  "fee": {
-    "label": "Alınan masraf ({{cur}}) · harcamaya sayılmaz",
-    "notNumber": "Bu masraf bir sayı değil"
+  "xcharge": {
+    "label": "Transfer masrafı",
+    "calc": "Transfer masrafı için hesap makinesi",
+    "remove": "Transfer masrafını kaldır"
+  },
+  "charge": {
+    "add": "Masraf ekle",
+    "label": "Masraf",
+    "calc": "Masraf için hesap makinesi",
+    "remove": "Masrafı kaldır",
+    "notNumber": "Bu masraf bir sayı değil",
+    "negative": "Masraf eksi olamaz"
+  },
+  "charges": {
+    "add": "Masrafları ekle",
+    "label": "Masraflar",
+    "calc": "Masraflar için hesap makinesi",
+    "remove": "Masrafları kaldır"
+  },
+  "extra": {
+    "add": "Ekstra ekle",
+    "label": "Ekstra",
+    "calc": "Ekstra için hesap makinesi",
+    "remove": "Ekstrayı kaldır",
+    "notNumber": "Bu ekstra bir sayı değil",
+    "negative": "Ekstra eksi olamaz"
+  },
+  "addOn": {
+    "both": "Transfer masrafı ve ekstra"
+  },
+  "csv": {
+    "xchargeNote": "Transfer masrafı",
+    "chargeNote": "Masraf",
+    "chargesNote": "Masraflar",
+    "extraNote": "Ekstra"
+  },
+  "prev": {
+    "loanX": "borç {{amount}} + transfer masrafı {{charge}}",
+    "loanCharges": "borç {{amount}} + masraflar {{charges}}",
+    "loanChargesX": "borç {{amount}} + masraflar {{charges}} + transfer masrafı {{charge}}",
+    "lendExtra": "alacak {{amount}} + ekstra {{extra}}",
+    "lendOff": "alacak {{amount}} − masraf {{charge}}",
+    "owes": "{{who}} {{amount}} borçlu",
+    "youOwe": "{{amount}} borçlusun",
+    "youOweWho": "{{who}} kişisine {{amount}} borçlusun",
+    "spend": "{{amount}} + masraf {{charge}}"
   },
   "loan": {
     "noDueYet": "Henüz vade yok",
-    "paybackHead": "Geri ödeme günü · {{date}}",
-    "returnHead": "Son ödeme günü · {{date}}",
     "st": {
       "active": "Açık",
       "partly": "Kısmen ödendi",
@@ -331,11 +373,7 @@
     "blockPaid": "{{who}}: zaten {{amount}} geri ödendi",
     "blockOrder": "{{who}}: {{date}} tarihli bir ödeme diğerlerinden önce geliyor",
     "payDeleted": "Ödeme silindi",
-    "from": "{{account}} hesabından",
-    "into": "{{account}} hesabına",
-    "dueAmount": "{{date}}: {{amount}} ödenecek",
-    "paybackOn": "Geri ödeme: {{date}}",
-    "returnOn": "Son ödeme: {{date}}",
+    "rowDue": "Vade {{date}}",
     "noDue": "Vade yok",
     "lentOn": "Verildi: {{date}}",
     "borrowedOn": "Alındı: {{date}}",
@@ -343,15 +381,11 @@
     "mergeBorrow": "{{who}} kişisine olan borcuna eklenir: artık toplam {{amount}} borcun var.",
     "lentTo": "Kime",
     "borrowedFrom": "Kimden",
-    "fromAccount": "Hangi hesaptan",
-    "intoAccount": "Hangi hesaba",
-    "paybackDay": "Geri ödeme günü",
-    "returnBy": "Son ödeme günü",
     "pickDay": "Gün seç",
     "saveLend": "Alacağı kaydet",
     "saveBorrow": "Borcu kaydet",
     "newLend": "Borç ver",
-    "newBorrow": "Borç aldım",
+    "newBorrow": "Borç al",
     "gone": "O borç silinmiş",
     "youLent": "{{account}} hesabından borç verdin · {{date}}",
     "youBorrowed": "{{account}} hesabına borç aldın · {{date}}",
@@ -366,10 +400,7 @@
     "gotBackQ": "Para geri geldi mi?",
     "paidBackQ": "Bir kısmını ödedin mi?",
     "partOk": "Bir kısmı da olur.",
-    "payInto": "Hangi hesaba",
-    "payFrom": "Hangi hesaptan",
-    "noPayAccount": "Kaydetmek için {{cur}} hesabı yok: bir tane ekle ya da arşivdekini tekrar göster.",
-    "addFee": "Masraf ekle (gönderim, para çekme)",
+    "noPayAccount": "Kaydetmek için {{cur}} hesabı yok: bir tane ekle ya da bir hesabı arşivden çıkar.",
     "record": "Ödemeyi kaydet",
     "drawLent": "{{date}}: {{account}} hesabından verildi",
     "drawBorrowed": "{{date}}: {{account}} hesabına alındı",
@@ -378,7 +409,13 @@
     "paidOff": "ödendi",
     "intoAcc": "{{account}} hesabına",
     "fromAcc": "{{account}} hesabından",
-    "feeAmt": "{{amount}} masraf",
+    "xchargeAmt": "{{amount}} transfer masrafı",
+    "chargeAmt": "− {{amount}} masraf",
+    "chargesAmt": "{{amount}} masraflar",
+    "extraAmt": "{{amount}} ekstra",
+    "extraIncl": "{{amount}} ekstra dahil",
+    "chargesIncl": "{{amount}} masraflar dahil",
+    "tipAmt": "+{{amount}} ekstra",
     "clearedLend": "bununla alacak kapandı",
     "clearedBorrow": "bununla borç kapandı",
     "leftAfter": "bundan sonra {{amount}} kaldı",
@@ -396,7 +433,6 @@
     "forgive": "Affedildi say",
     "delLend": "Alacağı sil",
     "delBorrow": "Borcu sil",
-    "dueOptional": "Vade (isteğe bağlı)",
     "editLend": "Alacağı düzenle",
     "editBorrow": "Borcu düzenle",
     "editPayment": "Ödemeyi düzenle",
@@ -407,17 +443,23 @@
     "whoLend": "Kime borç verdin?",
     "whoBorrow": "Sana kim borç verdi?",
     "feeNote": "Ödeme masrafı",
-    "feeNegative": "Masraf eksi olamaz",
     "noAccountIn": "{{cur}} hesabı yok",
     "noAccountRecord": "Kaydetmek için {{cur}} hesabı yok",
     "msg": {
       "lent": "{{amount}} borç verdin · {{who}}",
+      "lentOwes": "{{who}} kişisine {{amount}} borç verdin · {{who}} {{owed}} borçlu",
       "borrowed": "{{amount}} borç aldın · {{who}}",
+      "borrowedOwe": "{{who}} kişisinden {{amount}} borç aldın · {{owed}} borçlusun",
       "reopened": "Yeniden açıldı",
       "writtenOff": "Vazgeçildi",
       "forgiven": "Affedildi",
       "gotBack": "{{amount}} geri aldın",
+      "gotBackTip": "{{amount}} geri aldın + {{extra}} ekstra",
+      "gotBackIncl": "{{amount}} geri aldın, {{extra}} ekstra dahil",
       "paidBack": "{{amount}} geri ödedin",
+      "paidBackX": "{{amount}} geri ödedin + {{charge}} transfer masrafı",
+      "paidBackIncl": "{{amount}} geri ödedin, {{charges}} masraflar dahil",
+      "paidBackInclX": "{{amount}} geri ödedin, {{charges}} masraflar dahil + {{charge}} transfer masrafı",
       "allCleared": "hepsi kapandı",
       "owesAgain": "{{who}} yine sana {{amount}} borçlu",
       "oweAgain": "{{who}}: yine {{amount}} borcun var"
@@ -425,17 +467,16 @@
     "over": {
       "lendToLoan": "Alacak kapandı · {{who}}: artık {{amount}} borcun var",
       "loanToLend": "Borç kapandı · {{who}} artık sana {{amount}} borçlu",
-      "extraNote": "Fazla ödeme · {{who}}",
-      "lendCleared": "Alacak kapandı · {{who}}",
-      "asFeeMsg": "Borç kapandı · {{amount}} masraf olarak",
+      "asExtraMsg": "Alacak kapandı · {{who}}: {{amount}} ekstra olarak",
+      "asChargeMsg": "Borç kapandı · {{amount}} masraf olarak",
       "theyPaid": "{{who}} {{amount}} fazla ödedi",
       "youPaid": "{{amount}} fazla ödedin",
-      "askLendOr": "Fazladan gelen {{amount}} ne? Bir borç olabilir ({{who}} sana borç verdi, artık sen borçlusun) ya da gelir, örneğin onun karşıladığı bir masraf.",
-      "askBorrowOr": "Fazladan giden {{amount}} ne? Bir alacak olabilir (artık {{who}} sana borçlu) ya da bu ödemenin masrafı, örneğin gönderim ücreti veya faiz.",
+      "askLendOr": "{{who}} sana {{owed}} borçluydu. Fazladan gelen {{amount}} bir ekstra mı (gelir sayılır), yoksa {{who}} kişisinden aldığın ve geri ödeyeceğin bir borç mu?",
+      "askBorrowOr": "{{who}} kişisine {{owed}} borcun vardı. Fazladan giden {{amount}} bu ödemenin masrafı mı (harcama sayılır), yoksa {{who}} kişisine verdiğin ve sana geri ödeyeceği bir alacak mı?",
       "asLoan": "Borç olarak kaydet",
       "asLend": "Alacak olarak kaydet",
-      "asIncome": "Gelir olarak kaydet",
-      "asFee": "Masraf olarak kaydet"
+      "asExtra": "Ekstra olarak kaydet",
+      "asCharge": "Masraf olarak kaydet"
     },
     "clear": {
       "titleLend": "{{who}}: alacak kapatılsın mı?",
@@ -454,19 +495,26 @@
   "entry": {
     "gone": "O kayıt silinmiş",
     "whatFor": "Ne içindi?",
-    "into": "Hangi hesaba",
-    "paidFrom": "Hangi hesaptan",
     "paidTo": "Ödenen",
     "receivedFrom": "Gönderen",
     "notePh": "Not (isteğe bağlı)",
-    "editIn": "Gelen parayı düzenle",
+    "editIn": "Geliri düzenle",
     "editOut": "Harcamayı düzenle",
-    "newIn": "Gelen para",
+    "newIn": "Gelir",
     "newOut": "Harcama",
     "pickCat": "Bir kategori seç"
   },
   "entries": {
-    "fullHistory": "Tüm geçmişi aç"
+    "fullHistory": "Tüm geçmişi aç",
+    "archiveInstead": "Bunun yerine arşivle",
+    "archived": "Arşivlendi",
+    "warnOne": "Silmek hesap bakiyesini değiştirir.",
+    "warnLend": "Silmek hesap bakiyesini ve alacağı değiştirir.",
+    "warnBorrow": "Silmek hesap bakiyesini ve borcu değiştirir.",
+    "warnMany": "Silmek hesap bakiyelerini değiştirir.",
+    "delTitle_one": "{{count}} kayıt silinsin mi?",
+    "delTitle_other": "Bu {{count}} kayıt silinsin mi?",
+    "delThis": "Bu kayıt silinsin mi?"
   },
   "home": {
     "nothingYet": "Henüz hiçbir şey yazılmadı.",
@@ -476,13 +524,15 @@
     "addAccount": "Hesap ekle",
     "accounts": "Hesaplar",
     "backToday": "Bugüne dön",
-    "balance": "Bakiye",
+    "total": "Toplam",
+    "totalIn": "{{cur}} cinsinden toplam",
+    "barSay": "{{entries}}. {{total}}",
     "entries_one": "{{count}} kayıt",
     "entries_other": "{{count}} kayıt",
     "addOut": "Harcama ekle",
     "transferLabel": "Hesaplar arası transfer",
     "transfer": "Transfer",
-    "addIn": "Gelen para ekle",
+    "addIn": "Gelir ekle",
     "loan": "Borç al",
     "lend": "Borç ver",
     "morning": "Günaydın",
@@ -519,10 +569,18 @@
     "region": "Bölge",
     "choose": "Seç",
     "week": "Haftanın ilk günü",
+    "opensOn": "Ana sayfa açılınca",
+    "opens": {
+      "day": "Bugün",
+      "month": "Bu ay",
+      "year": "Bu yıl"
+    },
     "clock": "Saat biçimi",
     "h24": "24 saat",
     "h12": "12 saat",
     "reminders": "Hatırlatmalar",
+    "searchArch": "Aramada arşivdeki kayıtlar",
+    "searchArchHint": "Arama, arşivlediğin kayıtları da bulur.",
     "outCats": "Harcama kategorileri",
     "outCatsHint": "Ana ekrandaki düzenin aynısı. Düzenlemek için dokun, taşımak için basılı tutup sürükle.",
     "addOutCat": "Harcama kategorisi ekle",
@@ -566,38 +624,87 @@
     "mode": {
       "d": "Günler",
       "w": "Haftalar",
-      "m": "Aylar"
+      "m": "Aylar",
+      "y": "Yıl"
     },
     "weekOf": "{{date}} haftası",
-    "spent": "harcandı",
+    "soFar": "{{year}} şu ana kadar",
     "earlier": "Önceki",
     "later": "Sonraki",
     "same": {
       "d": "Önceki günle aynı",
       "w": "Geçen haftayla aynı",
-      "m": "Geçen ayla aynı"
+      "m": "Geçen ayla aynı",
+      "y": "{{year}} ile aynı",
+      "yp": "{{year}} yılının aynı aylarıyla aynı"
     },
     "up": {
       "d": "↑ {{pct}}, önceki güne göre",
       "w": "↑ {{pct}}, geçen haftaya göre",
-      "m": "↑ {{pct}}, geçen aya göre"
+      "m": "↑ {{pct}}, geçen aya göre",
+      "y": "↑ {{pct}}, {{year}} yılına göre",
+      "yp": "↑ {{pct}}, {{year}} yılının aynı aylarına göre"
     },
     "down": {
       "d": "↓ {{pct}}, önceki güne göre",
       "w": "↓ {{pct}}, geçen haftaya göre",
-      "m": "↓ {{pct}}, geçen aya göre"
+      "m": "↓ {{pct}}, geçen aya göre",
+      "y": "↓ {{pct}}, {{year}} yılına göre",
+      "yp": "↓ {{pct}}, {{year}} yılının aynı aylarına göre"
     },
     "avg": "Günde ort. {{amount}}",
     "none": {
       "d": "O gün hiç harcama yok.",
       "w": "O hafta hiç harcama yok.",
-      "m": "{{month}}: hiç harcama yok."
+      "m": "{{month}}: hiç harcama yok.",
+      "y": "{{year}}: hiç harcama yok."
     },
     "open": {
       "d": "Bu günü Ana sayfada aç",
       "w": "Bu haftayı Ana sayfada aç",
-      "m": "Bu ayı Ana sayfada aç"
-    }
+      "m": "Bu ayı Ana sayfada aç",
+      "y": "Bu yılı Ana sayfada aç"
+    },
+    "charges": "Masraflar",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "{{pct}} altı",
+    "showAll_one": "{{count}} kaydı Geçmiş’te göster",
+    "showAll_other": "{{count}} kaydın tümünü Geçmiş’te göster"
+  },
+  "search": {
+    "title": "Ara",
+    "clear": "Temizle",
+    "spent": "{{amount}} harcandı",
+    "received": "{{amount}} alındı",
+    "field": "Geçmişte ara",
+    "suggestions": "Öneriler",
+    "entries": "Kayıtlar",
+    "recent": "Son aramalar",
+    "forget": "Unut: {{text}}",
+    "clearRecent": "Tüm son aramaları temizle",
+    "forgotten": "“{{text}}” son aramalardan kaldırıldı",
+    "clearedAll": "Son aramalar temizlendi",
+    "group": {
+      "pay": "Ödenen",
+      "payIn": "Gönderen",
+      "cat": "Kategori",
+      "acc": "Hesap",
+      "who": "Kişi",
+      "whoLend": "Borç verdin",
+      "whoBorrow": "Borç aldın",
+      "kind": "Tür",
+      "period": "Dönem",
+      "amount": "Tutar"
+    },
+    "sugLine_one": "{{group}} · {{count}} kayıt",
+    "sugLabel_one": "{{group}} {{title}}, {{count}} kayıt",
+    "sugLine_other": "{{group}} · {{count}} kayıt",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} kayıt",
+    "nothing": "“{{q}}” ile eşleşen yok",
+    "noteLine": "Not: {{note}}",
+    "fixBtn_one": "“{{word}}” ara · {{count}} kayıt",
+    "fixBtn_other": "“{{word}}” ara · {{count}} kayıt"
   },
   "nav": {
     "home": "Ana sayfa",
@@ -607,9 +714,8 @@
   "assets": {
     "dragTip": "İpucu: geri getirmek için bir satırı basılı tutup yukarıdaki boş yere sürükle.",
     "netWorth": "Net varlık",
-    "netWorthHint": "Sahip olduğun ve alacağın, eksi borcun",
     "noAccounts": "Henüz hesap yok",
-    "dropShow": "Tekrar göstermek için buraya bırak",
+    "dropShow": "Arşivden çıkarmak için buraya bırak",
     "showArchived": "Arşivdekileri göster ({{count}})",
     "hideArchived": "Arşivdekileri gizle ({{count}})",
     "dropArchive": "Arşivlemek için buraya bırak",
@@ -629,7 +735,7 @@
     "owe": "Borcun",
     "loans": "Aldığın borçlar",
     "loansHint": "Aldığın borçlar geri ödenene kadar burada görünür.",
-    "borrowBtn": "Borç kaydet",
+    "borrowBtn": "Borç al",
     "cards": "Kredi kartları"
   },
   "tx": {
@@ -637,26 +743,123 @@
     "borrowedFrom": "Borç aldın: {{who}}",
     "theyPaidBack": "{{who}} geri ödedi",
     "youPaidBack": "Geri ödedin: {{who}}",
-    "lending": "Alacak",
-    "loan": "Borç",
-    "feeGotBack": "geri alma: {{who}}",
-    "feePaidBack": "geri ödeme: {{who}}"
+    "addedAt": "Eklenme: {{time}}",
+    "addedOn": "Eklenme: {{date}}, {{time}}",
+    "leftAfter": "Sonra kalan",
+    "inAcc": "{{account}} hesabında",
+    "xchargeOn": "+ {{amount}} transfer masrafı",
+    "chargeIncl": "{{amount}} masraf dahil",
+    "chargesIncl": "{{amount}} masraflar dahil",
+    "extraIncl": "{{amount}} ekstra dahil",
+    "extraOn": "+ {{amount}} ekstra",
+    "chargeOff": "− {{amount}} masraf",
+    "sent": "Gönderilen",
+    "paidBack": "Geri ödenen",
+    "gotBack": "Geri alınan",
+    "lent": "Borç verilen",
+    "borrowed": "Borç alınan",
+    "charge": "Masraf",
+    "xcharge": "Transfer masrafı",
+    "charges": "Masraflar",
+    "extra": "Ekstra",
+    "asIncome": "gelir sayıldı",
+    "asSpending": "harcama sayıldı",
+    "leftExtra": "Kalan: paranın {{money}} kısmı, sonra {{extra}} ekstra",
+    "leftCharges": "Kalan: paranın {{money}} kısmı, sonra {{charges}} masraf",
+    "due": "Vade",
+    "was": "Önce",
+    "now": "Şimdi",
+    "youOwe": "Borcun: {{who}}",
+    "owesYou": "{{who}} sana borçlu",
+    "cleared": "Kapandı",
+    "paidOf": "{{paid}} / {{total}} ödendi",
+    "backOf": "{{paid}} / {{total}} geri geldi"
   },
   "history": {
     "stopSel": "Seçimi bitir",
     "selected_one": "{{count}} seçildi",
     "selected_other": "{{count}} seçildi",
     "selAll": "Tümünü seç",
+    "clearSel": "Seçimi temizle",
     "delSel": "Seçilenleri sil",
+    "archSel": "Seçilenleri arşivle",
     "select": "Kayıt seç",
-    "all": "Tümü",
+    "allTime": "Tüm zamanlar",
     "none": {
-      "day": "O gün hiçbir şey yazılmamış.",
-      "month": "O ay hiçbir şey yazılmamış.",
-      "range": "O günlerde hiçbir şey yazılmamış."
+      "all": "Henüz hiçbir şey yazılmamış.",
+      "archived": "Tüm kayıtlar arşivde."
     },
     "deleted_one": "{{count}} kayıt silindi",
-    "deleted_other": "{{count}} kayıt silindi"
+    "deleted_other": "{{count}} kayıt silindi",
+    "words": {
+      "moved": "Transfer edilen {{amount}}",
+      "lent": "{{amount}} borç verildi",
+      "gotBack": "{{amount}} geri alındı",
+      "borrowed": "{{amount}} borç alındı",
+      "paidBack": "{{amount}} geri ödendi",
+      "added": "{{amount}} eklendi",
+      "takenOff": "{{amount}} düşüldü",
+      "charges": "Masraflar {{amount}}",
+      "extras": "Ekstralar {{amount}}"
+    },
+    "headSay": "{{title}}, {{parts}}",
+    "filters": "Filtreler",
+    "filtersN": "Filtreler · {{count}}",
+    "choosePeriod": "Dönem seç: {{period}}",
+    "showAll": "Tüm zamanları göster",
+    "removeFilter": "Filtreyi kaldır: {{name}}",
+    "clearAll": "Tümünü temizle",
+    "noMatch": "Bu filtrelere uyan kayıt yok",
+    "count_one": "{{count}} kayıt",
+    "count_other": "{{count}} kayıt",
+    "kind": {
+      "out": "Harcamalar",
+      "in": "Gelirler",
+      "xfer": "Transferler",
+      "lend": "Alacaklar",
+      "borrow": "Borçlar",
+      "fix": "Bakiye düzeltmeleri",
+      "charges": "Masraflar",
+      "extras": "Ekstralar"
+    },
+    "kindWords": {
+      "charges": "masraf, ücret, komisyon, faiz",
+      "extras": "bahşiş, faiz, ekstra"
+    },
+    "fromAcc": "Nereden: {{account}}",
+    "toAcc": "Nereye: {{account}}",
+    "payOut": "Ödenen: {{name}}",
+    "payIn": "Gönderen: {{name}}",
+    "amtRange": "{{from}} – {{to}}",
+    "amtMore": "{{amount}} üzeri",
+    "amtLess": "{{amount}} altı",
+    "lentTo": "Borç verdin: {{who}}",
+    "borrowedFrom": "Borç aldın: {{who}}",
+    "all": "Tümü",
+    "transactions": "İşlemler",
+    "category": "Kategori",
+    "lentSec": "Borç verilen",
+    "borrowedSec": "Borç alınan",
+    "between": "Arasında",
+    "everyone": "Herkes",
+    "anyAccount": "Herhangi bir hesap",
+    "fromAny": "Nereden: herhangi bir hesap",
+    "toAny": "Nereye: herhangi bir hesap",
+    "oneSide": "Taraflardan biri {{account}}",
+    "showNone": "Kayıt yok",
+    "swap": "Nereden ile Nereyi değiştir",
+    "show_one": "{{count}} kaydı göster",
+    "show_other": "{{count}} kaydı göster",
+    "savedGone": "Kaydedildi · artık bu listede değil"
+  },
+  "archive": {
+    "title": "Arşiv",
+    "open": "Arşivdeki kayıtlar",
+    "unarchive": "Arşivden çıkar",
+    "back": "Geçmişe geri döndü",
+    "none": "Arşivde bir şey yok.",
+    "noneHint": "Arşivlediğin kayıtlar burada bekler; tüm bakiyeler olduğu gibi kalır.",
+    "mark": "Arşivde"
   },
   "remind": {
     "nudge": "Akşam hatırlatması",
@@ -664,7 +867,7 @@
     "check": "Bakiye kontrolü",
     "checkHint": "Bakiyelerin hâlâ tutuyor mu?",
     "dues": "Borç ve alacak vadeleri",
-    "duesHint": "Vade günü, +1 gün / +1 hafta seçenekleriyle",
+    "duesHint": "Vade gününde, vade yoksa her ay",
     "nudgeAt": "Akşam hatırlatması saati",
     "checkAt": "Bakiye kontrolü saati",
     "duesAt": "Vade hatırlatması saati"
@@ -679,8 +882,8 @@
     "entries_other": "{{count}} kayıt",
     "autoQ": "{{file}} geri yüklensin mi?",
     "q": "Bu yedek geri yüklensin mi?",
-    "body": "Bu telefondaki her şeyin yerine {{accounts}} ve {{entries}} gelir.",
-    "bodySaved": "Bu telefondaki her şeyin yerine {{accounts}} ve {{entries}} gelir · kaydedilme: {{when}}.",
+    "body": "Bu telefonun verileri yedekteki verilerle değiştirilecek: {{accounts}} ve {{entries}}.",
+    "bodySaved": "Bu telefonun verileri yedekteki verilerle değiştirilecek: {{accounts}} ve {{entries}}, kaydedilme zamanı: {{when}}.",
     "lost_one": "İçindeki {{count}} öğe okunamıyor ve dışarıda kalacak.",
     "lost_other": "İçindeki {{count}} öğe okunamıyor ve dışarıda kalacak.",
     "newer": "Tally’nin daha yeni bir sürümüyle yapılmış: hiçbir şey dışarıda kalmasın diye önce Tally’yi güncelle.",
@@ -708,12 +911,12 @@
     },
     "none": {
       "title": "Henüz yedek yok",
-      "body": "Silmeden önce verilerinin bir yedeği kaydedilsin mi?"
+      "body": "Her şeyi silmeden önce bir yedek kaydedilsin mi?"
     },
-    "skip": "Atla",
     "title": "Tüm veriler silinsin mi?",
-    "body": "Bu telefondaki tüm hesaplar ve kayıtlar silinir. Bu geri alınamaz.",
-    "done": "Tüm veriler silindi"
+    "body": "Bu telefondaki tüm hesaplar ve kayıtlar kaybolacak.",
+    "done": "Tüm veriler silindi",
+    "noBackup": "Yedeksiz sil"
   },
   "native": {
     "err": {
@@ -754,5 +957,9 @@
   },
   "lang": {
     "name": "Türkçe"
+  },
+  "suggest": {
+    "removeName": "“{{name}}” adını önerilerden kaldır",
+    "removed": "“{{name}}” önerilerden kaldırıldı"
   }
 }

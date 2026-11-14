@@ -39,7 +39,8 @@ Never edit `app/src/main/assets/js/i18n/*.js`: `tools/gen_i18n.py` makes them fr
 | spending / spent | money that went out on something (an expense) |
 | money in / received / income | money that came in |
 | transfer | money moved between two of your own accounts; never spending |
-| fee | a charge on a transfer or a loan payment; never counted as spending |
+| fee / charge | a cost paid with an entry (an ATM fee, VAT, a service charge, a loan's interest); counted as spending: a purchase's charge in the purchase's own category, any other charge in the Charges part (docs/specs/charges.md) |
+| extra | what you receive on top of what you lent (interest, a tip); counted as income |
 | loan / borrowed | money **you** borrowed from someone: you owe it |
 | lending / lent | money **you** lent to someone: they owe you |
 | payment / paid back / got back | money returned on a loan (you paid back) or a lending (you got back) |
@@ -52,7 +53,8 @@ Never edit `app/src/main/assets/js/i18n/*.js`: `tools/gen_i18n.py` makes them fr
 | net worth | what you have and are owed, minus what you owe |
 | category | what spending was for (Groceries, Rent, …) |
 | payee / paid to / received from | who an entry's money went to (a shop, a person) or came from (an employer, a client) |
-| archive / archived | an account put away: hidden from the totals, its entries kept |
+| archive / archived | an account put away: hidden from the totals, its entries kept; an entry put away: hidden from History only, still counted in every total |
+| unarchive | bring an archived account or entry back (one word for both) |
 | backup / auto backup / restore | a file copy of everything / the daily one in a folder / bringing a copy back |
 | evening nudge | the evening reminder when nothing was written that day |
 | balance check | the morning question "do your balances still match?" |

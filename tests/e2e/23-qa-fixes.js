@@ -111,10 +111,13 @@ const ok = (c, m) => {
   });
   await page.click('[data-act="sel-del"]');
   await settle();
+  await page.click("#pop .cd-destroy"); // the question comes first: Archive instead is always offered
+  await settle();
   ok(
     (await state()).txns.some(x => x.id === "d2") && (await state()).txns.some(x => x.id === "x1"),
     "multi-select delete is refused as a whole when it would undo a payment"
   );
+  ok((await snackText()).includes("already paid back"), "…and says why: " + (await snackText()));
   // the payment's date can't be before the first draw
   await page.evaluate(() => {
     V.screen = "home";
@@ -126,7 +129,7 @@ const ok = (c, m) => {
   ok(dmin === d5, "a payment's date starts at the first draw: " + dmin);
   await page.evaluate(() => closeSheet());
 
-  // ---- 3. multi-select delete counts what actually went (a transfer's fee goes with it)
+  // ---- 3. multi-select delete counts what went as History lists it (a transfer's fee goes with it, inside its row)
   await seed({
     txns: [
       { id: "t1", ts: 1, date: t, type: "transfer", amount: 50, account: "a", to: "b", note: "", feeId: "f1" },
@@ -140,7 +143,12 @@ const ok = (c, m) => {
   });
   await page.click('[data-act="sel-del"]');
   await settle();
-  ok((await snackText()).includes("Deleted 2 entries"), "delete message counts the fee: " + (await snackText()));
+  await page.click("#pop .cd-destroy"); // Delete
+  await page.waitForTimeout(350);
+  ok(
+    (await snackText()).includes("Deleted 1 entry"),
+    "delete message counts the row, the fee inside it: " + (await snackText())
+  );
 
   // ---- 4. Undo never restores over a newer change
   await seed({ txns: [{ id: "e1", ts: 1, date: t, type: "expense", amount: 5, account: "a", cat: "food", note: "" }] });
@@ -277,19 +285,17 @@ const ok = (c, m) => {
   const rl = await page.evaluate(() => [
     rangeLabel("2026-06-03", "2026-06-09"),
     rangeLabel("2025-12-29", "2026-01-04"),
-    rangeLabel("2026-04-01", "2026-09-30", true),
   ]);
   ok(/^Jun 3\s*–\s*9$/.test(rl[0]), "en-US range: " + rl[0]);
   ok(/2025/.test(rl[1]) && /2026/.test(rl[1]), "across years, with the years: " + rl[1]);
-  ok(/^Apr\s*–\s*Sep$/.test(rl[2]), "months: " + rl[2]);
 
   // ---- 12. Delete all data: the backup question's buttons say what they do
   await page.evaluate(() => wipeAll());
   await settle();
   ok(
-    (await page.textContent('#pop [data-act="ask-ok"]')).trim() === "Save backup" &&
-      (await page.textContent('#pop [data-act="ask-alt"]')).trim() === "Skip",
-    "Save backup / Skip"
+    (await page.textContent("#pop .cd-keep")).trim() === "Save backup" &&
+      (await page.textContent("#pop .cd-destroy")).trim() === "Delete without a backup",
+    "Save backup / Delete without a backup"
   );
   await page.evaluate(() => closePop());
 
@@ -360,6 +366,47 @@ const ok = (c, m) => {
   const pp = await phone.newPage();
   await pp.goto(appUrl);
   ok(await pp.evaluate(() => phoneLand()), "a sideways phone still is");
+  /* held sideways, Home's bar has no ‹ › (no room beside the icons), and Search stays in it */
+  const side = await pp.evaluate(() => {
+    S = blank();
+    S.settings.cur = "USD";
+    S.settings.lastCheck = today();
+    S.accounts.push({ id: "a", name: "Cash", type: "cash", currency: "USD", opening: 10, archived: false });
+    render();
+    const vis = s => [...document.querySelectorAll(s)].filter(e => e.offsetWidth > 0).length;
+    return { arrows: vis("#app .pnav > .icon"), search: vis('#app .appbar [data-act="search-open"]') };
+  });
+  ok(side.arrows === 0 && side.search === 1, "sideways: no period arrows, Search in the bar: " + JSON.stringify(side));
+  /* upright on a 360px phone the date fits beside its arrows, a past day's too; on a small phone at a large text size
+     in German "Heute" is whole too (where a date wouldn't fit, the arrows make room for it) */
+  for (const [w, sc, lang, want, back] of [
+    [360, 1, "en", 2, 2],
+    [320, 1.3, "de", null, 0],
+  ]) {
+    const up = await browser.newContext({ viewport: { width: w, height: 700 }, uiLang: lang, locale: lang });
+    await up.addInitScript(sc => {
+      window.Android = { getColors: () => null, setBars() {}, fontScale: () => sc };
+    }, sc);
+    const upPage = await up.newPage();
+    await upPage.goto(appUrl);
+    const r = await upPage.evaluate(back => {
+      S = blank();
+      S.settings.cur = "USD";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "a", name: "Cash", type: "cash", currency: "USD", opening: 10, archived: false });
+      V.period = "day";
+      V.anchor = addDays(today(), -back);
+      render();
+      const l = $(".pnav .plabel > span");
+      return {
+        arrows: [...document.querySelectorAll("#app .pnav > .icon")].filter(e => e.offsetWidth > 0).length,
+        whole: l.scrollWidth <= l.clientWidth + 1,
+        label: l.textContent,
+      };
+    }, back);
+    ok((want == null || r.arrows === want) && r.whole, w + "px @" + sc + ": the date whole: " + JSON.stringify(r));
+    await up.close();
+  }
   await tab.close();
   await phone.close();
 

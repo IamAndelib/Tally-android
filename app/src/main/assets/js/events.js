@@ -66,8 +66,11 @@ document.addEventListener("click", ev => {
       break;
     case "go":
       closeSheet();
-      V.screen = v;
-      render();
+      if (v === "history") openHistory();
+      else {
+        V.screen = v;
+        render();
+      }
       scrollTo(0, 0);
       break;
     case "tab":
@@ -101,6 +104,7 @@ document.addEventListener("click", ev => {
     case "ed-acc":
       F.editAcc = v;
       setPressed("ed-acc", v);
+      formPreview();
       break;
     case "loanpay-del":
       deleteLoanEntry(v);
@@ -155,11 +159,18 @@ document.addEventListener("click", ev => {
     case "haptics":
       toggleHaptics();
       break;
+    /* Settings → History: search finds archived entries too (stored only when on) */
+    case "search-arch":
+      if (S.settings.searchArch === true) delete S.settings.searchArch;
+      else S.settings.searchArch = true;
+      save();
+      render();
+      break;
     case "donut-mode":
       cycleDonut();
       break;
     case "period-open":
-      periodDialog(v === "hist" ? HP : V);
+      periodDialog(V);
       break;
     case "pd-tab":
       PD.tab = v;
@@ -186,6 +197,13 @@ document.addEventListener("click", ev => {
     case "pd-month":
       setPeriod({ period: "month", anchor: v + "-01" });
       break;
+    case "pd-years":
+      PD.yEnd += +v;
+      pdRender();
+      break;
+    case "pd-yr":
+      setPeriod({ period: "year", anchor: v + "-01-01" });
+      break;
     case "pd-today":
       setPeriod({ period: "day", anchor: today() }); // always today's figures, whichever tab is open
       break;
@@ -198,6 +216,9 @@ document.addEventListener("click", ev => {
       if (f) f();
       break;
     }
+    case "cd":
+      choiceTap(+v);
+      break;
     case "ask-alt": {
       const f = ASK_ALT;
       closePop();
@@ -205,8 +226,7 @@ document.addEventListener("click", ev => {
       break;
     }
     case "go-today":
-      V.period = "day";
-      V.anchor = today();
+      homePeriod();
       render();
       break;
     case "prev":
@@ -235,11 +255,18 @@ document.addEventListener("click", ev => {
       if (undoFn) {
         const f = undoFn;
         undoFn = null;
+        if (f.keep) {
+          // a change inside the open form (a name taken out of its suggestions): the form stays
+          $("#snack").innerHTML = "";
+          f();
+          break;
+        }
         /* what an open layer shows may be what Undo takes away: back to the screen first */
         closePop();
         BACKTO = null;
+        const entries = !!$("#sheet #ent-list"); // the entries list was open when Undo was tapped
         closeSheet();
-        f();
+        f(entries);
       }
       break;
     case "check-ok":
@@ -256,6 +283,7 @@ document.addEventListener("click", ev => {
     case "sm-mode":
       SM.mode = v;
       SM.sel = null;
+      SM.open = null; // another tab shows other days: an opened row closes
       setPressed("sm-mode", v);
       smRender();
       break;
@@ -264,10 +292,18 @@ document.addEventListener("click", ev => {
       break;
     case "sm-pick":
       SM.sel = +v;
+      SM.open = null;
       smRender();
       break;
     case "sm-open":
       smOpen();
+      break;
+    case "sm-part":
+      smToggle(v);
+      break;
+    case "sm-all":
+      smAll(v);
+      scrollTo(0, 0);
       break;
     case "add-out":
       txSheet(null, "expense");
@@ -280,6 +316,34 @@ document.addEventListener("click", ev => {
       break;
     case "tx-open":
       openEntry(v);
+      break;
+    case "row-open":
+      if (V.find && V.open !== v) recentKeep(HF.q); // an entry opened from a search
+      rowToggle(el, v);
+      break;
+    case "search-open":
+      openFind();
+      break;
+    case "find-back":
+      findBack();
+      break;
+    case "find-clear":
+      findClear();
+      break;
+    case "fs-pick":
+      findPick(+v);
+      break;
+    case "rec-use":
+      recentUse(+v);
+      break;
+    case "rec-del":
+      recentDel(+v);
+      break;
+    case "rec-clear":
+      recentClear();
+      break;
+    case "find-fix":
+      findFix();
       break;
     case "f-showcats": {
       const g = $("#f-catgrid");
@@ -310,9 +374,20 @@ document.addEventListener("click", ev => {
     }
     case "tx-del":
     case "tr-del": {
+      if (el.closest(".txo")) {
+        rowDelete(v);
+        break;
+      }
       const id = F.id;
-      closeSheet();
-      withUndo(T("common.deleted"), () => deleteEntries([id]));
+      deleteAsk([id], arch => {
+        const to = !BACKTO && rowsAround([id]); // from the entries sheet, openEntry() places it on its way back
+        if (V.open === id) V.open = ""; // its row was opened: it doesn't come back opened (after Unarchive or Undo)
+        closeSheet();
+        withUndo(T(arch ? "entries.archived" : "common.deleted"), () =>
+          arch ? archiveEntries([id], true) : deleteEntries([id])
+        );
+        if (to) landFocus(to);
+      });
       break;
     }
     case "tr-new":
@@ -333,21 +408,23 @@ document.addEventListener("click", ev => {
       trSync();
       break;
     }
-    case "add-fee":
-      F.showFee = true;
-      $("#fee-wrap").hidden = false;
-      el.hidden = true;
-      if (CALC) calcClose(CALC.id, calcToggleBtn(CALC.id)); // no keypad over the system keyboard
-      $("#f-fee").focus();
-      if (F.kind === "tr") trPreview();
+    case "addon-add":
+      addOnAdd(el.closest(".p") || document, v);
+      break;
+    case "addon-remove":
+      addOnRemove(el.closest(".p") || document, v);
       break;
     case "tr-save":
       saveTr();
       break;
     case "adj-del": {
       const id = F.id;
-      closeSheet();
-      withUndo(T("fix.deleted"), () => deleteEntries([id]));
+      deleteAsk([id], arch => {
+        closeSheet();
+        withUndo(T(arch ? "entries.archived" : "fix.deleted"), () =>
+          arch ? archiveEntries([id], true) : deleteEntries([id])
+        );
+      });
       break;
     }
     case "acc-open":
@@ -358,10 +435,7 @@ document.addEventListener("click", ev => {
       break;
     case "hist-acc":
       closeSheet();
-      V.hAcc = v;
-      Object.assign(HP, { period: "month", anchor: today() });
-      V.screen = "history";
-      render();
+      openHistory({ acc: v });
       scrollTo(0, 0);
       break;
     case "acc-form":
@@ -456,6 +530,11 @@ document.addEventListener("click", ev => {
       S.settings.clock = v === "12" ? "12" : "24";
       commit();
       break;
+    case "home-opens":
+      S.settings.home = ["month", "year"].includes(v) ? v : "day";
+      homePeriod(); // Home shows it as soon as you go back
+      commit();
+      break;
     case "cur-pick": {
       const f = CURPICK;
       closeSheet2();
@@ -490,56 +569,142 @@ document.addEventListener("click", ev => {
       V.showArchived = true;
       render();
       break;
-    case "hmon":
-      if (+v < 0 || canNext(HP)) {
-        shiftPeriod(+v, HP);
-        if (V.sel) V.sel = new Set();
-        render();
-      }
+    case "hp-open":
+      periodDialog(HP);
       break;
-    case "hacc":
-      setHistAcc(v);
+    case "hp-all":
+      histAllTime();
+      render();
+      histFocus(".hpl");
+      break;
+    case "hf-open":
+      filtersSheet();
+      break;
+    case "hfs-acc":
+    case "hfs-kind":
+    case "hfs-sub":
+    case "hfs-pick":
+      if (!HFD || el.getAttribute("aria-disabled") === "true") break; // a dimmed option has nothing to leave
+      if (act === "hfs-acc") Object.assign(HFD, { acc: v, from: "", to: "" });
+      else if (act === "hfs-kind") Object.assign(HFD, { kind: v, cat: "", who: "", from: "", to: "" });
+      else if (act === "hfs-sub") HFD[el.dataset.k] = v;
+      else {
+        Object.assign(HFD, hfSide(HFD, HFSIDE, v));
+        closePop();
+      }
+      HFD = histNorm(HFD);
+      hfsDraw();
+      break;
+    case "hfs-from":
+    case "hfs-to":
+      hfMenu(act === "hfs-from" ? "from" : "to", el);
+      break;
+    case "hfs-swap":
+      if (HFD) HFD = histNorm({ ...HFD, from: HFD.to, to: HFD.from });
+      hfsDraw();
+      break;
+    case "hfs-clear":
+      HFD = { ...histBlank(), q: HFD.q, pay: HFD.pay, amt: HFD.amt }; // only the sheet's own choices; words, payee, amount stay
+      hfsDraw();
+      break;
+    case "hfs-show":
+      if (!HFD || el.disabled) break;
+      HF = { ...HFD };
+      closeSheet();
+      render();
+      break;
+    case "hf-del": {
+      const chipAt = [...document.querySelectorAll("#app .hchips .hchip")].indexOf(el);
+      if (v === "acc")
+        Object.assign(HF, { acc: "", from: "", to: "" }); // a side may be the account: both go with it
+      else if (v === "from" || v === "to" || v === "pay" || v === "amt") HF[v] = "";
+      else if (v === "kind") Object.assign(HF, { kind: "", cat: "", who: "", from: "", to: "" });
+      else Object.assign(HF, { cat: "", who: "", from: "", to: "" });
+      HF = histNorm(HF);
+      render();
+      histFocus(".hchip", chipAt);
+      break;
+    }
+    case "hf-clear":
+      FIND.steps = []; // a reset: Back does not undo the suggestions tapped before it
+      histClear();
+      render();
+      histFocus(".hfbtn");
       break;
     case "sel-start":
       V.sel = new Set();
       render();
+      landFocus(['[data-act="sel-cancel"]']); // the bar's button that ends the selection
       break;
     case "sel-cancel":
-      V.sel = null;
-      render();
+      selEnd();
       break;
     case "sel-toggle":
       if (V.sel.has(v)) V.sel.delete(v);
       else V.sel.add(v);
-      if (!V.sel.size) {
-        V.sel = null;
-        render();
-      } else selSync(el);
+      if (!V.sel.size) selEnd();
+      else selSync(el);
       break;
     case "sel-all": {
-      const ids = historyList().map(t => t.id);
+      const ids = selRows(histList()).map(t => t.id); // a fee goes with its entry; never an archived entry
       V.sel = ids.every(id => V.sel.has(id)) ? new Set() : new Set(ids);
       render();
       break;
     }
-    case "sel-del": {
+    /* archiving asks nothing and is never refused (it changes no balance or loan): the selection goes, with Undo */
+    case "sel-arch": {
       if (!V.sel || !V.sel.size) return;
       const ids = [...V.sel],
-        no = loanBlock(ids);
-      if (no) {
-        snack(no);
-        return;
-      }
-      let n = 0; // what actually went: a transfer's fee and a deleted loan's payments go with it
-      withUndo(
-        () => T("history.deleted", { count: n }),
-        () => {
-          n = S.txns.length;
-          deleteEntries(ids);
-          n -= S.txns.length;
-          V.sel = null;
+        to = rowsAround(ids);
+      withUndo(T("entries.archived"), () => {
+        archiveEntries(ids, true);
+        V.sel = null;
+      });
+      landFocus(to);
+      break;
+    }
+    case "arch-open":
+      archOpen();
+      break;
+    case "arch-back":
+      archBack();
+      break;
+    /* Unarchive (an opened row on the Archived screen, or in search): the entry, with its add-on, is back in History; a
+       search keeps listing it, now unmarked */
+    case "unarchive": {
+      const to = rowsAround([v]);
+      withUndo(T("archive.back"), () => {
+        archiveEntries([v], false);
+        V.open = "";
+      });
+      landFocus(to);
+      break;
+    }
+    case "sel-del": {
+      if (!V.sel || !V.sel.size) return;
+      const ids = [...V.sel];
+      deleteAsk(ids, arch => {
+        const no = !arch && loanBlock(ids); // archiving never changes a loan: only Delete can be refused
+        if (no) {
+          snack(no);
+          return;
         }
-      );
+        /* the rows that went (a deleted loan's payments go with it), archived or not: an add-on is in its entry (as
+           Delete in an opened row counts them) */
+        let n = 0;
+        const to = rowsAround(ids);
+        withUndo(
+          () => (arch ? T("entries.archived") : T("history.deleted", { count: n })),
+          () => {
+            n = entryRows(S.txns).length;
+            if (arch) archiveEntries(ids, true);
+            else deleteEntries(ids);
+            n -= entryRows(S.txns).length;
+            V.sel = null;
+          }
+        );
+        landFocus(to);
+      });
       break;
     }
     case "theme":
@@ -575,6 +740,9 @@ document.addEventListener("click", ev => {
     case "calc-key":
       calcKey(v);
       break;
+    case "name-hide":
+      hideName(v.slice(0, v.indexOf(":")), v.slice(v.indexOf(":") + 1));
+      break;
     case "f-payee-pick":
       pickPayee(v);
       break;
@@ -583,7 +751,7 @@ document.addEventListener("click", ev => {
       if (el2) el2.value = (loan(v) || {}).person || "";
       F.merge = v;
       $("#f-person-sug").hidden = true;
-      mergeHint();
+      formPreview(); // the hint and the preview name the tab picked
       if (el2) el2.focus({ preventScroll: true }); // the chips are gone: back to the name, now filled in
       break;
     }
@@ -646,10 +814,14 @@ document.addEventListener("focusin", ev => {
 document.addEventListener("input", ev => {
   const id = ev.target.id;
   if (ev.target.matches('input[inputmode="decimal"]') && !ev.target.readOnly) formatAmountInput(ev.target, ev);
-  if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-fee"].includes(id)) trPreview();
+  if (F && F.kind === "tr" && ["f-amt", "f-toamt", "f-charge"].includes(id)) trPreview();
+  else if (F && F.kind === "tx" && ["f-amt", "f-charge"].includes(id)) txPreview();
+  else if (F && F.kind === "loan" && ["f-amt", "f-charge", "f-extra", "ed-amt", "ed-charge", "ed-extra"].includes(id))
+    loanPreviews();
   else if (id === "f-actual") fixPreview();
   else if (id === "cur-q") curList(ev.target.value);
   else if (id === "ic-q") icList(ev.target.value);
+  else if (id === "find-q") findInput(ev.target.value);
   else if (id === "hx-in") hexPreview();
   else if (id === "f-person" && F && F.kind === "loanf") {
     /* a name typed out in full that has an open tab (same kind and currency) adds to it, as picking it would: the
@@ -658,10 +830,10 @@ document.addEventListener("input", ev => {
       cur = (acc(F.account) || {}).currency,
       same = name && cur ? personCandidates(F.lk, cur, ev.target.value).find(l => curFold(l.person) === name) : null;
     F.merge = same ? same.id : null;
-    mergeHint();
+    formPreview(); // the hint and the preview, which names the person
     personSuggest(ev.target.value);
   } else if (id === "f-payee" && F && F.kind === "tx") payeeSuggest(ev.target.value);
-  else if (id === "f-amt" && F && F.kind === "loanf") mergeHint();
+  else if (F && F.kind === "loanf" && ["f-amt", "f-charge", "f-extra"].includes(id)) formPreview();
 });
 document.addEventListener("change", ev => {
   if (ev.target.id === "restore-file") restoreFile(ev.target);
@@ -678,6 +850,10 @@ document.addEventListener("keydown", e => {
   } else if (e.key === "Enter" && (e.target.id === "nt-name" || e.target.id === "hx-in")) {
     e.preventDefault();
     (e.target.id === "nt-name" ? addType : useHex)();
+  } else if (e.key === "Enter" && e.target.id === "find-q") {
+    if (e.isComposing || e.keyCode === 229) return; // an IME is still composing: Enter is its own
+    e.preventDefault();
+    findSubmit();
   } else if (e.key === "Enter" && e.target.id === "cur-q") {
     const b = $('#curlist [data-act="cur-pick"]');
     if (b) {
@@ -709,7 +885,7 @@ document.addEventListener("keydown", e => {
     }
   }
 });
-/* while a sheet or dialog is up, the page behind it doesn't scroll */
+/* while a sheet or dialog is up, the page behind it doesn't scroll (CSS locks only <html>: see html.lock) */
 ["#sheet", "#sheet2", "#pop"].forEach(id =>
   new MutationObserver(() => {
     const on = !!($("#sheet").innerHTML || $("#sheet2").innerHTML || $("#pop").innerHTML);
@@ -750,11 +926,17 @@ function layerFocus() {
     else el.removeAttribute("aria-hidden");
     el.inert = below;
   });
+  const land = LAND; // a change took away what had the focus (landFocus)
+  LAND = null;
+  if (land && landNow(land)) return;
   /* once what lay behind is reachable again: back to where the focus was before the closed layer opened */
   /* (or to the control that replaced it: saving redraws the screen) */
   if (back && back.el.isConnected) back.el.focus({ preventScroll: true });
   else if (back) refocus(document, back.k);
-  if (top < 0) return;
+  if (top < 0) {
+    if (land && document.activeElement === document.body) landNow([], true); // never the page
+    return;
+  }
   const t = $(LAYERS[top]);
   if (t.contains(document.activeElement)) return;
   const d = t.querySelector('[role="dialog"], [role="alertdialog"]');
@@ -781,7 +963,10 @@ addEventListener("resize", () => {
   if (LP) return;
   if (crossed || (w && (V.screen === "home" || V.screen === "settings"))) render();
   else if (hh && c === 3 && V.screen === "home" && !$("#sheet").innerHTML) render();
+  else if (pinLike()) histPinSet(); // a new height (search's keyboard): what History or Settings can keep pinned
   fitCal($("#dp") || $("#pd"));
+  fitSmRows();
+  smFitOpen();
   /* turned with the keypad open: it moved (below the form ↔ beside it), so the field is brought back into view */
   if (CALC && CALC.inp && CALC.inp.isConnected)
     setTimeout(() => {

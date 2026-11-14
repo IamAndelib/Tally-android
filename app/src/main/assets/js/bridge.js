@@ -1,6 +1,6 @@
 /*
- * bridge.js — Talking to the Android shell (window.Android, see MainActivity.java): home-screen widget numbers, reminders,
- * notification actions, saving files, and the handlers behind the window.tally* hooks.
+ * bridge.js — Talking to the Android shell (window.Android, see MainActivity.java): home-screen widget numbers,
+ * reminders, notification actions, saving files, the recent searches, and the handlers behind the window.tally* hooks.
  */
 "use strict";
 
@@ -22,6 +22,22 @@ function syncWidget() {
   lastWidget = j;
   try {
     Android.setWidget(j);
+  } catch (e) {}
+}
+/* History search's recent searches, kept by the shell on this phone only (never in S, save(), localStorage, the shell's
+   saved copy, backups or CSV); in memory where the shell lacks the methods (tests in a browser, older shells) */
+let RECENT_MEM = [];
+function recentLoad() {
+  let a = RECENT_MEM;
+  try {
+    if (window.Android && Android.recentGet) a = JSON.parse(Android.recentGet() || "[]");
+  } catch (e) {}
+  return Array.isArray(a) ? a.filter(x => typeof x === "string" && x.trim()).slice(0, 5) : [];
+}
+function recentSave(list) {
+  RECENT_MEM = list.slice();
+  try {
+    if (window.Android && Android.recentSet) Android.recentSet(JSON.stringify(list));
   } catch (e) {}
 }
 /* "HH:MM" → {h, m} for the shell's alarms */
@@ -57,20 +73,38 @@ function syncReminders() {
   const c = maxTs ? iso(new Date(maxTs)) : "",
     newest = c > maxDate ? c : maxDate,
     last = newest < now ? newest : now;
+  /* an open tab with a payback day: on that day. One with none: monthly, on the day of the month the oldest money still
+     out moved (the shell works out each next day, see ReminderReceiver.monthlyDate) */
   const dues =
     r.dues === false
       ? []
       : S.loans
           .map(l => ({ l, i: loanInfo(l) }))
-          .filter(x => x.i.open && x.i.nextDue)
-          .map(({ l, i }) => ({
-            id: l.id,
-            date: i.nextDue,
-            kind: l.kind,
-            who: l.person || "", // none: the shell says "Someone" in the phone's language
-            amount: money(i.dueAmt, i.cur),
-            total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
-          }));
+          .filter(x => x.i.open)
+          .map(({ l, i }) => {
+            const who = l.person || ""; // none: the shell says "Someone" in the phone's language
+            if (i.nextDue)
+              return {
+                id: l.id,
+                date: i.nextDue,
+                kind: l.kind,
+                who,
+                amount: money(i.dueAmt, i.cur),
+                total: i.dueAmt < i.left ? money(i.left, i.cur) : "", // the whole tab, when more is out than is due
+              };
+            const out = i.draws.find(t => i.rem[t.id] > 0);
+            return (
+              out && {
+                id: l.id,
+                monthly: +out.date.slice(8),
+                since: out.date,
+                kind: l.kind,
+                who,
+                amount: money(i.left, i.cur),
+              }
+            );
+          })
+          .filter(Boolean);
   try {
     Android.setReminders(
       JSON.stringify({
@@ -305,28 +339,37 @@ function onFolderPicked(err) {
 function folderCheck() {
   readAutoBackup(r => {
     if (r.none) return backupOn();
-    // the shell already writes to the new folder on schedule: until Restore it or Replace it, auto backup is off
+    // the shell already writes to the new folder on schedule: until Restore or Overwrite, auto backup is off
     if (S.settings.backup.on) {
       S.settings.backup.on = false;
       save();
       syncBackup();
       if (V.screen === "settings") render();
     }
-    if (typeof r.text === "string" && backupData(r.text))
-      return askDialog(
-        T("backup.found.title"),
-        T("backup.found.body"),
-        T("backup.found.restore"),
-        () => restoreText(r.text, null, backupOn),
-        { alt: [T("backup.found.replace"), backupOn], cancel: T("common.notNow") }
-      );
-    askDialog(
-      T("backup.badFile.title"),
-      sentences(r.error ? nativeErr(r.error) : T("backup.badFile.cantRead"), T("backup.badFile.replaceQ")),
-      T("backup.found.replace"),
-      backupOn,
-      { cancel: T("common.notNow") }
-    );
+    const over = { role: "destroy", label: T("backup.overwrite"), run: backupOn };
+    const plan = typeof r.text === "string" ? restorePlan(r.text) : { err: 1 };
+    if (!plan.err)
+      return choiceDialog(T("backup.found.title"), T("backup.found.body"), [
+        {
+          role: "keep",
+          label: T("restore.ok"),
+          run: () => plan.run(backupOn),
+          confirm: { title: T("restore.q"), text: restoreBody(plan, r.when) },
+        },
+        {
+          ...over,
+          confirm: { title: T("backup.found.overwriteQ"), text: T("backup.found.overwriteBody") },
+        },
+        { role: "out", label: T("common.cancel") },
+      ]);
+    choiceDialog(T("backup.badFile.title"), r.error ? nativeErr(r.error) : T("backup.badFile.cantRead"), [
+      { role: "main", label: T("backup.badFile.other"), run: pickBackupFolder },
+      {
+        ...over,
+        confirm: { title: T("backup.found.overwriteQ"), text: T("backup.badFile.overwriteBody") },
+      },
+      { role: "out", label: T("common.cancel") },
+    ]);
   });
 }
 /* Answers from the shell's own threads (a slow folder can't freeze the page), each matched to its request by number,
@@ -396,7 +439,7 @@ function fixReminders(kind) {
 const keepPermsUp = () => {
   if (!$("#pp-rows")) closePop();
 };
-/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay]" from a reminder, "check" from the balance check,
+/* "add:out|in|tr" from the widget's quick add, "loan:<id>[:pay|:due]" from a reminder, "check" from the balance check,
    "backup" from a failed auto backup (window.tallyOpen) */
 function openFromNative(s) {
   const [k, id, pay] = String(s || "").split(":");
@@ -437,6 +480,9 @@ function openFromNative(s) {
   keepPermsUp();
   closeSheet();
   loanOpen(id, pay === "pay");
+  /* "Set a due date" on a monthly reminder: the payback day's picker, open */
+  const due = pay === "due" && $("#f-due2");
+  if (due) due.click();
 }
 /* the app came back to the foreground (window.tallyResume) */
 function onAppResume() {
@@ -458,7 +504,8 @@ function saveOut(name, mime, text, then) {
   else snack(T("data.noSaving"));
 }
 /* Android back / Escape: closes the top layer first (a dialog, then the keypad of the sheet on top, then that sheet),
-   then a selection, then another screen goes Home. False when there is nothing left to close (then the app closes). */
+   then a selection, then the Archived screen goes back to History and another screen goes Home. False when there is
+   nothing left to close (then the app closes). */
 function goBack() {
   if ($("#pop").innerHTML) {
     closePop();
@@ -485,8 +532,15 @@ function goBack() {
     return true;
   }
   if (V.sel) {
-    V.sel = null;
-    render();
+    selEnd();
+    return true;
+  }
+  if (V.find) {
+    if (!findUndo()) findBack(); // a suggestion tapped is undone first, then search mode ends
+    return true;
+  }
+  if (V.screen === "archive") {
+    archBack();
     return true;
   }
   if (V.screen !== "home") {

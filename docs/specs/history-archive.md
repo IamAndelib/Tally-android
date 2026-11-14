@@ -1,0 +1,73 @@
+# History: a pinned header, and archiving entries
+
+Status: Built in 1.5.0 (approved by the maintainer on 2026-11-07 from the mock-ups: real app, light and dark, phone
+and sideways). Built after charges (`docs/plans/2026-11-07-charges.md`), on data version 8; plan
+`docs/plans/2026-11-07-history-archive.md`. Where the build changed something, a dated note says so.
+
+## A · The header stays while the entries scroll
+
+1. While History scrolls, three things stay at the top: the app bar (← History, search, select), the period / Filters
+   row, and the heading of the month in view, with its "+" and "−" figures. Only the entries move under them.
+2. When the list reaches the next month, that month's heading pushes the old one up and takes its place. Day headings
+   scroll as today. A thin line (`--outline-variant`) under the pinned month heading separates it from the entries.
+3. Search keeps the same pinned block, with the search field in place of the app bar.
+4. **Selecting:** only the bar ("1 selected" with its actions) and the dimmed Filters row stay; the month headings are
+   not pinned and scroll with the entries, since their totals are not about the selection. (Changed 2026-11-13: the
+   bar shows only the count, "1"; TalkBack still reads "1 selected". With four icons the words didn't fit at 320px
+   with large text in several languages.)
+5. **A phone held sideways** (`body.land`): the app bar and the month heading stay, the month on one line (its "+" and
+   "−" figures side by side); the Filters row scrolls away with the entries and comes back as soon as the list
+   scrolls up.
+6. Built with `position: sticky` (WebView 87 has it). Each month is wrapped in its own section, so the next heading
+   can push the old one; History's chunked drawing adds a chunk that continues a month inside that month's section.
+   Anything that scrolls to a row (an edited entry, Undo, a search match) leaves room for the pinned block
+   (`scroll-padding-top`). TalkBack reads the page in the same order; the month heading keeps its heading role.
+
+## B · Archive an entry instead of deleting it
+
+1. **Archiving hides an entry from History and changes nothing else:** every balance, loan, total and chart stays as
+   it is. Every kind of entry can be archived, loan paybacks included.
+2. **The delete question:** "Delete this entry?" / "Delete these 2 entries?" (plural keys), with a line that warns
+   about Delete only, then Delete (filled red), Archive instead (tonal), Cancel (outlined):
+   - an entry: "Deleting changes the account balance."
+   - a loan or lending entry: "Deleting changes the account balance and the loan."
+   - several: "Deleting changes the account balances."
+   "Change the account balance" and "Keep the current balance" go: archiving replaces keeping the balance, and
+   nothing moves into an account's opening balance any more. Deleting from the loan's own page stays as it is.
+3. **After archiving:** the row leaves the list and the message reads "Archived", with Undo.
+4. **History's bar** gets an outlined archive-box icon (`icArchive()`), left of search, only while at least one entry
+   is archived (TalkBack: "Archived entries"). Archived entries are reached only from there. (Changed 2026-11-13: the
+   icon is an icon-only button at the end of the Filters line, after Clear all, outlined like Filters; it is left out
+   in search and dimmed with the line while selecting: "Historique" and four icons didn't fit in French.)
+5. **The Archived screen:** titled "Archived"; History's rows with their month and day headings, without totals. An
+   opened row offers "Unarchive" and Delete; "Unarchive" gives "Back in History" with Undo. (Changed 2026-11-12:
+   one word for one action, so an archived account's "Show again" became "Unarchive" too.) Delete there asks "Delete
+   this entry?" with the same warning line, Delete and Cancel (no Archive instead). Empty: "Nothing archived." and
+   "Entries you archive wait here, with every balance as it is."
+6. **Selecting** in History adds "Archive selected" (the archive icon, `icArchive()`) beside "Delete selected".
+7. **Archived entries still count** in History's month and day totals, Home's donut and balance bar, Summary and
+   every balance. Search does not find them unless the Settings option in C is on. CSV export keeps them (they
+   happened). While entries exist but every one is archived, History says "Every entry is archived."
+8. **Data:** a stored mark on the entry, `archived: true`, kept and sanitised by `migrate()` with a test; backups carry
+   it. An older version ignores the mark and shows the entry again with every balance unchanged, which is safe. An
+   archived entry's linked charge or extra is archived and unarchived with it.
+
+## C · Archived entries in search (approved 2026-11-12, mock-up `arch-search/search.png`)
+
+1. Settings gets a section "History", after Reminders, with one switch: "Archived entries in search", hint "Search
+   also finds entries you archived.", off by default. Stored as a setting (data version 8, sanitised by `migrate()`).
+2. With it on, History's search lists archived matches among the others, in date order. Each is marked: an outlined
+   archive box (`icArchive()`) and "Archived" at the start of its second line (text, not colour alone). Opened, it
+   offers "Unarchive" and Delete, as on the Archived screen. Search's suggestions and counts include them too.
+3. History itself, Home and Summary don't change: archiving keeps an entry out of their lists, and their totals
+   already count it.
+4. (Added 2026-11-12.) While selecting in such a search, archived matches stay in the list, faded, and can't be
+   selected: a long press or a tap on one does nothing, and Select all, Archive selected and Delete selected cover the
+   other matches only.
+
+## D · Settings' header stays while Settings scrolls (approved 2026-11-12, option A, `arch-search/settings-pin.png`)
+
+1. The app bar ("← Settings") and the heading of the section in view ("Theme", "Region", "Reminders", …) stay at the
+   top; the next section's heading pushes the old one up, with the same thin `--outline-variant` line as History's
+   pinned month, shown only while pinned. Built with `position: sticky`, each section wrapped in its own block.
+2. The same on a phone held sideways and on tablets; TalkBack reads Settings in the same order as before.

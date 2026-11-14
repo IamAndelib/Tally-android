@@ -22,7 +22,6 @@
     "save": "Simpan",
     "edit": "Ubah",
     "note": "Catatan",
-    "optional": "Opsional",
     "account": "Akun",
     "history": "Riwayat",
     "enterAmount": "Masukkan jumlah",
@@ -34,9 +33,7 @@
     "previous": "Sebelumnya",
     "next": "Berikutnya",
     "change": "Ganti",
-    "done": "Selesai",
-    "yes": "Ya",
-    "no": "Tidak"
+    "done": "Selesai"
   },
   "day": {
     "today": "Hari ini",
@@ -55,10 +52,9 @@
     "archivedTag": "diarsipkan",
     "startedWith": "Awal hari ini: {{amount}}",
     "mismatch": "Tidak cocok?",
-    "mismatchHint": "Ketik jumlah yang benar-benar kamu punya sekarang. Tally mencatat selisihnya sebagai koreksi saldo.",
+    "mismatchHint": "Ketik jumlah yang kamu punya sekarang. Selisihnya menjadi koreksi saldo.",
     "actual": "Saldo sebenarnya",
     "update": "Perbarui saldo",
-    "unarchive": "Tampilkan lagi",
     "edit": "Ubah akun",
     "new": "Akun baru",
     "typeNow": "Ketik saldo saat ini",
@@ -71,9 +67,9 @@
     "type": "Jenis",
     "opening": "Saldo awal",
     "balanceNow": "Saldo saat ini",
-    "openingHint": "Isinya sebelum transaksi pertamamu di sini. Untuk mengoreksi saldo hari ini, pakai “Tidak cocok?”.",
+    "openingHint": "Sebelum transaksi pertamamu di sini.",
     "cardHint": "Kartu kredit? Masukkan tagihanmu sebagai angka negatif.",
-    "curLocked": "Mata uang terkunci karena akun ini sudah punya transaksi.",
+    "curLockedAria": "Mata uang: {{currency}}. Terkunci: akun ini punya transaksi",
     "add": "Tambah akun",
     "delete": "Hapus akun",
     "nameIt": "Beri nama akun",
@@ -104,17 +100,14 @@
     "to": "Ke",
     "swap": "Tukar asal dan tujuan",
     "sent": "Jumlah dikirim",
-    "addFee": "Tambah biaya (ATM, tarik tunai)",
     "ok": "Transfer",
     "title": "Transfer",
     "edit": "Ubah transfer",
     "arrived": "Jumlah yang masuk ke {{account}} ({{cur}})",
-    "inclFee": "(termasuk biaya {{amount}})",
     "pickBoth": "Pilih kedua akun",
     "pickTwo": "Pilih dua akun yang berbeda",
     "enterSent": "Masukkan jumlah yang dikirim",
     "enterArrived": "Masukkan jumlah yang masuk dalam {{cur}}",
-    "feeNegative": "Biaya tidak boleh negatif",
     "feeNote": "Biaya transfer",
     "done": "{{amount}} ditransfer ke {{account}}"
   },
@@ -132,14 +125,15 @@
     "on": "Cadangan otomatis aktif · tiap hari pukul {{time}}",
     "found": {
       "title": "Folder ini sudah berisi cadangan Tally",
-      "body": "Pulihkan di ponsel ini, atau timpa dengan data ponsel ini mulai sekarang?",
-      "restore": "Pulihkan",
-      "replace": "Timpa"
+      "body": "Pulihkan di ponsel ini, atau timpa dengan data ponsel ini?",
+      "overwriteQ": "Timpa cadangan ini?",
+      "overwriteBody": "Data cadangan ini akan hilang, diganti dengan data ponsel ini."
     },
     "badFile": {
-      "title": "Cadangan di folder ini tidak bisa dibaca",
-      "cantRead": "File cadangan tidak bisa dibaca.",
-      "replaceQ": "Timpa dengan data ponsel ini mulai sekarang?"
+      "title": "Tally tidak bisa membaca cadangan di folder ini",
+      "cantRead": "Mungkin rusak, atau dibuat oleh Tally versi yang lebih baru.",
+      "other": "Pilih folder lain",
+      "overwriteBody": "Tidak bisa dibaca, jadi apa pun isinya akan hilang."
     },
     "unavailable": "Cadangan tidak tersedia di sini",
     "running": "Mencadangkan…",
@@ -153,7 +147,8 @@
       "title": "Amankan datamu?",
       "body": "Nyalakan cadangan harian: Tally menyimpan salinan di folder pilihanmu, jadi datamu tidak ikut hilang bersama ponsel.",
       "ok": "Nyalakan"
-    }
+    },
+    "overwrite": "Timpa"
   },
   "data": {
     "saveFailed": {
@@ -187,8 +182,11 @@
     "day": "Hari",
     "range": "Rentang",
     "month": "Bulan",
+    "year": "Tahun",
     "prevYear": "Tahun sebelumnya",
     "nextYear": "Tahun berikutnya",
+    "earlierYears": "Tahun-tahun sebelumnya",
+    "laterYears": "Tahun-tahun berikutnya",
     "rangeEnd": "Sekarang ketuk hari terakhir",
     "rangeHint": "Geser melintasi hari, atau ketuk awal lalu akhir"
   },
@@ -295,11 +293,14 @@
     "yellow": "Kuning"
   },
   "ring": {
+    "charges": "Biaya",
     "add": "Tambah {{cat}}",
     "addShare": "Tambah {{cat}}, {{share}} dari pengeluaran",
     "tapCat": "Ketuk kategori",
     "summary": "Ringkasan pengeluaran: keluar {{spent}}",
     "summaryGot": "Ringkasan pengeluaran: keluar {{spent}}, masuk {{got}}",
+    "summaryCharges": "Ringkasan pengeluaran: keluar {{spent}}, termasuk biaya {{charges}}",
+    "summaryChargesGot": "Ringkasan pengeluaran: keluar {{spent}}, termasuk biaya {{charges}}, masuk {{got}}",
     "switchCur": "Menampilkan {{cur}}. Ganti ke {{next}}"
   },
   "donut": {
@@ -310,14 +311,55 @@
     "both": "Pengeluaran + pemasukan",
     "none": "Tanpa statistik"
   },
-  "fee": {
-    "label": "Biaya ({{cur}}) · tidak dihitung sebagai pengeluaran",
-    "notNumber": "Biaya itu bukan angka"
+  "xcharge": {
+    "label": "Biaya transfer",
+    "calc": "Kalkulator untuk biaya transfer",
+    "remove": "Hapus biaya transfer"
+  },
+  "charge": {
+    "add": "Tambah biaya",
+    "label": "Biaya",
+    "calc": "Kalkulator untuk biaya",
+    "remove": "Hapus biaya",
+    "notNumber": "Biaya itu bukan angka",
+    "negative": "Biaya tidak boleh negatif"
+  },
+  "charges": {
+    "add": "Tambah biaya",
+    "label": "Biaya",
+    "calc": "Kalkulator untuk biaya",
+    "remove": "Hapus biaya"
+  },
+  "extra": {
+    "add": "Tambah jumlah tambahan",
+    "label": "Tambahan",
+    "calc": "Kalkulator untuk tambahan",
+    "remove": "Hapus tambahan",
+    "notNumber": "Tambahan itu bukan angka",
+    "negative": "Tambahan tidak boleh negatif"
+  },
+  "addOn": {
+    "both": "Biaya transfer dan tambahan"
+  },
+  "csv": {
+    "xchargeNote": "Biaya transfer",
+    "chargeNote": "Biaya",
+    "chargesNote": "Biaya",
+    "extraNote": "Tambahan"
+  },
+  "prev": {
+    "loanX": "utang {{amount}} + biaya transfer {{charge}}",
+    "loanCharges": "utang {{amount}} + biaya {{charges}}",
+    "loanChargesX": "utang {{amount}} + biaya {{charges}} + biaya transfer {{charge}}",
+    "lendExtra": "piutang {{amount}} + tambahan {{extra}}",
+    "lendOff": "piutang {{amount}} − biaya {{charge}}",
+    "owes": "{{who}} berutang {{amount}}",
+    "youOwe": "utang {{amount}}",
+    "youOweWho": "utang ke {{who}} {{amount}}",
+    "spend": "{{amount}} + biaya {{charge}}"
   },
   "loan": {
     "noDueYet": "Belum ada jatuh tempo",
-    "paybackHead": "Tanggal kembali · {{date}}",
-    "returnHead": "Bayar paling lambat · {{date}}",
     "st": {
       "active": "Aktif",
       "partly": "Dibayar sebagian",
@@ -330,11 +372,7 @@
     "blockPaid": "{{who}}: sudah dibayar {{amount}}",
     "blockOrder": "{{who}}: ada pembayaran pada {{date}} yang lebih dulu",
     "payDeleted": "Pembayaran dihapus",
-    "from": "Dari {{account}}",
-    "into": "Ke {{account}}",
-    "dueAmount": "{{amount}} jatuh tempo {{date}}",
-    "paybackOn": "Kembali {{date}}",
-    "returnOn": "Bayar paling lambat {{date}}",
+    "rowDue": "Jatuh tempo {{date}}",
     "noDue": "Tanpa jatuh tempo",
     "lentOn": "Dipinjamkan {{date}}",
     "borrowedOn": "Dipinjam {{date}}",
@@ -342,10 +380,6 @@
     "mergeBorrow": "Ditambahkan ke pinjamanmu dari {{who}} — sekarang utangmu {{amount}}.",
     "lentTo": "Dipinjamkan ke",
     "borrowedFrom": "Dipinjam dari",
-    "fromAccount": "Dari akun",
-    "intoAccount": "Ke akun",
-    "paybackDay": "Tanggal kembali",
-    "returnBy": "Bayar paling lambat",
     "pickDay": "Pilih hari",
     "saveLend": "Simpan piutang",
     "saveBorrow": "Simpan utang",
@@ -363,10 +397,7 @@
     "gotBackQ": "Uangnya sudah kembali?",
     "paidBackQ": "Sudah bayar sebagian?",
     "partOk": "Sebagian juga tidak apa-apa.",
-    "payInto": "Ke",
-    "payFrom": "Dari",
-    "noPayAccount": "Tidak ada akun dalam {{cur}} untuk mencatatnya: tambahkan satu, atau tampilkan lagi akun yang diarsipkan.",
-    "addFee": "Tambah biaya (kirim, tarik tunai)",
+    "noPayAccount": "Tidak ada akun dalam {{cur}} untuk mencatatnya: tambahkan satu, atau batalkan pengarsipan salah satu akun.",
     "record": "Catat pembayaran",
     "drawLent": "Dipinjamkan dari {{account}} pada {{date}}",
     "drawBorrowed": "Dipinjam, masuk ke {{account}} pada {{date}}",
@@ -375,7 +406,13 @@
     "paidOff": "lunas",
     "intoAcc": "ke {{account}}",
     "fromAcc": "dari {{account}}",
-    "feeAmt": "biaya {{amount}}",
+    "xchargeAmt": "biaya transfer {{amount}}",
+    "chargeAmt": "− biaya {{amount}}",
+    "chargesAmt": "biaya {{amount}}",
+    "extraAmt": "tambahan {{amount}}",
+    "extraIncl": "termasuk tambahan {{amount}}",
+    "chargesIncl": "termasuk biaya {{amount}}",
+    "tipAmt": "+tambahan {{amount}}",
     "clearedLend": "piutang ini jadi lunas",
     "clearedBorrow": "utang ini jadi lunas",
     "leftAfter": "sisa {{amount}} setelah ini",
@@ -393,7 +430,6 @@
     "forgive": "Tandai dibebaskan",
     "delLend": "Hapus piutang",
     "delBorrow": "Hapus utang",
-    "dueOptional": "Jatuh tempo (opsional)",
     "editLend": "Ubah piutang",
     "editBorrow": "Ubah utang",
     "editPayment": "Ubah pembayaran",
@@ -404,17 +440,23 @@
     "whoLend": "Kamu pinjamkan ke siapa?",
     "whoBorrow": "Kamu pinjam dari siapa?",
     "feeNote": "Biaya pembayaran",
-    "feeNegative": "Biaya tidak boleh negatif",
     "noAccountIn": "Tidak ada akun dalam {{cur}}",
     "noAccountRecord": "Tidak ada akun dalam {{cur}} untuk mencatatnya",
     "msg": {
       "lent": "{{amount}} dipinjamkan ke {{who}}",
+      "lentOwes": "{{amount}} dipinjamkan ke {{who}} · {{who}} berutang {{owed}}",
       "borrowed": "Pinjam {{amount}} dari {{who}}",
+      "borrowedOwe": "Pinjam {{amount}} dari {{who}} · utang {{owed}}",
       "reopened": "Dibuka lagi",
       "writtenOff": "Diikhlaskan",
       "forgiven": "Ditandai dibebaskan",
       "gotBack": "{{amount}} diterima kembali",
+      "gotBackTip": "{{amount}} diterima kembali + tambahan {{extra}}",
+      "gotBackIncl": "{{amount}} diterima kembali, termasuk tambahan {{extra}}",
       "paidBack": "{{amount}} dibayar",
+      "paidBackX": "{{amount}} dibayar + biaya transfer {{charge}}",
+      "paidBackIncl": "{{amount}} dibayar, termasuk biaya {{charges}}",
+      "paidBackInclX": "{{amount}} dibayar, termasuk biaya {{charges}} + biaya transfer {{charge}}",
       "allCleared": "semua lunas",
       "owesAgain": "{{who}} kembali berutang {{amount}} padamu",
       "oweAgain": "Kamu kembali berutang {{amount}} pada {{who}}"
@@ -422,17 +464,16 @@
     "over": {
       "lendToLoan": "Piutang ke {{who}} lunas · kamu berutang {{amount}} pada {{who}}",
       "loanToLend": "Utang lunas · {{who}} berutang {{amount}} padamu",
-      "extraNote": "Kelebihan dari {{who}}",
-      "lendCleared": "Piutang ke {{who}} lunas",
-      "asFeeMsg": "Utang lunas · {{amount}} sebagai biayanya",
+      "asExtraMsg": "Piutang ke {{who}} lunas · {{amount}} sebagai tambahan",
+      "asChargeMsg": "Utang lunas · {{amount}} sebagai biayanya",
       "theyPaid": "{{who}} membayar {{amount}} lebih",
       "youPaid": "Kamu membayar {{amount}} lebih",
-      "askLendOr": "Kelebihan {{amount}} ini apa? Pinjaman dari {{who}} (sekarang kamu berutang padanya), atau pemasukan, misalnya biaya yang dia tanggung.",
-      "askBorrowOr": "Kelebihan {{amount}} ini apa? Pinjaman untuk {{who}} (sekarang dia berutang padamu), atau biaya untuk pembayaran ini, misalnya biaya kirim atau bunga.",
+      "askLendOr": "{{who}} berutang {{owed}} padamu. Apakah kelebihan {{amount}} ini tambahan, dihitung sebagai pemasukan, atau utang dari {{who}} yang harus kamu bayar kembali?",
+      "askBorrowOr": "Kamu berutang {{owed}} pada {{who}}. Apakah kelebihan {{amount}} ini biaya untuk pembayaran ini, dihitung sebagai pengeluaran, atau piutang ke {{who}} yang harus dia bayar padamu?",
       "asLoan": "Catat sebagai utang",
       "asLend": "Catat sebagai piutang",
-      "asIncome": "Catat sebagai pemasukan",
-      "asFee": "Catat sebagai biaya"
+      "asExtra": "Catat sebagai tambahan",
+      "asCharge": "Catat sebagai biaya"
     },
     "clear": {
       "titleLend": "Tutup piutang ke {{who}}?",
@@ -451,8 +492,6 @@
   "entry": {
     "gone": "Transaksi itu sudah dihapus",
     "whatFor": "Untuk apa?",
-    "into": "Masuk ke",
-    "paidFrom": "Dibayar dari",
     "paidTo": "Dibayar ke",
     "receivedFrom": "Diterima dari",
     "notePh": "Catatan (opsional)",
@@ -463,17 +502,27 @@
     "pickCat": "Pilih kategori"
   },
   "entries": {
-    "fullHistory": "Buka semua riwayat"
+    "fullHistory": "Buka semua riwayat",
+    "archiveInstead": "Arsipkan saja",
+    "archived": "Diarsipkan",
+    "warnOne": "Menghapus akan mengubah saldo akun.",
+    "warnLend": "Menghapus akan mengubah saldo akun dan piutangnya.",
+    "warnBorrow": "Menghapus akan mengubah saldo akun dan utangnya.",
+    "warnMany": "Menghapus akan mengubah saldo akun terkait.",
+    "delTitle_other": "Hapus {{count}} transaksi ini?",
+    "delThis": "Hapus transaksi ini?"
   },
   "home": {
     "nothingYet": "Belum ada yang dicatat.",
     "allArchived": "Semua akun diarsipkan",
-    "allArchivedHint": "Tampilkan lagi salah satunya dari Aset, atau tambah yang baru.",
+    "allArchivedHint": "Batalkan pengarsipan salah satunya dari Aset, atau tambah yang baru.",
     "showArchived": "Tampilkan akun yang diarsipkan",
     "addAccount": "Tambah akun",
     "accounts": "Akun",
     "backToday": "Kembali ke hari ini",
-    "balance": "Saldo",
+    "total": "Total",
+    "totalIn": "Total dalam {{cur}}",
+    "barSay": "{{entries}}. {{total}}",
     "entries_other": "{{count}} transaksi",
     "addOut": "Tambah pengeluaran",
     "transferLabel": "Transfer antarakun",
@@ -515,10 +564,18 @@
     "region": "Wilayah",
     "choose": "Pilih",
     "week": "Hari pertama dalam minggu",
+    "opensOn": "Beranda dibuka pada",
+    "opens": {
+      "day": "Hari ini",
+      "month": "Bulan ini",
+      "year": "Tahun ini"
+    },
     "clock": "Format waktu",
     "h24": "24 jam",
     "h12": "12 jam",
     "reminders": "Pengingat",
+    "searchArch": "Transaksi yang diarsipkan di pencarian",
+    "searchArchHint": "Pencarian juga menemukan transaksi yang kamu arsipkan.",
     "outCats": "Kategori pengeluaran",
     "outCatsHint": "Tata letaknya persis seperti layar utama. Ketuk untuk mengubah, tahan dan geser untuk memindahkan.",
     "addOutCat": "Tambah kategori pengeluaran",
@@ -561,38 +618,83 @@
     "mode": {
       "d": "Hari",
       "w": "Minggu",
-      "m": "Bulan"
+      "m": "Bulan",
+      "y": "Tahun"
     },
     "weekOf": "Minggu mulai {{date}}",
-    "spent": "keluar",
+    "soFar": "{{year}} sejauh ini",
     "earlier": "Sebelumnya",
     "later": "Berikutnya",
     "same": {
       "d": "Sama dengan hari sebelumnya",
       "w": "Sama dengan minggu lalu",
-      "m": "Sama dengan bulan lalu"
+      "m": "Sama dengan bulan lalu",
+      "y": "Sama dengan {{year}}",
+      "yp": "Sama dengan bulan yang sama di {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} dari hari sebelumnya",
       "w": "↑ {{pct}} dari minggu lalu",
-      "m": "↑ {{pct}} dari bulan lalu"
+      "m": "↑ {{pct}} dari bulan lalu",
+      "y": "↑ {{pct}} dari {{year}}",
+      "yp": "↑ {{pct}} dari bulan yang sama di {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} dari hari sebelumnya",
       "w": "↓ {{pct}} dari minggu lalu",
-      "m": "↓ {{pct}} dari bulan lalu"
+      "m": "↓ {{pct}} dari bulan lalu",
+      "y": "↓ {{pct}} dari {{year}}",
+      "yp": "↓ {{pct}} dari bulan yang sama di {{year}}"
     },
     "avg": "Rata-rata {{amount}} per hari",
     "none": {
       "d": "Tidak ada pengeluaran hari itu.",
       "w": "Tidak ada pengeluaran minggu itu.",
-      "m": "Tidak ada pengeluaran di {{month}}."
+      "m": "Tidak ada pengeluaran di {{month}}.",
+      "y": "Tidak ada pengeluaran di {{year}}."
     },
     "open": {
       "d": "Buka hari tersebut di Beranda",
       "w": "Buka minggu tersebut di Beranda",
-      "m": "Buka bulan tersebut di Beranda"
-    }
+      "m": "Buka bulan tersebut di Beranda",
+      "y": "Buka tahun tersebut di Beranda"
+    },
+    "charges": "Biaya",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "kurang dari {{pct}}",
+    "showAll_other": "Tampilkan semua {{count}} di Riwayat"
+  },
+  "search": {
+    "title": "Cari",
+    "clear": "Hapus",
+    "spent": "{{amount}} keluar",
+    "received": "{{amount}} masuk",
+    "field": "Cari di riwayat",
+    "suggestions": "Saran",
+    "entries": "Transaksi",
+    "recent": "Pencarian terakhir",
+    "forget": "Lupakan: {{text}}",
+    "clearRecent": "Hapus semua pencarian terbaru",
+    "forgotten": "“{{text}}” dihapus dari pencarian terbaru",
+    "clearedAll": "Pencarian terbaru dihapus",
+    "group": {
+      "pay": "Dibayar ke",
+      "payIn": "Diterima dari",
+      "cat": "Kategori",
+      "acc": "Akun",
+      "who": "Orang",
+      "whoLend": "Dipinjamkan ke",
+      "whoBorrow": "Dipinjam dari",
+      "kind": "Jenis",
+      "period": "Periode",
+      "amount": "Jumlah"
+    },
+    "sugLine_other": "{{group}} · {{count}} transaksi",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} transaksi",
+    "nothing": "Tidak ada yang cocok dengan “{{q}}”",
+    "noteLine": "Catatan: {{note}}",
+    "fixBtn_other": "Cari “{{word}}” · {{count}} transaksi"
   },
   "nav": {
     "home": "Beranda",
@@ -600,11 +702,10 @@
     "liabs": "Utang"
   },
   "assets": {
-    "dragTip": "Tips: tahan satu baris lalu geser ke slot kosong untuk menampilkannya lagi.",
+    "dragTip": "Tips: tahan satu baris lalu geser ke slot kosong untuk membatalkan pengarsipannya.",
     "netWorth": "Kekayaan bersih",
-    "netWorthHint": "Yang kamu punya dan piutangmu, dikurangi utangmu",
     "noAccounts": "Belum ada akun",
-    "dropShow": "Lepas di sini untuk menampilkannya lagi",
+    "dropShow": "Lepas di sini untuk membatalkan pengarsipan",
     "showArchived": "Tampilkan arsip ({{count}})",
     "hideArchived": "Sembunyikan arsip ({{count}})",
     "dropArchive": "Lepas di sini untuk mengarsipkan",
@@ -624,7 +725,7 @@
     "owe": "Utangmu",
     "loans": "Pinjaman",
     "loansHint": "Uang yang kamu pinjam tampil di sini sampai lunas.",
-    "borrowBtn": "Catat utang",
+    "borrowBtn": "Pinjam uang",
     "cards": "Kartu kredit"
   },
   "tx": {
@@ -632,24 +733,119 @@
     "borrowedFrom": "Dipinjam dari {{who}}",
     "theyPaidBack": "{{who}} membayar kembali",
     "youPaidBack": "Bayar ke {{who}}",
-    "lending": "Piutang",
-    "loan": "Utang",
-    "feeGotBack": "diterima dari {{who}}",
-    "feePaidBack": "dibayar ke {{who}}"
+    "addedAt": "Ditambahkan pukul {{time}}",
+    "addedOn": "Ditambahkan {{date}} pukul {{time}}",
+    "leftAfter": "Sisa setelahnya",
+    "inAcc": "di {{account}}",
+    "xchargeOn": "+ biaya transfer {{amount}}",
+    "chargeIncl": "termasuk biaya {{amount}}",
+    "chargesIncl": "termasuk biaya {{amount}}",
+    "extraIncl": "termasuk tambahan {{amount}}",
+    "extraOn": "+ tambahan {{amount}}",
+    "chargeOff": "− biaya {{amount}}",
+    "sent": "Dikirim",
+    "paidBack": "Dibayar kembali",
+    "gotBack": "Diterima kembali",
+    "lent": "Dipinjamkan",
+    "borrowed": "Dipinjam",
+    "charge": "Biaya",
+    "xcharge": "Biaya transfer",
+    "charges": "Biaya",
+    "extra": "Tambahan",
+    "asIncome": "dihitung sebagai pemasukan",
+    "asSpending": "dihitung sebagai pengeluaran",
+    "leftExtra": "Sisa: {{money}} dari uangnya, lalu tambahan {{extra}}",
+    "leftCharges": "Sisa: {{money}} dari uangnya, lalu biaya {{charges}}",
+    "due": "Jatuh tempo",
+    "was": "Sebelum",
+    "now": "Sekarang",
+    "youOwe": "Utang ke {{who}}",
+    "owesYou": "{{who}} berutang padamu",
+    "cleared": "Lunas",
+    "paidOf": "{{paid}} dari {{total}} dibayar",
+    "backOf": "{{paid}} dari {{total}} kembali"
   },
   "history": {
     "stopSel": "Berhenti memilih",
     "selected_other": "{{count}} dipilih",
     "selAll": "Pilih semua",
+    "clearSel": "Hapus pilihan",
     "delSel": "Hapus yang dipilih",
+    "archSel": "Arsipkan yang dipilih",
     "select": "Pilih transaksi",
-    "all": "Semua",
+    "allTime": "Sepanjang waktu",
     "none": {
-      "day": "Tidak ada catatan hari itu.",
-      "month": "Tidak ada catatan bulan itu.",
-      "range": "Tidak ada catatan di hari-hari itu."
+      "all": "Belum ada catatan.",
+      "archived": "Semua transaksi diarsipkan."
     },
-    "deleted_other": "{{count}} transaksi dihapus"
+    "deleted_other": "{{count}} transaksi dihapus",
+    "words": {
+      "moved": "Ditransfer {{amount}}",
+      "lent": "{{amount}} dipinjamkan",
+      "gotBack": "{{amount}} kembali",
+      "borrowed": "{{amount}} dipinjam",
+      "paidBack": "{{amount}} dibayar kembali",
+      "added": "{{amount}} ditambah",
+      "takenOff": "{{amount}} dikurangi",
+      "charges": "Biaya {{amount}}",
+      "extras": "Tambahan {{amount}}"
+    },
+    "headSay": "{{title}}, {{parts}}",
+    "filters": "Filter",
+    "filtersN": "Filter · {{count}}",
+    "choosePeriod": "Pilih periode: {{period}}",
+    "showAll": "Tampilkan sepanjang waktu",
+    "removeFilter": "Hapus filter: {{name}}",
+    "clearAll": "Hapus semua",
+    "noMatch": "Tidak ada transaksi yang cocok dengan filter ini",
+    "count_other": "{{count}} transaksi",
+    "kind": {
+      "out": "Pengeluaran",
+      "in": "Pemasukan",
+      "xfer": "Transfer",
+      "lend": "Piutang",
+      "borrow": "Utang",
+      "fix": "Koreksi saldo",
+      "charges": "Biaya",
+      "extras": "Tambahan"
+    },
+    "kindWords": {
+      "charges": "ongkos, admin, komisi, bunga",
+      "extras": "tip, bunga"
+    },
+    "fromAcc": "Dari {{account}}",
+    "toAcc": "Ke {{account}}",
+    "payOut": "Dibayar ke {{name}}",
+    "payIn": "Diterima dari {{name}}",
+    "amtRange": "{{from}} sampai {{to}}",
+    "amtMore": "Lebih dari {{amount}}",
+    "amtLess": "Kurang dari {{amount}}",
+    "lentTo": "Dipinjamkan ke {{who}}",
+    "borrowedFrom": "Dipinjam dari {{who}}",
+    "all": "Semua",
+    "transactions": "Transaksi",
+    "category": "Kategori",
+    "lentSec": "Dipinjamkan ke",
+    "borrowedSec": "Dipinjam dari",
+    "between": "Antara",
+    "everyone": "Semua orang",
+    "anyAccount": "Akun mana saja",
+    "fromAny": "Dari akun mana saja",
+    "toAny": "Ke akun mana saja",
+    "oneSide": "Salah satu sisi adalah {{account}}",
+    "showNone": "Tidak ada transaksi",
+    "swap": "Tukar Dari dan Ke",
+    "show_other": "Tampilkan {{count}} transaksi",
+    "savedGone": "Disimpan · tidak lagi ada di daftar ini"
+  },
+  "archive": {
+    "title": "Arsip",
+    "open": "Transaksi yang diarsipkan",
+    "unarchive": "Batalkan pengarsipan",
+    "back": "Dikembalikan ke Riwayat",
+    "none": "Belum ada yang diarsipkan.",
+    "noneHint": "Transaksi yang kamu arsipkan menunggu di sini, dan semua saldo tetap seperti adanya.",
+    "mark": "Diarsipkan"
   },
   "remind": {
     "nudge": "Pengingat malam",
@@ -657,7 +853,7 @@
     "check": "Cek saldo",
     "checkHint": "Saldomu masih cocok?",
     "dues": "Jatuh tempo utang & piutang",
-    "duesHint": "Pada harinya, dengan +1 hari / +1 minggu",
+    "duesHint": "Pada hari jatuh tempo, atau tiap bulan jika tidak ada",
     "nudgeAt": "Pengingat malam pukul",
     "checkAt": "Cek saldo pukul",
     "duesAt": "Pengingat jatuh tempo pukul"
@@ -670,8 +866,8 @@
     "entries_other": "{{count}} transaksi",
     "autoQ": "Pulihkan {{file}}?",
     "q": "Pulihkan cadangan ini?",
-    "body": "Mengganti semua yang ada di ponsel ini dengan {{accounts}} dan {{entries}}.",
-    "bodySaved": "Mengganti semua yang ada di ponsel ini dengan {{accounts}} dan {{entries}} · disimpan {{when}}.",
+    "body": "Data ponsel ini akan diganti dengan data cadangan: {{accounts}} dan {{entries}}.",
+    "bodySaved": "Data ponsel ini akan diganti dengan data cadangan: {{accounts}} dan {{entries}}, disimpan {{when}}.",
     "lost_other": "{{count}} item di dalamnya tidak bisa dibaca dan akan dilewati.",
     "newer": "Cadangan ini dibuat oleh versi Tally yang lebih baru: perbarui Tally dulu agar tidak ada yang terlewat.",
     "ok": "Pulihkan",
@@ -698,12 +894,12 @@
     },
     "none": {
       "title": "Belum ada cadangan",
-      "body": "Simpan cadangan datamu sebelum menghapusnya?"
+      "body": "Simpan cadangan sebelum menghapus semuanya?"
     },
-    "skip": "Lewati",
     "title": "Hapus semua data?",
-    "body": "Semua akun dan transaksi di ponsel ini. Ini tidak bisa dibatalkan.",
-    "done": "Semua data dihapus"
+    "body": "Semua akun dan transaksi di ponsel ini akan hilang.",
+    "done": "Semua data dihapus",
+    "noBackup": "Hapus tanpa cadangan"
   },
   "native": {
     "err": {
@@ -744,5 +940,9 @@
   },
   "lang": {
     "name": "Bahasa Indonesia"
+  },
+  "suggest": {
+    "removeName": "Hapus “{{name}}” dari saran",
+    "removed": "“{{name}}” dihapus dari saran"
   }
 }

@@ -127,7 +127,9 @@ const ok = (c, m) => {
   // income sheet cycling
   await act("add-in");
   await tagSheet();
+  await sact("f-showcats"); // Received has Spent's category chip: the grid opens from it
   await sact("f-cat", "gift");
+  await sact("f-showcats");
   await sact("f-cat", "income");
   ok(await sameSheet(), "income sheet not rebuilt");
   await page.fill("#f-amt", "100");
@@ -143,11 +145,11 @@ const ok = (c, m) => {
   await sact("tr-swap");
   await sact("tr-to", S.accounts[1].id);
   ok(!(await page.isVisible("#f-toamt")), "received field hidden for CAD→CAD");
-  await sact("add-fee");
-  ok(await page.isVisible("#f-fee"), "fee field shown");
+  await sact("addon-add", "xcharge");
+  ok(await page.isVisible("#f-charge"), "transfer charge field shown");
   ok(await sameSheet(), "transfer sheet not rebuilt");
-  await page.fill("#f-fee", "2");
-  ok((await page.textContent("#tr-prev")).includes("62.00"), "preview includes fee");
+  await page.fill("#f-charge", "2");
+  ok((await page.textContent("#sheet .aocard .aoprev")).includes("62.00"), "preview includes the transfer charge");
   await sact("tr-save");
   let b = await bal();
   ok(b.Bank === 525.5 && b.Wallet === 100, "after transfer+fee " + JSON.stringify(b));
@@ -161,7 +163,7 @@ const ok = (c, m) => {
   await sact("tr-save");
   b = await bal();
   ok(b.bKash === 2850 && b.Bank === 515.5, "bKash 2850 " + JSON.stringify(b));
-  // eating out and transport entries so the donut has 3 categories (the transfer's fee isn't spending)
+  // eating out and transport entries so the donut has 3 categories (the transfer's fee is spending in Charges, no tile)
   await act("add-cat", "food");
   await page.fill("#f-amt", "8");
   await sact("tx-save");
@@ -169,8 +171,9 @@ const ok = (c, m) => {
   await page.fill("#f-amt", "3");
   await sact("tx-save");
   ok(
-    !(await page.$eval('#ring [data-v="fees"] .cp', e => e.textContent).catch(() => "")),
-    "the transfer's fee is not on the ring"
+    !(await page.$('#ring [data-v="fees"]')) && (await page.textContent("#ring .dcenter")).includes("25.5"),
+    "a new notebook has no Fees tile; the transfer's fee is in the ring's figure: 12.50 + 8 + 3 + 2 " +
+      (await page.textContent("#ring .dcenter"))
   );
 
   // ---- leader lines: one per spent category, start on the donut rim, end near the icon, never cross
@@ -326,7 +329,7 @@ const ok = (c, m) => {
   const gift = S.txns.find(t => t.type === "income");
   const before = S.txns.length;
   // long-press with mouse (same code path as touch)
-  const row = await page.$(`[data-act="tx-open"][data-v="${tr.id}"]`);
+  const row = await page.$(`[data-act="row-open"][data-v="${tr.id}"]`);
   const rb = await row.boundingBox();
   await page.mouse.move(rb.x + 60, rb.y + 20);
   await page.mouse.down();
@@ -339,9 +342,15 @@ const ok = (c, m) => {
   );
   await act("sel-toggle", food.id);
   await act("sel-toggle", gift.id);
-  ok((await page.textContent(".appbar h1")).startsWith("3 selected"), "3 selected");
+  ok(
+    (await page.getAttribute(".appbar h1", "aria-label")) === "3 selected" &&
+      (await page.textContent(".appbar h1")) === "3",
+    "3 selected: the bar shows the count, TalkBack reads “3 selected”"
+  );
   await page.screenshot({ path: OUT + "/history-select.png" });
   await act("sel-del");
+  await page.click("#pop .cd-destroy"); // Delete
+  await page.waitForTimeout(350);
   S = await state();
   ok(S.txns.length === before - 4 && !S.txns.some(t => t.id === tr.feeId), "deleted 3 + linked fee");
   await act("undo");
@@ -351,7 +360,7 @@ const ok = (c, m) => {
   await act("sel-start");
   await act("sel-all");
   ok(
-    (await page.evaluate(() => document.querySelectorAll(".tx.on").length)) === before,
+    (await page.evaluate(() => document.querySelectorAll(".tx.on").length)) === before - 1, // the fee is no row
     "select all selects the month"
   );
   await act("sel-cancel");
@@ -397,8 +406,8 @@ const ok = (c, m) => {
   const cof = S.cats.find(c => c.name === "Coffee");
   ok(cof && cof.kind === "out" && cof.e === "☕" && !cof.i && cof.c === "#a646c9", "custom spending category added");
   ok(
-    (await page.evaluate(() => document.querySelectorAll(".ring.edit .tile").length)) === 13,
-    "preview re-laid out with 13 categories"
+    (await page.evaluate(() => document.querySelectorAll(".ring.edit .tile").length)) === 12,
+    "preview re-laid out with 12 categories (the 11 built in, no Fees since data v8, and Coffee)"
   );
   await act("cat-new", "in");
   await page.fill("#f-cname", "Tutoring");

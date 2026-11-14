@@ -1,0 +1,5 @@
+- Busca dentro do Histórico, e o Histórico de todo o período com Filtros: conta, tipo, categoria, pessoa.
+- Arquive um lançamento em vez de excluí-lo: os saldos ficam como estão.
+- Um ano como período no Início, no Histórico e no resumo de gastos.
+- Taxas e extras: uma taxa de saque, um imposto ou uma gorjeta, contados como gasto ou receita.
+- Segure e arraste para reordenar contas, dívidas e os saldos do Início.

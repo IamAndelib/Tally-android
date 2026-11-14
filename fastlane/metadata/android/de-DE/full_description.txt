@@ -9,21 +9,22 @@ Geld erhalten hast; schon benutzte Namen werden beim Tippen vorgeschlagen.
 ALLE KONTEN, JEDE WÄHRUNG
 Bankkonten, E-Wallets, Bargeld, Kreditkarten und Sparkonten, jedes in seiner eigenen Währung: jede Währung der Welt.
 
-UMBUCHUNGEN ZÄHLEN NIE ALS AUSGABE
-Schieb Geld zwischen deinen eigenen Konten hin und her, auch zwischen Währungen, und trag eine Gebühr für
-Geldautomat oder Auszahlung ein, wenn eine anfällt.
+GELD ZWISCHEN DEINEN KONTEN VERSCHIEBEN
+Schieb Geld zwischen deinen eigenen Konten hin und her, auch zwischen Währungen, und trag eine Gebühr ein, etwa für
+Geldautomat oder Auszahlung; sie zählt als Ausgabe.
 
 KONTOSTAND IN SEKUNDEN KORRIGIEREN
 Wenn ein Konto nicht zu dem passt, was du wirklich hast, gib den echten Betrag ein, und Tally bucht den Unterschied.
 
 GELIEHEN UND VERLIEHEN
 Behalte im Blick, was du dir geliehen oder an andere verliehen hast: mehrere Beträge pro Person, Fälligkeiten,
-Teilzahlungen (mit Gebühren), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst du in den Tabs Vermögen
-und Schulden.
+Teilzahlungen (mit einer Gebühr oder einem Extra obendrauf), Erinnerungen und Abschreibungen. Dein Nettovermögen siehst
+du in den Tabs Vermögen und Schulden.
 
 ZURÜCKBLICKEN
-Verlauf für jeden Tag, Zeitraum oder Monat, mit dem Stand jedes Kontos nach jedem Eintrag. Tippe auf den Ring, um
-deine letzten 7 Tage, 8 Wochen oder einen Monat nach Kategorien zu sehen.
+Verlauf für jeden Tag, jeden Zeitraum, jeden Monat, jedes Jahr oder die gesamte Zeit, mit dem Stand jedes Kontos nach jedem Eintrag.
+Durchsuche ihn, filtere nach Konto, Art, Kategorie oder Person und archiviere Einträge, die du nicht mehr sehen willst.
+Tippe auf den Ring, um deine Ausgaben nach Tag, Woche, Monat oder Jahr zu sehen.
 
 ERINNERUNGEN UND EIN WIDGET
 Eine Erinnerung am Abend, wenn du heute noch nichts notiert hast, Erinnerungen an fällige Rückzahlungen und ein

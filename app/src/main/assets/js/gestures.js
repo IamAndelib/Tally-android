@@ -16,8 +16,7 @@ function swallowNextClick() {
 }
 let sw = null,
   LP = null,
-  smSw = null,
-  hsw = null;
+  smSw = null;
 /* true while a dropped ring tile glides into its slot (no new drag until the page has redrawn) */
 let ringSettling = false;
 /* like a phone keyboard's backspace: after 400 ms held, delete every 70 ms, faster (35 ms) after about a second */
@@ -43,9 +42,7 @@ function pressStart(x, y, target) {
   swallowClick = false;
   const layer = !!($("#sheet").innerHTML || $("#pop").innerHTML);
   sw = !layer && target.closest("#ring") ? { x, y } : null;
-  smSw = target.closest("#sm .smchart") ? { x, y } : null;
-  /* History: a sideways swipe on the page (not on the chip strip, which scrolls) moves between account filters */
-  hsw = !layer && V.screen === "history" && !V.sel && !target.closest(".strip") ? { x, y } : null;
+  smSw = target.closest("#sm .smchart:not(.smy)") ? { x, y } : null; // the year's bars scroll sideways instead
   /* holding the calculator's ⌫ keeps deleting (a quick tap is still one delete, through the click) */
   const bs = CALC && target.closest('.calc [data-act="calc-key"][data-v="⌫"]');
   if (bs) {
@@ -67,9 +64,12 @@ function pressStart(x, y, target) {
     LP = rc.disabled ? null : { kind: "range", x, y, from: rc.dataset.v, cur: rc.dataset.v, moved: false };
     return;
   }
+  /* a row long-pressed starts a selection, but not an archived match in search (it can't be selected: selRows) */
   const tile = !ringSettling && target.closest(".cgrid .tile, .ring.edit .tile"),
-    row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="tx-open"]');
-  const mv = (V.screen === "assets" || V.screen === "liabs") && target.closest(".tx[data-drag]");
+    row = V.screen === "history" && !V.sel && target.closest('.tx[data-act="row-open"]:not(.txarch)');
+  const mv =
+    (V.screen === "assets" || V.screen === "liabs" || V.screen === "home") &&
+    (target.closest(".tx[data-drag]") || target.closest('.strip .acc[data-act="acc-open"]'));
   const hold = target.closest("#sheet .chip[data-ctype]") || target.closest('#f-dots .dot[data-act="f-col"]');
   if (hold) {
     LP = { x, y, cx: x, cy: y, el: hold, kind: "hold", active: false };
@@ -89,7 +89,15 @@ function pressStart(x, y, target) {
     LP = null;
     return;
   }
-  LP = { x, y, cx: x, cy: y, el: tile || row || mv, kind: tile ? "drag" : row ? "sel" : "move", active: false };
+  LP = {
+    x,
+    y,
+    cx: x,
+    cy: y,
+    el: tile || row || mv,
+    kind: tile ? "drag" : row ? "sel" : mv && mv.matches(".acc") ? "chip" : "move",
+    active: false,
+  };
   LP.timer = setTimeout(
     () => {
       if (!LP) return;
@@ -97,8 +105,10 @@ function pressStart(x, y, target) {
       swallowNextClick();
       buzz("long");
       if (LP.kind === "sel") {
-        V.sel = new Set([LP.el.dataset.v]);
+        const id = LP.el.dataset.v;
+        V.sel = new Set([id]);
         render();
+        landFocus([{ row: id }, '[data-act="sel-cancel"]']); // the row held, now ticked
         LP = null;
       } else dragBegin();
     },
@@ -180,19 +190,6 @@ function pressEnd(x, y) {
     }
   }
   smSw = null;
-  /* History: finger left → the next account chip (All → Bank → Cash), right → back; stops at the ends */
-  if (hsw && x != null && !(LP && LP.active) && V.screen === "history" && !V.sel) {
-    const dx = x - hsw.x,
-      dy = y - hsw.y,
-      ids = histAccs(),
-      i = ids.indexOf(V.hAcc || ""),
-      j = i + (dx < 0 ? 1 : -1);
-    if (ids.length > 2 && Math.abs(dx) > 60 && Math.abs(dy) < 50 && j >= 0 && j < ids.length) {
-      setHistAcc(ids[j]);
-      buzz("tick");
-    }
-  }
-  hsw = null;
   if (LP && LP.kind === "repeat") {
     stopRepeat();
     if (LP.fired) swallowNextClick(); // the release shouldn't delete one more
@@ -217,7 +214,7 @@ function pressEnd(x, y) {
   if (LP) {
     clearTimeout(LP.timer);
     if (LP.active && LP.kind === "drag") dragEnd();
-    else if (LP.active && LP.kind === "move") rowDrop();
+    else if (LP.active && (LP.kind === "move" || LP.kind === "chip")) rowDrop();
     LP = null;
   }
 }
@@ -240,10 +237,11 @@ function dragBegin() {
     grid: el.closest(".cgrid"),
     ring: el.closest(".ring.edit"),
   });
+  if (LP.kind === "chip") g.classList.add("gh-chip"); // lifted at its own size, like a row
   if (LP.kind === "move") {
     g.classList.add("gh-row");
-    LP.to = ZONE_TO[el.closest("[data-src]").dataset.src];
-    document.querySelectorAll('.dropbox[data-zone="' + LP.to + '"]').forEach(z => z.classList.add("dropok"));
+    LP.to = ZONE_TO[el.closest("[data-src]").dataset.src]; // none for a list that only reorders
+    if (LP.to) document.querySelectorAll('.dropbox[data-zone="' + LP.to + '"]').forEach(z => z.classList.add("dropok"));
   }
 }
 /* where a row may be dropped (source list data-src -> slot data-zone): archived <-> accounts, cleared -> open (clearing stays explicit) */
@@ -255,40 +253,106 @@ const ZONE_TO = {
   "lend-open": "lend-done",
   "borrow-open": "borrow-done",
 };
+/* a dropped row (or Home balance chip): onto its section's box, it moves there (archived, cleared, active again); among
+   its own list's rows, the list keeps the new order (accounts, loans and other assets are listed in the order they're
+   kept; Home's chips in an order of their own, settings.chipOrder); anywhere else, nothing changes */
 function rowDrop() {
   const L = LP,
     ok = !!L.over;
   document.querySelectorAll(".dropok,.dropover").forEach(z => z.classList.remove("dropok", "dropover"));
   L.el.classList.remove("placeholder");
   L.ghost.remove();
-  if (!ok) return; /* dropped elsewhere: nothing changes */
-  const [type, id] = L.el.dataset.drag.split(":");
-  S.settings.dragTip = true;
+  if (ok) {
+    const [type, id] = L.el.dataset.drag.split(":");
+    S.settings.dragTip = true;
+    buzz("confirm");
+    if (type === "acc") setArchived(id, L.to === "arch");
+    else if (/-done$/.test(L.to)) clearLoan(id);
+    else reopenLoan(id);
+    return;
+  }
+  if (!L.moved) return;
+  const sib = [...L.el.parentNode.children].filter(e => e.matches("[data-drag], .acc[data-v]")),
+    ids = sib.map(e => (e.dataset.drag ? e.dataset.drag.split(":")[1] : e.dataset.v));
+  /* Home (its chips, or its account list on a wide screen) keeps an order of its own; elsewhere the kept lists' order */
+  if (L.kind === "chip" || L.el.closest('[data-src="home"]')) S.settings.chipOrder = ids;
+  else {
+    const key = { acc: "accounts", loan: "loans", asset: "assets" }[L.el.dataset.drag.split(":")[0]];
+    S[key] = keepOrder(S[key], ids);
+  }
   buzz("confirm");
-  if (type === "acc") setArchived(id, L.to === "arch");
-  else if (/-done$/.test(L.to)) clearLoan(id);
-  else reopenLoan(id);
+  commit();
+}
+/* list with the items named by ids in that order, in the places those items held (the others stay where they are) */
+function keepOrder(list, ids) {
+  const set = new Set(ids),
+    q = ids.map(id => list.find(x => x.id === id)).filter(Boolean);
+  let k = 0;
+  return list.map(x => (set.has(x.id) && q[k] ? q[k++] : x));
 }
 function dragMove(x, y) {
   const L = LP;
   L.ghost.style.left = x - L.dx + "px";
   L.ghost.style.top = y - L.dy + "px";
   /* near an edge the page scrolls along; for the ring only while part of it is still off-screen that way, so a ring
-     that fits never creeps under the finger */
+     that fits never creeps under the finger. The top edge is below what a screen keeps pinned there (Settings' bar
+     and section heading: the room scroll-padding-top keeps, histPinSet), so a ring hidden under it scrolls too */
   const rb = L.ring && L.ring.getBoundingClientRect(),
+    pinned = parseFloat(document.documentElement.style.scrollPaddingTop) || 0,
     low = innerHeight - (document.body.classList.contains("hasnav") ? 150 : 70);
-  if (y < 70 && (!rb || rb.top < 0)) scrollBy(0, -10);
+  if (y < pinned + 70 && (!rb || rb.top < pinned)) scrollBy(0, -10);
   else if (y > low && (!rb || rb.bottom > low)) scrollBy(0, 10);
+  if (L.kind === "chip") {
+    /* Home's balance chips: sideways, the strip scrolling along near its ends */
+    L.ghost.style.top = L.el.getBoundingClientRect().top + "px";
+    const strip = L.el.parentNode,
+      sr = strip.getBoundingClientRect();
+    if (x < sr.left + 32) strip.scrollLeft -= 8;
+    else if (x > sr.right - 32) strip.scrollLeft += 8;
+    /* once the held chip's leading edge (not the finger) passes the middle of the chip beside it, it takes that
+       chip's place, with one tick per switch; wherever the finger holds it, a wide chip needs no longer drag */
+    const gl = x - L.dx,
+      gr = gl + L.w,
+      side = el => (el && el.matches(".acc[data-v]") ? el : null),
+      mid = el => {
+        const r = el.getBoundingClientRect();
+        return r.left + r.width / 2;
+      },
+      next = side(L.el.nextElementSibling),
+      prev = side(L.el.previousElementSibling);
+    if (next && gr > mid(next)) {
+      next.after(L.el);
+      L.moved = true;
+      buzz("tick");
+    } else if (prev && gl < mid(prev)) {
+      prev.before(L.el);
+      L.moved = true;
+      buzz("tick");
+    }
+    return;
+  }
   if (L.kind === "move") {
     const hit = document.elementFromPoint(x, y),
       z = hit && hit.closest(".dropbox"),
-      ok = !!z && z.dataset.zone === L.to;
+      ok = !!z && !!L.to && z.dataset.zone === L.to;
     if (ok !== !!L.over || (ok && L.overEl !== z)) {
       document.querySelectorAll(".dropover").forEach(e => e.classList.remove("dropover"));
       if (ok) z.classList.add("dropover");
     }
     L.over = ok;
     L.overEl = ok ? z : null;
+    /* over another row of the same list: the held row takes its place (above it in its top half, below in its bottom) */
+    const t = !ok && hit && hit.closest(".tx[data-drag]");
+    if (t && t !== L.el && t.parentNode === L.el.parentNode) {
+      const r = t.getBoundingClientRect(),
+        above = y < r.top + r.height / 2;
+      if (above ? t.previousElementSibling !== L.el : t.nextElementSibling !== L.el) {
+        if (above) t.before(L.el);
+        else t.after(L.el);
+        L.moved = true;
+        buzz("tick");
+      }
+    }
     return;
   }
   if (L.ring) {
@@ -435,7 +499,6 @@ document.addEventListener(
       /* a second finger (a pinch) ends every swipe */
       sw = null;
       smSw = null;
-      hsw = null;
       if (LP) {
         clearTimeout(LP.timer);
         stopRepeat();
@@ -487,5 +550,5 @@ document.addEventListener("mouseup", () => {
   }
 });
 document.addEventListener("contextmenu", e => {
-  if (e.target.closest(".tile,.tx,.dd,.chip,.dot,.calc,.amtwrap.calcing")) e.preventDefault();
+  if (e.target.closest(".tile,.tx,.dd,.chip,.dot,.calc,.amtwrap.calcing,.aorow.calcing")) e.preventDefault();
 });

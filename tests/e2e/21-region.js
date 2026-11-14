@@ -184,7 +184,7 @@ const ok = (c, m) => {
     wipeConfirm();
   });
   await settle();
-  const yes = await page.$('#pop [data-act="ask-ok"]');
+  const yes = await page.$("#pop .cd-destroy");
   if (yes) await yes.click();
   await settle();
   S = await page.evaluate(() => S);

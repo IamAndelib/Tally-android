@@ -22,7 +22,6 @@
     "save": "Save",
     "edit": "Edit",
     "note": "Note",
-    "optional": "Optional",
     "account": "Account",
     "history": "History",
     "enterAmount": "Enter an amount",
@@ -34,9 +33,7 @@
     "previous": "Previous",
     "next": "Next",
     "change": "Change",
-    "done": "Done",
-    "yes": "Yes",
-    "no": "No"
+    "done": "Done"
   },
   "day": {
     "today": "Today",
@@ -53,12 +50,11 @@
     "archiveOwes": "It still owes {{amount}}. Archived accounts are left out of your totals; their entries stay in History.",
     "archive": "Archive",
     "archivedTag": "archived",
-    "startedWith": "Started today with {{amount}}",
+    "startedWith": "At the start of today: {{amount}}",
     "mismatch": "Doesn’t match?",
-    "mismatchHint": "Type what you really have now. Tally records the difference as a balance fix.",
+    "mismatchHint": "Type what you have now. The difference becomes a balance fix.",
     "actual": "Actual balance",
     "update": "Update balance",
-    "unarchive": "Show again",
     "edit": "Edit account",
     "new": "New account",
     "typeNow": "Type what you have now",
@@ -71,9 +67,9 @@
     "type": "Type",
     "opening": "Starting balance",
     "balanceNow": "Balance right now",
-    "openingHint": "What it held before your first entry here. To correct today’s balance, use “Doesn’t match?” instead.",
+    "openingHint": "Before your first entry here.",
     "cardHint": "Credit card? Enter what you owe as a negative number.",
-    "curLocked": "Currency is locked because this account has entries.",
+    "curLockedAria": "Currency: {{currency}}. Locked: this account has entries",
     "add": "Add account",
     "delete": "Delete account",
     "nameIt": "Give the account a name",
@@ -104,17 +100,14 @@
     "to": "To",
     "swap": "Swap from and to",
     "sent": "Amount sent",
-    "addFee": "Add a fee (ATM, cash‑out)",
     "ok": "Transfer",
     "title": "Transfer",
     "edit": "Edit transfer",
     "arrived": "Amount that arrived in {{account}} ({{cur}})",
-    "inclFee": "(incl. {{amount}} fee)",
     "pickBoth": "Pick both accounts",
     "pickTwo": "Pick two different accounts",
     "enterSent": "Enter the amount sent",
     "enterArrived": "Enter how much arrived in {{cur}}",
-    "feeNegative": "Fee can't be negative",
     "feeNote": "Transfer fee",
     "done": "Transferred {{amount}} to {{account}}"
   },
@@ -132,14 +125,15 @@
     "on": "Auto backup on · daily at {{time}}",
     "found": {
       "title": "This folder already has a Tally backup",
-      "body": "Restore it on this phone, or replace it with this phone's data from now on?",
-      "restore": "Restore it",
-      "replace": "Replace it"
+      "body": "Restore it on this phone, or overwrite it with this phone's data?",
+      "overwriteQ": "Overwrite this backup?",
+      "overwriteBody": "This backup's data will be lost, replaced by this phone's."
     },
     "badFile": {
-      "title": "Couldn't read this folder's backup",
-      "cantRead": "The backup file can't be read.",
-      "replaceQ": "Replace it with this phone's data from now on?"
+      "title": "Tally can't read the backup in this folder",
+      "cantRead": "It may be damaged, or made by a newer version of Tally.",
+      "other": "Choose another folder",
+      "overwriteBody": "It can't be read, so whatever it holds will be lost."
     },
     "unavailable": "Backup isn't available here",
     "running": "Backing up…",
@@ -153,7 +147,8 @@
       "title": "Keep your data safe?",
       "body": "Turn on the daily backup: Tally keeps a copy in a folder you pick, so nothing is lost with the phone.",
       "ok": "Turn on"
-    }
+    },
+    "overwrite": "Overwrite"
   },
   "data": {
     "saveFailed": {
@@ -187,8 +182,11 @@
     "day": "Day",
     "range": "Range",
     "month": "Month",
+    "year": "Year",
     "prevYear": "Previous year",
     "nextYear": "Next year",
+    "earlierYears": "Earlier years",
+    "laterYears": "Later years",
     "rangeEnd": "Now tap the end day",
     "rangeHint": "Drag across days, or tap start then end"
   },
@@ -296,11 +294,14 @@
     "yellow": "Yellow"
   },
   "ring": {
+    "charges": "Charges",
     "add": "Add {{cat}}",
     "addShare": "Add {{cat}}, {{share}} of spending",
     "tapCat": "Tap a category",
     "summary": "Spending summary: spent {{spent}}",
     "summaryGot": "Spending summary: spent {{spent}}, received {{got}}",
+    "summaryCharges": "Spending summary: spent {{spent}}, of which charges {{charges}}",
+    "summaryChargesGot": "Spending summary: spent {{spent}}, of which charges {{charges}}, received {{got}}",
     "switchCur": "Showing {{cur}}. Switch to {{next}}"
   },
   "donut": {
@@ -311,14 +312,55 @@
     "both": "Spending + income",
     "none": "No stats"
   },
-  "fee": {
-    "label": "Fee charged ({{cur}}) · not counted as spending",
-    "notNumber": "That fee isn't a number"
+  "xcharge": {
+    "label": "Transfer charge",
+    "calc": "Calculator for the transfer charge",
+    "remove": "Remove the transfer charge"
+  },
+  "charge": {
+    "add": "Add a charge",
+    "label": "Charge",
+    "calc": "Calculator for the charge",
+    "remove": "Remove the charge",
+    "notNumber": "That charge isn't a number",
+    "negative": "A charge can't be negative"
+  },
+  "charges": {
+    "add": "Add charges",
+    "label": "Charges",
+    "calc": "Calculator for the charges",
+    "remove": "Remove the charges"
+  },
+  "extra": {
+    "add": "Add an extra",
+    "label": "Extra",
+    "calc": "Calculator for the extra",
+    "remove": "Remove the extra",
+    "notNumber": "That extra isn't a number",
+    "negative": "An extra can't be negative"
+  },
+  "addOn": {
+    "both": "Transfer charge and extra"
+  },
+  "csv": {
+    "xchargeNote": "Transfer charge",
+    "chargeNote": "Charge",
+    "chargesNote": "Charges",
+    "extraNote": "Extra"
+  },
+  "prev": {
+    "loanX": "loan {{amount}} + transfer charge {{charge}}",
+    "loanCharges": "loan {{amount}} + charges {{charges}}",
+    "loanChargesX": "loan {{amount}} + charges {{charges}} + transfer charge {{charge}}",
+    "lendExtra": "lending {{amount}} + extra {{extra}}",
+    "lendOff": "lending {{amount}} − charge {{charge}}",
+    "owes": "{{who}} owes {{amount}}",
+    "youOwe": "you owe {{amount}}",
+    "youOweWho": "you owe {{who}} {{amount}}",
+    "spend": "{{amount}} + charge {{charge}}"
   },
   "loan": {
     "noDueYet": "No due date yet",
-    "paybackHead": "Payback day · {{date}}",
-    "returnHead": "Return by · {{date}}",
     "st": {
       "active": "Active",
       "partly": "Partly paid",
@@ -331,11 +373,7 @@
     "blockPaid": "{{who}}: already paid back {{amount}}",
     "blockOrder": "{{who}}: a payment on {{date}} comes before the rest",
     "payDeleted": "Payment deleted",
-    "from": "From {{account}}",
-    "into": "Into {{account}}",
-    "dueAmount": "{{amount}} due {{date}}",
-    "paybackOn": "Payback {{date}}",
-    "returnOn": "Return by {{date}}",
+    "rowDue": "Due {{date}}",
     "noDue": "No due date",
     "lentOn": "Lent {{date}}",
     "borrowedOn": "Borrowed {{date}}",
@@ -343,15 +381,11 @@
     "mergeBorrow": "Adds to what you borrowed from {{who}} — now {{amount}} you owe.",
     "lentTo": "Lent to",
     "borrowedFrom": "Borrowed from",
-    "fromAccount": "From account",
-    "intoAccount": "Into account",
-    "paybackDay": "Payback day",
-    "returnBy": "Return by",
     "pickDay": "Pick a day",
     "saveLend": "Save lending",
     "saveBorrow": "Save loan",
     "newLend": "Lend money",
-    "newBorrow": "Borrowed money",
+    "newBorrow": "Borrow money",
     "gone": "That loan was deleted",
     "youLent": "You lent from {{account}} · {{date}}",
     "youBorrowed": "You borrowed into {{account}} · {{date}}",
@@ -366,10 +400,7 @@
     "gotBackQ": "Got money back?",
     "paidBackQ": "Paid some back?",
     "partOk": "Part of it is fine too.",
-    "payInto": "Into",
-    "payFrom": "From",
-    "noPayAccount": "No account in {{cur}} to record it: add one, or show an archived one again.",
-    "addFee": "Add a fee (sending, cash‑out)",
+    "noPayAccount": "No account in {{cur}} to record it: add one, or unarchive one.",
     "record": "Record payment",
     "drawLent": "Lent from {{account}} on {{date}}",
     "drawBorrowed": "Borrowed into {{account}} on {{date}}",
@@ -378,7 +409,13 @@
     "paidOff": "paid off",
     "intoAcc": "into {{account}}",
     "fromAcc": "from {{account}}",
-    "feeAmt": "{{amount}} fee",
+    "xchargeAmt": "{{amount}} transfer charge",
+    "chargeAmt": "− {{amount}} charge",
+    "chargesAmt": "{{amount}} charges",
+    "extraAmt": "{{amount}} extra",
+    "extraIncl": "incl. {{amount}} extra",
+    "chargesIncl": "incl. {{amount}} charges",
+    "tipAmt": "+{{amount}} extra",
     "clearedLend": "this cleared the lending",
     "clearedBorrow": "this cleared the loan",
     "leftAfter": "{{amount}} left after this",
@@ -396,7 +433,6 @@
     "forgive": "Mark as forgiven",
     "delLend": "Delete lending",
     "delBorrow": "Delete loan",
-    "dueOptional": "Due (optional)",
     "editLend": "Edit lending",
     "editBorrow": "Edit loan",
     "editPayment": "Edit payment",
@@ -407,17 +443,23 @@
     "whoLend": "Who did you lend to?",
     "whoBorrow": "Who lent you the money?",
     "feeNote": "Payment fee",
-    "feeNegative": "A fee can't be negative",
     "noAccountIn": "No account in {{cur}}",
     "noAccountRecord": "No account in {{cur}} to record it",
     "msg": {
       "lent": "Lent {{amount}} to {{who}}",
+      "lentOwes": "Lent {{amount}} to {{who}} · {{who}} owes {{owed}}",
       "borrowed": "Borrowed {{amount}} from {{who}}",
+      "borrowedOwe": "Borrowed {{amount}} from {{who}} · you owe {{owed}}",
       "reopened": "Reopened",
       "writtenOff": "Written off",
       "forgiven": "Marked as forgiven",
       "gotBack": "Got back {{amount}}",
+      "gotBackTip": "Got back {{amount}} + {{extra}} extra",
+      "gotBackIncl": "Got back {{amount}}, incl. {{extra}} extra",
       "paidBack": "Paid back {{amount}}",
+      "paidBackX": "Paid back {{amount}} + {{charge}} transfer charge",
+      "paidBackIncl": "Paid back {{amount}}, incl. {{charges}} charges",
+      "paidBackInclX": "Paid back {{amount}}, incl. {{charges}} charges + {{charge}} transfer charge",
       "allCleared": "all cleared",
       "owesAgain": "{{who}} owes you {{amount}} again",
       "oweAgain": "You owe {{who}} {{amount}} again"
@@ -425,17 +467,16 @@
     "over": {
       "lendToLoan": "{{who}}’s lending cleared · you owe {{who}} {{amount}}",
       "loanToLend": "Loan cleared · {{who}} owes you {{amount}}",
-      "extraNote": "Extra from {{who}}",
-      "lendCleared": "{{who}}’s lending cleared",
-      "asFeeMsg": "Loan cleared · {{amount}} as its fee",
+      "asExtraMsg": "{{who}}’s lending cleared · {{amount}} as an extra",
+      "asChargeMsg": "Loan cleared · {{amount}} as its charge",
       "theyPaid": "{{who}} paid {{amount}} more",
       "youPaid": "You paid {{amount}} more",
-      "askLendOr": "What is the extra {{amount}}? A loan from {{who}} (you now owe it), or income, such as a fee they covered.",
-      "askBorrowOr": "What is the extra {{amount}}? A lending to {{who}} (they owe you), or a fee on this payment, such as a sending charge or interest.",
+      "askLendOr": "{{who}} owed you {{owed}}. Is the extra {{amount}} money on top, counted as income, or a loan from {{who}} that you owe back?",
+      "askBorrowOr": "You owed {{who}} {{owed}}. Is the extra {{amount}} a charge on this payment, counted as spending, or a lending to {{who}} that they owe you?",
       "asLoan": "Track as loan",
       "asLend": "Track as lending",
-      "asIncome": "Track as income",
-      "asFee": "Track as a fee"
+      "asExtra": "Track as extra",
+      "asCharge": "Track as charge"
     },
     "clear": {
       "titleLend": "Clear {{who}}’s lending?",
@@ -454,19 +495,26 @@
   "entry": {
     "gone": "That entry was deleted",
     "whatFor": "What was it for?",
-    "into": "Into",
-    "paidFrom": "Paid from",
     "paidTo": "Paid to",
     "receivedFrom": "Received from",
     "notePh": "Note (optional)",
-    "editIn": "Edit money in",
+    "editIn": "Edit received",
     "editOut": "Edit spending",
-    "newIn": "Money in",
+    "newIn": "Received",
     "newOut": "Spent",
     "pickCat": "Pick a category"
   },
   "entries": {
-    "fullHistory": "Open full history"
+    "fullHistory": "Open full history",
+    "archiveInstead": "Archive instead",
+    "archived": "Archived",
+    "warnOne": "Deleting changes the account balance.",
+    "warnLend": "Deleting changes the account balance and the loan.",
+    "warnBorrow": "Deleting changes the account balance and the loan.",
+    "warnMany": "Deleting changes the account balances.",
+    "delTitle_one": "Delete {{count}} entry?",
+    "delTitle_other": "Delete these {{count}} entries?",
+    "delThis": "Delete this entry?"
   },
   "home": {
     "nothingYet": "Nothing written down yet.",
@@ -476,7 +524,9 @@
     "addAccount": "Add an account",
     "accounts": "Accounts",
     "backToday": "Back to today",
-    "balance": "Balance",
+    "total": "Total",
+    "totalIn": "Total in {{cur}}",
+    "barSay": "{{entries}}. {{total}}",
     "entries_one": "{{count}} entry",
     "entries_other": "{{count}} entries",
     "addOut": "Add spending",
@@ -519,14 +569,22 @@
     "region": "Region",
     "choose": "Choose",
     "week": "First day of week",
+    "opensOn": "Home opens on",
+    "opens": {
+      "day": "Today",
+      "month": "This month",
+      "year": "This year"
+    },
     "clock": "Time format",
     "h24": "24-hour",
     "h12": "12-hour",
     "reminders": "Reminders",
+    "searchArch": "Archived entries in search",
+    "searchArchHint": "Search also finds entries you archived.",
     "outCats": "Spending categories",
     "outCatsHint": "Laid out exactly like your home screen. Tap to edit, hold and drag to move.",
     "addOutCat": "Add spending category",
-    "inCats": "Money-in categories",
+    "inCats": "Received categories",
     "removedCats": "Removed · tap to bring back",
     "data": "Your data",
     "dataAuto": "Everything stays on this phone, with a daily copy in your backup folder.",
@@ -553,7 +611,7 @@
     "exampleIn": "e.g. Freelance, Refunds",
     "add": "Add category",
     "edit": "Edit category",
-    "newIn": "New money-in category",
+    "newIn": "New received category",
     "newOut": "New spending category",
     "back": "{{name}} is back",
     "keepOne": "Keep at least one category",
@@ -566,38 +624,87 @@
     "mode": {
       "d": "Days",
       "w": "Weeks",
-      "m": "Months"
+      "m": "Months",
+      "y": "Year"
     },
     "weekOf": "Week of {{date}}",
-    "spent": "spent",
+    "soFar": "{{year}} so far",
     "earlier": "Earlier",
     "later": "Later",
     "same": {
       "d": "Same as the day before",
       "w": "Same as last week",
-      "m": "Same as last month"
+      "m": "Same as last month",
+      "y": "Same as {{year}}",
+      "yp": "Same as the same months of {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} vs the day before",
       "w": "↑ {{pct}} vs last week",
-      "m": "↑ {{pct}} vs last month"
+      "m": "↑ {{pct}} vs last month",
+      "y": "↑ {{pct}} vs {{year}}",
+      "yp": "↑ {{pct}} vs the same months of {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} vs the day before",
       "w": "↓ {{pct}} vs last week",
-      "m": "↓ {{pct}} vs last month"
+      "m": "↓ {{pct}} vs last month",
+      "y": "↓ {{pct}} vs {{year}}",
+      "yp": "↓ {{pct}} vs the same months of {{year}}"
     },
     "avg": "Avg {{amount}} a day",
     "none": {
       "d": "Nothing spent that day.",
       "w": "Nothing spent that week.",
-      "m": "Nothing spent in {{month}}."
+      "m": "Nothing spent in {{month}}.",
+      "y": "Nothing spent in {{year}}."
     },
     "open": {
       "d": "Open this day on Home",
       "w": "Open this week on Home",
-      "m": "Open this month on Home"
-    }
+      "m": "Open this month on Home",
+      "y": "Open this year on Home"
+    },
+    "charges": "Charges",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "less than {{pct}}",
+    "showAll_one": "Show {{count}} entry in History",
+    "showAll_other": "Show all {{count}} in History"
+  },
+  "search": {
+    "title": "Search",
+    "clear": "Clear",
+    "spent": "{{amount}} spent",
+    "received": "{{amount}} received",
+    "field": "Search History",
+    "suggestions": "Suggestions",
+    "entries": "Entries",
+    "recent": "Recent searches",
+    "forget": "Forget: {{text}}",
+    "clearRecent": "Clear all recent searches",
+    "forgotten": "Removed “{{text}}” from recent searches",
+    "clearedAll": "Recent searches cleared",
+    "group": {
+      "pay": "Paid to",
+      "payIn": "Received from",
+      "cat": "Category",
+      "acc": "Account",
+      "who": "Person",
+      "whoLend": "Lent to",
+      "whoBorrow": "Borrowed from",
+      "kind": "Kind",
+      "period": "Period",
+      "amount": "Amount"
+    },
+    "sugLine_one": "{{group}} · {{count}} entry",
+    "sugLabel_one": "{{group}} {{title}}, {{count}} entry",
+    "sugLine_other": "{{group}} · {{count}} entries",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} entries",
+    "nothing": "Nothing matches “{{q}}”",
+    "noteLine": "Note: {{note}}",
+    "fixBtn_one": "Search “{{word}}” · {{count}} entry",
+    "fixBtn_other": "Search “{{word}}” · {{count}} entries"
   },
   "nav": {
     "home": "Home",
@@ -607,9 +714,8 @@
   "assets": {
     "dragTip": "Tip: hold a row and drag it up to the empty slot to bring it back.",
     "netWorth": "Net worth",
-    "netWorthHint": "What you have and are owed, minus what you owe",
     "noAccounts": "No accounts yet",
-    "dropShow": "Drop here to show it again",
+    "dropShow": "Drop here to unarchive",
     "showArchived": "Show archived ({{count}})",
     "hideArchived": "Hide archived ({{count}})",
     "dropArchive": "Drop here to archive",
@@ -629,7 +735,7 @@
     "owe": "You owe",
     "loans": "Loans",
     "loansHint": "Money you borrow shows here until it’s paid back.",
-    "borrowBtn": "Record a loan",
+    "borrowBtn": "Borrow money",
     "cards": "Credit cards"
   },
   "tx": {
@@ -637,26 +743,123 @@
     "borrowedFrom": "Borrowed from {{who}}",
     "theyPaidBack": "{{who}} paid back",
     "youPaidBack": "Paid back {{who}}",
-    "lending": "Lending",
-    "loan": "Loan",
-    "feeGotBack": "got back from {{who}}",
-    "feePaidBack": "paid back {{who}}"
+    "addedAt": "Added at {{time}}",
+    "addedOn": "Added {{date}} at {{time}}",
+    "leftAfter": "Left after",
+    "inAcc": "in {{account}}",
+    "xchargeOn": "+ {{amount}} transfer charge",
+    "chargeIncl": "incl. {{amount}} charge",
+    "chargesIncl": "incl. {{amount}} charges",
+    "extraIncl": "incl. {{amount}} extra",
+    "extraOn": "+ {{amount}} extra",
+    "chargeOff": "− {{amount}} charge",
+    "sent": "Sent",
+    "paidBack": "Paid back",
+    "gotBack": "Got back",
+    "lent": "Lent",
+    "borrowed": "Borrowed",
+    "charge": "Charge",
+    "xcharge": "Transfer charge",
+    "charges": "Charges",
+    "extra": "Extra",
+    "asIncome": "counted as income",
+    "asSpending": "counted as spending",
+    "leftExtra": "Left: {{money}} of the money, then the {{extra}} extra",
+    "leftCharges": "Left: {{money}} of the money, then the {{charges}} charges",
+    "due": "Due",
+    "was": "Was",
+    "now": "Now",
+    "youOwe": "You owe {{who}}",
+    "owesYou": "{{who}} owes you",
+    "cleared": "Cleared",
+    "paidOf": "{{paid}} of {{total}} paid",
+    "backOf": "{{paid}} of {{total}} back"
   },
   "history": {
     "stopSel": "Stop selecting",
     "selected_one": "{{count}} selected",
     "selected_other": "{{count}} selected",
     "selAll": "Select all",
+    "clearSel": "Clear selection",
     "delSel": "Delete selected",
+    "archSel": "Archive selected",
     "select": "Select entries",
-    "all": "All",
+    "allTime": "All time",
     "none": {
-      "day": "Nothing written down that day.",
-      "month": "Nothing written down that month.",
-      "range": "Nothing written down in those days."
+      "all": "Nothing written down yet.",
+      "archived": "Every entry is archived."
     },
     "deleted_one": "Deleted {{count}} entry",
-    "deleted_other": "Deleted {{count}} entries"
+    "deleted_other": "Deleted {{count}} entries",
+    "words": {
+      "moved": "Transferred {{amount}}",
+      "lent": "{{amount}} lent",
+      "gotBack": "{{amount}} got back",
+      "borrowed": "{{amount}} borrowed",
+      "paidBack": "{{amount}} paid back",
+      "added": "{{amount}} added",
+      "takenOff": "{{amount}} taken off",
+      "charges": "Charges {{amount}}",
+      "extras": "Extras {{amount}}"
+    },
+    "headSay": "{{title}}, {{parts}}",
+    "filters": "Filters",
+    "filtersN": "Filters · {{count}}",
+    "choosePeriod": "Choose a period: {{period}}",
+    "showAll": "Show all time",
+    "removeFilter": "Remove filter: {{name}}",
+    "clearAll": "Clear all",
+    "noMatch": "Nothing matches these filters",
+    "count_one": "{{count}} entry",
+    "count_other": "{{count}} entries",
+    "kind": {
+      "out": "Spent",
+      "in": "Received",
+      "xfer": "Transfers",
+      "lend": "Lent",
+      "borrow": "Borrowed",
+      "fix": "Balance fixes",
+      "charges": "Charges",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "fee, fees, charge, interest",
+      "extras": "tip, tips, interest"
+    },
+    "fromAcc": "From {{account}}",
+    "toAcc": "To {{account}}",
+    "payOut": "Paid to {{name}}",
+    "payIn": "Received from {{name}}",
+    "amtRange": "{{from}} to {{to}}",
+    "amtMore": "More than {{amount}}",
+    "amtLess": "Less than {{amount}}",
+    "lentTo": "Lent to {{who}}",
+    "borrowedFrom": "Borrowed from {{who}}",
+    "all": "All",
+    "transactions": "Transactions",
+    "category": "Category",
+    "lentSec": "Lent to",
+    "borrowedSec": "Borrowed from",
+    "between": "Between",
+    "everyone": "Everyone",
+    "anyAccount": "Any account",
+    "fromAny": "From any account",
+    "toAny": "To any account",
+    "oneSide": "One side is {{account}}",
+    "show_one": "Show {{count}} entry",
+    "show_other": "Show {{count}} entries",
+    "showNone": "No entries",
+    "swap": "Swap From and To",
+    "savedGone": "Saved · no longer in this list"
+  },
+  "archive": {
+    "title": "Archived",
+    "open": "Archived entries",
+    "unarchive": "Unarchive",
+    "back": "Back in History",
+    "none": "Nothing archived.",
+    "noneHint": "Entries you archive wait here, with every balance as it is.",
+    "mark": "Archived"
   },
   "remind": {
     "nudge": "Evening nudge",
@@ -664,7 +867,7 @@
     "check": "Balance check",
     "checkHint": "Do your balances still match?",
     "dues": "Loan & lending due days",
-    "duesHint": "On the day, with +1 day / +1 week",
+    "duesHint": "On the due day, or monthly when there is none",
     "nudgeAt": "Evening nudge at",
     "checkAt": "Balance check at",
     "duesAt": "Due-day reminders at"
@@ -679,8 +882,8 @@
     "entries_other": "{{count}} entries",
     "autoQ": "Restore {{file}}?",
     "q": "Restore this backup?",
-    "body": "Replaces everything on this phone with {{accounts}} and {{entries}}.",
-    "bodySaved": "Replaces everything on this phone with {{accounts}} and {{entries}} · saved {{when}}.",
+    "body": "This phone's data will be replaced by the backup's: {{accounts}} and {{entries}}.",
+    "bodySaved": "This phone's data will be replaced by the backup's: {{accounts}} and {{entries}}, saved {{when}}.",
     "lost_one": "{{count}} item in it can't be read and will be left out.",
     "lost_other": "{{count}} items in it can't be read and will be left out.",
     "newer": "It was made by a newer version of Tally: update Tally first so nothing is left out.",
@@ -708,12 +911,12 @@
     },
     "none": {
       "title": "No backup yet",
-      "body": "Save a backup of your data before deleting it?"
+      "body": "Save a backup before deleting everything?"
     },
-    "skip": "Skip",
     "title": "Delete all data?",
-    "body": "Every account and entry on this phone. This can't be undone.",
-    "done": "All data deleted"
+    "body": "Every account and entry on this phone will be lost.",
+    "done": "All data deleted",
+    "noBackup": "Delete without a backup"
   },
   "native": {
     "err": {
@@ -754,5 +957,9 @@
   },
   "lang": {
     "name": "English"
+  },
+  "suggest": {
+    "removeName": "Remove “{{name}}” from suggestions",
+    "removed": "Removed “{{name}}” from suggestions"
   }
 }

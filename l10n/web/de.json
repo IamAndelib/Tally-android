@@ -22,7 +22,6 @@
     "save": "Speichern",
     "edit": "Bearbeiten",
     "note": "Notiz",
-    "optional": "Optional",
     "account": "Konto",
     "history": "Verlauf",
     "enterAmount": "Gib einen Betrag ein",
@@ -34,9 +33,7 @@
     "previous": "Zurück",
     "next": "Weiter",
     "change": "Ändern",
-    "done": "Fertig",
-    "yes": "Ja",
-    "no": "Nein"
+    "done": "Fertig"
   },
   "day": {
     "today": "Heute",
@@ -55,10 +52,9 @@
     "archivedTag": "archiviert",
     "startedWith": "Zu Tagesbeginn: {{amount}}",
     "mismatch": "Stimmt nicht?",
-    "mismatchHint": "Gib ein, was du jetzt wirklich hast. Tally bucht den Unterschied als Korrektur.",
+    "mismatchHint": "Gib ein, was du jetzt hast. Der Unterschied wird als Korrektur gebucht.",
     "actual": "Tatsächlicher Stand",
     "update": "Stand aktualisieren",
-    "unarchive": "Wieder zeigen",
     "edit": "Konto bearbeiten",
     "new": "Neues Konto",
     "typeNow": "Gib ein, was du jetzt hast",
@@ -71,9 +67,9 @@
     "type": "Typ",
     "opening": "Anfangsstand",
     "balanceNow": "Stand jetzt",
-    "openingHint": "Was vor deinem ersten Eintrag hier drauf war. Um den heutigen Stand zu korrigieren, nimm lieber „Stimmt nicht?“.",
+    "openingHint": "Vor deinem ersten Eintrag hier.",
     "cardHint": "Kreditkarte? Gib ein, was du schuldest, als negative Zahl.",
-    "curLocked": "Die Währung ist fest, weil dieses Konto Einträge hat.",
+    "curLockedAria": "Währung: {{currency}}. Gesperrt: Dieses Konto hat Einträge",
     "add": "Konto hinzufügen",
     "delete": "Konto löschen",
     "nameIt": "Gib dem Konto einen Namen",
@@ -104,17 +100,14 @@
     "to": "Nach",
     "swap": "Von und Nach tauschen",
     "sent": "Gesendeter Betrag",
-    "addFee": "Gebühr hinzufügen (Geldautomat, Auszahlung)",
     "ok": "Umbuchen",
     "title": "Umbuchung",
     "edit": "Umbuchung bearbeiten",
     "arrived": "Auf {{account}} angekommen ({{cur}})",
-    "inclFee": "(inkl. {{amount}} Gebühr)",
     "pickBoth": "Wähle beide Konten",
     "pickTwo": "Wähle zwei verschiedene Konten",
     "enterSent": "Gib den gesendeten Betrag ein",
     "enterArrived": "Gib ein, wie viel in {{cur}} ankam",
-    "feeNegative": "Die Gebühr kann nicht negativ sein",
     "feeNote": "Umbuchungsgebühr",
     "done": "{{amount}} auf {{account}} umgebucht"
   },
@@ -132,14 +125,15 @@
     "on": "Auto-Backup an · täglich um {{time}}",
     "found": {
       "title": "In diesem Ordner liegt schon ein Tally-Backup",
-      "body": "Auf diesem Handy wiederherstellen oder ab jetzt durch die Daten dieses Handys ersetzen?",
-      "restore": "Wiederherstellen",
-      "replace": "Ersetzen"
+      "body": "Auf diesem Handy wiederherstellen oder mit den Daten dieses Handys überschreiben?",
+      "overwriteQ": "Dieses Backup überschreiben?",
+      "overwriteBody": "Die Daten dieses Backups gehen verloren und werden durch die dieses Handys ersetzt."
     },
     "badFile": {
-      "title": "Das Backup in diesem Ordner ist nicht lesbar",
-      "cantRead": "Die Backup-Datei kann nicht gelesen werden.",
-      "replaceQ": "Ab jetzt durch die Daten dieses Handys ersetzen?"
+      "title": "Tally kann das Backup in diesem Ordner nicht lesen",
+      "cantRead": "Es ist vielleicht beschädigt oder stammt aus einer neueren Tally-Version.",
+      "other": "Anderen Ordner wählen",
+      "overwriteBody": "Es lässt sich nicht lesen, also geht alles darin verloren."
     },
     "unavailable": "Backup ist hier nicht verfügbar",
     "running": "Wird gesichert …",
@@ -153,7 +147,8 @@
       "title": "Deine Daten absichern?",
       "body": "Schalte das tägliche Backup ein: Tally legt eine Kopie in einem Ordner deiner Wahl ab, damit mit dem Handy nichts verloren geht.",
       "ok": "Einschalten"
-    }
+    },
+    "overwrite": "Überschreiben"
   },
   "data": {
     "saveFailed": {
@@ -187,8 +182,11 @@
     "day": "Tag",
     "range": "Zeitraum",
     "month": "Monat",
+    "year": "Jahr",
     "prevYear": "Voriges Jahr",
     "nextYear": "Nächstes Jahr",
+    "earlierYears": "Frühere Jahre",
+    "laterYears": "Spätere Jahre",
     "rangeEnd": "Tippe jetzt auf den letzten Tag",
     "rangeHint": "Über die Tage ziehen oder Anfang und Ende antippen"
   },
@@ -296,11 +294,14 @@
     "yellow": "Gelb"
   },
   "ring": {
+    "charges": "Gebühren",
     "add": "{{cat}} hinzufügen",
     "addShare": "{{cat}} hinzufügen, {{share}} der Ausgaben",
     "tapCat": "Tippe auf eine Kategorie",
     "summary": "Ausgabenübersicht: {{spent}} ausgegeben",
     "summaryGot": "Ausgabenübersicht: {{spent}} ausgegeben, {{got}} erhalten",
+    "summaryCharges": "Ausgabenübersicht: {{spent}} ausgegeben, davon Gebühren {{charges}}",
+    "summaryChargesGot": "Ausgabenübersicht: {{spent}} ausgegeben, davon Gebühren {{charges}}, {{got}} erhalten",
     "switchCur": "Zeigt {{cur}}. Zu {{next}} wechseln"
   },
   "donut": {
@@ -311,14 +312,55 @@
     "both": "Ausgaben + Einnahmen",
     "none": "Keine Zahlen"
   },
-  "fee": {
-    "label": "Gebühr ({{cur}}) · zählt nicht als Ausgabe",
-    "notNumber": "Die Gebühr ist keine Zahl"
+  "xcharge": {
+    "label": "Überweisungsgebühr",
+    "calc": "Rechner für die Überweisungsgebühr",
+    "remove": "Überweisungsgebühr entfernen"
+  },
+  "charge": {
+    "add": "Gebühr hinzufügen",
+    "label": "Gebühr",
+    "calc": "Rechner für die Gebühr",
+    "remove": "Gebühr entfernen",
+    "notNumber": "Die Gebühr ist keine Zahl",
+    "negative": "Eine Gebühr kann nicht negativ sein"
+  },
+  "charges": {
+    "add": "Gebühren hinzufügen",
+    "label": "Gebühren",
+    "calc": "Rechner für die Gebühren",
+    "remove": "Gebühren entfernen"
+  },
+  "extra": {
+    "add": "Extra hinzufügen",
+    "label": "Extra",
+    "calc": "Rechner für das Extra",
+    "remove": "Extra entfernen",
+    "notNumber": "Das Extra ist keine Zahl",
+    "negative": "Ein Extra kann nicht negativ sein"
+  },
+  "addOn": {
+    "both": "Überweisungsgebühr und Extra"
+  },
+  "csv": {
+    "xchargeNote": "Überweisungsgebühr",
+    "chargeNote": "Gebühr",
+    "chargesNote": "Gebühren",
+    "extraNote": "Extra"
+  },
+  "prev": {
+    "loanX": "Schuld {{amount}} + Überweisungsgebühr {{charge}}",
+    "loanCharges": "Schuld {{amount}} + Gebühren {{charges}}",
+    "loanChargesX": "Schuld {{amount}} + Gebühren {{charges}} + Überweisungsgebühr {{charge}}",
+    "lendExtra": "Darlehen {{amount}} + Extra {{extra}}",
+    "lendOff": "Darlehen {{amount}} − Gebühr {{charge}}",
+    "owes": "{{who}} schuldet {{amount}}",
+    "youOwe": "du schuldest {{amount}}",
+    "youOweWho": "du schuldest {{who}} {{amount}}",
+    "spend": "{{amount}} + Gebühr {{charge}}"
   },
   "loan": {
     "noDueYet": "Noch keine Frist",
-    "paybackHead": "Rückzahlung · {{date}}",
-    "returnHead": "Zurückzahlen bis · {{date}}",
     "st": {
       "active": "Läuft",
       "partly": "Teils bezahlt",
@@ -331,11 +373,7 @@
     "blockPaid": "{{who}}: schon {{amount}} zurückgezahlt",
     "blockOrder": "{{who}}: Eine Zahlung vom {{date}} kommt vor dem Rest",
     "payDeleted": "Zahlung gelöscht",
-    "from": "Von {{account}}",
-    "into": "Auf {{account}}",
-    "dueAmount": "{{amount}} fällig am {{date}}",
-    "paybackOn": "Rückzahlung am {{date}}",
-    "returnOn": "Zurückzahlen bis {{date}}",
+    "rowDue": "Fällig am {{date}}",
     "noDue": "Ohne Frist",
     "lentOn": "Verliehen am {{date}}",
     "borrowedOn": "Geliehen am {{date}}",
@@ -343,15 +381,11 @@
     "mergeBorrow": "Kommt zu dem dazu, was du dir von {{who}} geliehen hast – jetzt schuldest du {{amount}}.",
     "lentTo": "Verliehen an",
     "borrowedFrom": "Geliehen von",
-    "fromAccount": "Vom Konto",
-    "intoAccount": "Aufs Konto",
-    "paybackDay": "Rückzahlung am",
-    "returnBy": "Zurückzahlen bis",
     "pickDay": "Tag wählen",
     "saveLend": "Darlehen speichern",
     "saveBorrow": "Schuld speichern",
     "newLend": "Geld verleihen",
-    "newBorrow": "Geld geliehen",
+    "newBorrow": "Geld leihen",
     "gone": "Das wurde inzwischen gelöscht",
     "youLent": "Vom Konto {{account}} verliehen · {{date}}",
     "youBorrowed": "Geliehen auf {{account}} · {{date}}",
@@ -366,10 +400,7 @@
     "gotBackQ": "Geld zurückbekommen?",
     "paidBackQ": "Etwas zurückgezahlt?",
     "partOk": "Ein Teil geht auch.",
-    "payInto": "Auf",
-    "payFrom": "Von",
-    "noPayAccount": "Kein Konto in {{cur}} zum Erfassen: Leg eins an oder zeig ein archiviertes wieder.",
-    "addFee": "Gebühr hinzufügen (Versand, Auszahlung)",
+    "noPayAccount": "Kein Konto in {{cur}} zum Erfassen: Leg eins an oder heb die Archivierung eines Kontos auf.",
     "record": "Zahlung erfassen",
     "drawLent": "Von {{account}} verliehen am {{date}}",
     "drawBorrowed": "Auf {{account}} geliehen am {{date}}",
@@ -378,7 +409,13 @@
     "paidOff": "abbezahlt",
     "intoAcc": "auf {{account}}",
     "fromAcc": "von {{account}}",
-    "feeAmt": "{{amount}} Gebühr",
+    "xchargeAmt": "{{amount}} Überweisungsgebühr",
+    "chargeAmt": "− {{amount}} Gebühr",
+    "chargesAmt": "{{amount}} Gebühren",
+    "extraAmt": "{{amount}} Extra",
+    "extraIncl": "inkl. {{amount}} Extra",
+    "chargesIncl": "inkl. {{amount}} Gebühren",
+    "tipAmt": "+{{amount}} Extra",
     "clearedLend": "damit ist das Darlehen beglichen",
     "clearedBorrow": "damit ist die Schuld beglichen",
     "leftAfter": "danach {{amount}} offen",
@@ -396,7 +433,6 @@
     "forgive": "Als erlassen markieren",
     "delLend": "Darlehen löschen",
     "delBorrow": "Schuld löschen",
-    "dueOptional": "Fällig (optional)",
     "editLend": "Darlehen bearbeiten",
     "editBorrow": "Schuld bearbeiten",
     "editPayment": "Zahlung bearbeiten",
@@ -407,17 +443,23 @@
     "whoLend": "An wen hast du Geld verliehen?",
     "whoBorrow": "Wer hat dir das Geld geliehen?",
     "feeNote": "Zahlungsgebühr",
-    "feeNegative": "Eine Gebühr kann nicht negativ sein",
     "noAccountIn": "Kein Konto in {{cur}}",
     "noAccountRecord": "Kein Konto in {{cur}} zum Erfassen",
     "msg": {
       "lent": "{{amount}} an {{who}} verliehen",
+      "lentOwes": "{{amount}} an {{who}} verliehen · {{who}} schuldet {{owed}}",
       "borrowed": "{{amount}} von {{who}} geliehen",
+      "borrowedOwe": "{{amount}} von {{who}} geliehen · du schuldest {{owed}}",
       "reopened": "Wieder geöffnet",
       "writtenOff": "Abgeschrieben",
       "forgiven": "Als erlassen markiert",
       "gotBack": "{{amount}} zurückbekommen",
+      "gotBackTip": "{{amount}} zurückbekommen + {{extra}} Extra",
+      "gotBackIncl": "{{amount}} zurückbekommen, inkl. {{extra}} Extra",
       "paidBack": "{{amount}} zurückgezahlt",
+      "paidBackX": "{{amount}} zurückgezahlt + {{charge}} Überweisungsgebühr",
+      "paidBackIncl": "{{amount}} zurückgezahlt, inkl. {{charges}} Gebühren",
+      "paidBackInclX": "{{amount}} zurückgezahlt, inkl. {{charges}} Gebühren + {{charge}} Überweisungsgebühr",
       "allCleared": "alles beglichen",
       "owesAgain": "{{who}} schuldet dir wieder {{amount}}",
       "oweAgain": "Du schuldest {{who}} wieder {{amount}}"
@@ -425,17 +467,16 @@
     "over": {
       "lendToLoan": "Darlehen an {{who}} beglichen · du schuldest {{who}} {{amount}}",
       "loanToLend": "Schuld beglichen · {{who}} schuldet dir {{amount}}",
-      "extraNote": "Mehrbetrag von {{who}}",
-      "lendCleared": "Darlehen an {{who}} beglichen",
-      "asFeeMsg": "Schuld beglichen · {{amount}} als Gebühr",
+      "asExtraMsg": "Darlehen an {{who}} beglichen · {{amount}} als Extra",
+      "asChargeMsg": "Schuld beglichen · {{amount}} als Gebühr",
       "theyPaid": "{{who}} hat {{amount}} mehr gezahlt",
       "youPaid": "Du hast {{amount}} mehr gezahlt",
-      "askLendOr": "Was sind die zusätzlichen {{amount}}? Eine Schuld bei {{who}} (du schuldest das Geld jetzt) oder eine Einnahme, etwa eine Gebühr, die {{who}} übernommen hat.",
-      "askBorrowOr": "Was sind die zusätzlichen {{amount}}? Ein Darlehen an {{who}} ({{who}} schuldet dir das Geld) oder eine Gebühr auf diese Zahlung, etwa Versandkosten oder Zinsen.",
+      "askLendOr": "{{who}} hat dir {{owed}} geschuldet. Sind die zusätzlichen {{amount}} ein Extra obendrauf, als Einnahme gezählt, oder eine Schuld bei {{who}}, die du zurückzahlst?",
+      "askBorrowOr": "Du hast {{who}} {{owed}} geschuldet. Sind die zusätzlichen {{amount}} eine Gebühr auf diese Zahlung, als Ausgabe gezählt, oder ein Darlehen an {{who}}, das {{who}} dir schuldet?",
       "asLoan": "Als Schuld erfassen",
       "asLend": "Als Darlehen erfassen",
-      "asIncome": "Als Einnahme erfassen",
-      "asFee": "Als Gebühr erfassen"
+      "asExtra": "Als Extra erfassen",
+      "asCharge": "Als Gebühr erfassen"
     },
     "clear": {
       "titleLend": "Darlehen an {{who}} abschließen?",
@@ -454,8 +495,6 @@
   "entry": {
     "gone": "Dieser Eintrag wurde gelöscht",
     "whatFor": "Wofür war es?",
-    "into": "Auf Konto",
-    "paidFrom": "Bezahlt von",
     "paidTo": "Bezahlt an",
     "receivedFrom": "Erhalten von",
     "notePh": "Notiz (optional)",
@@ -466,7 +505,16 @@
     "pickCat": "Wähle eine Kategorie"
   },
   "entries": {
-    "fullHistory": "Ganzen Verlauf öffnen"
+    "fullHistory": "Ganzen Verlauf öffnen",
+    "archiveInstead": "Stattdessen archivieren",
+    "archived": "Archiviert",
+    "warnOne": "Löschen ändert den Kontostand.",
+    "warnLend": "Löschen ändert den Kontostand und das Darlehen.",
+    "warnBorrow": "Löschen ändert den Kontostand und die Schuld.",
+    "warnMany": "Löschen ändert die Kontostände.",
+    "delTitle_one": "{{count}} Eintrag löschen?",
+    "delTitle_other": "Diese {{count}} Einträge löschen?",
+    "delThis": "Diesen Eintrag löschen?"
   },
   "home": {
     "nothingYet": "Noch nichts notiert.",
@@ -476,7 +524,9 @@
     "addAccount": "Konto hinzufügen",
     "accounts": "Konten",
     "backToday": "Zurück zu heute",
-    "balance": "Kontostand",
+    "total": "Gesamt",
+    "totalIn": "Gesamt in {{cur}}",
+    "barSay": "{{entries}}. {{total}}",
     "entries_one": "{{count}} Eintrag",
     "entries_other": "{{count}} Einträge",
     "addOut": "Ausgabe hinzufügen",
@@ -519,10 +569,18 @@
     "region": "Region",
     "choose": "Wählen",
     "week": "Erster Wochentag",
+    "opensOn": "Start zeigt zuerst",
+    "opens": {
+      "day": "Heute",
+      "month": "Dieser Monat",
+      "year": "Dieses Jahr"
+    },
     "clock": "Zeitformat",
     "h24": "24 Stunden",
     "h12": "12 Stunden",
     "reminders": "Erinnerungen",
+    "searchArch": "Archivierte Einträge in der Suche",
+    "searchArchHint": "Die Suche findet auch Einträge, die du archiviert hast.",
     "outCats": "Ausgabenkategorien",
     "outCatsHint": "Genau wie auf deiner Startseite angeordnet. Tippen zum Bearbeiten, halten und ziehen zum Verschieben.",
     "addOutCat": "Ausgabenkategorie hinzufügen",
@@ -566,38 +624,87 @@
     "mode": {
       "d": "Tage",
       "w": "Wochen",
-      "m": "Monate"
+      "m": "Monate",
+      "y": "Jahr"
     },
     "weekOf": "Woche ab {{date}}",
-    "spent": "ausgegeben",
+    "soFar": "{{year}} bisher",
     "earlier": "Früher",
     "later": "Später",
     "same": {
       "d": "Wie am Vortag",
       "w": "Wie in der Vorwoche",
-      "m": "Wie im Vormonat"
+      "m": "Wie im Vormonat",
+      "y": "Wie {{year}}",
+      "yp": "Wie in denselben Monaten {{year}}"
     },
     "up": {
       "d": "↑ {{pct}} zum Vortag",
       "w": "↑ {{pct}} zur Vorwoche",
-      "m": "↑ {{pct}} zum Vormonat"
+      "m": "↑ {{pct}} zum Vormonat",
+      "y": "↑ {{pct}} zu {{year}}",
+      "yp": "↑ {{pct}} zu denselben Monaten {{year}}"
     },
     "down": {
       "d": "↓ {{pct}} zum Vortag",
       "w": "↓ {{pct}} zur Vorwoche",
-      "m": "↓ {{pct}} zum Vormonat"
+      "m": "↓ {{pct}} zum Vormonat",
+      "y": "↓ {{pct}} zu {{year}}",
+      "yp": "↓ {{pct}} zu denselben Monaten {{year}}"
     },
     "avg": "Ø {{amount}} pro Tag",
     "none": {
       "d": "An diesem Tag nichts ausgegeben.",
       "w": "In dieser Woche nichts ausgegeben.",
-      "m": "Im {{month}} nichts ausgegeben."
+      "m": "Im {{month}} nichts ausgegeben.",
+      "y": "{{year}} nichts ausgegeben."
     },
     "open": {
       "d": "Diesen Tag auf Start öffnen",
       "w": "Diese Woche auf Start öffnen",
-      "m": "Diesen Monat auf Start öffnen"
-    }
+      "m": "Diesen Monat auf Start öffnen",
+      "y": "Dieses Jahr auf Start öffnen"
+    },
+    "charges": "Gebühren",
+    "say": "{{name}}, {{amount}}",
+    "sayShare": "{{name}}, {{amount}}, {{share}}",
+    "under": "weniger als {{pct}}",
+    "showAll_one": "{{count}} Eintrag im Verlauf zeigen",
+    "showAll_other": "Alle {{count}} im Verlauf zeigen"
+  },
+  "search": {
+    "title": "Suchen",
+    "clear": "Löschen",
+    "spent": "{{amount}} ausgegeben",
+    "received": "{{amount}} erhalten",
+    "field": "Verlauf durchsuchen",
+    "suggestions": "Vorschläge",
+    "entries": "Einträge",
+    "recent": "Letzte Suchen",
+    "forget": "Vergessen: {{text}}",
+    "clearRecent": "Alle letzten Suchen löschen",
+    "forgotten": "„{{text}}“ aus den letzten Suchen entfernt",
+    "clearedAll": "Letzte Suchen gelöscht",
+    "group": {
+      "pay": "Bezahlt an",
+      "payIn": "Erhalten von",
+      "cat": "Kategorie",
+      "acc": "Konto",
+      "who": "Person",
+      "whoLend": "Verliehen an",
+      "whoBorrow": "Geliehen von",
+      "kind": "Art",
+      "period": "Zeitraum",
+      "amount": "Betrag"
+    },
+    "sugLine_one": "{{group}} · {{count}} Eintrag",
+    "sugLabel_one": "{{group}} {{title}}, {{count}} Eintrag",
+    "sugLine_other": "{{group}} · {{count}} Einträge",
+    "sugLabel_other": "{{group}} {{title}}, {{count}} Einträge",
+    "nothing": "Nichts passt zu „{{q}}“",
+    "noteLine": "Notiz: {{note}}",
+    "fixBtn_one": "„{{word}}“ suchen · {{count}} Eintrag",
+    "fixBtn_other": "„{{word}}“ suchen · {{count}} Einträge"
   },
   "nav": {
     "home": "Start",
@@ -607,9 +714,8 @@
   "assets": {
     "dragTip": "Tipp: Halte eine Zeile und zieh sie nach oben auf den leeren Platz, um sie zurückzuholen.",
     "netWorth": "Nettovermögen",
-    "netWorthHint": "Was du hast und noch bekommst, minus was du schuldest",
     "noAccounts": "Noch keine Konten",
-    "dropShow": "Hier ablegen, um es wieder zu zeigen",
+    "dropShow": "Zum Aufheben der Archivierung hier ablegen",
     "showArchived": "Archivierte zeigen ({{count}})",
     "hideArchived": "Archivierte ausblenden ({{count}})",
     "dropArchive": "Zum Archivieren hier ablegen",
@@ -629,7 +735,7 @@
     "owe": "Du schuldest",
     "loans": "Schulden",
     "loansHint": "Geld, das du dir leihst, steht hier, bis es zurückgezahlt ist.",
-    "borrowBtn": "Schuld erfassen",
+    "borrowBtn": "Geld leihen",
     "cards": "Kreditkarten"
   },
   "tx": {
@@ -637,26 +743,123 @@
     "borrowedFrom": "Von {{who}} geliehen",
     "theyPaidBack": "{{who}} hat zurückgezahlt",
     "youPaidBack": "An {{who}} zurückgezahlt",
-    "lending": "Verliehen",
-    "loan": "Geliehen",
-    "feeGotBack": "zurückbekommen von {{who}}",
-    "feePaidBack": "zurückgezahlt an {{who}}"
+    "addedAt": "Hinzugefügt um {{time}}",
+    "addedOn": "Hinzugefügt am {{date}} um {{time}}",
+    "leftAfter": "Übrig danach",
+    "inAcc": "in {{account}}",
+    "xchargeOn": "+ {{amount}} Überweisungsgebühr",
+    "chargeIncl": "inkl. {{amount}} Gebühr",
+    "chargesIncl": "inkl. {{amount}} Gebühren",
+    "extraIncl": "inkl. {{amount}} Extra",
+    "extraOn": "+ {{amount}} Extra",
+    "chargeOff": "− {{amount}} Gebühr",
+    "sent": "Gesendet",
+    "paidBack": "Zurückgezahlt",
+    "gotBack": "Zurückbekommen",
+    "lent": "Verliehen",
+    "borrowed": "Geliehen",
+    "charge": "Gebühr",
+    "xcharge": "Überweisungsgebühr",
+    "charges": "Gebühren",
+    "extra": "Extra",
+    "asIncome": "als Einnahme gezählt",
+    "asSpending": "als Ausgabe gezählt",
+    "leftExtra": "Offen: {{money}} vom Geld, danach {{extra}} Extra",
+    "leftCharges": "Offen: {{money}} vom Geld, danach {{charges}} Gebühren",
+    "due": "Fällig",
+    "was": "Vorher",
+    "now": "Jetzt",
+    "youOwe": "Du schuldest {{who}}",
+    "owesYou": "{{who}} schuldet dir",
+    "cleared": "Beglichen",
+    "paidOf": "{{paid}} von {{total}} bezahlt",
+    "backOf": "{{paid}} von {{total}} zurück"
   },
   "history": {
     "stopSel": "Auswahl beenden",
     "selected_one": "{{count}} ausgewählt",
     "selected_other": "{{count}} ausgewählt",
     "selAll": "Alle auswählen",
+    "clearSel": "Auswahl aufheben",
     "delSel": "Auswahl löschen",
+    "archSel": "Auswahl archivieren",
     "select": "Einträge auswählen",
-    "all": "Alle",
+    "allTime": "Gesamte Zeit",
     "none": {
-      "day": "An diesem Tag nichts notiert.",
-      "month": "In diesem Monat nichts notiert.",
-      "range": "In diesem Zeitraum nichts notiert."
+      "all": "Noch nichts notiert.",
+      "archived": "Alle Einträge sind archiviert."
     },
     "deleted_one": "{{count}} Eintrag gelöscht",
-    "deleted_other": "{{count}} Einträge gelöscht"
+    "deleted_other": "{{count}} Einträge gelöscht",
+    "words": {
+      "moved": "Umgebucht {{amount}}",
+      "lent": "{{amount}} verliehen",
+      "gotBack": "{{amount}} zurückbekommen",
+      "borrowed": "{{amount}} geliehen",
+      "paidBack": "{{amount}} zurückgezahlt",
+      "added": "{{amount}} dazugebucht",
+      "takenOff": "{{amount}} abgebucht",
+      "charges": "Gebühren {{amount}}",
+      "extras": "Extras {{amount}}"
+    },
+    "headSay": "{{title}}, {{parts}}",
+    "filters": "Filter",
+    "filtersN": "Filter · {{count}}",
+    "choosePeriod": "Zeitraum wählen: {{period}}",
+    "showAll": "Gesamte Zeit zeigen",
+    "removeFilter": "Filter entfernen: {{name}}",
+    "clearAll": "Alle zurücksetzen",
+    "noMatch": "Keine Einträge für diese Filter",
+    "count_one": "{{count}} Eintrag",
+    "count_other": "{{count}} Einträge",
+    "kind": {
+      "out": "Ausgaben",
+      "in": "Einnahmen",
+      "xfer": "Umbuchungen",
+      "lend": "Verliehen",
+      "borrow": "Geliehen",
+      "fix": "Korrekturen",
+      "charges": "Gebühren",
+      "extras": "Extras"
+    },
+    "kindWords": {
+      "charges": "Gebühr, Provision, Spesen, Zinsen, Zins",
+      "extras": "Trinkgeld, Zinsen, Zins"
+    },
+    "fromAcc": "Von {{account}}",
+    "toAcc": "Nach {{account}}",
+    "payOut": "Bezahlt an {{name}}",
+    "payIn": "Erhalten von {{name}}",
+    "amtRange": "{{from}} bis {{to}}",
+    "amtMore": "Mehr als {{amount}}",
+    "amtLess": "Weniger als {{amount}}",
+    "lentTo": "Verliehen an {{who}}",
+    "borrowedFrom": "Geliehen von {{who}}",
+    "all": "Alle",
+    "transactions": "Buchungen",
+    "category": "Kategorie",
+    "lentSec": "Verliehen an",
+    "borrowedSec": "Geliehen von",
+    "between": "Zwischen",
+    "everyone": "Alle",
+    "anyAccount": "Beliebiges Konto",
+    "fromAny": "Von beliebigem Konto",
+    "toAny": "Auf beliebiges Konto",
+    "oneSide": "Eine Seite ist {{account}}",
+    "showNone": "Keine Einträge",
+    "swap": "Von und Nach tauschen",
+    "show_one": "{{count}} Eintrag zeigen",
+    "show_other": "{{count}} Einträge zeigen",
+    "savedGone": "Gespeichert · nicht mehr in dieser Liste"
+  },
+  "archive": {
+    "title": "Archiviert",
+    "open": "Archivierte Einträge",
+    "unarchive": "Archivierung aufheben",
+    "back": "Wieder im Verlauf",
+    "none": "Nichts archiviert.",
+    "noneHint": "Einträge, die du archivierst, warten hier, und jeder Kontostand bleibt, wie er ist.",
+    "mark": "Archiviert"
   },
   "remind": {
     "nudge": "Abend-Erinnerung",
@@ -664,7 +867,7 @@
     "check": "Kontostand-Check",
     "checkHint": "Stimmen deine Kontostände noch?",
     "dues": "Fällige Rückzahlungen",
-    "duesHint": "Am Tag selbst, mit +1 Tag / +1 Woche",
+    "duesHint": "Am Fälligkeitstag, ohne Fälligkeitstag monatlich",
     "nudgeAt": "Abend-Erinnerung um",
     "checkAt": "Kontostand-Check um",
     "duesAt": "Fälligkeiten um"
@@ -679,8 +882,8 @@
     "entries_other": "{{count}} Einträge",
     "autoQ": "{{file}} wiederherstellen?",
     "q": "Dieses Backup wiederherstellen?",
-    "body": "Ersetzt alles auf diesem Handy durch {{accounts}} und {{entries}}.",
-    "bodySaved": "Ersetzt alles auf diesem Handy durch {{accounts}} und {{entries}} · gespeichert {{when}}.",
+    "body": "Die Daten dieses Handys werden durch die des Backups ersetzt: {{accounts}} und {{entries}}.",
+    "bodySaved": "Die Daten dieses Handys werden durch die des Backups ersetzt: {{accounts}} und {{entries}}, gespeichert {{when}}.",
     "lost_one": "{{count}} Element darin ist nicht lesbar und wird weggelassen.",
     "lost_other": "{{count}} Elemente darin sind nicht lesbar und werden weggelassen.",
     "newer": "Es stammt aus einer neueren Tally-Version: Aktualisiere Tally zuerst, damit nichts fehlt.",
@@ -708,12 +911,12 @@
     },
     "none": {
       "title": "Noch kein Backup",
-      "body": "Vor dem Löschen ein Backup deiner Daten speichern?"
+      "body": "Vor dem Löschen von allem ein Backup speichern?"
     },
-    "skip": "Überspringen",
     "title": "Alle Daten löschen?",
-    "body": "Alle Konten und Einträge auf diesem Handy. Das lässt sich nicht rückgängig machen.",
-    "done": "Alle Daten gelöscht"
+    "body": "Alle Konten und Einträge auf diesem Handy gehen verloren.",
+    "done": "Alle Daten gelöscht",
+    "noBackup": "Ohne Backup löschen"
   },
   "native": {
     "err": {
@@ -754,5 +957,9 @@
   },
   "lang": {
     "name": "Deutsch"
+  },
+  "suggest": {
+    "removeName": "„{{name}}“ aus den Vorschlägen entfernen",
+    "removed": "„{{name}}“ aus den Vorschlägen entfernt"
   }
 }

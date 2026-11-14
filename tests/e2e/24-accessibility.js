@@ -1,6 +1,8 @@
 // Accessibility: focus moves into sheets and dialogs and back, the page behind them is hidden from screen readers,
 // expandable rows, the time wheel, the ring's currency switch and the loan bar say what they are, calendar days are read
-// as dates, percentages and swatches are readable, and every control is 48px to tap.
+// as dates, percentages and swatches are readable, and every control is 48px to tap (the keypad's too); the charges'
+// cards, chips and overpaid dialog are named for TalkBack, and the Charges grey stands out and never stands alone;
+// Settings' pinned bar and section heading never cover the focus, and its reading order stays as it was.
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("24-accessibility");
 let fails = 0;
@@ -147,6 +149,74 @@ const ok = (c, m) => {
   await page.click('button.vh[data-act="cur-next"]', { force: true });
   await settle();
   ok(/Showing EUR/.test(await page.textContent('button.vh[data-act="cur-next"]')), "and it switches");
+  /* the Charges label (docs/specs/charges.md, Home): hidden from TalkBack, which hears it in the donut's label; its
+     words in the muted text colour (4.5:1), the grey only for its dot (3:1), in both themes */
+  for (const th of ["light", "dark"]) {
+    const chg = await page.evaluate(th => {
+      document.documentElement.dataset.theme = th;
+      if (!S.accounts.some(a => a.id === "b"))
+        S.accounts.push({ id: "b", name: "Wallet", type: "wallet", currency: "USD", opening: 0 });
+      if (!S.txns.some(x => x.id === "tr")) {
+        S.txns.push({
+          id: "tr",
+          ts: 7,
+          date: today(),
+          type: "transfer",
+          amount: 10,
+          account: "a",
+          to: "b",
+          feeId: "tf",
+        });
+        S.txns.push({
+          id: "tf",
+          ts: 8,
+          date: today(),
+          type: "expense",
+          amount: 2.5,
+          account: "a",
+          cat: "other",
+          feeOf: "tr",
+        });
+      }
+      V.cur = "USD";
+      render();
+      const bg = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim();
+      const hex = c =>
+        "#" +
+        c
+          .match(/\d+/g)
+          .slice(0, 3)
+          .map(v => (+v).toString(16).padStart(2, "0"))
+          .join("");
+      const lab = document.querySelector("#ring .rchg");
+      return {
+        hidden: lab.getAttribute("aria-hidden"),
+        focusable: lab.querySelectorAll("button, [tabindex], a, input").length + (lab.tabIndex >= 0 ? 1 : 0),
+        aria: document.querySelector("#ring .dwrap").getAttribute("aria-label"),
+        text: [...lab.querySelectorAll("span, b")].map(e => +contrast(hex(getComputedStyle(e).color), bg).toFixed(2)),
+        dot: +contrast(hex(getComputedStyle(lab.querySelector("i")).backgroundColor), bg).toFixed(2),
+      };
+    }, th);
+    ok(
+      chg.hidden === "true" && chg.focusable === 0,
+      th + ": the Charges label is hidden from TalkBack and takes no focus " + JSON.stringify(chg)
+    );
+    ok(
+      chg.aria === "Spending summary: spent $52.50, of which charges $2.50",
+      th + ": the donut's button says the charges: " + chg.aria
+    );
+    ok(
+      chg.text.length === 2 && chg.text.every(r => r >= 4.5) && chg.dot >= 3,
+      th + ": its words read at 4.5:1, its grey dot at 3:1 " + JSON.stringify([chg.text, chg.dot])
+    );
+  }
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.theme;
+    S.txns = S.txns.filter(x => x.id !== "tr" && x.id !== "tf");
+    S.accounts = S.accounts.filter(a => a.id !== "b");
+    V.cur = "EUR";
+    render();
+  });
   for (const th of ["dark"]) {
     await page.evaluate(th => {
       S.settings.theme = th;
@@ -267,6 +337,20 @@ const ok = (c, m) => {
     );
   });
   await sp.reload();
+  /* charges (docs/specs/charges.md): a loan from Bo, and a lending to Cy with a transfer charge and an extra (chips) */
+  await sp.evaluate(() => {
+    const t = today(),
+      e = (id, amount, more) =>
+        S.txns.push({ id, ts: 10 + S.txns.length, date: t, type: "loan", amount, account: "a", note: "", ...more });
+    S.loans.push(
+      { id: "B", kind: "borrow", person: "Bo", account: "a", date: t, status: "open" },
+      { id: "C", kind: "lend", person: "Cy", account: "a", date: t, status: "open" }
+    );
+    e("bd", 20, { dir: "in", loan: "B", principal: true, onTop: 2 });
+    e("cd", 30, { dir: "out", loan: "C", principal: true, onTop: 3, feeId: "cc" });
+    e("cc", 1, { dir: "out", loan: "C", principal: true, feeOf: "cd" });
+    save();
+  });
   await sp.waitForTimeout(200);
   const tooSmall = () =>
     sp.evaluate(() => {
@@ -277,10 +361,19 @@ const ok = (c, m) => {
         .forEach(e => {
           /* the layout size: a sheet or dialog still opening is drawn a little smaller (its animation's scale) */
           const b = { width: e.offsetWidth, height: e.offsetHeight };
+          /* a compact chip's touch target is its ::after, reaching past the drawn chip (History's Filters sheet, the
+             names offered under a field) */
+          if (["hfc", "nchip-pick", "nchip-x"].some(c => e.classList.contains(c))) {
+            const q = getComputedStyle(e, "::after");
+            if (q.content !== "none" && q.position === "absolute" && q.display !== "none") {
+              b.width = Math.max(b.width, parseFloat(q.width) || 0);
+              b.height = Math.max(b.height, parseFloat(q.height) || 0);
+            }
+          }
           if (!b.width || !b.height || getComputedStyle(e).visibility === "hidden") return;
           if (e.tagName === "A" && b.height < 24) return; // a link inside a sentence
+          if (e.dataset.act === "calc-pos") return; // the caret's mirror over a field: the field itself, not a button
           if (e.classList.contains("dd") ? b.height >= 48 && b.width >= 42 : b.width >= 48 && b.height >= 48) return;
-          if (e.classList.contains("smcol") && b.width >= 40 && b.height >= 96) return;
           out.push(
             (e.dataset.act || e.className || e.tagName) + " " + Math.round(b.width) + "x" + Math.round(b.height)
           );
@@ -295,22 +388,103 @@ const ok = (c, m) => {
     ["Settings", () => ((V.screen = "settings"), render())],
     ["an expense", () => ((V.screen = "home"), render(), txSheet(null, "expense", "food"))],
     ["a transfer", () => trSheet()],
+    ["a transfer, its charge card", () => (trSheet(), $('#sheet [data-act="addon-add"]').click())],
+    [
+      "a transfer, the keypad on its charge",
+      () => (trSheet(), $('#sheet [data-act="addon-add"]').click(), padOn("f-charge")),
+    ],
     ["a balance fix", () => adjSheet()],
     ["an account", () => accOpen("a")],
     ["a loan", () => loanOpen("L")],
     ["a new loan", () => loanForm("borrow")],
+    [
+      "a new lending, its card of two rows",
+      () => (
+        loanForm("lend"),
+        $('#sheet [data-act="addon-add"][data-v="xcharge"]').click(),
+        $('#sheet [data-act="addon-add"][data-v="extra"]').click()
+      ),
+    ],
+    [
+      "a new loan, its charges card",
+      () => (loanForm("borrow"), $('#sheet [data-act="addon-add"][data-v="charges"]').click()),
+    ],
+    [
+      "an expense, its charge card",
+      () => (txSheet(null, "expense", "food"), $('#sheet [data-act="addon-add"]').click()),
+    ],
+    [
+      "an expense, the keypad on its charge",
+      () => (txSheet(null, "expense", "food"), $('#sheet [data-act="addon-add"]').click(), padOn("f-charge")),
+    ],
+    ["a lending's payment, its extra card", () => (loanOpen("L"), $('#sheet [data-act="addon-add"]').click())],
+    ["a loan's payment, its transfer charge card", () => (loanOpen("B"), $('#sheet [data-act="addon-add"]').click())],
+    ["a loan with chips", () => loanOpen("C")],
+    [
+      "a lend's Edit, its card of two rows, the keypad on its extra",
+      () => (loanOpen("C"), loanDrawEdit("cd"), padOn("ed-extra")),
+    ],
+    ["a borrow's Edit, its charges", () => (loanOpen("B"), loanDrawEdit("bd"))],
+    ["paid more than owed", () => (loanOpen("L"), ($("#f-amt").value = "50"), payLoan())],
+    [
+      "History, a lend row with its chips",
+      () => (openHistory({ who: "Cy" }), rowToggle($('#app .tx[data-v="cd"]'), "cd")),
+    ],
     ["a category", () => catForm("food")],
     ["the icons", () => iconPicker("food", "#2a78d6", () => {})],
     ["the currencies", () => curPicker("USD", () => {}, "Currency")],
     ["the time wheel", () => timePicker("Time", "21:00", () => {})],
     ["the summary", () => summarySheet()],
+    ["History, Filters", () => (openHistory(), filtersSheet())],
+    ["History, Filters, Transfers", () => (openHistory({ kind: "xfer" }), filtersSheet())],
+    [
+      "History, From menu",
+      () => (openHistory({ kind: "xfer" }), filtersSheet(), $('#sheet [data-act="hfs-from"]').click()),
+    ],
+    ["History, an opened row", () => (openHistory(), rowToggle($('#app .tx[data-v="e"]'), "e"))],
     ["a date picker", () => (txSheet(null, "expense", "food"), $("#sheet .datefld").click())],
     ["the period picker", () => ((V.screen = "home"), render(), $(".plabel").click())],
+    ["Delete all data", () => ((V.screen = "settings"), render(), wipeAll())],
+    [
+      "Delete all data, final step",
+      () => ((V.screen = "settings"), render(), wipeAll(), $("#pop .cd-destroy").click()),
+    ],
+    ["History, selecting", () => (openHistory(), (V.sel = new Set(["e"])), render())],
+    /* archived entries (docs/specs/history-archive.md, B): History's icon, the Archived screen, an opened row there, the
+       delete question there (Delete and Cancel), and the screen once empty */
+    ["History, its archive button on the Filters line", () => (archiveEntries(["e"], true), commit(), openHistory())],
+    ["Archived", () => archOpen()],
+    ["Archived, an opened row", () => (archOpen(), rowToggle($('#app .tx[data-v="e"]'), "e"))],
+    [
+      "Archived, the delete question",
+      () => (archOpen(), rowToggle($('#app .tx[data-v="e"]'), "e"), $('#app .txo [data-act="tx-del"]').click()),
+    ],
+    ["Archived, empty", () => (archiveEntries(["e"], false), commit(), archOpen())],
+    /* archived entries in search (spec C): an archived match opened, Unarchive and Delete (search stays on: last) */
+    [
+      "Search, an archived match opened",
+      () => (
+        archiveEntries(["e"], true),
+        (S.settings.searchArch = true),
+        commit(),
+        openFind(),
+        ($("#find-q").value = HF.q = "5"),
+        findDraw(),
+        rowToggle($('#app .tx[data-v="e"]'), "e")
+      ),
+    ],
   ];
+  /* the keypad opened on a field once the form has focused its first field (60ms after it opens: focusAmt), which
+     would close it */
+  await sp.evaluate(() => {
+    window.padOn = id => new Promise(r => setTimeout(() => (calcToggle(id, calcToggleBtn(id)), r()), 120));
+  });
   for (const [name, open] of views) {
     await sp.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
     await sp.waitForTimeout(150);
     await sp.evaluate(open);
+    if (/keypad on/.test(name))
+      ok(await sp.evaluate(() => !!CALC && !$("#calc-" + CALC.id).hidden), name + ": the keypad is open");
     await sp.waitForTimeout(350);
     const bad = await tooSmall();
     ok(bad.length === 0, "48px to tap: " + name + (bad.length ? " " + bad.join(", ") : ""));
@@ -365,6 +539,933 @@ const ok = (c, m) => {
     ok(m.weeks === 6 && m.tall >= 44 && m.fits, "sideways, " + name + ": six weeks fit, days " + m.tall + "px tall");
   }
   await side.close();
+
+  // ---- 7b. the transfer charge's card for TalkBack: a group named after its field, the field named by its label, its
+  // own calculator and remove buttons; the button that opens it says what it adds
+  await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+  await settle();
+  await page.evaluate(() => trSheet());
+  await settle();
+  await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await settle();
+  const ao = await page.evaluate(() => {
+    const card = $("#sheet .aocard"),
+      inp = $("#f-charge"),
+      by = inp.getAttribute("aria-labelledby");
+    return {
+      role: card.getAttribute("role"),
+      group: card.getAttribute("aria-label"),
+      field: by ? ($("#" + by) || {}).textContent : inp.getAttribute("aria-label"),
+      calc: card.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+      expanded: card.querySelector('[data-act="calc-toggle"]').getAttribute("aria-expanded"),
+      remove: card.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+      amtCalc: $('#sheet [data-act="calc-toggle"][data-v="f-amt"]').getAttribute("aria-label"),
+    };
+  });
+  ok(
+    ao.role === "group" && ao.group === "Transfer charge" && ao.field === "Transfer charge",
+    "the card is a group named Transfer charge, its field too " + JSON.stringify(ao)
+  );
+  ok(
+    ao.calc === "Calculator for the transfer charge" &&
+      ao.expanded === "false" &&
+      ao.remove === "Remove the transfer charge",
+    "its own calculator and remove buttons " + JSON.stringify(ao)
+  );
+  ok(ao.amtCalc === "Calculator", "the amount's calculator keeps its name");
+  await page.evaluate(() => closeSheet());
+  await settle();
+
+  // ---- 7c. the lend form's card of two rows: a group named "Transfer charge and extra", each row's field, calculator
+  // and ✕ named after it, the two buttons saying what they add; one row left: the card takes its name; Borrow's Charges
+  await page.evaluate(() => loanForm("lend"));
+  await settle();
+  const adds = await page.evaluate(() =>
+    [...document.querySelectorAll("#sheet .aoadd")].map(b => [b.dataset.v, b.textContent.trim()])
+  );
+  ok(
+    JSON.stringify(adds) ===
+      JSON.stringify([
+        ["xcharge", "Transfer charge"],
+        ["extra", "Add an extra"],
+      ]),
+    "lend: + Transfer charge and + Add an extra " + JSON.stringify(adds)
+  );
+  await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await page.click('#sheet [data-act="addon-add"][data-v="extra"]');
+  await settle();
+  const rowNames = (layer = "#sheet") =>
+    page.evaluate(layer => {
+      const card = $(layer + " .aocard:not([hidden])") || $(layer + " .aocard");
+      return {
+        role: card.getAttribute("role"),
+        group: card.getAttribute("aria-label"),
+        rows: [...card.querySelectorAll(".aorow:not([hidden])")].map(r => {
+          const inp = r.querySelector("input");
+          return [
+            ($("#" + inp.getAttribute("aria-labelledby")) || {}).textContent,
+            r.querySelector('[data-act="calc-toggle"]').getAttribute("aria-label"),
+            r.querySelector('[data-act="addon-remove"]').getAttribute("aria-label"),
+          ];
+        }),
+        focus: document.activeElement && document.activeElement.id,
+      };
+    }, layer);
+  let rn = await rowNames();
+  ok(
+    rn.role === "group" &&
+      rn.group === "Transfer charge and extra" &&
+      JSON.stringify(rn.rows) ===
+        JSON.stringify([
+          ["Transfer charge", "Calculator for the transfer charge", "Remove the transfer charge"],
+          ["Extra", "Calculator for the extra", "Remove the extra"],
+        ]) &&
+      rn.focus === "f-extra",
+    "the card of two rows is the group “Transfer charge and extra”, each row named, the focus in the new field " +
+      JSON.stringify(rn)
+  );
+  await page.click('#sheet [data-act="addon-remove"][data-v="extra"]');
+  await settle();
+  rn = await rowNames();
+  ok(
+    rn.group === "Transfer charge" &&
+      rn.rows.length === 1 &&
+      (await page.evaluate(() => document.activeElement.dataset.v)) === "extra",
+    "✕ on the extra: the card is “Transfer charge”, the focus back on + Add an extra " + JSON.stringify(rn)
+  );
+  await page.evaluate(() => (closeSheet(), loanForm("borrow")));
+  await settle();
+  await page.click('#sheet [data-act="addon-add"][data-v="charges"]');
+  await settle();
+  rn = await rowNames();
+  ok(
+    rn.group === "Charges" &&
+      JSON.stringify(rn.rows) === JSON.stringify([["Charges", "Calculator for the charges", "Remove the charges"]]),
+    "borrow: the Charges card, its field, calculator and ✕ named " + JSON.stringify(rn)
+  );
+  await page.evaluate(() => closeSheet());
+  await settle();
+
+  // ---- 7d. the other cards for TalkBack (docs/specs/charges.md, "Which form offers what"): Spent's charge, a lending's
+  // payment's extra, a loan's payment's transfer charge, a lend's and a borrow's Edit; each a group named after its
+  // rows, each row's field, calculator and ✕ named, its button saying what it adds, the focus in the new field
+  const NAMES = {
+    charge: ["Charge", "Calculator for the charge", "Remove the charge"],
+    xcharge: ["Transfer charge", "Calculator for the transfer charge", "Remove the transfer charge"],
+    extra: ["Extra", "Calculator for the extra", "Remove the extra"],
+    charges: ["Charges", "Calculator for the charges", "Remove the charges"],
+  };
+  await page.evaluate(() => {
+    const t = today();
+    S.loans.push(
+      { id: "M", kind: "borrow", person: "Mia", account: "a", date: t, status: "open" },
+      { id: "N", kind: "lend", person: "Noor", account: "a", date: t, status: "open" }
+    );
+    const e = (id, amount, more) =>
+      S.txns.push({ id, ts: 20 + S.txns.length, date: t, type: "loan", amount, account: "a", note: "", ...more });
+    e("md", 200, { dir: "in", loan: "M", principal: true, onTop: 20 });
+    e("nd", 100, { dir: "out", loan: "N", principal: true, onTop: 15, feeId: "nc" });
+    e("nc", 5, { dir: "out", loan: "N", principal: true, feeOf: "nd" });
+    save();
+    render();
+  });
+  for (const [name, open, layer, kinds, group, focus] of [
+    ["Spent", () => txSheet(null, "expense", "food"), "#sheet", ["charge"], "Charge", "f-charge"],
+    ["a lending's payment", () => loanOpen("L"), "#sheet", ["extra"], "Extra", "f-extra"],
+    ["a loan's payment", () => loanOpen("M"), "#sheet", ["xcharge"], "Transfer charge", "f-charge"],
+    [
+      "a lend's Edit",
+      () => (loanOpen("L"), loanDrawEdit("d1")),
+      "#sheet2",
+      ["xcharge", "extra"],
+      "Transfer charge and extra",
+      "ed-extra",
+    ],
+    ["a borrow's Edit", () => (loanOpen("M"), loanDrawEdit("md")), "#sheet2", ["charges"], "Charges", "ed-charge"],
+  ]) {
+    await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+    await settle();
+    await page.evaluate(open);
+    await settle();
+    /* a borrow's draw with charges on top opens with its row; the others are opened by their buttons */
+    const adds = await page.evaluate(
+      layer =>
+        [...document.querySelectorAll(layer + " .aoadd:not([hidden])")].map(b => [b.dataset.v, b.textContent.trim()]),
+      layer
+    );
+    for (const k of kinds)
+      if (adds.some(([v]) => v === k)) await page.click(layer + ' [data-act="addon-add"][data-v="' + k + '"]');
+    await settle();
+    const rn = await rowNames(layer);
+    const want = { charge: "Add a charge", xcharge: "Transfer charge", extra: "Add an extra", charges: "Add charges" };
+    ok(
+      rn.role === "group" &&
+        rn.group === group &&
+        JSON.stringify(rn.rows) === JSON.stringify(kinds.map(k => NAMES[k])) &&
+        adds.every(([v, txt]) => txt === want[v]) &&
+        (name === "a borrow's Edit" || rn.focus === focus),
+      name +
+        ": the card is the group “" +
+        group +
+        "”, each row named, its button says what it adds " +
+        JSON.stringify([rn, adds])
+    );
+  }
+  await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+  await settle();
+
+  // ---- 7e. paid more than owed: a dialog named and described, its three answers in words, the sheet behind hidden;
+  // Escape saves nothing and gives the focus back to the button that paid
+  await page.evaluate(() => loanOpen("L"));
+  await settle();
+  await page.fill("#f-amt", "100");
+  const before = await page.evaluate(() => S.txns.length);
+  await page.click('#sheet [data-act="loan-pay"]');
+  await settle();
+  const ovp = await page.evaluate(() => {
+    const d = document.querySelector("#pop .dialog"),
+      name = d && document.getElementById(d.getAttribute("aria-labelledby")),
+      desc = d && document.getElementById(d.getAttribute("aria-describedby"));
+    return (
+      d && {
+        role: d.getAttribute("role"),
+        name: name && name.textContent,
+        desc: desc && desc.textContent,
+        answers: [...d.querySelectorAll("button")].map(b => b.textContent.trim()).filter(Boolean),
+        focus: d.contains(document.activeElement),
+        behind: $("#sheet").getAttribute("aria-hidden") === "true" && $("#sheet").inert,
+      }
+    );
+  });
+  ok(
+    ovp &&
+      ovp.role === "alertdialog" &&
+      ovp.name === "Sam paid $40.00 more" &&
+      /Sam owed you \$60\.00/.test(ovp.desc) &&
+      ovp.answers.length === 3 &&
+      ovp.focus &&
+      ovp.behind,
+    "paid more than owed: an alertdialog named and described, three answers in words, focused, the sheet hidden " +
+      JSON.stringify(ovp)
+  );
+  await page.keyboard.press("Escape");
+  await settle();
+  ok(
+    await page.evaluate(
+      n => !$("#pop").innerHTML && document.activeElement.dataset.act === "loan-pay" && S.txns.length === n,
+      before
+    ),
+    "Escape saves nothing and gives the focus back to the pay button"
+  );
+  await page.evaluate(() => closeSheet());
+  await settle();
+
+  // ---- 7f. chips (a draw's parts in History's opened row and under the loan sheet's figure): each its words over its
+  // figure, read as text, nothing hidden from TalkBack
+  for (const [where, open, sel] of [
+    ["History", () => (openHistory({ who: "Noor" }), rowToggle($('#app .tx[data-v="nd"]'), "nd")), "#app .txo"],
+    ["the loan sheet", () => loanOpen("N"), "#sheet .hero"],
+  ]) {
+    await page.evaluate(open);
+    await settle();
+    const chips = await page.evaluate(
+      sel =>
+        [...document.querySelectorAll(sel + " .lpart")].map(c => [
+          (c.querySelector(".lpc") || {}).textContent,
+          (c.querySelector(".lpv") || {}).textContent,
+          !!c.closest("[aria-hidden=true]"),
+        ]),
+      sel
+    );
+    ok(
+      chips.length === 3 && chips.every(([w, v, h]) => w && /\$\d/.test(v) && !h),
+      where + ": the chips say their words and figures " + JSON.stringify(chips)
+    );
+    await page.evaluate(() => (closeSheet(), (V.screen = "home"), render()));
+    await settle();
+  }
+
+  // ---- 7g. the Charges grey (CHARGES_C) carries meaning as a part of a drawing: Home's ring slice, the Summary pie's
+  // slice and the dot on its Charges line each stand out 3:1 against what lies behind them, in light and dark; and
+  // never by colour alone: the slice has its label, the line its word
+  for (const th of ["light", "dark"]) {
+    const g = await page.evaluate(th => {
+      S.settings.theme = th;
+      applyTheme();
+      if (!S.accounts.some(a => a.id === "b"))
+        S.accounts.push({ id: "b", name: "Wallet", type: "wallet", currency: "USD", opening: 0 });
+      if (!S.txns.some(x => x.id === "tr"))
+        S.txns.push(
+          { id: "tr", ts: 7, date: today(), type: "transfer", amount: 10, account: "a", to: "b", feeId: "tf" },
+          { id: "tf", ts: 8, date: today(), type: "expense", amount: 2.5, account: "a", cat: "other", feeOf: "tr" }
+        );
+      V.cur = "USD";
+      V.screen = "home";
+      render();
+      const hex = c =>
+        "#" +
+        c
+          .match(/[\d.]+/g)
+          .slice(0, 3)
+          .map(v => (+v).toString(16).padStart(2, "0"))
+          .join("");
+      /* the colour behind e: the first ancestor with a background */
+      const behind = e => {
+        for (let p = e.parentElement; p; p = p.parentElement) {
+          const b = getComputedStyle(p).backgroundColor;
+          if (!/rgba\(.*, 0\)$|transparent/.test(b)) return hex(b);
+        }
+        return hex(getComputedStyle(document.body).backgroundColor);
+      };
+      const slice = document.querySelector('#ring circle[stroke="' + CHARGES_C + '"]'),
+        out = {
+          ring: slice ? +contrast(CHARGES_C, behind(slice.closest("svg"))).toFixed(2) : 0,
+          label: (document.querySelector("#ring .rchg") || {}).textContent || "",
+        };
+      summarySheet();
+      $('#sheet [data-act="sm-mode"][data-v="m"]').click();
+      const pie = [...document.querySelectorAll("#sm .smpie path")].find(p => p.getAttribute("fill") === CHARGES_C),
+        dot = document.querySelector("#sm .smtop .chdot");
+      out.pie = pie ? +contrast(CHARGES_C, behind(pie.closest("svg"))).toFixed(2) : 0;
+      out.dot = dot ? +contrast(hex(getComputedStyle(dot).backgroundColor), behind(dot)).toFixed(2) : 0;
+      out.line = dot ? dot.closest(".tx").getAttribute("aria-label") + " | " + dot.closest(".tx").textContent : "";
+      out.pieHidden = document.querySelector("#sm .smpie svg").getAttribute("aria-hidden") === "true";
+      closeSheet();
+      return out;
+    }, th);
+    ok(
+      g.ring >= 3 && g.pie >= 3 && g.dot >= 3,
+      th + ": the Charges grey stands out 3:1 as the ring's slice, the pie's and the line's dot " + JSON.stringify(g)
+    );
+    ok(
+      /^Charges\$2\.50$/.test(g.label) && /^Charges, \$2\.50/.test(g.line) && /Charges/.test(g.line.split(" | ")[1]),
+      th + ": the grey is never alone: the slice has its label, the line its word " + JSON.stringify(g)
+    );
+    ok(g.pieHidden, th + ": the pie is a drawing, its names in the list under it");
+  }
+  await page.evaluate(() => {
+    S.settings.theme = "light";
+    applyTheme();
+    S.txns = S.txns.filter(x => x.id !== "tr" && x.id !== "tf");
+    S.accounts = S.accounts.filter(a => a.id !== "b");
+    render();
+  });
+
+  // ---- 8. the stacked-button dialogs: named and described for TalkBack, focus inside, back where it was
+  await page.evaluate(() => (closePop(), closeSheet2(), closeSheet()));
+  await page.evaluate(() => ((V.screen = "settings"), render()));
+  await settle();
+  await page.focus('[data-act="wipe"]');
+  await page.evaluate(() => wipeAll());
+  await settle();
+  const cdA = await page.evaluate(() => {
+    const d = document.querySelector("#pop .dialog"),
+      name = document.getElementById(d.getAttribute("aria-labelledby")),
+      desc = document.getElementById(d.getAttribute("aria-describedby"));
+    return {
+      role: d.getAttribute("role"),
+      name: name && name.textContent,
+      desc: desc && desc.textContent,
+      focus: d.contains(document.activeElement) || d === document.activeElement,
+      behind: $("#app").inert && $("#app").getAttribute("aria-hidden") === "true",
+      labelled: [...d.querySelectorAll("button")].every(b => b.textContent.trim()),
+    };
+  });
+  ok(
+    cdA.role === "alertdialog" && cdA.name && cdA.desc && cdA.focus && cdA.behind && cdA.labelled,
+    "a stacked-button dialog is an alertdialog with a name and a description, focused, the page behind hidden " +
+      JSON.stringify(cdA)
+  );
+  await page.click("#pop .cd-destroy");
+  await settle();
+  ok(
+    await page.evaluate(() => {
+      const d = document.querySelector("#pop .dialog");
+      return !!d && (d.contains(document.activeElement) || d === document.activeElement);
+    }),
+    "its second step takes the focus too"
+  );
+  await page.keyboard.press("Escape");
+  await settle();
+  ok(
+    await page.evaluate(() => !$("#pop").innerHTML && document.activeElement.dataset.act === "wipe"),
+    "Escape closes both steps and the focus is back on Delete all data"
+  );
+
+  // ---- design round, task 9: the emblem is its own 48dp button; the net worth card; History's Select icon
+  {
+    await page.evaluate(() => {
+      render();
+      catForm("food", "out");
+    });
+    await settle();
+    const e = await page.evaluate(() => {
+      const b = $('#sheet .cprevbtn[data-act="f-icon"]'),
+        r = b.getBoundingClientRect(),
+        pen = b.querySelector(":scope > .ic");
+      const veil = getComputedStyle(b, "::after").backgroundColor;
+      return {
+        name: b.getAttribute("aria-label"),
+        w: r.width,
+        h: r.height,
+        pen: !!pen && getComputedStyle(pen).color,
+        veil,
+        textBtn: !!$('#sheet .btn.text[data-act="f-icon"]'),
+        count: document.querySelectorAll('#sheet [data-act="f-icon"]').length,
+      };
+    });
+    ok(e.name === "Change emblem", "the emblem button is called Change emblem for TalkBack");
+    ok(e.w >= 48 && e.h >= 48, "the emblem button is at least 48px: " + e.w + "x" + e.h);
+    ok(
+      e.pen === "rgb(255, 255, 255)" && /rgba\(0, 0, 0, 0\.5\)/.test(e.veil),
+      "a white pen over a 50% dark veil: " + e.pen + " " + e.veil
+    );
+    ok(!e.textBtn && e.count === 1, "the 'Change emblem' text button is gone");
+    await page.click('#sheet .cprevbtn[data-act="f-icon"]');
+    await settle();
+    ok(await page.evaluate(() => !!$("#ic-q") || !!$("#sheet2 .icgrid, #sheet .icgrid")), "it opens the emblem picker");
+    await page.evaluate(() => {
+      closeSheet();
+      closeSheet();
+    });
+    await settle();
+
+    // net worth: no explaining line, the same soft container as You owe, both themes; still named
+    for (const scheme of ["light", "dark"]) {
+      await page.evaluate(th => {
+        S.settings.theme = th;
+        applyTheme();
+        V.screen = "assets";
+        render();
+      }, scheme);
+      await settle();
+      const n = await page.evaluate(() => {
+        const c = $(".sumcard.soft"),
+          cs = getComputedStyle(c),
+          sc = getComputedStyle(document.documentElement).getPropertyValue("--secondary-container").trim();
+        const probe = document.createElement("i");
+        probe.style.background = sc;
+        document.body.append(probe);
+        const want = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return { text: c.textContent, bg: cs.backgroundColor, want, small: !!c.querySelector(".small"), fg: cs.color };
+      });
+      ok(
+        /^Net worth/.test(n.text) && !n.small && !/minus what you owe/.test(n.text),
+        scheme + ": net worth has its title and no explaining line: " + n.text
+      );
+      ok(n.bg === n.want, scheme + ": net worth uses the soft container " + n.bg);
+      const rgb = x =>
+        x
+          .match(/[\d.]+/g)
+          .slice(0, 3)
+          .map(Number);
+      const lum = c => {
+        const f = v => ((v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+        return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+      };
+      const a = lum(rgb(n.bg)),
+        b = lum(rgb(n.fg));
+      ok((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 4.5, scheme + ": net worth text passes AA");
+    }
+    await page.evaluate(() => {
+      S.settings.theme = "light";
+      applyTheme();
+    });
+
+    // History's Select icon is the outlined checklist (not the old checked box), 48px, still named Select
+    await page.evaluate(() => {
+      V.screen = "history";
+      render();
+    });
+    await settle();
+    const sel = await page.evaluate(() => {
+      const b = $('[data-act="sel-start"]');
+      return (
+        b && {
+          name: b.getAttribute("aria-label"),
+          same: b.querySelector("path").getAttribute("d") === P.checklist,
+          old: "checkbox" in P,
+          w: b.getBoundingClientRect().width,
+        }
+      );
+    });
+    ok(
+      sel && sel.name === "Select entries" && sel.same && sel.w >= 48 && !sel.old,
+      "History's Select icon is the checklist: " + (sel && sel.name)
+    );
+    ok(
+      !(await page.evaluate(() => Object.keys(window.TALLY_ICONS).some(k => /checklist|deselect/i.test(k)))),
+      "the checklist is not offered as a category emblem"
+    );
+
+    // archived entries (docs/specs/history-archive.md, B): History's archive button and Archive selected are named and
+    // 48px; the Archived screen's headings are headings, its opened row says so, and Back gives the focus to the icon
+    const named = sel =>
+      page.evaluate(sel => {
+        const b = $(sel),
+          r = b && b.getBoundingClientRect();
+        return (
+          b && {
+            name: b.getAttribute("aria-label"),
+            tap: r.width >= 48 && r.height >= 48,
+            mute: [...b.querySelectorAll("svg")].every(s => s.getAttribute("aria-hidden") === "true"),
+          }
+        );
+      }, sel);
+    const id = await page.evaluate(() => {
+      const t = histRows(S.txns)[0];
+      archiveEntries([t.id], true);
+      commit();
+      V.screen = "history";
+      render();
+      return t.id;
+    });
+    await settle();
+    const icon = await named('#app .hbar [data-act="arch-open"]');
+    ok(
+      icon && icon.name === "Archived entries" && icon.tap && icon.mute,
+      "History's archive button, on the Filters line, is called “Archived entries”, 48px: " + JSON.stringify(icon)
+    );
+    await page.evaluate(() => {
+      V.sel = new Set([histRows(S.txns)[0].id]);
+      render();
+    });
+    const sa = await named('#app [data-act="sel-arch"]');
+    ok(
+      sa && sa.name === "Archive selected" && sa.tap && sa.mute,
+      "Archive selected is named, 48px: " + JSON.stringify(sa)
+    );
+    await page.evaluate(() => {
+      V.sel = null;
+      render();
+    });
+    await page.click('#app [data-act="arch-open"]');
+    await settle();
+    await page.click('#app .tx[data-v="' + id + '"]');
+    await settle();
+    const ar = await page.evaluate(id => {
+      const row = $('#app .tx[data-v="' + id + '"]');
+      return {
+        back: $("#app .appbar button").getAttribute("aria-label"),
+        title: $("#app .appbar h1").textContent,
+        month: [...document.querySelectorAll("#app .hmon")].map(
+          h => h.getAttribute("role") + h.getAttribute("aria-level")
+        ),
+        day: [...document.querySelectorAll("#app .dayh")].map(
+          h => h.getAttribute("role") + h.getAttribute("aria-level")
+        ),
+        open: row.getAttribute("aria-expanded"),
+        acts: [...document.querySelectorAll("#app .txo .acts button")].map(b => b.textContent),
+      };
+    }, id);
+    ok(
+      ar.back === "Back" &&
+        ar.title === "Archived" &&
+        ar.month.length === 1 &&
+        ar.month.every(m => m === "heading2") &&
+        ar.day.length === 1 &&
+        ar.day.every(d => d === "heading3") &&
+        ar.open === "true" &&
+        JSON.stringify(ar.acts) === JSON.stringify(["Unarchive", "Delete"]),
+      "the Archived screen: Back, its title, month and day headings, the opened row and its actions " +
+        JSON.stringify(ar)
+    );
+    await page.click('#app [data-act="arch-back"]');
+    await settle();
+    ok(
+      (await page.evaluate(() => [V.screen, document.activeElement.dataset.act].join())) === "history,arch-open",
+      "Back gives the focus to the archive button"
+    );
+    // archived entries in search (spec C): Settings' switch is a named switch, 48px; an archived match says
+    // "Archived" in words (its box is hidden from TalkBack), in its line's own colour: not colour alone
+    await page.evaluate(() => {
+      V.screen = "settings";
+      render();
+    });
+    await settle();
+    const sw = await page.evaluate(() => {
+      const b = $('#app [data-act="search-arch"]'),
+        r = b && b.getBoundingClientRect();
+      return (
+        b && {
+          role: b.getAttribute("role"),
+          name: b.getAttribute("aria-label"),
+          on: b.getAttribute("aria-checked"),
+          w: r.width,
+          h: r.height,
+        }
+      );
+    });
+    ok(
+      sw &&
+        sw.role === "switch" &&
+        sw.name === "Archived entries in search" &&
+        sw.on === "false" &&
+        sw.w >= 48 &&
+        sw.h >= 48,
+      "Settings → History: the switch is named “Archived entries in search”, a switch, 48px " + JSON.stringify(sw)
+    );
+    await page.click('#app [data-act="search-arch"]');
+    await settle();
+    ok(
+      (await page.evaluate(() => $('#app [data-act="search-arch"]').getAttribute("aria-checked"))) === "true" &&
+        (await page.evaluate(() => document.activeElement.dataset.act)) === "search-arch",
+      "tapped, it says it is on and keeps the focus"
+    );
+    const mk = await page.evaluate(id => {
+      const t = entry(id),
+        words = (t.payee || catName(cat(t.cat)) || "").split(/\s+/)[0];
+      openFind();
+      $("#find-q").value = HF.q = words;
+      findDraw();
+      const r = $('#app .tx[data-v="' + id + '"]'),
+        m = r && r.querySelector(".s .tarch"),
+        s = r && r.querySelector(".s");
+      const out = r && {
+        name: r.textContent,
+        word: m && m.textContent,
+        mute: !!m && [...m.querySelectorAll("svg")].every(x => x.getAttribute("aria-hidden") === "true"),
+        colour: !!m && getComputedStyle(m).color === getComputedStyle(s).color,
+        others: [...document.querySelectorAll("#app .tx[data-v] .tarch")].map(e => e.closest(".tx").dataset.v),
+      };
+      /* selecting in that search: the archived match can't be selected, and says so (Ruling O) */
+      V.sel = new Set();
+      render();
+      const q = $('#app .tx[data-v="' + id + '"]');
+      if (out)
+        out.sel = q && {
+          disabled: q.getAttribute("aria-disabled"),
+          pressed: q.getAttribute("aria-pressed"),
+          act: q.dataset.act || "",
+          same: q.textContent === out.name,
+        };
+      V.sel = null;
+      findEnd();
+      V.screen = "settings";
+      render();
+      return out;
+    }, id);
+    ok(
+      mk &&
+        /Archived/.test(mk.name) &&
+        mk.word === "Archived" &&
+        mk.mute &&
+        mk.colour &&
+        JSON.stringify(mk.others) === JSON.stringify([id]),
+      "an archived match says “Archived” in words, its box hidden, in its line's colour " + JSON.stringify(mk)
+    );
+    ok(
+      mk && mk.sel && mk.sel.disabled === "true" && mk.sel.pressed === null && !mk.sel.act && mk.sel.same,
+      "while selecting, an archived match is read as unavailable (aria-disabled), its name unchanged " +
+        JSON.stringify(mk && mk.sel)
+    );
+    await page.click('#app [data-act="search-arch"]');
+    await settle();
+    await page.evaluate(id => {
+      archiveEntries([id], false);
+      commit();
+    }, id);
+    await page.evaluate(() => {
+      V.screen = "home";
+      render();
+    });
+  }
+
+  // ---- Settings' pinned header (docs/specs/history-archive.md, D): the bar and the heading of the section in view
+  // stay at the top, the next heading pushes the old one up, a thin line under the held heading only; the same
+  // sideways and on tablets; a control the focus moves to is never left under them; TalkBack's order is unchanged
+  for (const sz of [
+    { id: "phone", w: 393, h: 852, s: 1 },
+    { id: "small 1.3x", w: 320, h: 640, s: 1.3 },
+    { id: "sideways", w: 800, h: 360, s: 1 },
+    { id: "sideways 1.3x", w: 740, h: 360, s: 1.3 },
+    { id: "tablet", w: 800, h: 1280, s: 1 },
+    { id: "tablet sideways", w: 1280, h: 800, s: 1.3 },
+  ]) {
+    const c = await browser.newContext({
+      viewport: { width: sz.w, height: sz.h },
+      screen: { width: sz.w, height: sz.h },
+      isMobile: true,
+      hasTouch: true,
+      locale: "en-US",
+    });
+    await c.addInitScript(s => {
+      window.Android = {
+        setReminders() {},
+        takeActions: () => "[]",
+        getColors: () => null,
+        setBars() {},
+        requestNotifications() {},
+        fontScale: () => s,
+      };
+    }, sz.s);
+    const sp = await c.newPage();
+    sp.on("pageerror", e => errors.push(e.message));
+    await sp.goto(appUrl);
+    await sp.evaluate(() =>
+      localStorage.setItem(
+        "tally:v1",
+        JSON.stringify({
+          v: 6,
+          settings: { cur: "USD", clock: "24", lastCheck: today(), dragTip: true },
+          accounts: [{ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1 }],
+          txns: [],
+        })
+      )
+    );
+    await sp.reload();
+    await sp.evaluate(() => {
+      V.screen = "settings";
+      render();
+    });
+    const frame = () => sp.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await frame();
+    const tag = sz.id + ": ";
+    /* the reading order before anything scrolls: the accessibility tree of the screen */
+    const tree = await sp.locator("#app").ariaSnapshot();
+    /* what the window shows at the top: the bar, the heading under it and its line, and whatever else is in view */
+    const look = () =>
+      sp.evaluate(() => {
+        const box = e => e.getBoundingClientRect(),
+          bar = box($("#app .appbar")),
+          cx = bar.left + bar.width / 2,
+          at = (x, y) => document.elementFromPoint(x, y) || { closest: () => null },
+          heads = [...document.querySelectorAll("#app .sec")],
+          probe = document.createElement("div");
+        probe.style.color = "var(--outline-variant)";
+        document.body.appendChild(probe);
+        const outline = getComputedStyle(probe).color;
+        probe.remove();
+        const line = h =>
+          parseFloat(getComputedStyle(h).borderBottomWidth) > 0 &&
+          getComputedStyle(h).borderBottomColor !== "rgba(0, 0, 0, 0)"
+            ? getComputedStyle(h).borderBottomWidth + " " + getComputedStyle(h).borderBottomColor
+            : "";
+        /* the heading at the top: the one right under the bar, or the one cut by it */
+        const head = heads.find(h => box(h).bottom > bar.bottom + 1 && box(h).top < bar.bottom + 12),
+          hb = head && box(head);
+        /* nothing of a section shows between the bar and the held heading's bottom */
+        let leak = "";
+        if (hb)
+          for (let y = 2; y < hb.bottom - 1; y += 3) {
+            const e = at(cx, y);
+            if (!e.closest(".appbar, .sec") && !e.closest(".hpin")) leak = leak || e.className || e.tagName;
+          }
+        return {
+          y: scrollY,
+          barTop: bar.top,
+          barBottom: bar.bottom,
+          barHit: !!at(cx, bar.top + bar.height / 2).closest(".appbar"),
+          head: head ? head.textContent.trim() : "",
+          headTop: hb ? hb.top : -1,
+          headBottom: hb ? hb.bottom : -1,
+          headHit: !!hb && at(cx, hb.top + hb.height / 2) === head,
+          line: head ? line(head) : "",
+          outline: "1px " + outline,
+          /* the headings in view that aren't held: no line */
+          others: heads
+            .filter(h => h !== head && box(h).top > (hb ? hb.bottom : bar.bottom) && box(h).top < innerHeight)
+            .map(h => [h.textContent.trim(), line(h)]),
+          leak,
+        };
+      });
+    const headY = name =>
+      sp.evaluate(name => {
+        const h = [...document.querySelectorAll("#app .sec")].find(x => x.textContent.trim() === name);
+        return h.getBoundingClientRect().top + scrollY;
+      }, name);
+    /* at the top: the first heading isn't held, so no line under any heading */
+    let L = await look();
+    ok(
+      L.y === 0 && L.others.every(o => o[1] === "") && (L.head === "" || L.line === ""),
+      tag + "unscrolled, no heading has the line " + JSON.stringify(L)
+    );
+    /* halfway through Region */
+    const reg = await headY("Region"),
+      rem = await headY("Reminders");
+    await sp.evaluate(y => scrollTo(0, y), Math.round(reg + (rem - reg) / 2));
+    await frame();
+    L = await look();
+    ok(L.y > 0, tag + "scrolled halfway through Region: " + L.y);
+    ok(Math.abs(L.barTop) < 1 && L.barHit, tag + "the bar stays at the top " + JSON.stringify(L));
+    ok(
+      L.head === "Region" && L.headHit && L.headTop >= L.barBottom - 0.5 && L.headTop <= L.barBottom + 6,
+      tag + "Region's heading stays right under it " + JSON.stringify(L)
+    );
+    ok(L.line === L.outline, tag + "a thin line in the outline-variant colour under it " + JSON.stringify(L));
+    ok(
+      L.others.every(o => o[1] === ""),
+      tag + "the headings below have no line " + JSON.stringify(L.others)
+    );
+    ok(!L.leak, tag + "nothing of the section shows above the heading's bottom: " + L.leak);
+    const pinnedTop = L.headTop;
+    /* the hand-over: Reminders' heading reaches Region's and pushes it up */
+    const remNow = await sp.evaluate(
+      () =>
+        [...document.querySelectorAll("#app .sec")]
+          .find(x => x.textContent.trim() === "Reminders")
+          .getBoundingClientRect().top
+    );
+    await sp.evaluate(d => scrollBy(0, d), Math.round(remNow - L.headBottom + 12));
+    await frame();
+    const hand = await sp.evaluate(() => {
+      const r = n =>
+        [...document.querySelectorAll("#app .sec")].find(x => x.textContent.trim() === n).getBoundingClientRect();
+      return { reg: r("Region"), rem: r("Reminders") };
+    });
+    ok(
+      hand.reg.top < pinnedTop - 4 && hand.reg.bottom <= hand.rem.top + 0.5 && hand.rem.top - hand.reg.bottom < 30,
+      tag + "Reminders' heading pushes Region's up " + JSON.stringify(hand)
+    );
+    /* then takes its place, halfway through Reminders */
+    const rem2 = await headY("Reminders"),
+      hist = await headY("History");
+    await sp.evaluate(y => scrollTo(0, y), Math.round(rem2 + (hist - rem2) / 2));
+    await frame();
+    L = await look();
+    ok(
+      L.head === "Reminders" && L.headHit && Math.abs(L.headTop - pinnedTop) < 1 && L.line === L.outline,
+      tag + "then Reminders' heading takes its place, with the line " + JSON.stringify(L)
+    );
+    ok(Math.abs(L.barTop) < 1 && L.barHit && !L.leak, tag + "the bar still above it " + JSON.stringify(L));
+    /* the focus moved (TalkBack, a keyboard) to a control under the pinned part: it comes out below it */
+    const below = () =>
+      sp.evaluate(() => {
+        /* the whole 48px box, a switch's clear bands above and below its track too (its scroll-margin) */
+        const e = document.activeElement,
+          r = e.getBoundingClientRect(),
+          bar = $("#app .appbar").getBoundingClientRect(),
+          held = [...document.querySelectorAll("#app .sec")]
+            .map(h => h.getBoundingClientRect())
+            .filter(h => h.top <= bar.bottom + 6 && h.bottom > bar.bottom),
+          top = Math.max(bar.bottom, ...held.map(h => h.bottom)),
+          hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return {
+          act: e.dataset.act + (e.dataset.v ? ":" + e.dataset.v : ""),
+          top: r.top,
+          under: top,
+          ok: r.top >= top - 0.5 && r.bottom <= innerHeight + 0.5 && !!hit && (hit === e || e.contains(hit)),
+        };
+      });
+    /* keyboard: Shift+Tab back to the nudge's switch, scrolled under the pinned part */
+    await sp.evaluate(() => {
+      $('#app [data-act="pick-time"][data-v="check"]').focus({ preventScroll: true });
+      const s = $('#app [data-act="rem-daily"]').getBoundingClientRect();
+      scrollBy(0, s.top - $("#app .appbar").getBoundingClientRect().bottom - 2);
+    });
+    await frame();
+    await sp.keyboard.press("Shift+Tab");
+    await frame();
+    let F = await below();
+    ok(
+      F.act === "rem-daily" && F.ok && F.under >= 60,
+      tag + "Shift+Tab to a control under the pinned part brings it out " + JSON.stringify(F)
+    );
+    /* focus() (TalkBack's focus moves the input focus too) to a control of the section above, behind the bar */
+    await sp.evaluate(() => {
+      const s = $('#app [data-act="week"]').getBoundingClientRect();
+      scrollBy(0, s.top - $("#app .appbar").getBoundingClientRect().bottom + 4);
+      $('#app [data-act="week"]').focus();
+    });
+    await frame();
+    F = await below();
+    ok(
+      F.act.startsWith("week") && F.ok && F.under >= 60,
+      tag + "focus() on a control under the pinned part brings it out " + JSON.stringify(F)
+    );
+    /* TalkBack's order: the same tree scrolled as at the top; the bar first, then each heading before its section */
+    ok((await sp.locator("#app").ariaSnapshot()) === tree, tag + "the accessibility tree is unchanged by scrolling");
+    const order = await sp.evaluate(() => {
+      const all = [...document.querySelectorAll("#app *")],
+        heads = [...document.querySelectorAll("#app .sec")];
+      return {
+        first: (all.find(e => e.matches("header, h1, button, a, .sec")) || {}).tagName,
+        h1: $("#app h1").textContent,
+        heads: heads.map(h => h.textContent.trim()),
+        roles: heads.filter(h => h.getAttribute("role") || h.getAttribute("aria-level")).length,
+        hidden: document.querySelectorAll("#app [aria-hidden=true]:not(svg):not(.ic)").length,
+      };
+    });
+    ok(
+      order.first === "HEADER" &&
+        order.h1 === "Settings" &&
+        JSON.stringify(order.heads) ===
+          JSON.stringify([
+            "Theme",
+            "Feel",
+            "Region",
+            "Reminders",
+            "History",
+            "Spending categories",
+            "Received categories",
+            "Your data",
+            "About",
+          ]) &&
+        order.roles === 0,
+      tag + "the bar first, then the section headings in order, as before " + JSON.stringify(order)
+    );
+    /* a long heading (a long word in another language, large text): it wraps, whole, and the room kept above a
+       control scrolled to grows with it */
+    if (sz.w === 320) {
+      const lw = await sp.evaluate(() => {
+        const h = [...document.querySelectorAll("#app .sec")].find(x => x.textContent.trim() === "Region");
+        h.textContent = "Region, Sprache und Zahlenformat für Beträge und Datumsangaben";
+        histPinSet();
+        const r = h.getBoundingClientRect(),
+          bar = $("#app .appbar").getBoundingClientRect();
+        return {
+          cut: h.scrollWidth > h.clientWidth + 1,
+          lines: Math.round(r.height / parseFloat(getComputedStyle(h).lineHeight || "20")),
+          pad: parseFloat(document.documentElement.style.scrollPaddingTop) || 0,
+          need: bar.bottom + r.height,
+        };
+      });
+      ok(
+        !lw.cut && lw.lines > 1 && lw.need > 64 && lw.pad >= lw.need - 1,
+        tag + "a long heading wraps, and the room above the focus grows " + JSON.stringify(lw)
+      );
+      await sp.evaluate(() => render());
+    }
+    /* dragging a category up towards a ring whose top is hidden under the pinned part: the page scrolls along (the
+       drag's top edge counts from the pinned part's bottom, not the window's top) */
+    if (sz.id === "phone") {
+      await sp.evaluate(() => render());
+      const cdp = await c.newCDPSession(sp);
+      const T = (type, x, y) =>
+        cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+      const at = await sp.evaluate(() => {
+        const pad = parseFloat(document.documentElement.style.scrollPaddingTop) || 0,
+          ring = $("#app .ring.edit");
+        scrollBy(0, ring.getBoundingClientRect().top - (pad - 30));
+        /* the lowest tile in view, to lift */
+        const t = [...ring.querySelectorAll(".tile")]
+          .map(e => e.getBoundingClientRect())
+          .filter(r => r.bottom < innerHeight - 10)
+          .sort((a, b) => b.top - a.top)[0];
+        return { x: t.left + t.width / 2, y: t.top + t.height / 2, pad, ring: ring.getBoundingClientRect().top };
+      });
+      const y0 = await sp.evaluate(() => scrollY);
+      await T("touchStart", at.x, at.y);
+      await sp.waitForTimeout(450);
+      for (let k = 1; k <= 6; k++) {
+        await T("touchMove", at.x, at.y + ((at.pad + 30 - at.y) * k) / 6);
+        await sp.waitForTimeout(16);
+      }
+      for (let k = 0; k < 6; k++) {
+        await T("touchMove", at.x + (k % 2), at.pad + 30);
+        await sp.waitForTimeout(16);
+      }
+      const drag = await sp.evaluate(y0 => ({ lifted: !!document.querySelector(".ghost"), up: y0 - scrollY }), y0);
+      await T("touchEnd");
+      await sp.waitForTimeout(400);
+      ok(
+        drag.lifted && drag.up >= 20 && at.ring < at.pad && at.ring > 0,
+        tag + "a category dragged up to a ring under the pinned part scrolls the page " + JSON.stringify([at, drag])
+      );
+    }
+    await c.close();
+  }
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();

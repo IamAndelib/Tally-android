@@ -21,12 +21,12 @@
 //     archived isn't a new notebook; focus stays on the control after a redraw; screen readers hear values (donut
 //     totals, ring %, currency, dialog text, chart bars pressed); the ring redraws on a theme switch; a one-day range
 //     says Yesterday; chart labels follow the phone; the currency switch stays with "No stats"
-//  K. loan amounts compared as shown, the loan form's currency, "Track as a fee" names the whole fee, no account in a
+//  K. loan amounts compared as shown, the loan form's currency, "Track as charge" names the whole charge, no account in a
 //     loan's currency is said, signs placed one way in every History row
 //  L. screens on small, short and right-to-left setups: amounts never cut; right-to-left names keep the app's sentences
 //     in order; long names end in "…" in chips and wrap in sheet titles; the add-colour ring; a 48px currency switch;
 //     the pickers fit a short window and scroll by swipe; the range band joins up; short weekday names where long ones
-//     don't fit; focus rings drawn whole; "Partly paid" ends in "…"; "cash‑out" doesn't break
+//     don't fit; focus rings drawn whole; "Partly paid" ends in "…"
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 outDir("28-hunt-fixes");
 let fails = 0;
@@ -163,6 +163,7 @@ const ok = (c, m) => {
   await page.evaluate(() => entriesSheet());
   await settle();
   await page.click(`#sheet [data-v="${e1}"]`);
+  await page.click('#sheet .txo [data-act="tx-open"]');
   await settle();
   await page.fill("#f-amt", "13");
   await page.click('#sheet [data-act="tx-save"]');
@@ -224,7 +225,7 @@ const ok = (c, m) => {
   await seed({ txns: [{ id: "e1", ts: 1, date: t, type: "expense", amount: 5, account: "a", cat: "food", note: "" }] });
   await page.evaluate(() => wipeAll());
   await settle();
-  await page.click('#pop [data-act="ask-ok"]'); // Save backup
+  await page.click("#pop .cd-keep"); // Save backup
   await settle();
   await page.evaluate(() => window.tallySaved(false));
   await settle();
@@ -235,7 +236,7 @@ const ok = (c, m) => {
     "Delete all data stops when its backup didn't save: " + (await page.textContent("#snack"))
   );
   await page.evaluate(b => restoreText(JSON.stringify(b)), {
-    v: 8, // made by a version newer than this one
+    v: 9, // made by a version newer than this one
     settings: { cur: "USD" },
     accounts: [
       { id: "x", name: "Cash", type: "cash", currency: "USD", opening: 10 },
@@ -253,7 +254,7 @@ const ok = (c, m) => {
     /2 accounts and 2 entries/.test(rtext) && /1 item .*left out/.test(rtext) && /newer version/.test(rtext),
     "Restore says what it will really restore: " + rtext.replace(/\s+/g, " ")
   );
-  await page.click('#pop [data-act="ask-ok"]');
+  await page.click("#pop .cd-keep");
   await settle();
   ok((await state()).accounts.length === 2, "restored");
   await page.click('#snack [data-act="undo"]');
@@ -336,7 +337,7 @@ const ok = (c, m) => {
     await page.evaluate(
       () =>
         money(1.005, "USD") === "$1.01" &&
-        money(-0.125, "USD") === "-$0.13" &&
+        money(-0.125, "USD") === "−\u2060$0.13" &&
         signed(-0.004, "USD") === "$0.00" &&
         signed(-5, "USD") === "−\u2060$5.00"
     ),
@@ -647,9 +648,10 @@ const ok = (c, m) => {
     V.screen = "history";
     render();
   });
+  await page.click('#app [data-v="d2"]');
   ok(
-    (await page.textContent('#app [data-v="d2"]')).includes("school fees"),
-    "a note on an added draw shows in History"
+    (await page.textContent("#app .txo")).includes("school fees"),
+    "a note on an added draw shows in History, in the opened row"
   );
   await lseed([["d1", 1000, d10]], [["p", 600, d7]]);
   await page.evaluate(() => {
@@ -681,11 +683,12 @@ const ok = (c, m) => {
       !(await bp.evaluate(() => S.settings.backup.on)),
     "a picked folder that holds a backup asks before writing over it"
   );
-  await bp.click('#pop [data-act="ask-alt"]'); // Replace it
-  ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns auto backup on");
+  await bp.click("#pop .cd-destroy"); // Overwrite
+  await bp.click("#pop .cd-destroy"); // and its second question
+  ok(await bp.evaluate(() => S.settings.backup.on), "Overwrite turns auto backup on");
   // Change to another folder that holds a backup, auto backup on: nothing is written there unless the answer says so
   await bp.evaluate(() => onFolderPicked(""));
-  await bp.waitForSelector('#pop [data-act="ask-alt"]'); // the folder is read on the shell's thread
+  await bp.waitForSelector("#pop .cd-destroy"); // the folder is read on the shell's thread
   ok(
     (await bp.textContent("#pop")).includes("already has a Tally backup") &&
       !(await bp.evaluate(() => S.settings.backup.on)),
@@ -694,10 +697,11 @@ const ok = (c, m) => {
   await bp.evaluate(() => closePop()); // Not now
   ok(!(await bp.evaluate(() => S.settings.backup.on)), "Not now leaves it off: the backup there is never written over");
   await bp.evaluate(() => onFolderPicked(""));
-  await bp.waitForSelector('#pop [data-act="ask-alt"]');
-  // Replace it, as a script click: a second tap where a tap just closed a dialog is dropped on purpose
-  await bp.evaluate(() => $('#pop [data-act="ask-alt"]').click());
-  ok(await bp.evaluate(() => S.settings.backup.on), "Replace it turns it back on");
+  await bp.waitForSelector("#pop .cd-destroy");
+  // Overwrite, as a script click: a second tap where a tap just closed a dialog is dropped on purpose
+  await bp.evaluate(() => $("#pop .cd-destroy").click());
+  await bp.evaluate(() => $("#pop .cd-destroy").click()); // its second question
+  ok(await bp.evaluate(() => S.settings.backup.on), "Overwrite turns it back on");
   await bp.evaluate(() => {
     sessionStorage.setItem("cfg", JSON.stringify({ status: { folder: "", usable: false, last: 0, error: "" } }));
     V.screen = "settings";
@@ -747,16 +751,16 @@ const ok = (c, m) => {
   await bp.evaluate(() => onFolderPicked(""));
   await bp.waitForTimeout(100);
   ok(
-    (await bpop()).includes("Couldn't read this folder's backup") && !(await bp.evaluate(() => S.settings.backup.on)),
+    (await bpop()).includes("can't read the backup in this folder") && !(await bp.evaluate(() => S.settings.backup.on)),
     "a backup there that can't be read is asked about, not written over"
   );
   await bp.evaluate(() => closePop());
   await bset({ status: { folder: "Docs", usable: true, last: 0, error: "" }, auto: { text: other, when: 0 } });
   await bp.evaluate(() => onFolderPicked(""));
   await bp.waitForTimeout(100);
-  await bp.click('#pop [data-act="ask-ok"]'); // Restore it
+  await bp.click("#pop .cd-keep"); // Restore it
   await bp.waitForTimeout(100);
-  await bp.click('#pop [data-act="ask-ok"]'); // Restore
+  await bp.click("#pop .cd-keep"); // Restore
   await bp.waitForTimeout(100);
   const restored = await bp.evaluate(() => [S.accounts.map(a => a.name).join(), S.settings.backup.on]);
   await bp.click('#snack [data-act="undo"]');
@@ -794,7 +798,7 @@ const ok = (c, m) => {
     window.__calls = [];
     wipeAll();
   });
-  await bp.click('#pop [data-act="ask-ok"]'); // Save backup: Back up now
+  await bp.click("#pop .cd-keep"); // Save backup: Back up now
   await bp.evaluate(() => {
     V.screen = "home";
     render();
@@ -814,7 +818,7 @@ const ok = (c, m) => {
     backupNow();
     wipeAll();
   });
-  await bp.click('#pop [data-act="ask-ok"]');
+  await bp.click("#pop .cd-keep");
   const ids = await bnow();
   await bp.evaluate(id => window.tallyBackedUp("", id), ids[0]);
   await bp.waitForTimeout(100);
@@ -1010,9 +1014,12 @@ const ok = (c, m) => {
   const chip = await sp.evaluate(() => {
     const c = document.querySelector('#sheet [data-act="f-acc"]'),
       n = c.querySelector(".chn");
-    return { fits: c.getBoundingClientRect().right <= innerWidth, cut: getComputedStyle(n).textOverflow };
+    return { fits: c.getBoundingClientRect().right <= innerWidth, whole: n.scrollWidth <= n.clientWidth + 1 };
   });
-  ok(chip.fits && chip.cut === "ellipsis", "a long account name in its chip is cut with … " + JSON.stringify(chip));
+  ok(
+    chip.fits && chip.whole,
+    "a long account name in its chip wraps, whole, inside the screen " + JSON.stringify(chip)
+  );
   await small.close();
   await seed({ accounts: [{ id: "a", name: "Bank", type: "bank", currency: "USD", opening: 1, archived: true }] });
   ok(
@@ -1065,8 +1072,10 @@ const ok = (c, m) => {
     "a one-day range of yesterday says Yesterday"
   );
   ok(
-    await page.evaluate(() => compact(1500) === "1.5K" && compact(0.25) === "0.25"),
-    "chart labels in the phone's own short form"
+    await page.evaluate(
+      () => compact(1500) === "1,500" && compact(0.25) === "0" && compact(-0.4) === "0" && compact(12400) === "12.4K"
+    ),
+    "chart labels are whole amounts, in the phone's own short form only from five digits"
   );
   await seed({
     settings: { cur: "USD", clock: "24", lastCheck: t, dragTip: true, donut: "none" },
@@ -1144,15 +1153,15 @@ const ok = (c, m) => {
   await page.evaluate(() => loanOpen("B"));
   await settle();
   await page.fill("#f-amt", "110");
-  await page.click('#sheet [data-act="add-fee"]');
-  await page.fill("#f-fee", "2");
+  await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
+  await page.fill("#f-charge", "2");
   await page.click('#sheet [data-act="loan-pay"]');
   await settle();
-  await page.click('#pop [data-act="ask-alt"]'); // Track as a fee
+  await page.click("#pop .cd-main"); // Track as charge
   await settle();
   ok(
-    (await page.textContent("#snack")).includes("$12.00 as its fee"),
-    "Track as a fee names the whole fee: " + (await page.textContent("#snack"))
+    (await page.textContent("#snack")).includes("$12.00 as its charge"),
+    "Track as charge names the whole charge: " + (await page.textContent("#snack"))
   );
   await page.evaluate(() => closeSheet());
   await seed({
@@ -1407,13 +1416,16 @@ const ok = (c, m) => {
       r = document.createRange();
     if (!b || !b.nextSibling) return null;
     r.selectNodeContents(b.nextSibling);
-    const rb = $('#app [data-v="x1"] .rb'),
-      arrow = rb.firstChild;
+    const an = $('#app [data-v="x1"] .s'),
+      arrow = an.querySelector(".ar");
     return {
       sentence:
         getComputedStyle(d).direction === "ltr" &&
         b.getBoundingClientRect().right <= r.getBoundingClientRect().left + 1,
-      arrow: arrow.nodeType === 3 && arrow.textContent === "↓" && !rb.querySelector(".rbn").textContent.includes("↓"),
+      arrow:
+        !!arrow &&
+        arrow.textContent === "→" &&
+        [...an.querySelectorAll("bdi")].every(x => !x.textContent.includes("→")),
     };
   });
   ok(bidi && bidi.sentence, 'a right-to-left name keeps the sentence in order: "سارة paid back", name first');
@@ -1428,29 +1440,22 @@ const ok = (c, m) => {
     }),
     "a Home chip's emblem stays before a right-to-left name"
   );
-  /* chips holding long names: the name ends in "…", nothing past the chip's edge (its ✓ shows) */
+  /* chips holding long names: the whole name, on two lines if need be, nothing past the chip's edge (its ✓ shows) */
   const chipOk = sel =>
     narrow.evaluate(sel => {
       const c = document.querySelector(sel),
         n = c && c.querySelector(".chn");
-      return (
-        !!n &&
-        getComputedStyle(n).textOverflow === "ellipsis" &&
-        n.scrollWidth > n.clientWidth &&
-        c.scrollWidth <= c.clientWidth + 1
-      );
+      return !!n && n.scrollWidth <= n.clientWidth + 1 && c.scrollWidth <= c.clientWidth + 1;
     }, sel);
   await narrow.evaluate(() => {
-    V.screen = "history";
-    V.hAcc = "b";
-    render();
+    openHistory({ acc: "b" });
   });
   ok(
-    await chipOk('.strip [data-act="hacc"][data-v="b"]'),
-    'History\'s chip for a long account name ends in "…" and keeps its ✓'
+    await chipOk('.hchips [data-act="hf-del"][data-v="acc"]'),
+    "History's chip for a long account name shows it whole and keeps its ✕"
   );
   await narrow.evaluate(() => {
-    V.hAcc = "";
+    HF.acc = "";
     V.screen = "home";
     render();
     loanForm("lend");
@@ -1458,7 +1463,7 @@ const ok = (c, m) => {
   await narrow.waitForTimeout(150);
   await narrow.fill("#f-person", "Ma");
   await narrow.waitForTimeout(150);
-  ok(await chipOk('#f-person-sug [data-act="f-person-pick"]'), 'a suggested person with a long name ends in "…"');
+  ok(await chipOk('#f-person-sug [data-act="f-person-pick"]'), "a suggested person with a long name shows it whole");
   await narrow.evaluate(() => {
     closeSheet();
     accOpen("i");
@@ -1487,15 +1492,6 @@ const ok = (c, m) => {
       });
     }),
     '"Add your own colour" shows its dashed ring'
-  );
-  await narrow.evaluate(() => {
-    closeSheet();
-    trSheet();
-  });
-  await narrow.waitForTimeout(150);
-  ok(
-    await narrow.evaluate(() => $("#fee-btn").textContent.includes("cash‑out")),
-    '"cash‑out" on the fee button never breaks at its hyphen'
   );
   await narrow.evaluate(() => {
     closeSheet();

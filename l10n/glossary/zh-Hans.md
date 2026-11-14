@@ -38,7 +38,8 @@ The vocabulary follows common Chinese bookkeeping apps: 支出 / 收入 / 转账
 | net worth | 净资产 | |
 | category | 分类 | |
 | payee (paid to / received from) | 收款方 / 付款方 | |
-| archive / archived | 归档 / 已归档 | unarchive: 重新显示 |
+| archive / archived / unarchive | 归档 / 已归档 / 取消归档 | |
+| Archived (the screen of archived entries) | 已归档 | |
 | backup / auto backup / restore | 备份 / 自动备份 / 恢复 | |
 | evening nudge | 晚间提醒 | |
 | balance check | 余额核对 | |

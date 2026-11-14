@@ -138,7 +138,7 @@ const ok = (c, m) => {
     return b;
   };
 
-  // ---- 1. archived account: Show again
+  // ---- 1. archived account: Unarchive
   await tap('[data-act="tab"][data-v="assets"]');
   ok(
     await page.evaluate(() => getComputedStyle(document.getElementById("app")).animationName === "none"),
@@ -148,16 +148,16 @@ const ok = (c, m) => {
   ok(await page.isVisible('[data-src="arch"]'), "archived list shown");
   ok((await page.textContent('[data-src="arch"]')).includes("Archived"), "archived row carries an Archived pill");
   await tap('[data-src="arch"] [data-v="c"]');
-  ok(await page.isVisible('#sheet [data-act="acc-unarch"]'), 'archived account sheet shows "Show again"');
+  ok(await page.isVisible('#sheet [data-act="acc-unarch"]'), 'archived account sheet shows "Unarchive"');
   await page.screenshot({ path: OUT + "/archived-sheet.png" });
   await tap('#sheet [data-act="acc-unarch"]');
   let S = await state();
-  ok(!S.accounts.find(a => a.id === "c").archived, "Show again unarchives");
+  ok(!S.accounts.find(a => a.id === "c").archived, "Unarchive unarchives");
   ok(await page.isVisible('[data-src="acc"] [data-v="c"].flash'), "the account flashes softly in Accounts");
   await tap('[data-act="undo"]');
   S = await state();
   ok(S.accounts.find(a => a.id === "c").archived, "Undo archives it again");
-  ok(!((await page.evaluate(() => document.getElementById("app").classList.contains("enter"))) && false) || true, "");
+  ok(!(await page.evaluate(() => document.getElementById("app").classList.contains("enter"))), "no enter anim on Undo");
 
   // ---- 2. drag archived -> accounts
   if (!(await page.$('.dropbox[data-zone="arch"]'))) await tap('[data-act="toggle-arch"]');
@@ -167,11 +167,11 @@ const ok = (c, m) => {
       r.over &&
       !globalThis.__listOutlined &&
       globalThis.__slots.length === 1 &&
-      /show it again/.test(globalThis.__slots[0]),
+      /Drop here to unarchive/.test(globalThis.__slots[0]),
     "dragging an archived row opens one empty slot, no outline on Accounts " + JSON.stringify([r, globalThis.__slots])
   );
   S = await state();
-  ok(!S.accounts.find(a => a.id === "c").archived, "drop on Accounts shows it again");
+  ok(!S.accounts.find(a => a.id === "c").archived, "drop on Accounts unarchives it");
   ok(S.settings.dragTip === true, "drag tip dismissed after first drag");
   // accounts -> archived (drop box when the archive list is collapsed/empty)
   r = await drag('[data-src="acc"] [data-v="w"]', '.dropbox[data-zone="arch"]');
@@ -190,11 +190,12 @@ const ok = (c, m) => {
   await tap('[data-act="undo"]');
   S = await state();
   ok(!S.accounts.find(a => a.id === "w").archived, "undo");
-  // drop outside a zone: nothing changes
-  const before = JSON.stringify((await state()).accounts);
+  // drop outside a zone: nothing is archived (passing the rows on the way only reorders them, see suite 39)
+  const sorted = a => JSON.stringify(a.slice().sort((x, y) => (x.id < y.id ? -1 : 1)));
+  const before = sorted((await state()).accounts);
   await page.evaluate(() => scrollTo(0, 0));
   r = await drag('[data-src="acc"] [data-v="k"]', ".sumcard");
-  ok(JSON.stringify((await state()).accounts) === before && !r.over, "drop outside a zone changes nothing");
+  ok(sorted((await state()).accounts) === before && !r.over, "drop outside a zone archives nothing");
   ok(!(await page.$(".ghost")), "ghost removed");
   // a tap still opens; a scroll does not start a drag
   await tap('[data-src="acc"] [data-v="k"]');
@@ -277,7 +278,7 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="tx-save"]');
   ok(!(await page.$(".popin,.bump")), "no pop/bump effects on save");
   ok(
-    await page.evaluate(() => !document.getElementById("app").classList.contains("enter") || true),
+    await page.evaluate(() => !document.getElementById("app").classList.contains("enter")),
     "no enter anim on in-place re-render"
   );
   const snackAnim = await page.evaluate(() => getComputedStyle(document.querySelector(".snack")).animationName);

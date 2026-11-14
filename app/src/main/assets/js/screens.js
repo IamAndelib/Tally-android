@@ -1,5 +1,6 @@
 /*
- * screens.js — The screens: render() and Home, Assets, Liabilities, History and Settings, plus the entry rows they share.
+ * screens.js — The screens: render() and Home, Assets, Liabilities and Settings (History is in history.js), plus the
+ * entry rows they share (txLine, txOpenView, dayList, dayGroups) and the helpers that fit text (fitFigures, fitWrapped).
  */
 "use strict";
 
@@ -35,9 +36,18 @@ let RINGW = 0;
    that was in view where it was (rowAnchor) */
 let drawnScreen = "";
 function render() {
-  const a = V.screen === drawnScreen ? rowAnchor($("#app")) : null;
-  keepFocus($("#app"), drawScreen);
+  const a = V.screen === drawnScreen && !FIND_BACK ? rowAnchor($("#app")) : null, // not around search's list (findBack)
+    f = V.find ? findKeep() : null, // search mode: the caret in the field comes back too
+    on = document.activeElement,
+    fr = a && on && $("#app").contains(on) && on.closest("[data-v]");
+  DRAWAT = a ? { ids: [a.v, fr && fr.dataset.v], pane: dayDrawn("#app") } : null; // the pane: before drawScreen clears it
+  try {
+    keepFocus($("#app"), drawScreen);
+  } finally {
+    DRAWAT = null;
+  }
   drawnScreen = V.screen;
+  if (f) findRestore(f);
   if (a) toAnchor(a, $("#app"));
 }
 /* The row in the middle of the view (an entry, an account) and where it is in it, {v, top}, so toAnchor() can put it back
@@ -61,8 +71,14 @@ function rowAnchor(box, scroller) {
     row = rows.find(below) || rows[rows.length - 1];
   return row ? { v: row.dataset.v, top: row.getBoundingClientRect().top - r.top } : null;
 }
+/* the rows toAnchor() holds in place, each by the function that lets it go: when the focus is scrolled to elsewhere
+   (landFocus), that place no longer counts */
+const HOLDS = new Set();
 function toAnchor(a, box, scroller) {
+  /* once the box is drawn anew (another screen, or the next render, which keeps its own row), the row is let go */
+  const drawn = box.firstElementChild;
   const fix = () => {
+    if (box.firstElementChild !== drawn) return stop();
     const row = box.querySelector('.tx[data-v="' + CSS.escape(a.v) + '"]'),
       d = row ? row.getBoundingClientRect().top - (scroller ? scroller.getBoundingClientRect().top : 0) - a.top : 0;
     if (Math.abs(d) < 1) return;
@@ -74,17 +90,59 @@ function toAnchor(a, box, scroller) {
      runs before the frame is painted), for the few frames that takes, or until the person touches or scrolls */
   const ro = new ResizeObserver(fix),
     stop = () => {
+      HOLDS.delete(stop);
       ro.disconnect();
       ["pointerdown", "wheel", "keydown"].forEach(t => removeEventListener(t, stop, true));
     };
   box.querySelectorAll(".dl").forEach(l => ro.observe(l));
+  HOLDS.add(stop);
   ["pointerdown", "wheel", "keydown"].forEach(t => addEventListener(t, stop, true));
   setTimeout(stop, 250);
 }
+/* A long list drawn anew on the same screen (History's, the Archived screen's, Home's pane; the entries sheet when it
+   comes back) is drawn only through the chunk (HIST_CHUNK entries) holding the row in view and the row with the focus,
+   plus one chunk, and never further than it was (`was`, entries drawn so far) unless those rows moved down: the place
+   and the focus stay, and the rest follows as the end comes near, as on opening (histWatch, dayWatch). DRAWAT: those
+   rows' ids while render() draws, and how far Home's pane was drawn (else null); drawTo(): how many of list's
+   entries to draw, or 0 when neither row is in it. */
+let DRAWAT = null;
+function drawTo(list, ids, was) {
+  const i = Math.max(-1, ...(ids || []).map(id => (id ? list.findIndex(t => t.id === id) : -1)));
+  if (i < 0) return 0;
+  const n = (Math.floor(i / HIST_CHUNK) + 2) * HIST_CHUNK;
+  return was ? Math.min(n, Math.max(was, i + 1)) : n;
+}
+/* Draws a long list on until entry id's row is in it, as scrolling there would (histMore, dayMore), so the focus can
+   land on a row not drawn yet (landFocus): History's or the Archived screen's, or a period's day list in root (the
+   entries sheet, Home's pane). The row, or null when the list doesn't list it. */
+function drawThrough(root, id) {
+  const sel = '.tx.en[data-v="' + CSS.escape(id) + '"]',
+    app = root === $("#app"),
+    hist = app && histLike(),
+    key = app ? "#app" : "#sheet",
+    more = hist ? ".hmore" : ".dmore",
+    row = root.querySelector(sel);
+  if (row || !root.querySelector(more) || !(hist || (root === $(key) && DAYL[key]))) return row;
+  const rows = hist ? (V.screen === "archive" ? archRows : listRows)(HLIST) : histRows(DAYL[key]);
+  if (!rows.some(t => t.id === id)) return null;
+  while (!root.querySelector(sel) && root.querySelector(more)) {
+    if (hist) histMore();
+    else dayMore(key);
+  }
+  return root.querySelector(sel);
+}
 function drawScreen() {
   const app = $("#app");
-  RBC = null;
-  if (V.screen !== "history") V.sel = null;
+  RBC = LPC = null;
+  if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
+  if (!histLike()) {
+    V.sel = null;
+    /* leaving History forgets its filters, and ends search mode (its words and payee / amount with them); its Archived
+       screen keeps them, for Back */
+    if (V.find) findEnd();
+    HF = histBlank();
+    histUnwatch();
+  }
   const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
@@ -102,16 +160,28 @@ function drawScreen() {
       ? Math.max(240, Math.min(pw, innerHeight - 12))
       : Math.max(300, Math.min(pw, ((screen && screen.availHeight) || innerHeight) - 400));
   }
-  if (V.screen === "history") app.innerHTML = historyView();
-  else if (V.screen === "assets") app.innerHTML = assetsView();
+  if (V.screen === "history") {
+    app.innerHTML = historyView();
+    histWatch();
+  } else if (V.screen === "archive") {
+    app.innerHTML = archiveView();
+    histWatch();
+  } else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
   else if (V.screen === "settings") {
     app.innerHTML = settingsView();
     fitWeekSeg();
   } else app.innerHTML = homeView();
+  dayWatch("#app"); // Home's pane: its period's rows past the first chunk
   fitFigures(app);
-  if (document.fonts.status === "loading") document.fonts.ready.then(() => fitFigures(app));
-  document.body.classList.toggle("hist", V.screen === "history"); // horizontal swipes switch accounts (gestures.js)
+  histCenter(app);
+  histPin();
+  if (document.fonts.status === "loading")
+    document.fonts.ready.then(() => {
+      fitFigures(app);
+      histCenter(app);
+      histPinSet(); // the month headings' height in the web font
+    });
   $("#nav").innerHTML = tabs
     ? '<div class="in">' +
       [
@@ -148,7 +218,7 @@ function subBar(title) {
   );
 }
 function homeView() {
-  const act = activeAccounts();
+  const act = homeAccounts();
   /* every account archived: not a new notebook, so a way back to them */
   if (!act.length && S.accounts.length)
     return (
@@ -167,7 +237,9 @@ function homeView() {
     );
   if (!act.length) {
     return (
-      tabBar("Tally") +
+      '<header class="appbar"><h1>Tally</h1>' +
+      settingsBtn() +
+      "</header>" + // a new notebook: only Settings is of use
       '<div class="welcome"><div class="big">📒</div><h2>' +
       TH("welcome.title") +
       "</h2><p>" +
@@ -209,7 +281,7 @@ function homeView() {
     ">" +
     ic("right") +
     "</button></div>" +
-    topIcons() +
+    topIcons(true) +
     "</header>";
 
   const wide = twoPane();
@@ -219,9 +291,9 @@ function homeView() {
     side =
       '<div class="sec">' +
       TH("home.accounts") +
-      '</div><div class="list">' +
-      act.map(a => accRow(a, b)).join("") +
-      '</div><button class="btn text" data-act="acc-form" style="margin-top:4px">' +
+      "</div>" +
+      zoneList("home", act.map(a => accRow(a, b)).join("")) +
+      '<button class="btn text" data-act="acc-form" style="margin-top:4px">' +
       ic("add") +
       TH("account.add") +
       "</button>";
@@ -255,44 +327,36 @@ function homeView() {
       '<div class="sec">' +
       esc(periodLabel()) +
       "</div>" +
-      (list.length ? dayGroups(list) : '<div class="empty">' + TH("home.nothingYet") + "</div>");
+      dayList(list, "#app", DRAWAT ? drawTo(list, DRAWAT.ids, DRAWAT.pane) : 0);
   }
   const top = h;
   h = "";
 
-  const pt = periodTxns().filter(t => inCur(t, cur));
-  let spent = 0,
-    got = 0;
+  /* the period's spending by part (a category, or CHARGES) and what was received, by the counting rule */
+  const [ps, pe] = range();
+  let spent = 0;
   const by = {};
-  pt.forEach(t => {
-    if (isSpend(t)) {
-      spent += t.amount;
-      by[t.cat] = (by[t.cat] || 0) + t.amount;
-    } else if (t.type === "income") got += t.amount;
+  spendItems(cur).forEach(x => {
+    if (x.date < ps || x.date > pe) return;
+    spent += x.amount;
+    by[x.cat] = (by[x.cat] || 0) + x.amount;
   });
   spent = rnd(spent);
-  got = rnd(got);
+  const got = gotIn(cur, ps, pe);
   const ring = ringHTML(outCats(), { mode: "home", by, spent, got, cur });
 
-  const total = balanceIn(cur, b);
-  const n = periodTxns().length;
-  if (!(V.period === "day" && V.anchor === today()))
+  const n = histRows(periodTxns()).length; // a fee is part of its entry
+  if (!atHomePeriod()) {
+    const back = S.settings.home === "day" ? T("day.today") : T("settings.opens." + S.settings.home);
     h +=
       '<div class="todayrow"><button class="todaychip" data-act="go-today" aria-label="' +
-      TH("home.backToday") +
+      esc(S.settings.home === "day" ? T("home.backToday") : back) +
       '">' +
       ic("reset") +
-      TH("day.today") +
+      esc(back) +
       "</button></div>";
-  h +=
-    '<button class="balbar" data-act="entries">' +
-    ic("list") +
-    '<span class="l">' +
-    TH("home.balance") +
-    (n ? " · " + TH("home.entries", { count: n }) : "") +
-    "</span><b>" +
-    esc(money(total, cur)) +
-    "</b></button>";
+  }
+  h += balBar(b, n);
   h +=
     '<div class="fabs"><button class="fab minus" data-act="add-out" aria-label="' +
     TH("home.addOut") +
@@ -370,19 +434,25 @@ function checkCard(b, cur) {
     "</button></section>"
   );
 }
-/* History + Settings, always one tap away in the top bar */
-const topIcons = () =>
-  '<button class="icon" data-act="go" data-v="history" aria-label="' +
-  TH("common.history") +
-  '">' +
-  ic("history") +
-  '</button><button class="icon" data-act="go" data-v="settings" aria-label="' +
+/* Search (on every tab: Home, Assets, Liabilities), History + Settings, always one tap away in the top bar */
+const searchBtn = () =>
+  '<button class="icon" data-act="search-open" aria-label="' + TH("search.title") + '">' + ic("search") + "</button>";
+const settingsBtn = () =>
+  '<button class="icon" data-act="go" data-v="settings" aria-label="' +
   TH("settings.title") +
   '">' +
   ic("settings") +
   "</button>";
-function tabBar(title) {
-  return '<header class="appbar"><h1>' + esc(title) + "</h1>" + topIcons() + "</header>";
+const topIcons = search =>
+  (search ? searchBtn() : "") +
+  '<button class="icon" data-act="go" data-v="history" aria-label="' +
+  TH("common.history") +
+  '">' +
+  ic("history") +
+  "</button>" +
+  settingsBtn();
+function tabBar(title, search) {
+  return '<header class="appbar"><h1>' + esc(title) + "</h1>" + topIcons(search) + "</header>";
 }
 function perCur(add) {
   const m = {};
@@ -391,15 +461,37 @@ function perCur(add) {
   });
   return m;
 }
-/* a figure too wide for its place (a long balance at a large text size on a small phone) is set smaller, a tenth at a
-   time down to 60%, rather than cut: the summary cards' totals, and a row's amount where the row can't hold it (its
-   balance lines are sized in em, so they shrink with it). Still too wide, a total wraps. Measured again once the font
-   has loaded. A button beside another whose label is one word too long for it (German, French at a large text size)
-   is set smaller the same way, then breaks the word as a last resort. */
+/* Text wraps rather than shrinks or loses letters (a label, a name, a tile, a tab); only a figure too wide for its
+   place (a long balance at a large text size on a small phone) is set smaller, a tenth at a time down to 60%: the
+   summary cards' totals (still too wide: they wrap), and a row's amount where the row can't hold it. Also, measured
+   here (again once the font has loaded): a list narrower than 20rem is tight (its rows stack, .list.tight); Home's
+   period loses its ‹ › where the date doesn't fit beside them; Lend and Borrow put their icon above the word when a
+   word doesn't fit beside it; a name that wrapped gets a box as wide as its longest line (fitWrapped). */
 function fitFigures(root) {
   root
-    .querySelectorAll(".sumcard .big[style], .tx .a[style], .row > .btn[style], .fbtn[style], .cat .cn[style]")
+    .querySelectorAll(".sumcard .big[style], .tx .a[style], .hcol[style], .balbar b[style]")
     .forEach(el => el.removeAttribute("style"));
+  root.querySelectorAll(".tx.en.stacked").forEach(el => el.classList.remove("stacked")); // measured side by side again
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  /* a list under 20rem is tight; one already set in from the side (data-tight: Summary's opened part) at its own width */
+  root
+    .querySelectorAll(".list")
+    .forEach(l => l.classList.toggle("tight", l.clientWidth > 0 && l.clientWidth < (+l.dataset.tight || 20) * rem));
+  root.querySelectorAll(".pnav").forEach(p => {
+    p.classList.remove("noarr");
+    const l = p.querySelector(".plabel > span");
+    if (l && l.scrollWidth > l.clientWidth + 1) p.classList.add("noarr");
+  });
+  root.querySelectorAll(".loanbtns").forEach(r => {
+    r.classList.remove("stack");
+    if ([...r.children].some(b => b.scrollWidth > b.clientWidth + 1)) r.classList.add("stack");
+  });
+  fitWrapped(root, ".acc .n > span:last-child, .chip .chn");
+  /* tabs too wide for one row together (a sideways phone's narrow dialog, a large text size): two rows of two */
+  root.querySelectorAll(".seg").forEach(g => {
+    g.classList.remove("two");
+    if (g.children.length === 4 && g.scrollWidth > g.clientWidth + 1) g.classList.add("two");
+  });
   const shrink = (el, over) => {
     if (!over()) return;
     const f = parseFloat(getComputedStyle(el).fontSize);
@@ -410,10 +502,37 @@ function fitFigures(root) {
     shrink(el, over);
     if (over()) el.style.overflowWrap = "anywhere";
   });
-  /* a day's list far off screen isn't laid out (content-visibility, .dl): its rows are fitted as they come near */
-  const fitRow = el => {
-    const row = el.closest(".tx");
-    shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+  /* a month's or day's figures (History's heading column): the whole column is set smaller, never cut */
+  root.querySelectorAll(".hcol").forEach(el => shrink(el, () => el.scrollWidth > el.clientWidth + 1));
+  /* Home's account chips fade at the edge the row still scrolls toward (not at its end, nor when it all fits) */
+  root.querySelectorAll(".strip").forEach(el => {
+    if (!el.fadeOn) {
+      el.fadeOn = true;
+      el.addEventListener("scroll", () => fadeStrip(el), { passive: true });
+    }
+    fadeStrip(el);
+  });
+  /* Home's balance bar: its figures (together, to stay in their column) a tenth smaller at a time down to 60%, never cut */
+  root.querySelectorAll(".balbar .bt").forEach(el => {
+    const bs = el.querySelectorAll("b"),
+      f = parseFloat(getComputedStyle(bs[0]).fontSize);
+    for (let k = 0.9; k > 0.55 && el.scrollWidth > el.clientWidth + 1; k -= 0.1)
+      bs.forEach(x => (x.style.fontSize = f * k + "px"));
+  });
+  /* rows, given by their amounts: an entry's row in a list that isn't tight whose title the amount beside it cuts
+     (clamped, measured side by side) stacks as a tight list's rows do (.stacked: the title whole, the amount under it);
+     then a figure the row can't hold is set smaller. All read before any is changed. A day's list far off screen isn't
+     laid out (content-visibility, .dl): its rows are fitted as they come near */
+  const fitRows = as => {
+    as.filter(el => {
+      const row = el.closest(".tx.en"),
+        d = row && !row.closest(".tight") && row.querySelector(".d");
+      return d && d.scrollHeight > d.clientHeight + 1;
+    }).forEach(el => el.closest(".tx").classList.add("stacked"));
+    as.forEach(el => {
+      const row = el.closest(".tx");
+      shrink(el, () => row.scrollWidth > row.clientWidth + 1);
+    });
   };
   if (root.fitIO) root.fitIO.disconnect();
   root.querySelectorAll("[data-far]").forEach(l => delete l.dataset.far); // a second pass: near now is fitted now
@@ -427,7 +546,7 @@ function fitFigures(root) {
         es.forEach(e => {
           if (!e.isIntersecting) return;
           io.unobserve(e.target);
-          e.target.querySelectorAll(".tx .a").forEach(fitRow);
+          fitRows([...e.target.querySelectorAll(".tx .a")]);
         }),
       { root: root.querySelector(".p"), rootMargin: "800px 0px" } // a sheet scrolls its panel, the screen the page
     ));
@@ -436,29 +555,44 @@ function fitFigures(root) {
       io.observe(l);
     });
   }
-  root.querySelectorAll(".tx .a").forEach(el => {
-    if (!el.closest("[data-far]")) fitRow(el);
+  fitRows([...root.querySelectorAll(".tx .a")].filter(el => !el.closest("[data-far]")));
+  /* ring names are whole or left out (ringHTML measures them): should one still not fit its line as laid out (the web
+     font arriving after the ring was drawn), the ring shows none */
+  root.querySelectorAll(".ring").forEach(ring => {
+    const cn = [...ring.querySelectorAll(".rt .cn")];
+    cn.forEach(el => (el.hidden = false));
+    if (cn.some(el => el.scrollWidth > el.clientWidth + 1)) cn.forEach(el => (el.hidden = true));
   });
-  root.querySelectorAll(".row > .btn, .fbtn").forEach(el => {
-    const over = () => el.scrollWidth > el.clientWidth + 1;
-    shrink(el, over);
-    if (over()) el.style.overflowWrap = "anywhere";
-  });
-  /* a category name too wide for its tile (a long word, large text): a little smaller, down to 10px (a ring's 9px, as
-     in a full one), and only then its ellipsis */
-  root.querySelectorAll(".cat .cn").forEach(el => {
-    const min = el.closest(".rt") ? 9 : 10;
-    for (
-      let px = parseFloat(getComputedStyle(el).fontSize) - 0.5;
-      px >= min && el.scrollWidth > el.clientWidth + 1;
-      px -= 0.5
-    )
-      el.style.fontSize = px + "px";
+  fitChargeLabel(root); // after the names, which it must stay clear of
+}
+function fadeStrip(el) {
+  el.classList.toggle(
+    "fade",
+    el.scrollWidth > el.clientWidth + 1 && Math.abs(el.scrollLeft) + el.clientWidth < el.scrollWidth - 2
+  );
+}
+/* A box sizes a wrapped text to the room it had, not to the text: a chip whose name took two lines would keep empty
+   space beside its shorter line. These get the width of their longest line instead. */
+function fitWrapped(root, sel) {
+  root.querySelectorAll(sel).forEach(el => {
+    el.style.width = "";
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const lines = new Map();
+    for (const q of r.getClientRects()) {
+      if (!q.width) continue;
+      const k = Math.round(q.top / 4),
+        l = lines.get(k);
+      lines.set(k, l ? [Math.min(l[0], q.left), Math.max(l[1], q.right)] : [q.left, q.right]);
+    }
+    if (lines.size < 2) return;
+    el.style.width = Math.ceil(Math.max(...[...lines.values()].map(l => l[1] - l[0]))) + 1 + "px";
   });
 }
 const curLines = m =>
   Object.keys(m).length
     ? Object.entries(m)
+        .sort((a, b) => mainFirst(a[0], b[0]))
         .map(([c, v]) => '<div class="big">' + esc(money(v, c)) + "</div>")
         .join("")
     : '<div class="big">' + esc(money(0, S.settings.cur)) + "</div>";
@@ -473,15 +607,15 @@ function netWorth() {
     });
   });
 }
-function accRow(a, b, drag) {
+function accRow(a, b) {
   return (
-    '<button class="tx' +
+    '<button class="tx stk' +
     (FX.row === a.id ? " flash" : "") +
     '" data-act="acc-open" data-v="' +
     a.id +
-    '"' +
-    (drag ? ' data-drag="acc:' + a.id + '"' : "") +
-    ">" +
+    '" data-drag="acc:' +
+    a.id +
+    '">' +
     emblem(accEmb(a), "em") +
     '<span class="mid"><div class="d" dir="auto">' +
     esc(a.name) +
@@ -493,23 +627,17 @@ function accRow(a, b, drag) {
     "</span></button>"
   );
 }
-/* drag targets: a list with data-zone, or (when that list is empty or collapsed) a drop box that only shows while dragging */
+/* drag targets: a list with data-zone, or (when that list is empty or collapsed) a drop box that only shows while
+   dragging; icon: its icon's markup */
 const dropBox = (z, label, icon) =>
-  '<div class="dropbox" data-zone="' + z + '">' + (icon ? ic(icon) : "") + esc(label) + "</div>";
+  '<div class="dropbox" data-zone="' + z + '">' + (icon || "") + esc(label) + "</div>";
 const zoneList = (z, rows) => '<div class="list" data-src="' + z + '">' + rows + "</div>";
 const dragTip = () =>
   S.settings.dragTip ? "" : '<p class="hint" style="margin:8px 4px 0">' + TH("assets.dragTip") + "</p>";
 function assetsView() {
   const b = balances();
   let h = "";
-  h +=
-    '<div class="sumcard"><div class="t">' +
-    TH("assets.netWorth") +
-    "</div>" +
-    curLines(netWorth()) +
-    '<div class="t small">' +
-    TH("assets.netWorthHint") +
-    "</div></div>";
+  h += '<div class="sumcard soft"><div class="t">' + TH("assets.netWorth") + "</div>" + curLines(netWorth()) + "</div>";
   const accs = activeAccounts().filter(a => a.type !== "card"),
     arch = S.accounts.filter(a => a.archived);
   h +=
@@ -517,9 +645,9 @@ function assetsView() {
     TH("home.accounts") +
     "</div>" +
     (accs.length
-      ? zoneList("acc", accs.map(a => accRow(a, b, true)).join(""))
+      ? zoneList("acc", accs.map(a => accRow(a, b)).join(""))
       : '<div class="empty">' + TH("assets.noAccounts") + "</div>") +
-    dropBox("acc", T("assets.dropShow"), "reset") +
+    dropBox("acc", T("assets.dropShow"), icUnarchive()) +
     '<button class="btn text" data-act="acc-form" style="margin-top:4px">' +
     ic("add") +
     TH("account.add") +
@@ -530,8 +658,8 @@ function assetsView() {
       TH(V.showArchived ? "assets.hideArchived" : "assets.showArchived", { count: arch.length }) +
       "</button>";
   h +=
-    dropBox("arch", T("assets.dropArchive")) +
-    (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b, true)).join("")) + dragTip() : "");
+    dropBox("arch", T("assets.dropArchive"), icArchive()) +
+    (arch.length && V.showArchived ? zoneList("arch", arch.map(a => accRow(a, b)).join("")) + dragTip() : "");
   const left = h; // two panes: net worth and accounts | what you're owed and other assets
   h = loanSection("lend", T("assets.owedToYou"), T("assets.owedHint"), T("assets.lendBtn"));
   h +=
@@ -539,11 +667,13 @@ function assetsView() {
     TH("assets.other") +
     "</div>" +
     (S.assets.length
-      ? '<div class="list">' +
+      ? '<div class="list" data-src="assets">' +
         S.assets
           .map(
             x =>
-              '<button class="tx" data-act="asset-edit" data-v="' +
+              '<button class="tx stk" data-act="asset-edit" data-v="' +
+              x.id +
+              '" data-drag="asset:' +
               x.id +
               '">' +
               emblem(x, "em") +
@@ -560,7 +690,7 @@ function assetsView() {
     ic("add") +
     TH("asset.add") +
     "</button>";
-  return tabBar(T("nav.assets")) + panes(left, h);
+  return tabBar(T("nav.assets"), true) + panes(left, h);
 }
 /* one kind of loan on Assets (lend) or Liabilities (borrow): the open ones (or a hint) and a button for a new one, then
    the cleared ones behind "Show cleared"; open and cleared are drop zones, to drag a loan between them */
@@ -575,14 +705,14 @@ function loanSection(kind, title, none, add) {
     (open.length
       ? zoneList(kind + "-open", open.map(([l, i]) => loanRow(l, i)).join(""))
       : '<p class="hint" style="margin:0 4px">' + esc(none) + "</p>") +
-    dropBox(kind + "-open", T("loans.dropActive"), "reset") +
+    dropBox(kind + "-open", T("loans.dropActive"), ic("reset")) +
     '<button class="btn text" data-act="loan-new" data-v="' +
     kind +
     '" style="margin-top:4px">' +
     ic("add") +
     esc(add) +
     "</button>" +
-    dropBox(kind + "-done", T("loans.dropCleared"), "check");
+    dropBox(kind + "-done", T("loans.dropCleared"), ic("check"));
   if (done.length) {
     h +=
       '<button class="btn text" data-act="toggle-cleared">' +
@@ -606,188 +736,466 @@ function liabsView() {
       if (b[a.id] < 0) add(a.currency, -b[a.id]);
     });
   });
-  h += '<div class="sumcard owe"><div class="t">' + TH("liabs.owe") + "</div>" + curLines(owed) + "</div>";
+  h += '<div class="sumcard soft"><div class="t">' + TH("liabs.owe") + "</div>" + curLines(owed) + "</div>";
   h += loanSection("borrow", T("liabs.loans"), T("liabs.loansHint"), T("liabs.borrowBtn"));
   /* two panes: what you owe and the loans | credit cards */
   const right = cards.length
-    ? '<div class="sec">' +
-      TH("liabs.cards") +
-      '</div><div class="list">' +
-      cards.map(a => accRow(a, b)).join("") +
-      "</div>"
+    ? '<div class="sec">' + TH("liabs.cards") + "</div>" + zoneList("cards", cards.map(a => accRow(a, b)).join(""))
     : "";
-  return tabBar(T("nav.liabs")) + panes(h, right);
+  return tabBar(T("nav.liabs"), true) + panes(h, right);
 }
+/* Home's balance bar: what a tap opens ("4 entries ›") on the left, the totals on the right: with one currency "Total in
+   USD" over the figure, with several one "Total", then a line each (its code in one column, the figures right-aligned in
+   the other): the notebook's currency first, the others by code. The ring's ⇄ only changes the ring. A screen reader
+   gets one sentence. */
+function balBar(b, n) {
+  const cs = currencies().sort(mainFirst),
+    say = cs.map(c => money(balanceIn(c, b), c)),
+    one = cs.length < 2,
+    cap = one ? T("home.totalIn", { cur: cs[0] }) : T("home.total"),
+    entries = T("home.entries", { count: n }),
+    line = (c, i) =>
+      '<span class="bcl">' +
+      (one ? "" : '<span class="bcc">' + (say[i].includes(c) ? "" : esc(c)) + "</span>") +
+      "<b>" +
+      esc(say[i]) +
+      "</b></span>";
+  return (
+    '<button class="balbar" data-act="entries" aria-label="' +
+    esc(T("home.barSay", { entries, total: T("common.labelValue", { label: cap, value: say.join(", ") }) })) +
+    '"><span class="l" aria-hidden="true">' +
+    esc(entries) +
+    ic("right") +
+    '</span><span class="bt' +
+    (one ? " one" : "") +
+    '" aria-hidden="true"><span class="bcap">' +
+    esc(cap) +
+    "</span>" +
+    cs.map(line).join("") +
+    "</span></button>"
+  );
+}
+/* an account in an entry's row: a dot of its colour, then its name (#37); the name says which account, the colour only
+   helps to spot it */
+const accTag = a => (a ? '<bdi><span class="adot"' + accVar(a) + "></span>" + hl(a.name) + "</bdi>" : bdi("?"));
+/* what an entry was, as its row's first line (HTML, words search matched marked): a purchase's or income's payee · note,
+   else its category; a transfer's note, else "Transfer"; a loan's "Lent to Rafi"; a balance fix; a fee met on its own */
+function txTitle(t) {
+  if (t.type === "transfer") return t.note ? hl(t.note) : esc(T("transfer.title"));
+  if (t.type === "adjust") return TH("fix.title");
+  if (t.type === "loan") {
+    const l = loan(t.loan),
+      lend = l && l.kind === "lend";
+    return TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
+      who: { html: "<bdi>" + hl(l ? loanWho(l) : "?") + "</bdi>" },
+    });
+  }
+  if (t.feeOf) {
+    const host = entry(t.feeOf) || {};
+    return t.note && !autoNote(t.note)
+      ? hl(t.note)
+      : esc(noteShown(t, host.type === "loan" && loan(host.loan) ? "loan.feeNote" : "transfer.feeNote"));
+  }
+  if (t.payee || t.note)
+    return [t.payee, t.note]
+      .filter(Boolean)
+      .map(x => "<bdi>" + hl(x) + "</bdi>")
+      .join(" \u00b7 ");
+  return hl(catName(cat(t.cat)));
+}
+/* An entry's row: two lines. What it was | how much, the money that moved (a purchase: with its charge), with small
+   lines under it naming what is inside it or on top of it (docs/specs/charges.md, "History rows": "incl. $150.00
+   charge", "+ $10.00 transfer charge", "incl. $150.00 extra" in green; a transfer between currencies: what arrived),
+   then its category when the title is a payee or a note (a note, for a loan) and its account with the dot of its
+   colour; a transfer: From → To. No balance on the row: tapping it opens it in place (txOpenView), where the balances,
+   the time it was written down and the actions are. An add-on has no row of its own (histRows). Every text wraps,
+   nothing is cut but a very long title (two lines, three in a tight list). A tight list (fitFigures) gives the title
+   the whole width, the amount the line below it, then the second line; so does a row whose title the amount beside it
+   would cut (.stacked, fitFigures). Summary's opened rows (smEntries) show the same title and account. */
 function txLine(t) {
   const a = acc(t.account),
-    cur = a ? a.currency : S.settings.cur;
+    cur = a ? a.currency : S.settings.cur,
+    f = addOnOf(t),
+    d = txTitle(t);
   let em,
-    d,
-    s,
     amt,
-    cls = "";
+    cls = "",
+    sub = accTag(a),
+    small = "";
   if (t.type === "transfer") {
     const to = acc(t.to);
     em = XFER_EMB;
     cls = "xfer";
-    d = esc(t.note || T("transfer.title"));
-    s = bdi(a ? a.name : "?") + " → " + bdi(to ? to.name : "?");
-    amt =
-      esc(money(t.amount, cur)) +
-      (t.toAmount != null && to && to.currency !== cur
-        ? "<small>→ " + esc(money(t.toAmount, to.currency)) + "</small>"
-        : "");
+    amt = esc(money(t.amount, cur));
+    sub += ' <span class="ar">\u2192</span> ' + accTag(to);
+    if (t.toAmount != null && to && to.currency !== cur)
+      small += "<small>\u2192 " + esc(money(t.toAmount, to.currency)) + "</small>";
   } else if (t.type === "adjust") {
     em = { i: "balance", c: "#7a8190" };
-    d = esc(noteShown(t, "fix.title"));
-    s = TH("fix.title") + " · " + bdi(a ? a.name : "?");
     amt = esc(signed(t.amount, cur));
     cls = t.amount < 0 ? "spent" : "got";
   } else if (t.type === "loan") {
-    const l = loan(t.loan),
-      lend = l && l.kind === "lend",
-      who = l ? loanWho(l) : "?";
+    const lend = (loan(t.loan) || {}).kind === "lend";
     em = LOAN_EMB[lend ? "lend" : "borrow"];
-    d = TH("tx." + (t.principal ? (lend ? "lentTo" : "borrowedFrom") : lend ? "theyPaidBack" : "youPaidBack"), {
-      who: { html: bdi(who) },
-    });
-    s = TH(lend ? "tx.lending" : "tx.loan") + " · " + bdi(a ? a.name : "?") + (t.note ? " · " + bdi(t.note) : "");
     amt = esc(signed(t.dir === "in" ? t.amount : -t.amount, cur));
     cls = t.dir === "in" ? "got" : "spent";
   } else if (t.feeOf) {
-    /* a fee: shown with the transfer or loan payment it was charged on, not as a category's spending */
+    /* a fee whose transfer or payment is gone (or one met outside History): its own row, never a category's spending */
     const host = entry(t.feeOf) || {},
       l = host.type === "loan" && loan(host.loan);
     cls = "xfer";
     amt = esc(signed(-t.amount, cur));
-    if (l) {
-      const lend = l.kind === "lend";
-      em = LOAN_EMB[lend ? "lend" : "borrow"];
-      d = esc(noteShown(t, "loan.feeNote"));
-      s =
-        bdi(a ? a.name : "?") +
-        " · " +
-        TH(lend ? "tx.feeGotBack" : "tx.feePaidBack", { who: { html: bdi(loanWho(l)) } });
-    } else {
-      const to = acc(host.to);
-      em = XFER_EMB;
-      d = esc(noteShown(t, "transfer.feeNote"));
-      s = bdi(a ? a.name : "?") + (to ? " → " + bdi(to.name) : "");
-    }
+    em = l ? LOAN_EMB[l.kind === "lend" ? "lend" : "borrow"] : XFER_EMB;
   } else {
     const k = cat(t.cat),
       out = t.type === "expense";
     em = k;
-    d = t.payee || t.note ? [t.payee, t.note].filter(Boolean).map(bdi).join(" · ") : esc(catName(k));
-    s = bdi(catName(k)) + " · " + bdi(a ? a.name : "?");
-    amt = esc(signed(out ? -t.amount : t.amount, cur));
+    if (t.payee || t.note) sub = "<bdi>" + hl(catName(k)) + "</bdi> \u00b7 " + sub;
+    const sum = out && f && f.type === "expense" ? rnd(t.amount + f.amount) : t.amount; // a purchase with its charge
+    amt = esc(signed(out ? -sum : sum, cur));
     cls = out ? "spent" : "got";
   }
-  const selMode = !!V.sel && V.screen === "history",
-    on = selMode && V.sel.has(t.id);
+  /* what is inside the amount (charges or an extra a payment covered, a purchase's charge), then what is on top of it */
+  const top = t.type === "loan" && !t.principal ? topPaidOf(t.id) : 0,
+    lendL = t.type === "loan" && (loan(t.loan) || {}).kind === "lend",
+    line = (key, amount, extra) => "<small" + (extra ? ' class="xtra"' : "") + ">" + TH(key, { amount }) + "</small>";
+  if (top > 0) small += line(lendL ? "tx.extraIncl" : "tx.chargesIncl", money(top, cur), lendL);
+  if (f) {
+    const fm = money(f.amount, (acc(f.account) || a || {}).currency || cur);
+    if (f.type === "income") small += line("tx.extraOn", fm, true);
+    else if (t.type === "expense") small += line("tx.chargeIncl", fm);
+    else if (t.type === "loan" && t.dir === "in")
+      small += line("tx.chargeOff", fm); // a lending payment's older fee
+    else small += line("tx.xchargeOn", fm);
+  }
+  const marked = HARCH && t.archived, // an archived entry that search lists (Settings → History)
+    selMode = !!V.sel && V.screen === "history",
+    noSel = selMode && marked, // never selected (selRows): in sight, but a tap does nothing
+    on = selMode && V.sel.has(t.id),
+    isOpen = !selMode && V.open === t.id;
+  /* search mode: a loan's or balance fix's note is not on its row; when a word matched it, it is a third line */
+  let noteLine = "";
+  if (HLW && t.note && (t.type === "loan" || t.type === "adjust")) {
+    const n = hl(t.note);
+    if (n.includes("<mark"))
+      noteLine = '<span class="hnote">' + TH("search.noteLine", { note: { html: "<bdi>" + n + "</bdi>" } }) + "</span>";
+  }
+  const hw = HLW; // the opened part shows no marks
+  HLW = null;
+  const opened = isOpen ? txOpenView(t) : "";
+  HLW = hw;
+  /* an archived entry that search lists (Settings → History): its second line starts with the archive box and the word
+     "Archived", so it is said, not only seen (docs/specs/history-archive.md, C) */
+  if (marked) sub = '<span class="tarch">' + icArchive() + TH("archive.mark") + "</span> \u00b7 " + sub;
   return (
-    '<button class="tx' +
+    '<button class="tx en' +
     (on ? " on" : "") +
+    (marked ? " txarch" : "") +
+    (noSel ? " unsel" : "") +
     (FX.row === t.id ? " flash" : "") +
-    '" data-act="' +
-    (selMode ? "sel-toggle" : "tx-open") +
-    '" data-v="' +
+    '"' +
+    (noSel ? "" : ' data-act="' + (selMode ? "sel-toggle" : "row-open") + '"') +
+    ' data-v="' +
     t.id +
     '"' +
-    (selMode ? ' aria-pressed="' + on + '"' : "") +
+    (noSel ? ' aria-disabled="true"' : selMode ? ' aria-pressed="' + on + '"' : ' aria-expanded="' + isOpen + '"') +
     ">" +
-    (selMode ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
-    '<span class="mid"><div class="d" dir="auto">' +
+    (selMode && !noSel ? '<span class="em pick">' + ic(on ? "checked" : "unchecked") + "</span>" : emblem(em, "em")) +
+    '<span class="mid"><span class="d" dir="auto">' +
     d +
-    '</div><div class="s">' +
-    loanPill(t) +
-    s +
-    '</div></span><span class="a ' +
+    '</span><span class="a ' +
     cls +
     '">' +
     amt +
-    rbLines(t) +
-    "</span></button>"
+    small +
+    '</span><span class="s">' +
+    sub +
+    "</span>" +
+    noteLine +
+    "</span></button>" +
+    opened
   );
 }
-/* the small grey balance line(s) under an amount: what the account held right after this entry */
-function rbLines(t) {
-  const r = runBal()[t.id];
-  if (!r) return "";
-  const a = acc(t.account);
+/* a loan's parts as chips (lend-refine), [[label key, amount]]: each a small outlined box, its label over its figure */
+const partChips = (parts, cur) =>
+  '<div class="lparts">' +
+  parts
+    .map(
+      ([k, v]) =>
+        '<div class="lpart"><span class="lpc">' +
+        TH(k) +
+        '</span><span class="lpv">' +
+        esc(money(v, cur)) +
+        "</span></div>"
+    )
+    .join("") +
+  "</div>";
+/* What an opened row adds to what the row shows: when it was written down, the balance it left (after its add-on), what a
+   transfer or a loan adds, and the actions. A box is a small label over a bold figure; an account is named only to tell
+   two balances apart. Never a total beside one of its parts (docs/specs/charges.md, "History rows"): the first box may
+   repeat the row's figure, so the boxes read "this, plus that" ("Sent | Transfer charge"); a part a payment covered
+   (an extra, charges) is a box of its own with what it counted as. A loan's box says what is owed, with a draw's own
+   parts as chips inside it (lend-refine) or, on a payment while both are left, what is left of the money and on top.
+   Built on demand: the tap that opens a row puts it after the row (rowToggle). */
+function txOpenView(t) {
+  const a = acc(t.account),
+    cur = a ? a.currency : S.settings.cur,
+    RB = runBal(),
+    r = RB[t.id] || {},
+    f = addOnOf(t),
+    fc = f ? (acc(f.account) || a || {}).currency || cur : cur,
+    after = (f && RB[f.id]) || r, // the balance after the entry and its add-on
+    M = (v, c) => esc(money(v, c));
+  const box = (cap, val, extra, cls) =>
+    '<div class="fbox"><div class="bcap">' +
+    cap +
+    '</div><div class="bval' +
+    (cls ? " " + cls : "") +
+    '">' +
+    val +
+    "</div>" +
+    (extra || "") +
+    "</div>";
+  const note = key => '<div class="bin">' + TH(key) + "</div>";
+  const bal = (x, v) =>
+    x && v != null
+      ? box(
+          TH("tx.leftAfter"),
+          M(v, x.currency),
+          '<div class="bin">' + TH("tx.inAcc", { account: { html: accTag(x) } }) + "</div>"
+        )
+      : "";
+  const row = boxes => (boxes ? '<div class="frow">' + boxes + "</div>" : "");
+  let h = "";
+  if (t.ts) {
+    const w = new Date(t.ts),
+      time = "<b>" + esc(clockTime(t.ts)) + "</b>";
+    h +=
+      '<div class="added">' +
+      ic("schedule") +
+      "<span>" +
+      (iso(w) !== t.date
+        ? TH("tx.addedOn", {
+            date: { html: "<b>" + esc(w.toLocaleDateString(DATE_LOC, { day: "numeric", month: "short" })) + "</b>" },
+            time: { html: time },
+          })
+        : TH("tx.addedAt", { time: { html: time } })) +
+      "</span></div>";
+  }
+  /* a loan's or fix's note lives here only; an expense's, income's and transfer's is their title */
+  if (t.note && !autoNote(t.note) && (t.type === "loan" || t.type === "adjust"))
+    h += '<div class="onote" dir="auto">' + bdi(t.note) + "</div>";
   if (t.type === "transfer") {
     const to = acc(t.to);
-    return (
-      rbLine(a ? a.name : "?", money(r.a, a ? a.currency : ""), "↓") +
-      (to && r.t != null ? rbLine(to.name, money(r.t, to.currency), "↑") : "")
-    );
-  }
-  return a ? rbLine(a.name, money(r.a, a.currency)) : "";
+    h += row(f ? box(TH("tx.sent"), M(t.amount, cur)) + box(TH("tx.xcharge"), M(f.amount, fc)) : "");
+    h += row(bal(a, after.a) + bal(to, r.t));
+  } else if (t.type === "loan" && loan(t.loan)) {
+    const l = loan(t.loan),
+      i = loanInfo(l),
+      lend = l.kind === "lend",
+      who = { html: bdi(loanWho(l)) },
+      /* what is still owed; written off or forgiven, the money still unpaid (what is unpaid on top is let go) */
+      owed = i.st === "writeoff" ? i.left : i.unpaid,
+      paid = Math.max(0, rnd(i.total - i.unpaid)),
+      pct = i.total ? Math.min(100, Math.round((paid / i.total) * 100)) : 0;
+    let inBox = "",
+      boxes = [];
+    if (t.principal) {
+      /* the draw's own parts, when it has more than its amount: Lent or Borrowed, a lend's transfer charge, the extra
+         or charges on top */
+      const parts = [[lend ? "tx.lent" : "tx.borrowed", t.amount]];
+      if (f && f.type === "loan") parts.push(["tx.xcharge", f.amount]);
+      if (t.onTop) parts.push([lend ? "tx.extra" : "tx.charges", t.onTop]);
+      if (parts.length > 1) inBox = partChips(parts, cur);
+      if (t.due && i.rem[t.id] > 0) boxes.push(box(TH("tx.due"), esc(shortDay(t.due))));
+    } else {
+      if (i.open && i.moneyLeft > 0 && i.topLeft > 0)
+        inBox =
+          '<div class="lfoot">' +
+          TH(lend ? "tx.leftExtra" : "tx.leftCharges", {
+            money: money(i.moneyLeft, i.cur),
+            [lend ? "extra" : "charges"]: money(i.topLeft, i.cur),
+          }) +
+          "</div>";
+      const top = topPaidOf(t.id),
+        tip = f && f.type === "income" ? f.amount : 0;
+      /* what the payment covered on top (with a tip, one Extra box with their sum), then its charge; the amount itself
+         only beside what is on top of it, never beside a part of it */
+      if (rnd(top + tip) > 0)
+        boxes.push(
+          lend
+            ? box(TH("tx.extra"), esc(signed(rnd(top + tip), cur)), note("tx.asIncome"), "got")
+            : box(TH("tx.charges"), M(top, cur), note("tx.asSpending"))
+        );
+      if (f && f.type === "expense") boxes.push(box(TH(lend ? "tx.charge" : "tx.xcharge"), M(f.amount, fc)));
+      if (boxes.length && !top) boxes.unshift(box(TH(lend ? "tx.gotBack" : "tx.paidBack"), M(t.amount, cur)));
+    }
+    h +=
+      '<div class="lbox"><div class="lhead"><span>' +
+      (owed > 0
+        ? TH(lend ? "tx.owesYou" : "tx.youOwe", { who })
+        : i.st === "writeoff" // nothing of the money left, only what was on top: let go, never "owes" or "Cleared"
+          ? TH(lend ? "loan.st.writtenOff" : "loan.st.forgiven")
+          : TH("tx.cleared")) +
+      "</span>" +
+      (owed > 0 ? "<b>" + M(owed, i.cur) + "</b>" : "") +
+      '</div><div class="ltrack" aria-hidden="true"><span style="width:' +
+      pct +
+      '%"></span></div><div class="lfoot">' +
+      TH(lend ? "tx.backOf" : "tx.paidOf", { paid: money(paid, i.cur), total: money(i.total, i.cur) }) +
+      "</div>" +
+      inBox +
+      "</div>";
+    h += boxes.length > 1 ? row(boxes.join("")) + row(bal(a, after.a)) : row(boxes.join("") + bal(a, after.a));
+  } else if (t.type === "adjust") {
+    if (after.a != null) h += row(box(TH("tx.was"), M(after.a - t.amount, cur)) + box(TH("tx.now"), M(after.a, cur)));
+  } else if (t.type === "expense" && f) h += row(box(TH("tx.charge"), M(f.amount, fc)) + bal(a, after.a));
+  else h += row(bal(a, after.a));
+  return (
+    '<div class="txo" data-v="' +
+    t.id +
+    '">' +
+    h +
+    /* an archived entry (the Archived screen, or search) is unarchived or deleted, not edited */
+    '<div class="acts"><button class="btn tonal" data-act="' +
+    (t.archived ? "unarchive" : "tx-open") +
+    '" data-v="' +
+    t.id +
+    '">' +
+    (t.archived ? icUnarchive() + TH("archive.unarchive") : ic("edit") + TH("common.edit")) +
+    '</button><button class="btn text dng" data-act="tx-del" data-v="' +
+    t.id +
+    '">' +
+    ic("delete") +
+    TH("common.delete") +
+    "</button></div></div>"
+  );
 }
-/* on a narrow screen the account name gives way (ellipsis), never the balance; a transfer's arrow stays outside the
-   name, on the app's side of it */
-const rbLine = (name, bal, arrow) =>
-  '<span class="rb' +
-  (arrow ? ' ar">' + arrow : '">') +
-  '<span class="rbn" dir="auto">' +
-  esc(name) +
-  "</span> " +
-  esc(bal) +
-  "</span>";
+/* the rows opened in a list, closed (not V.open: the caller says which one stays) */
+function rowsClose(scope) {
+  scope.querySelectorAll(".txo").forEach(x => x.remove());
+  scope.querySelectorAll('.tx[aria-expanded="true"]').forEach(x => x.setAttribute("aria-expanded", "false"));
+}
+/* a tap on a row: it opens in place (the one open before closes), or closes. Only that row's part is added or removed,
+   not the whole (long) list drawn anew. One row is open at a time, in the list that was tapped (the page or
+   the entries sheet, never the page behind a sheet): a list in a sheet starts with none open and the page's row behind
+   it is closed (entriesSheet), and closing that sheet leaves none open (closeSheet). */
+function rowToggle(row, id) {
+  const was = V.open === id;
+  rowsClose(row.closest("#sheet, #app") || document);
+  V.open = was ? "" : id;
+  const t = entry(id);
+  if (was || !t) return;
+  row.setAttribute("aria-expanded", "true");
+  row.insertAdjacentHTML("afterend", txOpenView(t));
+  const o = row.nextElementSibling;
+  if (o && o.scrollIntoView) o.scrollIntoView({ block: "nearest" });
+}
 function loanPill(t) {
   const r = t.type === "loan" && runBal()[t.id];
   if (!r || !r.ls) return "";
   return '<span class="st ' + r.ls + '">' + TH(r.ls === "cleared" ? "loan.st.cleared" : "loan.st.partly") + "</span> ";
 }
-function dayGroups(list) {
+/* a period's rows by day (Home's two panes: box "#app"; the entries sheet: "#sheet"), or why there are none: nothing
+   written down, or every entry archived (archived entries count in the day totals, never as rows). A year is
+   thousands of rows: they are drawn in History's chunks, at least `n` entries (drawTo) and whole days, then a marker
+   (.dmore) after which the rest follows as it comes near (dayWatch, dayMore), from the list kept in DAYL[box]. */
+const DAYL = {},
+  DAYIO = {};
+function dayList(list, box, n) {
+  if (!histRows(list).length)
+    return (
+      '<div class="empty">' + TH(list.some(t => t.archived) ? "history.none.archived" : "home.nothingYet") + "</div>"
+    );
+  DAYL[box] = list;
+  return dayChunk(list, 0, Math.max(n || 0, HIST_CHUNK));
+}
+/* how many entries box's day list has drawn (0: all of them, or none drawn) */
+const dayDrawn = box => {
+  const end = $(box + " .dmore");
+  return end ? +end.dataset.next : 0;
+};
+/* list[i..] for about `budget` entries, ending with a day (a day's total is the whole day's), then the marker */
+function dayChunk(list, i, budget) {
+  let e = Math.min(list.length, i + budget);
+  while (e < list.length && list[e].date === list[e - 1].date) e++;
+  return dayGroups(list.slice(i, e)) + (e < list.length ? '<div class="dmore" data-next="' + e + '"></div>' : "");
+}
+/* the rest of a day list is drawn when its marker comes within a few screens of the view (the sheet's panel, which
+   scrolls itself, or the page) */
+function dayWatch(box) {
+  if (DAYIO[box]) DAYIO[box].disconnect();
+  DAYIO[box] = null;
+  const end = $(box + " .dmore");
+  if (!end || typeof IntersectionObserver === "undefined") return;
+  DAYIO[box] = new IntersectionObserver(es => es.some(e => e.isIntersecting) && dayMore(box), {
+    root: end.closest(".p"),
+    rootMargin: "1500px 0px",
+  });
+  DAYIO[box].observe(end);
+}
+function dayMore(box) {
+  const end = $(box + " .dmore"),
+    list = DAYL[box];
+  if (!end || !list) return dayWatch(box);
+  end.insertAdjacentHTML("beforebegin", "<div>" + dayChunk(list, +end.dataset.next, HIST_CHUNK) + "</div>");
+  const part = end.previousElementSibling,
+    next = part.querySelector(".dmore");
+  end.remove();
+  if (next) part.after(next); // the marker stays last, after the rows
+  fitFigures(part);
+  dayWatch(box); // still near the end? this says so again
+}
+/* the rows of a list by day, under day headings: History's (hist), each with its words; the Archived screen's (hist
+   "arch"), the archived entries' rows under headings without totals; elsewhere, each day's spending */
+function dayGroups(list, hist) {
+  const arch = hist === "arch",
+    whole = new Map(); // History's day words count the fees too (histLines)
+  if (hist) list.forEach(x => whole.set(x.date, (whole.get(x.date) || []).concat(x)));
+  /* elsewhere (Home, the entries sheet: the whole period), each day's spending per currency by the counting rule, the
+     charges inside the rows and the worked-out parts included, in one pass (a year is thousands of rows) */
+  const days = new Map(),
+    rows = new Map(),
+    spend = (d, c, v) => {
+      const sp = days.get(d) || {};
+      sp[c] = (sp[c] || 0) + v;
+      days.set(d, sp);
+    };
+  if (!hist) {
+    list.forEach(x => isSpend(x) && spend(x.date, (acc(x.account) || {}).currency, x.amount));
+    loanParts().forEach(p => p.as === "spend" && spend(p.date, p.cur, p.amount));
+  }
+  list = arch ? archRows(list) : hist ? listRows(list) : histRows(list); // a fee is shown inside what it was charged on
   let h = "",
     cur = "";
-  /* each day's spending per currency, in one pass (a year of History is thousands of rows) */
-  const days = new Map(),
-    rows = new Map();
-  list.forEach(x => {
-    rows.set(x.date, (rows.get(x.date) || 0) + 1);
-    if (!isSpend(x)) return;
-    const c = (acc(x.account) || {}).currency,
-      sp = days.get(x.date) || {};
-    sp[c] = (sp[c] || 0) + x.amount;
-    days.set(x.date, sp);
-  });
+  list.forEach(x => rows.set(x.date, (rows.get(x.date) || 0) + 1));
   list.forEach(t => {
     if (t.date !== cur) {
       if (cur) h += "</div>";
       cur = t.date;
       const tot = Object.entries(days.get(cur) || {})
-        .map(([c, v]) => signed(-v, c))
+        .filter(e => rnd(e[1]))
+        .sort((a, b) => mainFirst(a[0], b[0]))
+        .map(([c, v]) => signed(-rnd(v), c))
         .join(" · ");
+      const title = capFirst(dayLabel(t.date)),
+        lines = hist && !arch ? histLines(whole.get(cur) || [], HF.kind, [cur, cur]) : [];
       h +=
-        '<div class="day"><span>' +
-        esc(capFirst(dayLabel(t.date))) +
-        "</span><span>" +
-        esc(tot) +
-        '</span></div><div class="list dl" style="contain-intrinsic-size:0 ' +
-        rows.get(cur) * 72 +
-        'px">';
+        (hist
+          ? '<div class="day dayh" role="heading" aria-level="3" aria-label="' +
+            esc(histHeadSay(title, lines)) +
+            '"><span aria-hidden="true">' +
+            esc(title) +
+            "</span>" +
+            histColumn(lines)
+          : '<div class="day"><span>' + esc(title) + "</span><span>" + esc(tot) + "</span>") +
+        '</div><div class="list dl" style="contain-intrinsic-size:0 ' +
+        rows.get(cur) * 5 + // an estimate (a row of two or three lines), in rem: it grows with the text size
+        'rem">';
     }
     h += txLine(t);
   });
   return cur ? h + "</div>" : h;
-}
-/* History's account filter ("" = All), from its chips or a sideways swipe; the chosen chip scrolls into view */
-function setHistAcc(id) {
-  V.hAcc = id || "";
-  if (V.sel) V.sel = new Set();
-  render();
-  const chip = $('.strip [data-act="hacc"][aria-pressed="true"]');
-  if (chip && chip.scrollIntoView) chip.scrollIntoView({ block: "nearest", inline: "nearest" });
-}
-/* the History filter chips in order: All, then the accounts shown */
-const histAccs = () => [""].concat(S.accounts.filter(a => !a.archived || a.id === V.hAcc).map(a => a.id));
-function historyList() {
-  const [s, e] = range(HP);
-  let list = S.txns.filter(t => t.date >= s && t.date <= e);
-  if (V.hAcc) list = list.filter(t => t.account === V.hAcc || t.to === V.hAcc);
-  return list.sort(byNewest);
 }
 /* a row ticked or unticked in History's selection: that row and the count change, not the whole (long) list */
 function selSync(b) {
@@ -796,97 +1204,12 @@ function selSync(b) {
   b.classList.toggle("on", on);
   b.setAttribute("aria-pressed", on);
   b.querySelector(".em.pick").innerHTML = ic(on ? "checked" : "unchecked");
-  $("#app .appbar h1").textContent = T("history.selected", { count: n });
-  $('#app [data-act="sel-del"]').disabled = !n;
-}
-function historyView() {
-  if (V.hAcc && !acc(V.hAcc)) V.hAcc = ""; // its account was deleted, or a backup restored
-  const list = historyList();
-  /* only what's listed stays selected (midnight moved to the next month, an Undo took one away): Delete never takes an
-     entry out of sight */
-  if (V.sel) {
-    const listed = new Set(list.map(t => t.id));
-    V.sel = new Set([...V.sel].filter(id => listed.has(id)));
-  }
-  let h;
-  if (V.sel) {
-    const n = V.sel.size;
-    h =
-      '<header class="appbar"><button class="icon" data-act="sel-cancel" aria-label="' +
-      TH("history.stopSel") +
-      '">' +
-      ic("close") +
-      "</button><h1>" +
-      TH("history.selected", { count: n }) +
-      "</h1>" +
-      '<button class="icon" data-act="sel-all" aria-label="' +
-      TH("history.selAll") +
-      '">' +
-      ic("selectall") +
-      "</button>" +
-      '<button class="icon" data-act="sel-del" aria-label="' +
-      TH("history.delSel") +
-      '"' +
-      (n ? "" : " disabled") +
-      ">" +
-      ic("delete") +
-      "</button></header>";
-  } else
-    h =
-      '<header class="appbar"><button class="icon" data-act="home" aria-label="' +
-      TH("common.back") +
-      '">' +
-      ic("back") +
-      "</button><h1>" +
-      TH("common.history") +
-      "</h1>" +
-      (list.length
-        ? '<button class="icon" data-act="sel-start" aria-label="' +
-          TH("history.select") +
-          '">' +
-          ic("checkbox") +
-          "</button>"
-        : "") +
-      "</header>";
-  h +=
-    '<div class="month"><button class="icon" data-act="hmon" data-v="-1" aria-label="' +
-    TH("common.previous") +
-    '">' +
-    ic("left") +
-    '</button><button class="plabel" data-act="period-open" data-v="hist" aria-haspopup="dialog"><span>' +
-    esc(periodLabel(HP)) +
-    "</span>" +
-    ic("down") +
-    '</button><button class="icon" data-act="hmon" data-v="1" aria-label="' +
-    TH("common.next") +
-    '"' +
-    (canNext(HP) ? "" : " disabled") +
-    ">" +
-    ic("right") +
-    "</button></div>";
-  const accs = S.accounts.filter(a => !a.archived || a.id === V.hAcc); // same order as histAccs()
-  if (accs.length > 1)
-    h +=
-      '<div class="strip" style="margin-top:8px"><button class="chip" data-act="hacc" data-v="" aria-pressed="' +
-      !V.hAcc +
-      '">' +
-      TH("history.all") +
-      "</button>" +
-      accs
-        .map(
-          a =>
-            '<button class="chip" data-act="hacc" data-v="' +
-            a.id +
-            '" aria-pressed="' +
-            (V.hAcc === a.id) +
-            '"><span class="chn" dir="auto">' +
-            esc(a.name) +
-            "</span></button>"
-        )
-        .join("") +
-      "</div>";
-  if (!list.length) return h + '<div class="empty">' + TH("history.none." + HP.period) + "</div>";
-  return h + dayGroups(list);
+  $("#app .appbar h1").outerHTML = selTitle(n);
+  $('#app [data-act="sel-del"]').disabled = $('#app [data-act="sel-arch"]').disabled = !n;
+  const all = $('#app [data-act="sel-all"]'),
+    every = histAllSelected();
+  all.setAttribute("aria-label", T(every ? "history.clearSel" : "history.selAll"));
+  all.innerHTML = every ? icDeselect() : ic("selectall");
 }
 function catGrid(kind) {
   let h = '<div class="cgrid" data-kind="' + kind + '">';
@@ -939,20 +1262,29 @@ function sliderShow(el, n) {
 }
 /* Settings → First day of week: the days' long names where they fit, else the short ones (the long one still read out) */
 function fitWeekSeg() {
-  const b = [...document.querySelectorAll('#app [data-act="week"]')];
-  if (b.some(x => x.scrollWidth > x.clientWidth + 1))
+  const b = [...document.querySelectorAll('#app [data-act="week"]')],
+    seg = b.length && b[0].parentElement; // each tab is as wide as its word: the three together may not fit
+  if (seg && (seg.scrollWidth > seg.clientWidth + 1 || b.some(x => x.scrollWidth > x.clientWidth + 1)))
     b.forEach(x => {
       x.setAttribute("aria-label", x.textContent);
       x.textContent = capFirst(weekdayName(+x.dataset.v, "short"));
     });
 }
 function settingsView() {
-  let h = subBar(T("settings.title"));
+  /* each section in a block of its own (.ssec), its heading first: the heading stays under the bar while its section
+     scrolls, until the next one pushes it up (histPin; docs/specs/history-archive.md, D) */
+  let h = "",
+    open = false;
+  const sec = (t, cls) => {
+    const s =
+      (open ? "</div>" : "") + '<div class="ssec"><div class="sec' + (cls ? " " + cls : "") + '">' + t + "</div>";
+    open = true;
+    return s;
+  };
   const th = S.settings.theme || "system";
   h +=
-    '<div class="sec">' +
-    TH("settings.theme") +
-    '</div><div class="seg">' +
+    sec(TH("settings.theme")) +
+    '<div class="seg">' +
     ["system", "light", "dark"]
       .map(
         k =>
@@ -967,9 +1299,8 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">' +
-    TH("settings.feel") +
-    '</div><div class="list"><div class="setrow"><span class="mid"><div>' +
+    sec(TH("settings.feel")) +
+    '<div class="list"><div class="setrow"><span class="mid"><div>' +
     TH("settings.vibration") +
     '</div><div class="s">' +
     TH("settings.vibrationHint") +
@@ -1000,9 +1331,8 @@ function settingsView() {
       .join("") +
     "</div>";
   h +=
-    '<div class="sec">' +
-    TH("settings.region") +
-    '</div><div class="lbl set">' +
+    sec(TH("settings.region")) +
+    '<div class="lbl set">' +
     TH("settings.mainCur") +
     '</div><button class="fieldbtn" data-act="pick-maincur" aria-label="' +
     TH("common.labelValue", {
@@ -1014,6 +1344,14 @@ function settingsView() {
     "</span>" +
     ic("down") +
     '</button><div class="lbl set">' +
+    TH("settings.opensOn") +
+    "</div>" +
+    seg(
+      "home-opens",
+      S.settings.home,
+      ["day", "month", "year"].map(k => [k, T("settings.opens." + k)])
+    ) +
+    '<div class="lbl set">' +
     TH("settings.week") +
     "</div>" +
     seg(
@@ -1051,19 +1389,29 @@ function settingsView() {
       esc(title) +
       '"></button></div>';
   h +=
-    '<div class="sec">' +
-    TH("settings.reminders") +
-    "</div>" +
+    sec(TH("settings.reminders")) +
     healthCard() +
     '<div class="list">' +
     remRow("nudge", "rem-daily", T("remind.nudge"), T("remind.nudgeHint"), r.daily, r.time) +
     remRow("check", "rem-check", T("remind.check"), T("remind.checkHint"), r.check, r.checkTime) +
     remRow("due", "rem-dues", T("remind.dues"), T("remind.duesHint"), r.dues, r.dueTime) +
     "</div>";
+  /* whether search finds archived entries too (docs/specs/history-archive.md, C) */
   h +=
-    '<div class="sec">' +
-    TH("settings.outCats") +
-    '</div><p class="hint" style="margin:0 4px 8px">' +
+    sec(TH("common.history")) +
+    '<div class="list"><div class="setrow"><span class="mid"><div>' +
+    TH("settings.searchArch") +
+    '</div><div class="s">' +
+    TH("settings.searchArchHint") +
+    "</div></span>" +
+    '<button class="sw" role="switch" data-act="search-arch" aria-checked="' +
+    (S.settings.searchArch === true) +
+    '" aria-label="' +
+    TH("settings.searchArch") +
+    '"></button></div></div>';
+  h +=
+    sec(TH("settings.outCats")) +
+    '<p class="hint" style="margin:0 4px 8px">' +
     TH("settings.outCatsHint") +
     "</p>" +
     ringHTML(outCats(), { mode: "edit" }) +
@@ -1071,7 +1419,7 @@ function settingsView() {
     ic("add") +
     TH("settings.addOutCat") +
     "</button>";
-  h += '<div class="sec">' + TH("settings.inCats") + "</div>" + catGrid("in");
+  h += sec(TH("settings.inCats")) + catGrid("in");
   const hid = S.cats.filter(c => c.hidden);
   if (hid.length)
     h +=
@@ -1095,9 +1443,8 @@ function settingsView() {
   /* with auto backup on, Back up now replaces Save backup */
   const autoOn = canBackup() && S.settings.backup.on;
   h +=
-    '<div class="sec">' +
-    TH("settings.data") +
-    '</div><p class="muted small" style="margin:0 4px 12px">' +
+    sec(TH("settings.data")) +
+    '<p class="muted small" style="margin:0 4px 12px">' +
     TH(autoOn ? "settings.dataAuto" : "settings.dataLocal") +
     "</p>" +
     autoBackupHtml() +
@@ -1142,9 +1489,8 @@ function settingsView() {
         })()
       : "";
   h +=
-    '<div class="sec center">' +
-    TH("settings.about") +
-    '</div><a class="btn kofi" href="' +
+    sec(TH("settings.about"), "center") +
+    '<a class="btn kofi" href="' +
     DONATE_URL +
     '"><svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' +
     ICONS.local_cafe[0] +
@@ -1157,7 +1503,7 @@ function settingsView() {
     '<br><a href="https://github.com/IamAndelib/Tally-android">' +
     TH("settings.source") +
     "</a></p>";
-  return h;
+  return '<div class="hpin">' + subBar(T("settings.title")) + "</div>" + h + "</div>";
 }
 /* where "Buy me a coffee" (Settings → About) leads: Tally's Ko-fi page, opened in the browser (MainActivity sends web
    links there), so Tally itself stays offline; the repository's Sponsor button (.github/FUNDING.yml) leads there too */

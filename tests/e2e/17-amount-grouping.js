@@ -125,8 +125,8 @@ const today = () => {
   await page.evaluate(() => txSheet("t1"));
   await settle();
   ok(
-    (await page.inputValue("#f-amt")) === "3,500",
-    "an existing 3500 opens as 3,500: " + (await page.inputValue("#f-amt"))
+    (await page.inputValue("#f-amt")) === "3,500.00",
+    "an existing 3500 opens as 3,500.00: " + (await page.inputValue("#f-amt"))
   );
   await page.click('[data-act="tx-save"]');
   await settle();
@@ -140,13 +140,13 @@ const today = () => {
   await settle();
   await typeInto("#f-amt", "1000");
   await typeInto("#f-toamt", "86500");
-  await page.click('[data-act="add-fee"]');
-  await typeInto("#f-fee", "1500");
+  await page.click('[data-act="addon-add"][data-v="xcharge"]');
+  await typeInto("#f-charge", "1500");
   ok(
     (await page.inputValue("#f-amt")) === "1,000" &&
       (await page.inputValue("#f-toamt")) === "86,500" &&
-      (await page.inputValue("#f-fee")) === "1,500",
-    "transfer amount, received and fee group"
+      (await page.inputValue("#f-charge")) === "1,500",
+    "transfer amount, received and charge group"
   );
   ok(/86,500/.test(await page.textContent("#sheet")), "preview still reads the grouped amounts");
   await page.click('[data-act="tr-save"]');
@@ -172,7 +172,7 @@ const today = () => {
   S = await state();
   ok(S.assets[0] && S.assets[0].value === 245000, "asset saved as 245000");
 
-  // ---- 7. calculator: the display itself is unchanged, the result lands grouped
+  // ---- 7. calculator: each number is grouped as it is typed, the result lands grouped
   await act("tab", "home");
   await settle();
   await page.click("#ring .cat");
@@ -180,7 +180,45 @@ const today = () => {
   await page.click('[data-act="calc-toggle"][data-v="f-amt"]');
   for (const k of ["6", "5", "0", "+", "5", "8", "9", "3", "+", "6", "5", "3"])
     await page.click(`.calc [data-act="calc-key"][data-v="${k}"]`);
-  ok((await page.textContent("#cm-f-amt")) === "650+5893+653", "calculator display is not regrouped while open");
+  ok((await page.textContent("#cm-f-amt")) === "650+5,893+653", "calculator display groups each number as it is typed");
+  ok((await page.inputValue("#f-amt")) === "650+5,893+653", "and so does the field behind it");
+  /* the caret stays beside the same digit: back four keys, ⌫ takes the 8 (not the comma), then 7 goes in its place */
+  await page.evaluate(() => {
+    CALC.pos = 6; // 650+58|93+653
+    calcMirrorSync("f-amt");
+  });
+  await page.click('.calc [data-act="calc-key"][data-v="⌫"]');
+  ok(
+    (await page.textContent("#cm-f-amt")) === "650+593+653",
+    "⌫ takes a digit, the grouping follows: " + (await page.textContent("#cm-f-amt"))
+  );
+  await page.click('.calc [data-act="calc-key"][data-v="7"]');
+  await page.click('.calc [data-act="calc-key"][data-v="8"]');
+  const shown = await page.evaluate(() => {
+    const m = document.getElementById("cm-f-amt");
+    return { text: m.textContent, before: m.firstChild.textContent, expr: CALC.expr };
+  });
+  ok(
+    shown.text === "650+57,893+653" && shown.before === "650+57,8" && shown.expr === "650+57893+653",
+    "typing in the middle keeps the caret after the typed digit: " + JSON.stringify(shown)
+  );
+  /* a tap on the display lands in CALC.expr's terms, whatever separators are shown */
+  const tapped = await page.evaluate(() => {
+    const m = document.getElementById("cm-f-amt"),
+      t = m.firstChild,
+      r = document.createRange();
+    r.setStart(t, 7); // just after "650+57," (the comma itself)
+    r.setEnd(t, 8);
+    const b = r.getBoundingClientRect();
+    calcTapCaret("f-amt", m, b.left + 1, b.top + b.height / 2);
+    return CALC.pos;
+  });
+  ok(tapped === 6, "a tap after the comma puts the caret after 650+57 in the expression: " + tapped);
+  await page.evaluate(() => {
+    CALC.expr = "650+5893+653"; // back to the sum the rest of this part checks
+    CALC.pos = CALC.expr.length;
+    calcMirrorSync("f-amt");
+  });
   await page.click('#calc-f-amt [data-act="calc-kbd"]');
   await settle();
   ok(
@@ -192,6 +230,33 @@ const today = () => {
     (await page.inputValue("#f-amt")) === "71,960",
     "typing after it keeps grouping: " + (await page.inputValue("#f-amt"))
   );
+
+  /* the phone's own separators: German groups with "." and has "," as the decimal point; Indian English groups lakhs */
+  for (const [locale, keys, want] of [
+    ["de-DE", ["1", "2", "5", "0", ".", "5", "+", "3", "0", "0"], "1.250,5+300"],
+    ["en-IN", ["1", "2", "5", "0", "0", "0", "0", "×", "2"], "12,50,000×2"],
+  ]) {
+    const c2 = await browser.newContext({ viewport: { width: 393, height: 852 }, locale });
+    const p2 = await c2.newPage();
+    p2.on("pageerror", e => errors.push(e.message));
+    await p2.goto(appUrl);
+    await p2.evaluate(() => {
+      S = blank();
+      S.settings.cur = "EUR";
+      S.settings.lastCheck = today();
+      S.accounts.push({ id: "a", name: "Bank", type: "bank", currency: "EUR", opening: 1, archived: false });
+      save();
+      render();
+      txSheet(null, "expense", "food");
+    });
+    await p2.click('[data-act="calc-toggle"][data-v="f-amt"]');
+    for (const k of keys) await p2.click(`.calc [data-act="calc-key"][data-v="${k}"]`);
+    ok(
+      (await p2.textContent("#cm-f-amt")) === want,
+      locale + ": the keypad shows " + want + ": " + (await p2.textContent("#cm-f-amt"))
+    );
+    await c2.close();
+  }
 
   ok(errors.length === 0, "no page errors: " + JSON.stringify(errors));
   await browser.close();

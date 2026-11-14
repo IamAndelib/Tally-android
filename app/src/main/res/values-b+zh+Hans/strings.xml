@@ -25,9 +25,9 @@
     <!-- %1$s：对方，%2$s：到期金额 -->
     <string name="n_owes_you">%1$s欠你%2$s</string>
     <string name="n_you_owe">你欠%1$s%2$s</string>
-    <string name="n_payback_today">今天是还款日</string>
+    <string name="n_payback_today">今天到期</string>
     <!-- %1$s：日期，如“6月15日 周一” -->
-    <string name="n_payback_was">原定%1$s还款</string>
+    <string name="n_payback_was">%1$s已到期</string>
     <string name="n_due_today">今天到期</string>
     <string name="n_due_was">%1$s已到期</string>
     <!-- %1$s：仍欠的全部金额 -->
@@ -35,10 +35,15 @@
     <string name="n_record">记录还款</string>
     <string name="n_plus_day">+1 天</string>
     <string name="n_plus_week">+1 周</string>
+    <string name="n_still_owes_you">%1$s仍欠你%2$s</string>
+    <string name="n_you_still_owe">你仍欠%1$s%2$s</string>
+    <string name="n_lent_on">%1$s借出 · 无到期日</string>
+    <string name="n_borrowed_on">%1$s借入 · 无到期日</string>
+    <string name="n_set_due">设定还款日</string>
     <string name="n_someone">某人</string>
     <!-- 锁屏隐藏通知内容时：只显示类型 -->
     <string name="pub_check">余额核对</string>
-    <string name="pub_dues">有一笔借贷到期了</string>
+    <string name="pub_dues">借贷提醒</string>
     <string name="pub_backup">备份问题</string>
     <string name="pub_nudge">今天还没记账</string>
 

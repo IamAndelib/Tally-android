@@ -335,7 +335,7 @@ function sampleState(t) {
   );
   await shot("transfer-fee", async () => {
     await page.evaluate(() => trSheet());
-    await page.click('#sheet [data-act="add-fee"]');
+    await page.click('#sheet [data-act="addon-add"][data-v="xcharge"]');
   });
   await shot(
     "adjust",
@@ -387,7 +387,7 @@ function sampleState(t) {
   );
   await shot("loan-fee", async () => {
     await page.evaluate(() => loanOpen("L1"));
-    await page.click('#sheet [data-act="add-fee"]');
+    await page.click('#sheet [data-act="addon-add"]');
   });
   await shot(
     "draw-edit",

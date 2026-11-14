@@ -62,7 +62,8 @@ const ok = (c, m) => {
       X("e1", d.d2, 1, "expense", 100, "w", { cat: "groceries" }),
       X("r1", d.d2, 2, "loan", 100, "k", { dir: "in", loan: "L1" }),
       X("i1", d.d1, 2, "income", 50, "w", { cat: "income" }),
-      X("t1", d.d1, 3, "transfer", 200, "k", { to: "w" }),
+      X("t1", d.d1, 3, "transfer", 200, "k", { to: "w", feeId: "t1f" }),
+      X("t1f", d.d1, 3, "expense", 5, "k", { cat: "fees", feeOf: "t1" }),
       X("e2", d.t, 4, "expense", 30, "w", { cat: "food" }),
       X("r2", d.t, 5, "loan", 200, "w", { dir: "in", loan: "L1" }),
     ],
@@ -98,7 +99,19 @@ const ok = (c, m) => {
       cs === (await page.evaluate(() => getComputedStyle(document.querySelector(".spent")).color)),
     "expense red, income green, transfer blue " + [cs, cg, cx]
   );
-  const rb = async id => page.$$eval(`[data-v="${id}"] .rb`, e => e.map(x => x.textContent));
+  /* an opened row's Left after boxes: the balance an account held after the entry, and which account */
+  const rb = async id => {
+    await tap(`.tx[data-v="${id}"]`);
+    const boxes = await page.$$eval(`.txo[data-v="${id}"] .fbox`, e =>
+      e
+        .filter(x => x.querySelector(".bcap").textContent === "Left after")
+        .map(
+          x => x.querySelector(".bin").textContent.replace(/^in\s*/, "") + " " + x.querySelector(".bval").textContent
+        )
+    );
+    await tap(`.tx[data-v="${id}"]`);
+    return boxes;
+  };
   const want = {
     e0: "Wallet BDT 930",
     e1: "Wallet BDT 830",
@@ -120,50 +133,82 @@ const ok = (c, m) => {
   ok(
     tr.length === 2 &&
       tr[0].includes("Bkash") &&
-      tr[0].includes("100") &&
+      tr[0].includes("95") &&
       tr[1].includes("Wallet") &&
       tr[1].includes("1,080"),
     "transfer shows both accounts " + JSON.stringify(tr)
   );
+  const lb = async id => {
+    await tap(`.tx[data-v="${id}"]`);
+    const t = (await page.$eval(`.txo[data-v="${id}"]`, e => e.innerText)).replace(/\s+/g, " ");
+    await tap(`.tx[data-v="${id}"]`);
+    return t;
+  };
+  /* a loan's box shows the loan as it is now: all of it paid back by the last payment */
+  const lbs = [await lb("r1"), await lb("r2"), await lb("p1")];
   ok(
-    (await txt('[data-v="r1"] .s')).includes("Partly paid") &&
-      (await txt('[data-v="r2"] .s')).includes("Cleared") &&
-      !(await txt('[data-v="p1"] .s')).includes("paid"),
-    "loan pills: partly paid, then cleared"
+    lbs.every(t => t.includes("Cleared") && t.includes("BDT 300.00 of BDT 300.00 back")),
+    "an opened loan entry shows the lending's bar and that it is cleared: " + lbs.join(" / ")
   );
   await page.screenshot({ path: OUT + "/history.png" });
   await tap('[data-act="home"]');
 
   // ---- 5. summary from the donut; balance bar still lists entries
+  /* Days: one day at a time, as a pie (as Months), ‹ › a day; today 30, yesterday the transfer's charge (5), then 100
+     and 70 */
   await tap("#ring .dwrap");
+  const dayView = () =>
+    page.evaluate(() => ({
+      head: document.querySelector("#sm .cal-h b").textContent,
+      later: document.querySelector('#sm [data-act="sm-nav"][data-v="1"]').disabled,
+      pie: !!document.querySelector("#sm .smchart .smpie svg"),
+      bars: document.querySelectorAll("#sm .smcol, #sm .smrow").length,
+      smd: document.querySelector("#sm .smd").textContent.replace(/\s+/g, " "),
+      rows: [...document.querySelectorAll("#sm .smtop .tx .d")].map(e => e.textContent.replace(/\s+/g, " ").trim()),
+      empty: (document.querySelector("#sm .empty") || {}).textContent || "",
+    }));
+  let dv = await dayView();
   ok(
-    (await page.isVisible('#sheet [data-act="sm-mode"][data-v="w"]')) && (await page.$$("#sheet .smcol")).length === 7,
-    "donut opens the summary with 7 day bars"
+    (await page.isVisible('#sheet [data-act="sm-mode"][data-v="w"]')) &&
+      (await page.getAttribute('#sheet [data-act="sm-mode"][data-v="d"]', "aria-pressed")) === "true" &&
+      dv.head === "Today" &&
+      dv.pie &&
+      dv.bars === 0 &&
+      dv.later,
+    "the donut opens Days on today: its pie, no bars, › off " + JSON.stringify(dv)
   );
-  const vals = await page.$$eval("#sheet .smcol .v", e => e.map(x => x.textContent));
-  ok(
-    vals[6] === "30" && vals[5] === "" && vals[4] === "100" && vals[3] === "70",
-    "bar values match the entries " + JSON.stringify(vals)
-  );
-  ok((await txt("#sm .smd")).includes("30") && (await txt("#sm .smd")).includes("Today"), "today selected by default");
-  await tap('#sheet .smcol[data-v="4"]');
-  const det = await txt("#sm .smd");
-  ok(
-    det.includes("100") && det.includes("↑ 43%"),
-    "tapping a bar shows its total and comparison: " + det.replace(/\s+/g, " ")
-  );
-  ok((await txt("#sm .smtop")).includes("Groceries"), "top categories listed");
-  await page.screenshot({ path: OUT + "/summary-days.png" });
-  await tap('#sheet [data-act="sm-mode"][data-v="w"]');
-  ok((await page.$$("#sheet .smrow")).length === 8, "8 week rows");
-  await tap('#sheet [data-act="sm-mode"][data-v="m"]');
-  ok(!!(await page.$("#sheet .smpie svg")), "month donut");
-  const lbl0 = await txt("#sm .cal-h b");
+  ok(dv.smd.includes("BDT 30.00") && dv.smd.includes("↑ 500%"), "today's total, against the day before: " + dv.smd);
+  await page.evaluate(() => smNav(1)); // the button is off; a swipe or a stray call stops at today too
+  ok((await dayView()).head === "Today", "› never goes past today");
   await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
-  ok((await txt("#sm .cal-h b")) !== lbl0, "‹ moves the window");
-  await tap('#sheet [data-act="sm-mode"][data-v="d"]');
-  await tap('#sheet [data-act="sm-nav"][data-v="1"]');
-  await tap('#sheet .smcol[data-v="4"]');
+  dv = await dayView();
+  /* yesterday spent only the transfer's charge: its total, and the list is the Charges line alone */
+  ok(
+    dv.head === "Yesterday" &&
+      !dv.later &&
+      dv.smd.includes("BDT 5.00") &&
+      dv.rows.length === 1 &&
+      dv.rows[0] === "Charges 100%",
+    "‹ steps one day: yesterday, only a transfer charge: its total and the Charges line " + JSON.stringify(dv)
+  );
+  await page.screenshot({ path: OUT + "/summary-days.png" });
+  await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
+  dv = await dayView();
+  const d2head = await page.evaluate(d => capFirst(dayLabel(d)), d.d2);
+  ok(
+    dv.head === d2head && dv.smd.includes("BDT 100.00") && dv.smd.includes("↑ 43%"),
+    "two days back: its date, its total and its comparison " + JSON.stringify(dv)
+  );
+  ok(
+    dv.rows.some(r => /^Groceries \d+%$/.test(r)),
+    "the day's categories with their shares " + JSON.stringify(dv.rows)
+  );
+  for (let k = 0; k < 2; k++) await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
+  dv = await dayView();
+  ok(
+    !dv.pie && dv.empty.includes("Nothing spent that day.") && dv.smd.includes("BDT 0.00"),
+    "a day with nothing spent: no pie, its total and the message " + JSON.stringify(dv)
+  );
   await tap('#sheet [data-act="sm-open"]');
   ok(
     !(await page.isVisible("#sheet .p")) &&
@@ -171,7 +216,27 @@ const ok = (c, m) => {
       !!(await page.$('[data-act="go-today"]')),
     "Open on Home shows that day: " + (await txt(".pnav .plabel"))
   );
+  /* Home on a day: the Summary opens on that day */
+  await tap("#ring .dwrap");
+  ok((await txt("#sm .cal-h b")) === (await txt(".pnav .plabel")), "the donut of a day opens that day");
+  await tap('#sheet [data-act="close"]');
+  await page.waitForTimeout(300); // a tap right where one just closed the sheet is dropped
   await tap('[data-act="go-today"]');
+  ok(!(await page.$('[data-act="go-today"]')), "Home back on today");
+  await tap("#ring .dwrap");
+  await tap('#sheet [data-act="sm-mode"][data-v="w"]');
+  ok((await page.$$("#sheet .smrow")).length === 8, "8 week rows");
+  await tap('#sheet [data-act="sm-mode"][data-v="m"]');
+  ok(!!(await page.$("#sheet .smpie svg")), "month pie");
+  const lbl0 = await txt("#sm .cal-h b");
+  await tap('#sheet [data-act="sm-nav"][data-v="-1"]');
+  ok((await txt("#sm .cal-h b")) !== lbl0, "‹ moves the window");
+  /* back to Days: the last day of the month on screen */
+  await tap('#sheet [data-act="sm-mode"][data-v="d"]');
+  const lastDay = await page.evaluate(() => capFirst(dayName(monthEnd(shiftMonth(today().slice(0, 7), -1)))));
+  ok((await txt("#sm .cal-h b")) === lastDay, "Days after a month back: its last day " + lastDay);
+  await tap('#sheet [data-act="close"]');
+  await page.waitForTimeout(300); // a tap right where one just closed the sheet is dropped
   await tap(".balbar");
   ok(await page.isVisible('#sheet [data-v="e2"]'), "balance bar still opens the entries");
   await tap('#sheet [data-act="close"]');
@@ -195,11 +260,11 @@ const ok = (c, m) => {
   await tap('[data-src="arch"] [data-v="k"]');
   ok(
     (await page.isVisible('#sheet [data-act="acc-unarch"]')) && (await page.isVisible('#sheet [data-act="hist-acc"]')),
-    "archived account: Show again + History"
+    "archived account: Unarchive + History"
   );
   await tap('#sheet [data-act="acc-unarch"]');
   S = await state();
-  ok(!S.accounts.find(a => a.id === "k").archived, "Show again unarchives");
+  ok(!S.accounts.find(a => a.id === "k").archived, "Unarchive unarchives");
   await tap('[data-src="acc"] [data-v="k"]');
   await tap('#sheet [data-act="acc-form"]');
   ok(!(await page.$('#sheet [data-act="acc-arch"]')), "Edit account has no Archive button");
@@ -292,8 +357,8 @@ const ok = (c, m) => {
   await tap('#sheet [data-act="close"]');
   await tap('[data-act="go"][data-v="settings"]');
   await tap('[data-act="wipe"]');
-  await tap('#pop [data-act="ask-alt"]'); // "No backup yet" → No (don't save one)
-  await tap('#pop [data-act="pd-close"]'); // "Delete all data?" → No
+  await tap("#pop .cd-destroy"); // "No backup yet" → No (don't save one)
+  await tap("#pop .cd-out"); // "Delete all data?" → No
   ok((await state()).accounts.length === 3, "wipe: No keeps data");
   const backup = JSON.stringify(
     Object.assign({}, seed, { accounts: seed.accounts.slice(0, 2), txns: seed.txns.filter(t => t.account !== "c") })
@@ -305,10 +370,10 @@ const ok = (c, m) => {
   });
   await page.waitForTimeout(200);
   ok(
-    (await page.isVisible('#pop [data-act="ask-ok"]')) && (await txt("#pop")).includes("2 accounts"),
+    (await page.isVisible("#pop .cd-keep")) && (await txt("#pop")).includes("2 accounts"),
     "restore asks with a Material dialog"
   );
-  await tap('#pop [data-act="ask-ok"]');
+  await tap("#pop .cd-keep");
   ok((await state()).accounts.length === 2, "restore after OK");
   await page.evaluate(s => localStorage.setItem("tally:v1", JSON.stringify(s)), seed);
   await page.reload();
@@ -332,16 +397,16 @@ const ok = (c, m) => {
   );
   await page.screenshot({ path: OUT + "/overdraw.png" });
   await tap('#pop [data-act="pd-close"]');
-  ok((await page.isVisible("#f-amt")) && (await state()).txns.length === 8, "Go back: sheet stays, nothing saved");
+  ok((await page.isVisible("#f-amt")) && (await state()).txns.length === 9, "Go back: sheet stays, nothing saved");
   await tap('#sheet [data-act="tx-save"]');
   await tap('#pop [data-act="ask-ok"]');
-  ok((await state()).txns.length === 9, "Save anyway saves");
+  ok((await state()).txns.length === 10, "Save anyway saves");
   await addOut("c", 5000);
   ok(
-    !(await page.isVisible('#pop [data-act="ask-ok"]')) && (await state()).txns.length === 10,
+    !(await page.isVisible('#pop [data-act="ask-ok"]')) && (await state()).txns.length === 11,
     "credit card never warns"
   );
-  // transfer from Bkash (100)
+  // transfer from Bkash (95)
   await tap('[data-act="tr-new"]');
   await tap('#sheet [data-act="tr-from"][data-v="k"]').catch(() => {});
   await tap('#sheet [data-act="tr-to"][data-v="w"]').catch(() => {});

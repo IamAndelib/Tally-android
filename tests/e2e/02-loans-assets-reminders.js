@@ -131,6 +131,14 @@ const ok = (c, m) => {
   await page.fill("#f-amt", "5000");
   await sact("f-acc", "k");
   await noNative("loan form");
+  {
+    const pv = (await page.textContent("#sheet .aoline")).replace(/\s+/g, " ").trim();
+    ok(
+      /^bKash \+.*5,000\.00 · you owe Rahim .*5,000\.00$/.test(pv) &&
+        (await page.isVisible('#sheet [data-act="addon-add"][data-v="charges"]')),
+      "borrow form: the preview under the account chips, and + Add charges " + pv
+    );
+  }
   await pickDate("f-due", d.p3);
   ok(
     (await page.textContent("#f-due")).trim().length > 3 &&
@@ -163,9 +171,13 @@ const ok = (c, m) => {
     "You owe = loan 5000 + card 500: " + (await page.textContent(".sumcard"))
   );
   ok((await page.textContent(`[data-act="loan-open"][data-v="${L1.id}"]`)).includes("Active"), "loan is Active");
+  const sub1 = await page.$eval(`[data-act="loan-open"][data-v="${L1.id}"] .s`, e => ({
+    text: e.textContent.trim(),
+    dot: !!e.querySelector(".adot"),
+  }));
   ok(
-    (await page.textContent(`[data-act="loan-open"][data-v="${L1.id}"]`)).includes("Into bKash"),
-    "loan row shows Into bKash"
+    sub1.dot && sub1.text.startsWith("bKash") && !sub1.text.includes("Into"),
+    "loan row names bKash after its dot: " + sub1.text
   );
   await page.screenshot({ path: OUT + "/liabs.png" });
 
@@ -203,8 +215,8 @@ const ok = (c, m) => {
   await settle();
   await page.fill("#f-amt", "5000");
   await sact("loan-pay");
-  ok(await page.isVisible('#pop [data-act="ask-ok"]'), "overpaying asks whether to track the extra");
-  await page.click('#pop [data-act="pd-close"]');
+  ok(await page.isVisible('#pop [data-act="cd"]'), "overpaying asks whether to track the extra");
+  await page.click("#pop .cd-out"); // Go back
   ok(await page.isVisible('#sheet [data-act="loan-pay"]'), "Go back keeps the payment sheet");
   await page.fill("#f-amt", "3000");
   await sact("loan-pay");
@@ -225,6 +237,15 @@ const ok = (c, m) => {
   await page.fill("#f-person", "Karim");
   await page.fill("#f-amt", "1000");
   await sact("f-acc", "w");
+  {
+    const pv = (await page.textContent("#sheet .aoline")).replace(/\s+/g, " ").trim();
+    ok(
+      /^Wallet −.*1,000\.00 · Karim owes .*1,000\.00$/.test(pv) &&
+        (await page.isVisible('#sheet [data-act="addon-add"][data-v="xcharge"]')) &&
+        (await page.isVisible('#sheet [data-act="addon-add"][data-v="extra"]')),
+      "lend form: the preview under the account chips, + Transfer charge and + Add an extra " + pv
+    );
+  }
   await pickDate("f-date", d.y);
   await page.evaluate(y => {
     document.getElementById("f-due").dataset.v = y;
@@ -238,9 +259,13 @@ const ok = (c, m) => {
     (await page.textContent(`[data-act="loan-open"][data-v="${L2.id}"]`)).includes("Overdue"),
     "lending past payback day → Overdue"
   );
+  const sub2 = await page.$eval(`[data-act="loan-open"][data-v="${L2.id}"] .s`, e => ({
+    text: e.textContent.trim(),
+    dot: !!e.querySelector(".adot"),
+  }));
   ok(
-    (await page.textContent(`[data-act="loan-open"][data-v="${L2.id}"]`)).includes("From Wallet"),
-    "lending row shows From Wallet"
+    sub2.dot && sub2.text.startsWith("Wallet") && !sub2.text.includes("From"),
+    "lending row names Wallet after its dot: " + sub2.text
   );
   ok((await page.textContent(".sumcard")) === nw0, "net worth unchanged by lending: " + nw0);
   await page.screenshot({ path: OUT + "/assets.png", fullPage: true });
@@ -299,6 +324,8 @@ const ok = (c, m) => {
   await act("sel-start");
   await act("sel-toggle", pr.id);
   await act("sel-del");
+  await page.click("#pop .cd-destroy"); // Delete
+  await page.waitForTimeout(350);
   S = await state();
   ok(
     !S.loans.some(l => l.id === L1.id) && !S.txns.some(t => t.loan === L1.id),
@@ -314,7 +341,7 @@ const ok = (c, m) => {
   await page.fill("#f-aname", "Gold");
   await page.fill("#f-aval", "20000");
   await sact("asset-save");
-  ok((await page.textContent(".sumcard")).includes("20,") || true, "asset added");
+  ok((await page.textContent("#app")).includes("Gold"), "asset added");
   S = await state();
   ok(S.assets[0].value === 20000, "asset saved");
 

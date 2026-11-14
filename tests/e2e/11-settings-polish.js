@@ -113,13 +113,13 @@ const ok = (c, m) => {
   await act("wipe");
   await settle();
   ok(
-    (await page.textContent("#pop")).includes("No backup yet") && (await page.isVisible('#pop [data-act="ask-alt"]')),
+    (await page.textContent("#pop")).includes("No backup yet") && (await page.isVisible("#pop .cd-destroy")),
     "no backup: Delete all data first offers one (OK / No)"
   );
-  await page.click('#pop [data-act="ask-alt"]'); // No
+  await page.click("#pop .cd-destroy"); // No
   await settle();
   ok((await page.textContent("#pop")).includes("Delete all data?"), "No: then the final Yes / No");
-  await page.click('#pop [data-act="ask-ok"]');
+  await page.click("#pop .cd-destroy");
   await settle();
   ok(await page.isDisabled('[data-act="wipe"]'), "Delete all data is disabled again right after wiping");
   await page.screenshot({ path: OUT + "/settings-wiped.png" });
@@ -247,6 +247,34 @@ const ok = (c, m) => {
     "History: day-header total lines up with the row amounts below it: " + JSON.stringify(align)
   );
   await page.screenshot({ path: OUT + "/history-aligned.png" });
+
+  // ---- a picker over a scrolled Settings: the pinned block stays at the top (html.lock only; body.lock made body a scroll container)
+  {
+    await page.evaluate(() => {
+      V.screen = "settings";
+      render();
+    });
+    await settle();
+    await page.setViewportSize({ width: 393, height: 500 });
+    await settle();
+    await page.evaluate(() => scrollTo({ top: 400, behavior: "instant" }));
+    await settle();
+    const before = await page.evaluate(() => ({ y: scrollY, has: !!$("#app .hpin") }));
+    const pb = await page.evaluate(() => {
+      const r = $('[data-act="pick-maincur"]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await page.mouse.click(pb.x, pb.y); // a tap where it is: a locator click would scroll first
+    await settle();
+    const r = await page.evaluate(() => ({
+      y: scrollY,
+      top: Math.round($("#app .hpin").getBoundingClientRect().top),
+    }));
+    ok(before.has && before.y > 100, "Settings scrolled down before the picker: " + JSON.stringify(before));
+    ok(r.top === 0 && r.y === before.y, "the pinned block stays at the top behind the picker: " + JSON.stringify(r));
+    await page.keyboard.press("Escape");
+    await page.setViewportSize({ width: 393, height: 852 });
+  }
 
   ok(errors.length === 0, "no page errors overall " + JSON.stringify(errors));
   ok(

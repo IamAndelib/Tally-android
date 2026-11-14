@@ -1,0 +1,5 @@
+- Busca dentro del Historial, y el Historial de todo el tiempo con Filtros: cuenta, tipo, categoría, persona.
+- Archiva un movimiento en lugar de borrarlo: los saldos se quedan como están.
+- Un año como periodo en Inicio, en el Historial y en el resumen de gastos.
+- Cargos y extras: una comisión del cajero, el IVA o una propina, contados como gasto o ingreso.
+- Mantén presionado y arrastra para reordenar cuentas, deudas y los saldos de Inicio.

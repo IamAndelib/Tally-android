@@ -8,23 +8,35 @@
 const LS = "tally:v1";
 function blank() {
   return {
-    v: 7, // 7: entries may have a payee (an older Tally restoring a backup warns it's newer, see restoreText)
+    /* 7: entries may have a payee. 8: charges and extras (docs/specs/charges.md): an add-on that moves money is an
+       entry linked both ways to its entry (feeOf on it, feeId on the entry: a charge on a transfer, a loan payment or a
+       purchase, a tip on a lending's payment, a lend's transfer charge), what only changes what is owed is a draw's
+       onTop; a new notebook has no Fees category; an entry may be archived (`archived: true`: hidden from History,
+       nothing else, docs/specs/history-archive.md), and search may find archived entries (`settings.searchArch`,
+       set only when true). An older Tally restoring a backup warns it's newer (restoreText)
+       and drops what it doesn't know: saved again there, the file comes back without onTop, a purchase's charge as a
+       plain expense in its category, a lend's transfer charge as a second draw, with Fees and every entry shown; every
+       balance (and what is owed, apart from onTop) stays right. */
+    v: 8,
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
          times show as 24-hour (ISO 8601) until changed in Settings → Region */
       cur: "",
       week: 1,
       clock: "24",
+      home: "day", // what Home opens on: "day" (today), "month" (this month) or "year" (this year)
       theme: "system",
       haptics: true,
       hapticLevel: 3,
       donut: "both",
       remind: { daily: true, time: "21:00", dues: true, dueTime: "09:00", check: true, checkTime: "08:00" },
       backup: { on: false, time: "23:00" },
+      hiddenPeople: [], // folded names taken out of the people suggestions (Lend, Borrow)
+      hiddenPayees: [], // … and out of the payee suggestions (Spent, Money in)
     },
     accounts: [],
     types: [],
-    cats: CATS.map(c => ({ ...c, hidden: false })),
+    cats: CATS.filter(c => !c.retired).map(c => ({ ...catCopy(c), hidden: false })),
     txns: [],
     loans: [],
     assets: [],
@@ -102,7 +114,7 @@ function migrate(o) {
   /* only the settings Tally knows, each checked below */
   Object.keys(s.settings)
     .concat(["backupAsk", "customCols", "dragTip", "hiddenCols", "hiddenTypes", "lastAcc", "lastAccIn"])
-    .concat(["lastCheck", "savedBackup"])
+    .concat(["chipOrder", "lastCheck", "savedBackup", "searchArch"])
     .forEach(k => {
       if (own(os, k)) s.settings[k] = os[k];
     });
@@ -112,6 +124,7 @@ function migrate(o) {
     s.settings.cur = accs.map(a => str(a.currency).trim().toUpperCase()).find(isCur) || (accs.length ? "USD" : "");
   }
   s.settings.week = Number.isInteger(os.week) && os.week >= 0 && os.week <= 6 ? os.week : 1;
+  if (!["day", "month", "year"].includes(s.settings.home)) s.settings.home = "day";
   /* saves from before the Time format setting keep what the phone showed them */
   s.settings.clock = os.clock === "12" || os.clock === "24" ? os.clock : phoneClock();
   if (!["system", "light", "dark"].includes(s.settings.theme)) s.settings.theme = "system";
@@ -133,6 +146,8 @@ function migrate(o) {
   if (!isDay(s.settings.backupAsk)) delete s.settings.backupAsk;
   if (!isDay(s.settings.lastCheck)) delete s.settings.lastCheck;
   if (s.settings.dragTip !== true) delete s.settings.dragTip;
+  /* Settings → History → Archived entries in search (docs/specs/history-archive.md, C): on only when exactly true */
+  if (s.settings.searchArch !== true) delete s.settings.searchArch;
   s.settings.haptics = s.settings.haptics !== false;
   s.settings.hapticLevel = Math.min(5, Math.max(1, Math.round(num(s.settings.hapticLevel)) || 3));
   if (!DONUT_MODES.includes(s.settings.donut)) s.settings.donut = "both";
@@ -173,6 +188,9 @@ function migrate(o) {
         c: hex(a.c) ? a.c : "",
       };
     });
+  /* the built-in Fees is retired from version 8 on: older saves keep it, as every older version gave it back (a 1.0
+     save, with no list of its own, too) */
+  if (!(ver >= 8)) s.cats = CATS.map(c => ({ ...catCopy(c), hidden: false }));
   if (Array.isArray(o.cats)) {
     const valid = o.cats.filter(c => c && c.id && str(c.name) && c.id !== "transfer");
     if (ver >= 2) {
@@ -193,7 +211,7 @@ function migrate(o) {
           if (String(c.c).toLowerCase() === String(OLD_CAT_COLS[c.id] || "").toLowerCase()) c.c = d.c;
         });
       CATS.forEach(d => {
-        if (!s.cats.some(c => c.id === d.id)) s.cats.push({ ...d });
+        if ((!d.retired || !(ver >= 8)) && !s.cats.some(c => c.id === d.id)) s.cats.push(catCopy(d));
       });
     } else {
       valid
@@ -211,6 +229,25 @@ function migrate(o) {
   }
   uniq(s.cats);
   uniq(s.accounts);
+  /* Home's own order of its balance chips (account ids, as they were dragged on Home); unknown, repeated or
+     broken ids drop out, and none left means the accounts' own order */
+  const accIds = new Set(s.accounts.map(a => a.id)),
+    seen = new Set();
+  s.settings.chipOrder = (Array.isArray(os.chipOrder) ? os.chipOrder : [])
+    .filter(v => typeof v === "string")
+    .map(sid)
+    .filter(id => accIds.has(id) && !seen.has(id) && seen.add(id));
+  if (!s.settings.chipOrder.length) delete s.settings.chipOrder;
+  /* names taken out of the Lent to / Borrowed from and Paid to / Received from suggestions, folded (curFold) and
+     once each; at most 200 */
+  ["hiddenPeople", "hiddenPayees"].forEach(k => {
+    const once = new Set();
+    s.settings[k] = (Array.isArray(os[k]) ? os[k] : [])
+      .filter(v => typeof v === "string")
+      .map(v => curFold(v).trim())
+      .filter(v => v && !once.has(v) && once.add(v))
+      .slice(-200); // the newest 200 (hideName adds at the end)
+  });
   const okAcc = new Set(s.accounts.map(a => a.id));
   s.txns = (Array.isArray(o.txns) ? o.txns : [])
     .filter(t => t && t.id && isDay(t.date) && okNum(t.amount) && okAcc.has(sid(t.account)))
@@ -224,6 +261,7 @@ function migrate(o) {
         account: sid(t0.account),
         note: str(t0.note),
       };
+      if (t0.archived === true) t.archived = true; // archived: hidden from History, nothing else (only exactly true)
       if (t0.type === "transfer") {
         t.to = sid(t0.to);
         if (t0.toAmount !== "" && okNum(t0.toAmount)) t.toAmount = +t0.toAmount;
@@ -236,7 +274,11 @@ function migrate(o) {
         t.loan = sid(t0.loan);
         if (t0.principal) t.principal = true;
         if (t0.principal && isDay(t0.due)) t.due = day(t0.due);
-        if (!t0.principal && t0.feeId) t.feeId = sid(t0.feeId);
+        if (t0.feeId) t.feeId = sid(t0.feeId); // a payment's charge or tip, a draw's transfer charge (checked below)
+        if (t0.feeOf) t.feeOf = sid(t0.feeOf); // a lend's transfer charge
+        /* what a draw owes on top (a lend's extra, a borrow's charges): a number above 0 that a field takes, or none */
+        const top = okNum(t0.onTop) ? rnd(+t0.onTop) : 0;
+        if (t0.principal && top > 0 && amtOk(top) != null) t.onTop = top;
       } else if (t0.type === "expense" || t0.type === "income") {
         if (t0.cat === "transfer") {
           // v1 imported one-sided "own transfer" rows: keep their balance effect, never count as spending
@@ -249,10 +291,9 @@ function migrate(o) {
           if (t0.type === "income" && c === "other") c = "otherin";
           t.cat = c;
           if (t0.feeOf) t.feeOf = sid(t0.feeOf);
-          else {
-            const p = str(t0.payee); // who was paid, or who paid: kept as written, only when there is one
-            if (p.trim()) t.payee = p;
-          }
+          if (t0.type === "expense" && t0.feeId) t.feeId = sid(t0.feeId); // a purchase's charge
+          const p = str(t0.payee); // who was paid, or who paid: kept as written, only when there is one (not an add-on)
+          if (p.trim()) t.payee = p;
         }
       } else return null;
       return t;
@@ -263,14 +304,6 @@ function migrate(o) {
      they were written, so the newest still comes first; balances don't depend on it */
   s.txns.forEach((t, i) => {
     if (!t.ts) t.ts = parseISO(t.date).getTime() + i;
-  });
-  /* a transfer or loan payment and its fee point at each other; a fee whose transfer or payment is gone is plain
-     spending, and one whose fee is gone has none (balances stay as they are either way) */
-  const byId = new Map(s.txns.map(t => [t.id, t])),
-    feeHost = x => !!x && (x.type === "transfer" || (x.type === "loan" && !x.principal));
-  s.txns.forEach(t => {
-    if (t.feeOf && !feeHost(byId.get(t.feeOf))) delete t.feeOf;
-    if (t.feeId && (byId.get(t.feeId) || {}).feeOf !== t.id) delete t.feeId;
   });
   /* a loan's account is its newest draw's; if the saved one is gone, take it from the draws rather than lose the loan */
   const drawsOf = new Map();
@@ -298,11 +331,39 @@ function migrate(o) {
     })
     .filter(Boolean);
   uniq(s.loans);
+  /* An entry and its add-on point at each other (feeId on the entry, feeOf on the add-on), and only the pairs
+     addOnFits() allows are kept; an add-on never carries one of its own (in a chain, every link after the first goes).
+     Any other link is dropped from both ends and the former add-on stands as what it is: a plain expense or income in
+     its stored category, or a draw of its loan. A kept add-on has no payee, due day or amount on top, and a purchase's
+     charge has its purchase's category (only older versions and the CSV read it). Amounts, accounts, dates and so
+     every balance stay as they are. */
+  const byId = new Map(s.txns.map(t => [t.id, t])),
+    lends = new Set(s.loans.filter(l => l.kind === "lend").map(l => l.id)),
+    hostOf = new Map();
+  s.txns.forEach(a => {
+    const h = a.feeOf && byId.get(a.feeOf);
+    if (h && h !== a && h.feeId === a.id && addOnFits(a, h, id => lends.has(id))) hostOf.set(a, h);
+  });
+  const kept = new Map([...hostOf].filter(([, h]) => !hostOf.has(h))),
+    hosts = new Set(kept.values());
+  s.txns.forEach(t => {
+    if (!kept.has(t)) delete t.feeOf;
+    if (!hosts.has(t)) delete t.feeId;
+  });
+  kept.forEach((h, a) => {
+    delete a.payee;
+    delete a.due;
+    delete a.onTop;
+    if (h.type === "expense") a.cat = h.cat;
+    /* an add-on is archived and unarchived with its entry (archiveEntries) */
+    if (h.archived) a.archived = true;
+    else delete a.archived;
+  });
   /* v6: a loan's due date used to live on the loan itself; move it onto its (first/only) principal draw */
   if (!(ver >= 6) && Array.isArray(o.loans))
     o.loans.forEach(ol => {
       if (!ol || !isDay(ol.due)) return;
-      const draw = s.txns.find(t => t.type === "loan" && t.principal && t.loan === sid(ol.id));
+      const draw = s.txns.find(t => t.type === "loan" && t.principal && !t.feeOf && t.loan === sid(ol.id));
       if (draw && !draw.due) draw.due = day(ol.due);
     });
   s.assets = (Array.isArray(o.assets) ? o.assets : [])
@@ -455,17 +516,143 @@ function entry(id) {
 const cat = id => S.cats.find(c => c.id === id) || S.cats.find(c => c.id === "other") || CATS[11];
 const acc = id => S.accounts.find(a => a.id === id);
 const activeAccounts = () => S.accounts.filter(a => !a.archived);
-/* A transfer's or loan payment's fee is its own entry, an expense linked to it (feeOf ↔ feeId), so it comes off the
-   paying account in every version of Tally; but like the transfer or payment it is never spending: the ring, day
-   totals, summaries and the widget count only isSpend() entries, and History shows the fee with what it was charged on.
-   Its stored category ("fees") is only for older versions: Tally never files an entry under a category by itself,
-   since a built-in one keeps its id when renamed into anything. */
-const isSpend = t => t.type === "expense" && !t.feeOf;
+/* the active accounts in Home's order (its balance chips, dragged there): settings.chipOrder first, then the others in
+   the accounts' own order (Assets, pickers), so a new account comes last */
+function homeAccounts() {
+  const order = S.settings.chipOrder || [],
+    at = a => (order.includes(a.id) ? order.indexOf(a.id) : order.length + S.accounts.indexOf(a));
+  return activeAccounts().sort((x, y) => at(x) - at(y));
+}
+/* The counting rule (docs/specs/charges.md, "Counting"), which every total follows: every expense is spending, a
+   charge (an expense linked to its entry, feeOf ↔ feeId) included, plus the parts of loans worked out by loanParts().
+   A charge counts in its purchase's category, any other one in CHARGES, which is no category: ids are [A-Za-z0-9-]
+   only (sid()), so it can never be one. A charge's stored category ("fees" but on a purchase) is only for older
+   versions and the CSV: Tally never files an entry under a category by itself, since a built-in one keeps its id when
+   renamed into anything. The movement itself (a transfer, a loan's draws and payments, a balance fix) never counts. */
+const CHARGES = "_charges";
+/* the grey of the Charges part (Home's slice and its label's dot, Summary's): never a text colour, it passes 3:1 only */
+const CHARGES_C = "#7a8190";
+const isSpend = t => t.type === "expense";
+/* the part expense t counts in: a category, or CHARGES */
+function spendCat(t) {
+  if (!t.feeOf) return t.cat;
+  const h = entry(t.feeOf);
+  return h && h.type === "expense" && h.feeId === t.id ? h.cat : CHARGES;
+}
+/* Whether entry a may be entry h's add-on (docs/specs/charges.md, "Allowed links"): an expense charge on a transfer, a
+   loan payment (a lending payment's only as the paid fee an older version recorded) or an expense; an income tip on a
+   lending's payment; a loan entry, a lend's transfer charge, on a draw of the same lending (lend(id): whether loan id
+   is a lending). Whether either is itself an add-on is for the caller to check. */
+function addOnFits(a, h, lend) {
+  if (a.type === "expense") return h.type === "transfer" || h.type === "expense" || (h.type === "loan" && !h.principal);
+  if (a.type === "income") return h.type === "loan" && !h.principal && h.dir === "in";
+  return (
+    a.type === "loan" &&
+    !!a.principal &&
+    a.dir === "out" &&
+    h.type === "loan" &&
+    !!h.principal &&
+    h.dir === "out" &&
+    a.loan === h.loan &&
+    lend(h.loan)
+  );
+}
+/* whether entry t is another entry's add-on (a charge, a tip, a lend's transfer charge) */
+const isAddOn = t => !!t && !!t.feeOf && !!entry(t.feeOf);
+/* entry t's linked add-on, or null */
+const addOnOf = t => {
+  const a = t && t.feeId ? entry(t.feeId) : null;
+  return a && a.feeOf === t.id ? a : null;
+};
+/* Gives entry t its add-on of one kind, or takes it away: "charge" (money paid with it, an expense from its account on
+   a transfer, a loan payment or a purchase, in the purchase's category or else "fees"; on a lend's draw a loan entry of
+   the same lending), "extra" (a tip on a lending's payment: an income into its account, in Other) or "top" (a draw's
+   amount on top, onTop: a lend's extra or a borrow's charges). An amount above 0 makes the add-on or updates it with
+   the entry's account, day and category, just after the entry (ts + 1; one already there keeps its note and, but on a
+   purchase, its category); anything else removes it. An entry has one
+   add-on: another kind already there is never replaced. A lending payment's new add-on is an extra, so "charge" there
+   only changes or removes the paid fee an older version recorded. False (and nothing changed) when t can't take it or
+   amount isn't a number a field takes (only a real 0 or less removes). */
+function setAddOn(t, kind, amount) {
+  if (!t || isAddOn(t) || typeof amount !== "number" || !Number.isFinite(amount)) return false;
+  const n = rnd(amount);
+  if (n > 0 && amtOk(n) == null) return false; // past what a field takes (migrate() would drop an onTop like it)
+  if (kind === "top") {
+    if (!(t.type === "loan" && t.principal)) return false;
+    if (n > 0) t.onTop = n;
+    else delete t.onTop;
+    return true;
+  }
+  const old = addOnOf(t),
+    lend = t.type === "loan" && !!t.principal && t.dir === "out" && (loan(t.loan) || {}).kind === "lend",
+    shape =
+      kind === "extra"
+        ? { type: "income", cat: "otherin" }
+        : kind !== "charge"
+          ? null
+          : lend
+            ? { type: "loan", dir: "out", loan: t.loan, principal: true }
+            : { type: "expense", cat: t.type === "expense" ? t.cat : "fees" };
+  if (!shape || !addOnFits(shape, t, () => lend)) return false;
+  if (old && (old.type === "income") !== (kind === "extra")) return !(n > 0); // another kind: never replaced
+  if (n > 0 && !old && kind === "charge" && t.type === "loan" && t.dir === "in") return false;
+  if (!(n > 0)) {
+    if (old) S.txns = S.txns.filter(x => x !== old);
+    delete t.feeId;
+    return true;
+  }
+  const a = old || { id: newId(), ts: (t.ts || Date.now()) + 1 },
+    /* one already there keeps what it was written with: its note, and its category unless it is a purchase's charge,
+       which follows the purchase's */
+    kept = old
+      ? { note: old.note || "", ...(old.cat && shape.cat && t.type !== "expense" ? { cat: old.cat } : {}) }
+      : {};
+  Object.keys(a).forEach(k => k === "id" || k === "ts" || delete a[k]);
+  Object.assign(a, { date: t.date, type: shape.type, amount: n, account: t.account, note: "" }, shape, kept, {
+    feeOf: t.id,
+  });
+  if (t.archived) a.archived = true; // archived and unarchived with its entry (archiveEntries)
+  if (!old) S.txns.push(a);
+  t.feeId = a.id;
+  return true;
+}
 /* whether entry t is in currency cur (its account's) */
 const inCur = (t, cur) => (acc(t.account) || {}).currency === cur;
-/* what was spent on day d in currency cur, and the active accounts' total in it (b: balances()) */
+/* What counts as spending in currency cur, by the counting rule: every expense, in its part (spendCat()), and every part
+   of a loan worked out as spending (loanParts(), in CHARGES), each as {date, amount, cat, of, at}: of is the entry it
+   comes from (the expense, or the loan entry the part is worked out on) and at the draw it is dated on when that isn't
+   of's day (loanParts()), for Summary's opened rows (smPartRows()). */
+function spendItems(cur) {
+  const out = S.txns
+    .filter(t => isSpend(t) && inCur(t, cur))
+    .map(t => ({ date: t.date, amount: t.amount, cat: spendCat(t), of: t.id }));
+  loanParts().forEach(
+    p =>
+      p.as === "spend" &&
+      p.cur === cur &&
+      out.push({ date: p.date, amount: p.amount, cat: CHARGES, of: p.of, ...(p.at ? { at: p.at } : {}) })
+  );
+  return out;
+}
+/* what was received in currency cur from day s to day e: money received (a tip on a payback included) and the extras
+   paid back (loanParts()); never a loan's own movement */
+const gotIn = (cur, s, e) =>
+  rnd(
+    S.txns
+      .filter(t => t.type === "income" && t.date >= s && t.date <= e && inCur(t, cur))
+      .reduce((q, t) => q + t.amount, 0) +
+      loanParts()
+        .filter(p => p.as === "income" && p.cur === cur && p.date >= s && p.date <= e)
+        .reduce((q, p) => q + p.amount, 0)
+  );
+/* what was spent on day d in currency cur (the widget, the morning check), and the active accounts' total in it
+   (b: balances()) */
 const spentOn = (d, cur) =>
-  rnd(S.txns.filter(t => t.date === d && isSpend(t) && inCur(t, cur)).reduce((q, t) => q + t.amount, 0));
+  rnd(
+    spendItems(cur)
+      .filter(x => x.date === d)
+      .reduce((q, x) => q + x.amount, 0)
+  );
 const balanceIn = (cur, b) =>
   rnd(
     activeAccounts()
@@ -481,8 +668,9 @@ function catsFull(kind) {
   return true;
 }
 const inCats = () => S.cats.filter(c => c.kind === "in" && !c.hidden);
-/* balance of each account right after each entry (date, then time order) and, for loan payments, whether that payment
-   left the loan partly paid or cleared. Cached until the next render. */
+/* balance of each account right after each entry (date, then time order) and, for loan payments, what that payment
+   left owed (r.left: every draw so far with its transfer charge and amount on top, less every payment so far) and
+   whether that left the loan partly paid or cleared. Cached until the next render. */
 let RBC = null;
 function runBal() {
   if (RBC) return RBC;
@@ -497,7 +685,7 @@ function runBal() {
     all[l.id] = 0;
   });
   S.txns.forEach(t => {
-    if (t.type === "loan" && t.principal && t.loan in all) all[t.loan] += t.amount;
+    if (t.type === "loan" && t.principal && t.loan in all) all[t.loan] += t.amount + (t.onTop || 0);
   });
   S.txns
     .slice()
@@ -506,7 +694,7 @@ function runBal() {
       if (!applyEntry(b, t)) return;
       const r = { a: rnd(b[t.account]), t: t.type === "transfer" && t.to in b ? rnd(b[t.to]) : null };
       if (t.type === "loan" && t.loan in amt) {
-        if (t.principal) amt[t.loan] += t.amount;
+        if (t.principal) amt[t.loan] += t.amount + (t.onTop || 0);
         else {
           paid[t.loan] += t.amount;
           /* a payment before what it pays (saved by an older version) is measured against the whole tab */
@@ -519,6 +707,44 @@ function runBal() {
       m[t.id] = r;
     });
   return (RBC = m);
+}
+/* The parts of loans and lendings that count as income or spending with no entry of their own (docs/specs/charges.md,
+   "Counting"), worked out by loanInfo() of every loan: the amount on top each payment covered (a lending's extra:
+   income; a loan's charges: spending, in Charges) on the payment's day (a later draw's, covered by credit, on the
+   draw's day: topOn), and a written-off lending's transfer charge
+   still unpaid (spending, in Charges) on its draw's day. Each is {of: the entry whose row it is in, date, cur (that
+   entry's account's), amount, as: "income" | "spend", and at: the draw it is dated on, only when that isn't its payment's
+   day (credit), so that History shows a heading there}. Cached until the next
+   render, as runBal(). */
+let LPC = null;
+function loanParts() {
+  if (LPC) return LPC;
+  const out = [],
+    add = (t, date, i, amount, as, more) =>
+      out.push({ of: t.id, date, cur: (acc(t.account) || {}).currency || i.cur, amount, as, ...more });
+  S.loans.forEach(l => {
+    const i = loanInfo(l);
+    i.topOn.forEach(
+      ([p, day, n, d]) =>
+        n > 0 && add(p, day, i, n, l.kind === "lend" ? "income" : "spend", day === p.date ? {} : { at: d.id })
+    );
+    i.draws.forEach(t => i.feeLeft[t.id] > 0 && add(t, t.date, i, i.feeLeft[t.id], "spend"));
+  });
+  return (LPC = out);
+}
+/* what loan payment id covered of its loan's amounts on top (loanInfo()'s topPaid: a lending's extra or a loan's
+   charges paid back), 0 for any other entry; from loanParts(), so worked out once per render */
+let TOPC = null;
+function topPaidOf(id) {
+  const parts = loanParts();
+  if (!TOPC || TOPC.parts !== parts) {
+    TOPC = { parts, m: new Map() };
+    parts.forEach(p => {
+      const t = entry(p.of);
+      if (t && !t.principal) TOPC.m.set(p.of, rnd((TOPC.m.get(p.of) || 0) + p.amount));
+    });
+  }
+  return TOPC.m.get(id) || 0;
 }
 /* Account balances from starting balance + every entry. With `before`, only entries dated earlier (start of that day). */
 function balances(before) {
@@ -549,21 +775,45 @@ function applyEntry(b, t) {
 function currencies() {
   return [...new Set(activeAccounts().map(a => a.currency))];
 }
+/* currency codes in the order every total is listed in: the notebook's own first, the others by code (History's
+   headings, Home's balance bar) */
+const mainFirst = (a, b) => (a === S.settings.cur ? -1 : b === S.settings.cur ? 1 : a < b ? -1 : 1);
 /* Every add/edit/delete of entries goes through here: snapshot entries, loans, accounts and assets, apply the change,
    save + render once with the feedback `fx`, and offer Undo in the snackbar to restore the snapshot exactly. msg may be
    a function, read after the change. */
-function withUndo(msg, change, fx) {
+function withUndo(msg, change, fx, after) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
   const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
-    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) };
+    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) },
+    row = fx && fx.row,
+    drawn = () => !!$("#app").querySelector('.tx.en[data-v="' + CSS.escape(row) + '"]'),
+    hist = V.screen === "history",
+    near = row && (hist || drawn()) ? rowsAround([row]) : null; // where an entry saved out of its list goes
   change();
   FX = fx || {};
   commit();
   FX = {};
-  snack(typeof msg === "function" ? msg() : msg, () => {
+  let said = typeof msg === "function" ? msg() : msg;
+  /* an entry saved out of the list it was opened from (History's filters, Home's period): its row is gone, the focus
+     goes to the next one; History says so */
+  if (near && (hist ? histGone(row) : !drawn())) {
+    if (hist && said === T("common.saved")) said = T("history.savedGone");
+    landFocus(near);
+  }
+  snack(said, entries => {
+    /* the rows Undo brings back or changes again (an add-on's in its entry's), the first in the list taking the focus */
+    const now = new Map(S.txns.map(t => [t.id, t])),
+      same = (a, b) =>
+        !!b && Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(k => a[k] === b[k]),
+      back = before.txns.filter(t => !same(t, now.get(t.id))).sort(byNewest);
     Object.assign(S, before);
     commit();
+    if (after) after(entries); // whether the entries list was open when Undo was tapped (it is closed by then)
     snack(T("common.undone"));
+    landFocus([
+      ...back.flatMap(t => [{ row: t.id }, t.feeOf && { row: t.feeOf }]),
+      ...(V.screen === "archive" ? ['.tx[data-act="row-open"]', '[data-act="arch-back"]'] : [".hfbtn"]),
+    ]);
   });
 }
 /* a form's save: the low-balance question when it applies, then the form closes and the change is made with its Undo */
@@ -572,6 +822,20 @@ const saveChecked = (mutate, date, msg, fx) =>
     closeSheet();
     withUndo(msg, mutate, fx);
   });
+/* whether change() would go through (it returns false when it can't): tried on copies of the entries and loans, as
+   guardOverdraw() tries one, so nothing is changed */
+function tryChange(change) {
+  const txs = S.txns,
+    L = S.loans;
+  S.txns = txs.map(t => ({ ...t }));
+  S.loans = L.map(l => ({ ...l }));
+  try {
+    return change() !== false;
+  } finally {
+    S.txns = txs;
+    S.loans = L;
+  }
+}
 /* Money sources (not credit cards) shouldn't go below zero. Try the change on a copy first; if it would take an account
    below zero (now, or at the end of that day) and lower than it already was, ask before saving. */
 function guardOverdraw(mutate, date, proceed) {
@@ -613,7 +877,8 @@ function guardOverdraw(mutate, date, proceed) {
    payments) only when every one of its draws is deleted; otherwise it follows its remaining draws */
 function deleteEntries(ids) {
   ids = new Set(ids);
-  const isDraw = t => t.type === "loan" && t.principal,
+  /* a lend's transfer charge is part of its draw: deleted with it, never a draw that keeps the lending */
+  const isDraw = t => t.type === "loan" && t.principal && !isAddOn(t),
     hit = new Set(S.txns.filter(t => ids.has(t.id) && isDraw(t)).map(t => t.loan)),
     gone = new Set([...hit].filter(lid => S.txns.every(t => !(isDraw(t) && t.loan === lid) || ids.has(t.id))));
   if (gone.size) {
@@ -631,5 +896,23 @@ function deleteEntries(ids) {
   });
   hit.forEach(lid => {
     if (!gone.has(lid)) relinkLoan(lid);
+  });
+}
+/* Archiving hides entries from History and changes nothing else (docs/specs/history-archive.md, B): on sets each one's
+   mark (`archived: true`), off takes it away. An entry and its add-on (a charge, a tip, a lend's transfer charge) are
+   archived and unarchived together. Amounts, accounts, dates, categories and links stay, so every balance, loan and
+   total does too; History's rows, search and the Filters sheet's counts leave archived entries out (histRows()),
+   unless Settings lets search find them (listRows()). */
+function archiveEntries(ids, on) {
+  const all = new Set(ids);
+  ids.forEach(id => {
+    const t = entry(id);
+    if (t && t.feeId) all.add(t.feeId);
+    if (t && t.feeOf) all.add(t.feeOf);
+  });
+  S.txns.forEach(t => {
+    if (!all.has(t.id)) return;
+    if (on) t.archived = true;
+    else delete t.archived;
   });
 }

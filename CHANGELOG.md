@@ -5,6 +5,134 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-11-14
+
+### Added
+
+- A loan or lending with no payback day gets a reminder once a month, on the day the money was lent, until it is paid
+  back, with *Record payment* and *Set a due date* buttons.
+- **A year** as a period on Home and in History, picked from a grid of years like the months (#41).
+- The spending summary's **Year** tab: a year's 12 months as bars you swipe through, the year against the same months
+  of the year before, and its categories (#41).
+- **Settings → Region → Home opens on:** today, this month or this year (#41).
+- An account's colour shows as a dot before its name everywhere an account is named: entries, loan rows, sheets and
+  Filters (#37). A picked account in a form is tinted in its own colour, as in Filters.
+- Hold and drag to reorder accounts, credit cards, loans, lendings and other assets, and Home's balance chips (#33).
+  Home's chips keep an order of their own.
+- **Search inside History** (#37), from Home, Assets, Liabilities and History: type words, a payee, a number or a
+  month and pick a suggestion to turn it into a History filter, each showing how many entries it leaves. The words that
+  matched are marked in the list (and in a loan's or balance fix's note), a typo offers the word it was close to, and
+  the last five searches wait under the empty field. Recent searches stay on this phone only: never in backups, device
+  transfer, exports or logs.
+- **History from all time**, with a period chip and a **Filters** sheet: by account, by kind (spent, received,
+  transfers, lent, borrowed, balance fixes), category, person, or the accounts a transfer went between. Each choice
+  shows how many entries it leaves; months and days carry their totals as a column: what was received over what was
+  spent, one line per currency.
+- Search and History small touches:
+  - a month or a day typed in the search ("may 2025", "jun 14") is offered as a period, with its entry count;
+  - suggestions start from two typed letters (one character in Chinese, Japanese and other scripts without spaces)
+    and wait while entries are selected;
+  - a recent search keeps the suggestion that was tapped, with its emblem; searches that found nothing are not kept;
+    each can be removed with its ✕, and **Clear all** empties the list, both with an Undo;
+  - with every entry selected, the button reads **Clear selection**;
+  - an entry edited so that it no longer fits the filters says "Saved · no longer in this list" and offers Undo.
+- **Archive an entry instead of deleting it.** An archived entry leaves History's list, search and suggestions, and
+  nothing else changes: every balance, loan, total, Home, the Summary, the widget, the morning check and the CSV export
+  still count it. Deleting asks "Delete this entry?" with one line on what Delete changes, then Delete, **Archive
+  instead** or Cancel, once for a whole selection; "Archived" then offers an Undo. Selecting adds **Archive selected**
+  beside Delete selected. A charge or extra is archived with its entry.
+- **The Archived screen**, from an archive button at the end of History's Filters line while anything is archived:
+  the archived entries under their month and day headings, without totals; an opened one offers **Unarchive** and
+  Delete.
+- **Settings → History → Archived entries in search** (off at first): search also lists archived entries, marked
+  "Archived", each with Unarchive and Delete. While selecting they are faded and can't be picked.
+- History's bar, its Filters line and the month in view stay at the top while the entries scroll, the next month's
+  heading taking over; Settings keeps its bar and the section in view the same way.
+- **Charges** and **Extras** as kinds in History's Filters and in search, with their counts; search finds them by
+  name and by words such as "fee" or "tip" in each language, and their month and day headings read "Charges" or
+  "Extras" with the amount.
+- **Suggested names** in the forms: the people under Lent to / Borrowed from, and the payees under Paid to / Received
+  from, are compact chips, each with a ✕ that takes the name out of the suggestions (its entries keep it), with an
+  Undo.
+- **Summary rows open in place** to the newest 5 entries behind their amount, with **Show all** opening History on
+  the same period and part.
+- **Charges and extras.** Each has its own calculator and a preview of what it adds up to:
+  - a **transfer charge** (an ATM or cash-out fee) on a lend, and **Add a charge** on spending, such as VAT or a
+    service charge; the fee on a transfer and on a loan payment is now called a transfer charge too;
+  - **charges** on a borrow (a fee and interest) and an **extra** on a lend (interest), and an extra on a payback (a
+    tip), in a tonal card under the amount;
+  - what is owed includes them: a lend's transfer charge and extra, a borrow's charges.
+  - CSV export names them: `expense-fee`, `lend-fee`, `lend-extra`, `borrow-fee` and `loan-extra`, one line after
+    their entry, in the same columns as before.
+
+### Changed
+
+- Entries read in two lines, the same in History and Home: what it was and how much, then its category and
+  account. A tap opens the entry in place (the time it was added, the balance left, a loan's progress, any note on a
+  loan or balance fix) with Edit and Delete inside (Edit opens a loan's own sheet).
+- **Charges count as spending.** A purchase's charge counts in its category, every other charge in a grey **Charges**
+  part on Home's ring and in Summary. An extra you get on top is income. A charge or extra sits inside its entry
+  instead of a row of its own, and searching counts entries the same way. Transfers, the money loans and lendings
+  move, and balance fixes still never count.
+- **Past fees now count.** Fees already recorded on transfers and loan payments count as spending, so earlier days and
+  months show more spent. No balance changes.
+- A new notebook starts without the Fees category; an existing one keeps it.
+- Paid more than you owed, or paid more than was owed to you? Tally asks: **Track as charge** or **Track as extra** on
+  that payment, or a new loan or lending the other way. The income form no longer opens from here.
+- The questions that decide what happens to a notebook are stacked, full-width answers that say what each does: a backup
+  folder that already holds a backup (Restore / Overwrite / Cancel), a backup that can't be read (Choose another folder
+  / Overwrite / Cancel), restoring a file you picked (Cancel / Restore; Restore / Choose another file / Cancel is the auto backup's) and **Delete all data** (Save backup
+  / Delete without a backup / Cancel). Overwrite and Delete ask once more before they act, where Cancel and Android's
+  Back close everything.
+- One name per thing: **Account** on every form (not "Paid from" or "Into"), **Received** for money in (the entry,
+  History's filter, "Received categories" in Settings), **Due** for a payback day, **Borrow money** beside Lend money,
+  and "At the start of today: $4,182.50" on an account. The account helper texts and Settings' reminder line are
+  shorter, and every note field reads the same. The Received form uses Spent's category chip.
+- Home's balance bar is stacked: "4 entries ›" on the left, on the right "Total in USD" over the figure, or, with
+  several currencies, one line each (the code in one column, the figures in the other). Home's chip row fades at an
+  edge where more chips wait.
+- Loans and lendings say each thing once: a row reads person and what's left, then the account and due date beside its
+  status (Active, Partly paid); the loan's sheet leaves out what the row already says.
+- The Summary shows whole amounts on every tab (a compact form such as 12.4K only from five digits), and its Days and
+  Months tabs show one day's or one month's categories as a pie, with the total under it. Days is no longer the last 7
+  days as bars; use ‹ › to move a day.
+- Small marks: History's Select icon is a checklist; the net worth card has no explaining line and the same soft
+  container in light and dark; a category's emblem is the button that changes it (a pen over a dark tint, replacing the
+  "Change emblem" text); amount fields start with the currency's own decimals ("4,167.50"); negative balances use a
+  true minus; an empty notebook's History keeps only Search until the first entry, and the welcome screen only Settings.
+- While entries are selected, the period and Filters row stays in place, dimmed and not tappable, so nothing jumps; the
+  filter chips continue on the Filters line, with Clear all last. The selection bar shows only the count, so its
+  buttons fit in every language on small phones; TalkBack still reads "2 selected".
+- An archived account comes back with **Unarchive** (was "Show again"), the same word as for entries; its drop slot
+  reads "Drop here to unarchive".
+- The Summary draws no chart when nothing is spent: the total, the message and the button say it.
+- Net worth and You owe list the notebook's currency first.
+- A 1.5.0 backup restored in 1.4.4 keeps every balance. What 1.4.4 doesn't know is left out: the amounts on top of a
+  draw (so a lending reads lower there) and the links of charges (a purchase's charge becomes a plain expense).
+- History and Home's Year entries list stay quick with years of entries.
+- A dragged Home chip swaps places as soon as its own edge passes the middle of the next one.
+- The calculator groups numbers as you type them (1,250 + 300), the way your phone writes them.
+- Credit cards without a colour of their own are purple, so they no longer look like bank accounts.
+- Nothing is cut short or shrunk any more: names, notes, categories, chips, fields, tabs and buttons wrap onto another
+  line. On small phones and with large text, entries, accounts and lendings stack from the left.
+- Home's account chips show a larger icon, with the name (on two lines if need be) and balance beside it; where the
+  date doesn't fit beside the ‹ › arrows, they make room for it.
+
+### Fixed
+
+- Home's ring shows category names whole or leaves them out: they are never cut with "…" or shrunk, and never overlap,
+  even with long names and many categories.
+- A sheet closes only when the tap began outside it, so dragging from a field's text to beyond the sheet's edge no
+  longer closes it.
+- A loan or lending reminder says "no due date" and "Due today" the same way everywhere, and on a locked screen reads
+  "A loan or lending reminder" without names or amounts.
+- Summary closes an opened row when the tab or the period changes.
+- With TalkBack, Select, archive, delete, Unarchive, Undo and a long press keep the focus on the next row or the
+  matching button instead of throwing it to the top of the page; an entry deleted or archived from its sheet no longer
+  comes back with its row opened.
+- A double tap on an answer in a dialog no longer also answers the question that answer opens next.
+- Android's screen reader reads a locked currency as one sentence ("Currency: USD. Locked: this account has entries").
+
 ## [1.4.4] — 2026-11-06
 
 ### Fixed
@@ -495,6 +623,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.5.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.5.0
 [1.4.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.4
 [1.4.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.3
 [1.4.2]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.2

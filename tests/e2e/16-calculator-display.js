@@ -166,7 +166,7 @@ const ok = (c, m) => {
     for (let i = 0; i < 40; i++) await page.mouse.move(edge.right - 10 + (i % 2), edge.y);
     await page.mouse.up();
     await settle();
-    const len = valueBefore.length;
+    const len = await page.evaluate(() => CALC.expr.length); // the expression, not its grouped display
     ok(
       (await pos()) === len,
       "holding at the right edge scrolls to the end: pos " + (await pos()) + " of " + len + tag

@@ -28,9 +28,9 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 | | | |
 |:-:|:-:|:-:|
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee and the balance after it |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week or month, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Money in"><br>**Money in**: with who it came from |  |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee, category and account |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week, month or year, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Received"><br>**Received**: with who it came from |  |
 
 ## Features
 
@@ -40,37 +40,55 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   the amount, save. New entries default to the day you're looking at.
 - **Paid to / Received from:** who you paid or who paid you, beside the category, with names you used before offered
   as you type. A new category or account can be added right from the entry form.
+- **Add a charge on spending**: VAT, a service charge or a card fee on top of the price. It comes off the same account,
+  counts as spending in the purchase's own category, and sits inside the entry in History.
 - **Every account, every currency.** Bank, mobile wallet, cash, credit card, savings — or your own account types. Each
   account keeps its own currency, any of the world's currencies.
 - **Morning check.** Once a day Tally lists your balances and asks if they still match.
 - **Transfers** between your own accounts never count as spending. Moving money between currencies asks for the amount
-  that arrived; an ATM or cash-out fee can be added: it comes off the paying account and shows with the transfer in
-  History, without counting as spending.
+  that arrived; a transfer charge (an ATM or cash-out fee) can be added: it comes off the From account, shows with the
+  transfer in History and counts as spending, in Charges.
 - **Balance fixes.** When an account doesn't match reality, type what it really holds and Tally records the difference.
-- **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), with a cursor you can move.
+- **Built-in calculator** on amount fields (`12+4.50`, `3×2.75`), grouping numbers as you type, with a cursor you can
+  move.
 - **Overdraw warning.** Accounts other than credit cards warn before a save takes them below zero.
 
 **Loans and net worth**
 
 - **Loans and lendings** per person: money you borrowed or lent, in several draws with their own due dates, partial
-  payments (counted against the draw due soonest, so each draw shows what's left of it), a sending or cash-out fee on
-  a payment (off the account, shown with the payment, never spending), "paid more than owed" (the extra as a new loan,
-  as income you file yourself, or as the payment's fee), write-off / forgive, and reopen.
+  payments (counted against the draw due soonest, so each draw shows what's left of it), a transfer charge on a
+  payment or a lend (owed back on a lend), interest as an extra on a lend, charges on a borrow, a tip on a payback,
+  "paid more than owed" (Tally asks: a charge or an extra, or a new loan or lending the other way), write-off /
+  forgive, and reopen. What is owed includes them.
 - **Assets and Liabilities** tabs with net worth per currency, other assets (a laptop, gold, …), cleared loans and
-  archived accounts. Drag a row between sections to archive it, mark it cleared or reopen it.
+  archived accounts. Hold and drag a row to reorder its list (Home's balance chips too), or onto another section to
+  archive it, mark it cleared or reopen it.
 
 **Looking back**
 
-- **History** for any day, date range or month, filtered by account, with each account's running balance under every
-  entry; swipe sideways to move between accounts. Hold an entry to select several and delete them together.
-- **Spending summary:** tap the donut for the last 7 days, 8 weeks, or a month by category, compared with the period
-  before.
+- **Home and History** for any day, date range, month or year. History starts on all time; narrow it with the period
+  chip and the Filters sheet: account, kind of money movement, category, person, or the accounts a transfer went
+  between, each option showing how many entries it leaves. Entries are two lines with the account marked by a dot of
+  its colour; a charge or extra sits inside its entry. Months and days carry what was received over what was spent, and
+  the bar, Filters and the month you're in stay at the top as you scroll. Tap an entry to open it in place; hold one to
+  select several and delete or archive them together.
+- **Archive instead of deleting:** an archived entry leaves History's list and changes nothing else; every balance,
+  loan and total still counts it. The Archived button beside Filters lists them, each with Unarchive and Delete.
+- **Search** inside History, from any tab: type a word, a number or a month and pick a suggestion (who was paid, who
+  paid you, a category, an account, a person, a kind, a period or an amount) to narrow the list, each showing how many
+  entries it leaves. Matches are marked, a typo offers the word it was close to, and your last searches wait under the
+  empty field. They stay on this phone only, never in backups. Archived entries are left out, unless **Settings →
+  History → Archived entries in search** is on.
+- **Spending summary:** tap the donut for a day or a month as a pie of its categories, the last 8 weeks, or a year's 12
+  months, compared with the period before; the bars show whole amounts. A category's row opens to its newest entries, with
+  "Show all" to see the rest in History.
 
 **Around the phone**
 
 - **Reminders**, each at the time you pick: an evening nudge if nothing was written that day, a daily balance check,
   and due-date reminders for loans that open the loan, with *Record payment*, *+1 day* and *+1 week* buttons. A due
-  reminder asks for what is due, with the whole tab beside it. Reminders still showing update themselves when you
+  reminder asks for what is due, with the whole tab beside it; one with no payback day reminds once a month, on the
+  day the money was lent, with *Set a due date*. Reminders still showing update themselves when you
   write something down, and go away once they no longer apply.
   On first open Tally asks for the two things they need (notifications and unrestricted battery), each with its own
   Allow; whatever you leave off stays in Settings with a button.
@@ -79,7 +97,8 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   every category, account and asset. Choose what the middle of the donut shows.
 - **Phones, foldables and tablets:** the layout adapts from small phones to tablets (a side rail and two panes on
   wide screens), and follows the phone's text size.
-- **Region settings:** your main currency, the first day of the week and 12- or 24-hour time.
+- **Region settings:** your main currency, what Home opens on (today, this month or this year), the first day of the
+  week and 12- or 24-hour time.
 - **In your language:** English, Spanish, Brazilian Portuguese, French, German, Russian, Simplified Chinese,
   Indonesian and Turkish, following the phone's language (or the one picked for Tally on Android 13+), with numbers,
   dates and money always written the phone's way. Translations other than English are drafts awaiting native
@@ -90,7 +109,7 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 - Everything stays on the phone. No account, no ads, no analytics, **no network requests**.
 - **Backup and restore** (a JSON file you keep anywhere) and **CSV export** of every entry, with its payee, for a
-  spreadsheet or an accounting app.
+  spreadsheet or an accounting app; a charge or an extra is its own line after its entry.
 - **Daily auto backup** into one file, "Tally backup.json", in a folder you pick; it stays there even if Tally is
   uninstalled.
 - **Undo** for every change.
@@ -154,7 +173,7 @@ content.
 
 | Permission | Why |
 | --- | --- |
-| Notifications | the evening nudge, the balance check and loan due-date reminders (only if you keep them on), and a notice if the daily backup fails |
+| Notifications | the evening nudge, the balance check and loan and lending reminders (only if you keep them on), and a notice if the daily backup fails |
 | Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
 | Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
 | Run at startup | to re-arm reminders and the daily backup after the phone restarts |

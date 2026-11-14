@@ -128,7 +128,7 @@ const ok = (c, m) => {
     await seed(page);
     const json = await page.evaluate(() => JSON.stringify(S));
     await page.evaluate(t => onRestorePicked("﻿" + t, null), json);
-    ok(await page.$("#pop [data-act=ask-ok]"), "a backup with a byte-order mark asks to restore");
+    ok(await page.$("#pop .cd-keep"), "a backup with a byte-order mark asks to restore");
     await page.evaluate(() => closePop());
     // Undo of a restore made while the saved data couldn't be read: back to that state, auto backup left alone
     const r = await page.evaluate(t => {
@@ -136,7 +136,7 @@ const ok = (c, m) => {
       S = blank();
       window.__native.backup = [];
       restoreText(t);
-      $("#pop [data-act=ask-ok]").click();
+      $("#pop .cd-keep").click();
       const after = window.__native.backup.slice();
       undoFn();
       return { after, undo: window.__native.backup.slice(after.length), unreadable };
@@ -244,7 +244,7 @@ const ok = (c, m) => {
       off: window.__native.backup.some(j => JSON.parse(j).on === false),
     }));
     ok(a.on && !a.off && !a.dialog, "picking the same folder again keeps auto backup on: " + JSON.stringify(a));
-    // a new folder with a damaged backup: the "can't read" question, with Replace it
+    // a new folder with a damaged backup: the "can't read" question, with Overwrite
     const b = await page.evaluate(async () => {
       closePop();
       window.__native.status = { on: true, folder: "y", usable: true, last: 0 };
@@ -252,12 +252,13 @@ const ok = (c, m) => {
       onFolderPicked("");
       await new Promise(r => setTimeout(r, 50));
       const t = $("#pop h3").textContent;
-      $("#pop [data-act=ask-ok]").click();
+      $("#pop .cd-destroy").click(); // Overwrite, then its second question
+      $("#pop .cd-destroy").click();
       return { t, on: S.settings.backup.on };
     });
     ok(
-      b.t === "Couldn't read this folder's backup" && b.on,
-      "a damaged backup offers Replace it: " + JSON.stringify(b)
+      b.t === "Tally can't read the backup in this folder" && b.on,
+      "a damaged backup offers Overwrite: " + JSON.stringify(b)
     );
     // the saved data can't be read, the shell still backs up: Restore reads the auto backup first, and restoring an
     // older file made before auto backup was on doesn't switch it off
@@ -277,7 +278,7 @@ const ok = (c, m) => {
         picked = window.__native.picked;
       window.__native.backup = [];
       restoreText(JSON.stringify(file));
-      $("#pop [data-act=ask-ok]").click();
+      $("#pop .cd-keep").click();
       return { read, picked, sent: window.__native.backup.map(j => JSON.parse(j).on), on: S.settings.backup.on };
     });
     ok(c.read === 1 && c.picked, "while the saved data can't be read, Restore tries the auto backup first");
@@ -339,9 +340,20 @@ const ok = (c, m) => {
     const { ctx, page } = await open({ uiLang: "ru", locale: "ru-RU" });
     await seed(page);
     const h = await page.evaluate(() => {
+      if (!S.txns.length)
+        S.txns.push({
+          id: "z1",
+          ts: 1,
+          date: today(),
+          type: "expense",
+          amount: 1,
+          account: S.accounts[0].id,
+          cat: "food",
+        }); // History's bar needs an entry
       V.screen = "history";
+      Object.assign(HP, { period: "month", anchor: today() });
       render();
-      return $("#app .month .plabel span").textContent;
+      return $("#app .hpl span").textContent;
     });
     ok(/^[А-ЯЁ]/.test(h), "a Russian month heading starts with a capital: " + h);
     await ctx.close();

@@ -1,6 +1,7 @@
-// A transfer's fee comes off the paying account but, like the transfer, is never spending: not on the ring, in the
-// day's total, the summaries, the balance check or the widget. History shows it with its transfer, not under a
-// category, whatever the built-in "fees" category was renamed to (the reported case: "Food").
+// A transfer's fee (its transfer charge) comes off the paying account and is spending in Charges, never under a
+// category: in the ring's figure (not on a category's tile), the day's total, the summaries and the widget, while the
+// transfer itself never counts. History shows it with its transfer, not under a category, whatever the built-in "fees"
+// category was renamed to (the reported case: "Food").
 const { chromium, appUrl, launchOptions, outDir } = require("./harness");
 const OUT = outDir("26-transfer-fee");
 let fails = 0;
@@ -68,10 +69,95 @@ const ok = (c, m) => {
   await settle();
   await page.click('#sheet [data-act="tr-to"][data-v="b"]');
   await page.fill("#f-amt", "20000");
-  await page.click('#sheet [data-act="add-fee"]');
-  await page.fill("#f-fee", "10");
-  ok((await page.textContent("#fee-lbl")).includes("not counted as spending"), "the fee field says it isn't spending");
-  ok((await page.textContent("#tr-prev")).includes("20,010.00"), "preview: City Bank −20,010");
+  /* the form's previews as a person sees them: [where, text], only the ones on screen */
+  const previews = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#sheet .aoline, #sheet .aoprev")]
+        .filter(e => e.offsetParent && e.textContent.trim())
+        .map(e => [
+          e.closest(".aocard") ? "card" : "line",
+          e.textContent
+            .replace(/\u2060/g, "")
+            .replace(/\s+/g, " ")
+            .trim(),
+        ])
+    );
+  let pv = await previews();
+  ok(
+    pv.length === 1 &&
+      pv[0][0] === "line" &&
+      /^City Bank −\S*20,000\.00 · Brac Joint \+\S*20,000\.00$/.test(pv[0][1].replace(/BDT /g, "BDT")),
+    "without a charge, the line under the amount (no arrow): " + JSON.stringify(pv)
+  );
+  ok(
+    await page.evaluate(() => {
+      const l = $("#sheet .aoline"),
+        a = $("#sheet .amtwrap");
+      return (
+        !!l &&
+        !!a &&
+        l.getBoundingClientRect().top >= a.getBoundingClientRect().bottom - 1 &&
+        !!l.querySelector(".adot")
+      );
+    }),
+    "the line sits under the amount, each account with its dot"
+  );
+  const add = '#sheet [data-act="addon-add"][data-v="xcharge"]';
+  ok((await page.textContent(add)).trim() === "Transfer charge", "the button: + Transfer charge");
+  ok(!(await page.$('#sheet [data-act="add-fee"]')), "no old Add a fee button on the transfer form");
+  await page.click(add);
+  await settle();
+  const st = await page.evaluate(() => ({
+    focus: document.activeElement && document.activeElement.id,
+    calc: document.body.classList.contains("calcopen"),
+    mode: $("#f-charge").getAttribute("inputmode"),
+    btn: !!$('#sheet [data-act="addon-add"][data-v="xcharge"]').offsetParent,
+    label: $("#sheet .aocard .aol").textContent,
+    cur: $("#sheet .aocard .aocur").textContent,
+  }));
+  ok(
+    st.focus === "f-charge" && !st.calc && st.mode === "decimal" && !st.btn,
+    "+ Transfer charge opens the card, its field focused with no keypad, the button gone " + JSON.stringify(st)
+  );
+  ok(st.label === "Transfer charge" && st.cur === "BDT", "the card: Transfer charge, BDT before the figure");
+  await page.fill("#f-charge", "10");
+  pv = await previews();
+  ok(
+    pv.length === 1 &&
+      pv[0][0] === "card" &&
+      /City Bank −\S*20,010\.00 · Brac Joint \+\S*20,000\.00/.test(pv[0][1].replace(/BDT /g, "BDT")),
+    "the line moves into the card, counting the charge, never twice: " + JSON.stringify(pv)
+  );
+  await page.click('#sheet [data-act="addon-remove"][data-v="xcharge"]');
+  await settle();
+  pv = await previews();
+  ok(
+    pv.length === 1 && pv[0][0] === "line" && pv[0][1].includes("20,000.00") && !pv[0][1].includes("20,010"),
+    "✕ closes the card and the line comes back: " + JSON.stringify(pv)
+  );
+  ok(
+    await page.evaluate(
+      () =>
+        !!$('#sheet [data-act="addon-add"][data-v="xcharge"]').offsetParent &&
+        document.activeElement === $('#sheet [data-act="addon-add"][data-v="xcharge"]') &&
+        !$("#sheet .aocard").offsetParent &&
+        $("#f-charge").value === ""
+    ),
+    "the button comes back with the focus, the card gone and emptied"
+  );
+  await page.click(add);
+  await page.fill("#f-charge", "10");
+  /* the code follows From */
+  await page.evaluate(() => {
+    S.accounts.push({ id: "u", name: "Dollar account", type: "bank", currency: "USD", opening: 0 });
+    trPickFrom("u");
+  });
+  ok((await page.textContent("#sheet .aocard .aocur")) === "USD", "the card's code follows From");
+  await page.evaluate(() => {
+    trPickFrom("a");
+    S.accounts.pop();
+  });
+  ok((await page.textContent("#sheet .aocard .aocur")) === "BDT", "and back");
   await page.click('#sheet [data-act="tr-save"]');
   await page.waitForTimeout(350);
   const bal = await page.evaluate(() => balances());
@@ -80,30 +166,47 @@ const ok = (c, m) => {
     fee = S.txns.find(x => x.feeOf),
     tr = S.txns.find(x => x.type === "transfer");
   ok(fee && fee.amount === 10 && fee.account === "a" && tr.feeId === fee.id, "the fee is linked to its transfer");
+  const ed = await page.evaluate(id => {
+    trSheet(id);
+    const r = {
+      card: !!$("#sheet .aocard").offsetParent,
+      v: $("#f-charge").value,
+      btn: !!$('#sheet [data-act="addon-add"]').offsetParent,
+      prev: $("#sheet .aocard .aoprev")
+        .textContent.replace(/\u2060/g, "")
+        .replace(/\s+/g, " "),
+    };
+    closeSheet();
+    return r;
+  }, tr.id);
+  ok(
+    ed.card && ed.v === "10.00" && !ed.btn && /20,010\.00/.test(ed.prev),
+    "editing the transfer: its card open from the start, with its preview " + JSON.stringify(ed)
+  );
 
-  // ---- 2. not spending: the ring, the day's total, the summary, the widget
+  // ---- 2. spending in Charges, under no category: the ring, the day's total, the summary, the widget
   const ring = await page.evaluate(() =>
     [...document.querySelectorAll(".rt .cp")].map(e => e.textContent).filter(Boolean)
   );
-  ok(ring.length === 1 && ring[0] === "100%", "the ring shows only the groceries " + JSON.stringify(ring));
   ok(
-    !(await page.textContent(".dcenter")).includes("60") && (await page.textContent(".dcenter")).includes("50"),
-    "spent today: 50, not 60"
+    ring.length === 1 && ring[0] === "83%",
+    "only the groceries have a tile: 50 of the 60 spent " + JSON.stringify(ring)
   );
+  ok((await page.textContent(".dcenter")).includes("60"), "spent today: 60, the fee in it");
   const foodTile = await page.evaluate(() => {
     const b = document.querySelector('.rt [data-v="fees"] .cp');
     return b ? b.textContent : "";
   });
   ok(foodTile === "", "nothing under Food");
   const w = await page.evaluate(() => window.__w[window.__w.length - 1]);
-  ok(w && /50\.00/.test(w.spent), "widget: spent today 50 " + (w && w.spent));
+  ok(w && /60\.00/.test(w.spent), "widget: spent today 60 " + (w && w.spent));
   const sm = await page.evaluate(() => {
     summarySheet();
     const v = smBuckets().map(b => b.v);
     closeSheet();
     return v;
   });
-  ok(sm[sm.length - 1] === 50, "summary: today 50 " + JSON.stringify(sm.slice(-3)));
+  ok(sm[sm.length - 1] === 60, "summary: today 60 " + JSON.stringify(sm.slice(-3)));
 
   // ---- 3. History: the fee with its transfer, not a category's spending
   await page.evaluate(() => {
@@ -111,14 +214,19 @@ const ok = (c, m) => {
     render();
   });
   await settle();
-  const row = (await page.textContent(`[data-v="${fee.id}"]`)).replace(/\s+/g, " ");
-  ok(/Transfer fee\s*City Bank → Brac Joint/.test(row) && !row.includes("Food"), "History row: " + row);
+  const row = (await page.textContent(`[data-v="${tr.id}"]`)).replace(/\s+/g, " ");
+  ok(
+    /City Bank.*→.*Brac Joint/.test(row) && /\+ .*10\.00 transfer charge/.test(row) && !row.includes("Food"),
+    "History: the transfer row, with its transfer charge under the amount: " + row
+  );
+  ok(!(await page.$(`[data-v="${fee.id}"]`)), "the fee has no row of its own");
   const day = (await page.textContent("#app .day")).replace(/\s+/g, " ");
-  ok(day.includes("50.00") && !day.includes("60.00"), "the day's total leaves out the fee: " + day);
+  ok(day.includes("60.00") && !day.includes("50.00"), "the day's spent counts the fee, inside it: " + day);
   await page.screenshot({ path: OUT + "/history.png" });
-  await page.click(`[data-v="${fee.id}"]`);
+  await page.click(`[data-v="${tr.id}"]`);
+  await page.click('#app .txo [data-act="tx-open"]');
   await settle();
-  ok(await page.evaluate(() => F && F.kind === "tr"), "tapping the fee opens its transfer");
+  ok(await page.evaluate(() => F && F.kind === "tr"), "tapping Edit opens the transfer");
   await page.evaluate(() => closeSheet());
 
   // ---- 4. saved data: a fee whose transfer is gone is plain spending; a transfer whose fee is gone has none
@@ -140,8 +248,8 @@ const ok = (c, m) => {
   ok(m[0] && m[1] && m[2] === 2, "dangling links dropped, entries kept " + JSON.stringify(m));
 
   // ---- 5. updating from 1.3.1: a notebook exactly as 1.3.1 saved it (made by 1.3.1's own transfer sheet, its "Fees"
-  // slot renamed "Food"; 1.3.1 counted the fee as 10 of 60 spent). Its fee stops being spending on its own, nothing
-  // to sort out by hand, and the stored entries stay exactly as they were.
+  // slot renamed "Food"; 1.3.1 counted the fee as 10 of 60 spent, under Food). Its fee is spending in Charges, never
+  // under Food, with nothing to sort out by hand, and the stored entries stay exactly as they were.
   const saved131 = {
     v: 6,
     settings: {
@@ -258,9 +366,15 @@ const ok = (c, m) => {
       .map(e => e.closest("[data-v]").dataset.v + " " + e.textContent),
   }));
   ok(up.bal.a === 99940 && up.bal.b === 65000, "after the update: balances as before " + JSON.stringify(up.bal));
+  const upCat = await page.evaluate(() => [S.v, S.cats.find(c => c.id === "fees")]);
   ok(
-    /50\.00/.test(up.centre) && !/60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 100%"]',
-    "after the update: spent 50, only Groceries on the ring, nothing under Food " + JSON.stringify(up)
+    upCat[0] === 8 && upCat[1] && upCat[1].name === "Food" && !upCat[1].hidden,
+    "after the update: version 8, the renamed Fees category kept as it was " + JSON.stringify(upCat)
+  );
+  ok(
+    /60\.00/.test(up.centre) && JSON.stringify(up.ring) === '["groceries 83%"]',
+    "after the update: spent 60, the fee in Charges, only Groceries has a tile, nothing under Food " +
+      JSON.stringify(up)
   );
   await page.evaluate(() => {
     V.screen = "history";
@@ -268,17 +382,43 @@ const ok = (c, m) => {
   });
   await settle();
   const oldFee = saved131.txns.find(x => x.feeOf);
-  const upRow = (await page.textContent(`[data-v="${oldFee.id}"]`)).replace(/\s+/g, " ");
+  const upRow = (await page.textContent(`[data-v="${saved131.txns.find(x => x.type === "transfer").id}"]`)).replace(
+    /\s+/g,
+    " "
+  );
   ok(
-    /Transfer fee\s*City Bank → Brac Joint/.test(upRow) && !upRow.includes("Food"),
+    /City Bank.*→.*Brac Joint/.test(upRow) && /\+ .*transfer charge/.test(upRow) && !upRow.includes("Food"),
     "after the update, History: " + upRow
   );
-  ok((await page.textContent("#app .day")).includes("50.00"), "the day's total is 50");
+  ok((await page.textContent("#app .day")).includes("60.00"), "the day's spent is 50 and the 10 fee");
   const kept = await page.evaluate(id => S.txns.find(x => x.id === id), oldFee.id);
   const changed = Object.keys(oldFee).filter(k => k !== "date" && kept[k] !== oldFee[k]);
   ok(
     changed.length === 0 && Object.keys(kept).length === Object.keys(oldFee).length,
     "the saved fee entry itself is unchanged (an older version still reads it) " + JSON.stringify(kept)
+  );
+
+  // ---- 6. the card's checks: not a number, negative, and an empty or 0 card saves no charge
+  const chk = await page.evaluate(() => {
+    const out = [];
+    const tryIt = v => {
+      trSheet();
+      $("#f-amt").value = "100";
+      $('#sheet [data-act="addon-add"][data-v="xcharge"]').click();
+      $("#f-charge").value = v;
+      const n = S.txns.length;
+      saveTr();
+      out.push([v, ($("#snack") || {}).textContent || "", S.txns.length - n]);
+      closeSheet();
+    };
+    ["5×", "−5", "0", "", "0.001"].forEach(tryIt);
+    return out;
+  });
+  ok(chk[0][1].includes("That charge isn't a number") && chk[0][2] === 0, "not a number: " + JSON.stringify(chk[0]));
+  ok(chk[1][1].includes("A charge can't be negative") && chk[1][2] === 0, "negative: " + JSON.stringify(chk[1]));
+  ok(
+    chk[2][2] === 1 && chk[3][2] === 1 && chk[4][2] === 1,
+    "a 0, an empty card, or one that shows as 0 saves the transfer alone " + JSON.stringify(chk.slice(2))
   );
 
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));

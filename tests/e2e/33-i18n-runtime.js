@@ -286,6 +286,30 @@ const EN = {
     await ctx.close();
   }
 
+  // ---- the delete question with the real catalogues: one entry has its own words; 21 (Russian's "one" form) its count
+  for (const [lang, locale, want1, want21] of [
+    ["ru", "ru-RU", "Удалить эту запись?", "Удалить 21 запись?"],
+    ["en", "en-US", "Delete this entry?", "Delete these 21 entries?"],
+  ]) {
+    const ctx = await browser.newContext({ viewport: { width: 360, height: 800 }, locale, uiLang: lang });
+    const page = await ctx.newPage();
+    page.on("pageerror", e => errors.push(e.message));
+    await page.goto(appUrl);
+    const r = await page.evaluate(() =>
+      [1, 21].map(n => {
+        deleteAsk(
+          Array.from({ length: n }, (_, i) => "x" + i),
+          () => {}
+        );
+        const t = $("#cd-t").textContent;
+        closePop();
+        return t;
+      })
+    );
+    ok(r[0] === want1 && r[1] === want21, lang + ": the delete question for 1 and for 21 entries: " + r.join(" | "));
+    await ctx.close();
+  }
+
   ok(errors.length === 0, "no page errors " + JSON.stringify(errors));
   await browser.close();
   console.log(fails ? fails + " FAILED" : "ALL PASSED");

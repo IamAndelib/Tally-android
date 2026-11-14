@@ -15,12 +15,16 @@ const CATS = [
   { id: "health", name: "Health", e: "💊", c: "#e0504f", i: "medication", kind: "out" },
   { id: "fun", name: "Fun", e: "🎬", c: "#2a78d6", i: "movie", kind: "out" },
   { id: "family", name: "Family", e: "🎁", c: "#df5f2b", i: "family_restroom", kind: "out" },
-  { id: "fees", name: "Fees", e: "🏦", c: "#00897b", i: "account_balance", kind: "out" },
+  /* retired (data v8): a new notebook has no Fees, since charges count in their purchase's category or in Charges;
+     an older notebook keeps it, its name and its entries (migrate()), and catName() still says it in Tally's language */
+  { id: "fees", name: "Fees", e: "🏦", c: "#00897b", i: "account_balance", kind: "out", retired: true },
   { id: "other", name: "Other", e: "🧾", c: "#b0671f", i: "category", kind: "out" },
   { id: "income", name: "Income", e: "💰", c: "#15a06f", i: "payments", kind: "in" },
   { id: "gift", name: "Gift", e: "🎁", c: "#e0578c", i: "redeem", kind: "in" },
   { id: "otherin", name: "Other", e: "➕", c: "#5f7389", i: "add_circle", kind: "in" },
 ];
+/* a built-in category as a notebook stores it (CATS' marks, like retired, are never saved) */
+const catCopy = d => ({ id: d.id, name: d.name, e: d.e, c: d.c, i: d.i, kind: d.kind });
 /* colours the built-in categories had before emblems (v<4), to upgrade only untouched ones */
 const OLD_CAT_COLS = {
   groceries: "#2E9E6B",
@@ -75,14 +79,15 @@ const P = {
   close: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
   check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
   list: "M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z",
+  tune: "M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z",
   down: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z",
   checked:
     "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
   unchecked:
     "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z",
   delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
-  checkbox:
-    "M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+  checklist:
+    "M22 7h-9v2h9V7zm0 8h-9v2h9v-2zM5.54 11 2 7.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 11zm0 8L2 15.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L5.54 19z",
   selectall:
     "M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2zM7 17h10V7H7v10zm2-8h6v6H9V9z",
   home: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
@@ -93,12 +98,12 @@ const P = {
     "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z",
   schedule:
     "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
+  search:
+    "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
   history:
     "M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z",
   settings:
     "M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z",
-  archive:
-    "M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5 6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z",
   reset:
     "M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 2.97-2.17 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93 0-4.42-3.58-8-8-8zm-6 8c0-1.65.67-3.15 1.76-4.24L6.34 7.34C4.9 8.79 4 10.79 4 13c0 4.08 3.05 7.44 7 7.93v-2.02c-2.83-.48-5-2.94-5-5.91z",
   keyboard:
@@ -106,6 +111,18 @@ const P = {
   edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
 };
 const ic = n => '<svg viewBox="0 0 24 24" class="ic" aria-hidden="true"><path d="' + P[n] + '"/></svg>';
+/* the Clear selection glyph: Material Symbols' deselect (Rounded, filled; viewBox "0 -960 960 960"), a UI icon kept out
+   of icons.js, which is the emblem picker's set */
+const DESELECT =
+  "M822-50 586-285H345q-24.75 0-42.37-17.63Q285-320.25 285-345v-241L59-812q-9-8.5-9-21.25T58.61-855q9.39-9 21.86-9 12.46 0 21.53 9L865-92q9 9 9 21t-9 21.39Q856-41 843.5-41T822-50ZM526-345 345-526v181h181Zm149-22-60-60v-188H427l-60-60h248q24.75 0 42.38 17.62Q675-639.75 675-615v248ZM293.5-788.68q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm165 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm165 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm165 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm-660 165q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm660 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm-660 165q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm660 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm-660 165q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm660 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm-660 165q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm165 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm165 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Zm165 0q-8.5-8.67-8.5-21.5 0-12.82 8.68-21.32 8.67-8.5 21.5-8.5 12.82 0 21.32 8.68 8.5 8.67 8.5 21.5 0 12.82-8.68 21.32-8.67 8.5-21.5 8.5-12.82 0-21.32-8.68Z";
+const icSym = d => '<svg viewBox="0 -960 960 960" class="ic" aria-hidden="true"><path d="' + d + '"/></svg>';
+const icDeselect = () => icSym(DESELECT);
+/* Material Symbols' archive and unarchive (outlined, the same viewBox): an archive box with an arrow into it (Archive,
+   History's way to its archived entries, Archive selected) or out of it (Unarchive), for entries and accounts alike */
+const ARCH_BOX =
+  "M200-640v440h560v-440H200Zm0 520q-33 0-56.5-23.5T120-200v-499q0-14 4.5-27t13.5-24l50-61q11-14 27.5-21.5T250-840h460q18 0 34.5 7.5T772-811l50 61q9 11 13.5 24t4.5 27v499q0 33-23.5 56.5T760-120H200Zm16-600h528l-34-40H250l-34 40Z";
+const icArchive = () => icSym("M480-240l160-160-56-56-64 64v-168h-80v168l-64-64-56 56 160 160Z" + ARCH_BOX);
+const icUnarchive = () => icSym("M440-240h80v-168l64 64 56-56-160-160-160 160 56 56 64-64v168Z" + ARCH_BOX);
 const $ = s => document.querySelector(s);
 const esc = s =>
   String(s ?? "").replace(
@@ -185,16 +202,18 @@ const LOCAL_SYM = {
   VES: "Bs.S",
   XCG: "Cg.",
 };
-/* f's text for v, with LOCAL_SYM's sign in place of a bare code (f.sym, set in money()) */
+/* f's text for v, with LOCAL_SYM's sign in place of a bare code (f.sym, set in money()); a negative amount's minus is
+   the true one, "−", kept on the amount's line (a word joiner), as signed() writes it */
 const fmtSym = (f, v) =>
-  f.sym
+  f.sym || v < 0
     ? f
         .formatToParts(v)
-        .map(p => (p.type === "currency" ? f.sym : p.value))
+        .map(p => (p.type === "currency" && f.sym ? f.sym : p.type === "minusSign" ? "−\u2060" : p.value))
         .join("")
     : f.format(v);
 /* formatters are slow to build and money() runs for every row, so each kind is built once */
 const NF = new Map();
+/* short: the narrow sign and, from 1,000 up, no cents (Home's ring) */
 function money(n, cur, short) {
   cur = cur || S.settings.cur;
   const big = !!short && Math.abs(n) >= 1000,
@@ -234,6 +253,18 @@ function shown(n, cur) {
   money(0, cur);
   const f = NF.get(cur || S.settings.cur);
   return f ? toDp(n, f.dp) : rnd(n);
+}
+/* an amount put into a field (a form for an entry already saved, an amount worked out): the currency's own decimals
+   ("4167.50" for 4167.5 dollars, "4167" for yen), more when the amount has more (kept to 3), in the canonical form the
+   field groups when the sheet opens */
+function amtPre(n, cur) {
+  if (n == null || n === "") return "";
+  const v = rnd(n);
+  money(0, cur);
+  const f = NF.get(cur || S.settings.cur),
+    dp = f ? Math.round(Math.log10(f.dp)) : 0,
+    own = (String(v).split(".")[1] || "").length;
+  return f ? v.toFixed(Math.max(dp, own)) : String(v);
 }
 /* "+$5.00" / "−$5.00": the sign of what's shown, so a rounded-away amount has none, where the phone's language puts it
    (€ −5,00 in Dutch, beside the number in Arabic), as a true minus or a plus, kept on the amount's line (a word joiner) */
@@ -298,15 +329,26 @@ function dayLabel(d) {
   }
   return isNaN(x) ? "" : DAY_DTF[y].format(x); // no date (an open loan without a due day): nothing to write
 }
+/* a day in full, with its year whichever it is: "Sun, Jun 14, 2026" */
+let FULL_DTF = null,
+  FULL_KEY = "";
+function dayFull(d) {
+  const x = parseISO(d);
+  if (isNaN(x)) return "";
+  if (FULL_KEY !== String(DATE_LOC)) {
+    FULL_KEY = String(DATE_LOC);
+    FULL_DTF = new Intl.DateTimeFormat(DATE_LOC, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  return FULL_DTF.format(x);
+}
 /* a day's name: Today, Yesterday, else "Mon, 15 Jun" */
 const dayName = d => (d === today() ? T("day.today") : d === addDays(today(), -1) ? T("day.yesterday") : dayLabel(d));
-/* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one);
-   months: whole months ("Apr – Sep") */
-function rangeLabel(a, b, months) {
+/* a date range the phone's way: "3 – 9 Jun", "Jun 3 – 9", "28 May – 3 Jun 2025" (the year when it isn't this one) */
+function rangeLabel(a, b) {
   const s = parseISO(a),
     e = parseISO(b),
     y = new Date().getFullYear(),
-    o = months ? { month: "short" } : { day: "numeric", month: "short" };
+    o = { day: "numeric", month: "short" };
   if (s.getFullYear() !== y || e.getFullYear() !== y) o.year = "numeric";
   try {
     return new Intl.DateTimeFormat(DATE_LOC, o).formatRange(s, e);
@@ -522,6 +564,9 @@ function shortDay(d) {
   if (x.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
   return x.toLocaleDateString(DATE_LOC, o);
 }
+/* the time of day of timestamp ts (when an entry was written down), on the clock Settings → Region chose */
+const clockTime = ts =>
+  new Date(ts).toLocaleTimeString(DATE_LOC, { hour: "numeric", minute: "2-digit", hour12: S.settings.clock === "12" });
 /* ISO dates (YYYY-MM-DD) sort as plain strings; localeCompare runs ICU collation on every comparison */
 const cmpDay = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 /* oldest first: by day, then by when written (the order balances add entries up in) */
