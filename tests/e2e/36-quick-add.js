@@ -132,7 +132,7 @@ const ok = (c, m) => {
       txSheet(null, "income");
       $("#f-amt").value = "50";
     });
-    await page.click("#f-catchip"); // money in has the same category chip as spending: the grid opens from it
+    // money in opens on its categories, as spending does
     await page.click('#sheet .catgrid [data-act="f-cat-new"]');
     ok((await page.getAttribute("#f-cname", "placeholder")) === "e.g. Freelance, Refunds", "money in: its own example");
     await page.fill("#f-cname", "Freelance");
@@ -293,8 +293,20 @@ const ok = (c, m) => {
   // ---- design round, task 9: forms and small marks
   {
     const { ctx, page } = await open();
-    // Received uses Spent's category control: the chip (Income ▾) opens the grid; picking closes it and says the pick
+    // Received uses Spent's category control: it opens on the grid with nothing picked; a pick closes it and shows on
+    // the chip, with "Received from" beside it; the chip opens the grid again
     await page.evaluate(() => txSheet(null, "income"));
+    const r0 = await page.evaluate(() => ({
+      gridHidden: $("#f-catgrid").hidden,
+      rowHidden: $("#f-catrow").hidden,
+      picked: document.querySelectorAll('#f-catgrid [aria-pressed="true"]').length,
+      cat: F.cat,
+    }));
+    ok(
+      !r0.gridHidden && r0.rowHidden && !r0.picked && !r0.cat,
+      "Received opens as Spent: the categories, none picked " + JSON.stringify(r0)
+    );
+    await page.click('#f-catgrid [data-act="f-cat"][data-v="income"]');
     const r = await page.evaluate(() => ({
       chip: $("#f-catchip").textContent.trim(),
       expanded: $("#f-catchip").getAttribute("aria-expanded"),
@@ -304,7 +316,7 @@ const ok = (c, m) => {
     }));
     ok(
       r.chip === "Income" && r.gridHidden && r.expanded === "false",
-      "Received: the chip says Income, the grid is closed"
+      "Received: the pick shows on the chip, the grid closes"
     );
     ok(r.payee === "Received from" && r.payeeInRow, "Received: 'Received from' sits next to the chip");
     await page.click("#f-catchip");

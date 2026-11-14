@@ -498,6 +498,7 @@
   "entry": {
     "gone": "Ese movimiento ya se había eliminado",
     "whatFor": "¿Para qué fue?",
+    "whatIn": "¿Qué fue?",
     "paidTo": "Pagado a",
     "receivedFrom": "Recibido de",
     "notePh": "Nota (opcional)",

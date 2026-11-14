@@ -109,13 +109,13 @@ const ok = (c, m) => {
     ok(box.t >= chip.b - 1, "on a narrow screen with large text Paid to goes below the category");
     await page.evaluate(() => {
       closeSheet();
-      txSheet(null, "income");
+      txSheet(null, "income", "income");
     });
-    const grid = await rect(page, "#sheet .catgrid"),
+    const inChip = await rect(page, "#f-catchip"),
       inBox = await rect(page, "#f-payee");
     ok(
-      inBox.t >= grid.b && (await page.getAttribute("#f-payee", "placeholder")) === "Received from",
-      "money in: Received from under the categories"
+      inBox.t >= inChip.b - 1 && (await page.getAttribute("#f-payee", "placeholder")) === "Received from",
+      "money in, as Spent: Received from below the category on a narrow screen"
     );
     await ctx.close();
   }

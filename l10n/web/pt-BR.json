@@ -498,6 +498,7 @@
   "entry": {
     "gone": "Esse lançamento foi excluído",
     "whatFor": "Foi com o quê?",
+    "whatIn": "O que foi?",
     "paidTo": "Pago a",
     "receivedFrom": "Recebido de",
     "notePh": "Nota (opcional)",

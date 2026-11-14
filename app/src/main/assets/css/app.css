@@ -1296,6 +1296,13 @@ html[dir="rtl"] .strip.fade {
   width: 18px;
   height: 18px;
 }
+/* the transfer's swap button between From and To: its icon sits midway between the From chips and the To label's
+   letters (the label's line box leaves a little room above them), in rem so it stays there at large text */
+.trswap {
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0 -0.75rem;
+}
 .lbl {
   font-size: 0.8rem;
   font-weight: 600;
