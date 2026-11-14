@@ -5,6 +5,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.1] — 2026-11-14
+
+### Changed
+
+- A new Received entry opens on its categories with none picked, as Spent does, under "What was it?"; it no longer
+  starts with Salary.
+
+### Fixed
+
+- The swap button between From and To in a transfer sits midway between them.
+
 ## [1.5.0] — 2026-11-14
 
 ### Added
@@ -623,6 +634,7 @@ First public release.
 - The Onest font is bundled with the app instead of loaded from Google Fonts, so it looks the same offline.
 - Test builds install as a separate app, "Tally Dev", next to the release.
 
+[1.5.1]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.5.1
 [1.5.0]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.5.0
 [1.4.4]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.4
 [1.4.3]: https://github.com/IamAndelib/Tally-android/releases/tag/v1.4.3

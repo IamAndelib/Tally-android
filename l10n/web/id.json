@@ -492,6 +492,7 @@
   "entry": {
     "gone": "Transaksi itu sudah dihapus",
     "whatFor": "Untuk apa?",
+    "whatIn": "Pemasukan apa?",
     "paidTo": "Dibayar ke",
     "receivedFrom": "Diterima dari",
     "notePh": "Catatan (opsional)",

@@ -495,6 +495,7 @@
   "entry": {
     "gone": "Dieser Eintrag wurde gelöscht",
     "whatFor": "Wofür war es?",
+    "whatIn": "Was war es?",
     "paidTo": "Bezahlt an",
     "receivedFrom": "Erhalten von",
     "notePh": "Notiz (optional)",

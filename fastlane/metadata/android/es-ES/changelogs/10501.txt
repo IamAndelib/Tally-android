@@ -1,0 +1,2 @@
+- Un nuevo ingreso se abre con sus categorías, sin ninguna elegida, como un gasto.
+- El botón para intercambiar Desde y Hacia en una transferencia queda centrado.

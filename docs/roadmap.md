@@ -4,7 +4,8 @@
 - **1.5.0** · fixes, Year view, search, account colours and order, History's filters, all time and archive, charges
   and extras (data version 8), Summary's day pie and opened rows, polish (released 2026-11-14) ·
   docs/plans/2026-11-01-release-1.5.0.md, docs/plans/2026-11-13-release-review-fixes.md
-- **1.5.1**, a point release from what the 1.5.0 reviews found (fixes and under the hood; no new screens) · exit:
+- **1.5.1** · Received opens on its categories as Spent does; the transfer's swap icon centred (2026-11-14)
+- **1.5.2**, a point release from what the 1.5.0 reviews found (fixes and under the hood; no new screens) · exit:
   maintainer-tested on a phone
   - Reminders: a monthly reminder missed on its day (phone off, a battery saver) shows on the next open instead of a
     month later; a lend entered with an earlier date isn't reminded a minute after; a JUnit test for `monthlyDate`.

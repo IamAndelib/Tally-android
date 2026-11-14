@@ -410,7 +410,7 @@ const ok = (c, m) => {
     JSON.stringify(r.h) === '["corner cafe"]' && r.n === 0 && r.hp.join() === "mahin",
     "A16: payees kept apart from people: " + JSON.stringify(r)
   );
-  await p.evaluate(() => (closeSheet(), txSheet(null, "income")));
+  await p.evaluate(() => (closeSheet(), txSheet(null, "income", "income")));
   await p.fill("#f-payee", "co");
   ok((await p.$$("#f-payee-sug .nchip")).length === 0, "A16: hidden for money in too (the same payees)");
   // typing the full name is still possible and picking works

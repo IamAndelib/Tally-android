@@ -588,7 +588,7 @@ const ago = n => {
     assets: [],
   });
   await page.evaluate(() => {
-    txSheet(null, "income");
+    txSheet(null, "income", "income"); // Salary picked, so its ring shows
     $("#f-catchip").click(); // the grid opens from the chip, as on Spent
   });
   await settle();

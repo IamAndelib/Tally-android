@@ -1,0 +1,2 @@
+- Uma nova receita abre com as categorias, sem nenhuma escolhida, como um gasto.
+- O botão de trocar De e Para numa transferência fica centralizado.

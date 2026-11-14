@@ -1,0 +1,2 @@
+- Yeni bir gelir, harcamadaki gibi seçili kategori olmadan kategorileriyle açılır.
+- Transferde Nereden ile Nereye arasındaki değiştir düğmesi ortalandı.

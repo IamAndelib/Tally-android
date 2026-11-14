@@ -1,0 +1,2 @@
+- A new Received entry opens on its categories with none picked, as Spent does.
+- The swap button between From and To in a transfer is centred.

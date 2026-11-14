@@ -127,7 +127,17 @@ const ok = (c, m) => {
   // income sheet cycling
   await act("add-in");
   await tagSheet();
-  await sact("f-showcats"); // Received has Spent's category chip: the grid opens from it
+  /* Received opens as Spent does: its categories to pick from, none picked, under its own question */
+  ok(
+    (await page.isVisible("#f-catgrid")) &&
+      !(await page.isVisible("#f-catrow")) &&
+      !(await page.$('#f-catgrid [aria-pressed="true"]')) &&
+      (await page.textContent("#f-catlbl")).trim() === "What was it?",
+    "Received opens on its category grid with nothing picked"
+  );
+  await page.fill("#f-amt", "5");
+  await sact("tx-save");
+  ok(await page.isVisible("#f-catgrid"), "Received: save blocked without category");
   await sact("f-cat", "gift");
   await sact("f-showcats");
   await sact("f-cat", "income");
@@ -141,6 +151,19 @@ const ok = (c, m) => {
   await page.fill("#f-amt", "60");
   await sact("tr-to", S.accounts[2].id);
   ok(await page.isVisible("#f-toamt"), "received field shows for CAD→BDT");
+  /* the swap icon midway between the From chips and the To label's letters (their line box leaves a fifth above) */
+  const sw = await page.evaluate(() => {
+    const g = document.querySelector('#sheet [data-act="tr-swap"] svg').getBoundingClientRect(),
+      from = Math.max(
+        ...[...document.querySelectorAll('#sheet [data-act="tr-from"]')].map(c => c.getBoundingClientRect().bottom)
+      ),
+      r = document.createRange();
+    r.selectNodeContents(document.querySelectorAll("#sheet .lbl")[1]);
+    const t = r.getBoundingClientRect(),
+      mid = g.top + g.height / 2;
+    return [mid - from, t.top + t.height * 0.2 - mid];
+  });
+  ok(Math.abs(sw[0] - sw[1]) <= 2, "the swap icon sits midway between From and To " + JSON.stringify(sw));
   await sact("tr-swap");
   await sact("tr-swap");
   await sact("tr-to", S.accounts[1].id);

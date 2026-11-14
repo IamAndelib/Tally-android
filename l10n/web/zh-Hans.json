@@ -492,6 +492,7 @@
   "entry": {
     "gone": "这条记录已被删除",
     "whatFor": "属于哪一类？",
+    "whatIn": "属于哪一类？",
     "paidTo": "收款方",
     "receivedFrom": "付款方",
     "notePh": "备注（选填）",

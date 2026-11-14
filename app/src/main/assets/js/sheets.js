@@ -297,7 +297,7 @@ function txSheet(id, type, catId, draft) {
     kind: "tx",
     id,
     type,
-    cat: d ? d.cat : t ? t.cat : catId || (inc ? "income" : null),
+    cat: d ? d.cat : t ? t.cat : catId || null, // a new entry, spent or received, starts with its categories to pick from
     account: d ? d.account : t ? t.account : def,
   };
   const k = F.cat ? cat(F.cat) : null,
@@ -320,7 +320,7 @@ function txSheet(id, type, catId, draft) {
     '<div class="lbl" id="f-catlbl" style="margin-top:0"' +
     (k ? " hidden" : "") +
     ">" +
-    TH("entry.whatFor") +
+    TH(inc ? "entry.whatIn" : "entry.whatFor") +
     "</div>" +
     '<div class="catgrid" id="f-catgrid" style="margin-top:8px"' +
     (k ? " hidden" : "") +
@@ -693,7 +693,7 @@ function trSheet(id) {
     "</div>" +
     accChips("tr-from", F.from, null, list);
   h +=
-    '<div style="display:flex;justify-content:center;margin:4px 0 -8px"><button class="icon" data-act="tr-swap" aria-label="' +
+    '<div class="trswap"><button class="icon" data-act="tr-swap" aria-label="' +
     TH("transfer.swap") +
     '">' +
     ic("swapv") +
