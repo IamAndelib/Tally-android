@@ -680,8 +680,10 @@ function inspect() {
       states.push(label);
       if (probs.length) summary[tag + " " + label] = probs;
     };
+    let seededDay = ""; // the day the sample notebook is built around (its "today"), for screens shown later
     const seed = async nCats => {
       const t = await page.evaluate(() => today());
+      seededDay = t;
       const st = sampleState(t, nCats);
       await page.evaluate(st => {
         const extra = st.extraCats;
@@ -1448,8 +1450,13 @@ function inspect() {
         return out;
       });
     await shot("summary", async () => {
-      await page.evaluate(() => summarySheet());
-      /* Days: today as a pie, as Months */
+      /* Days: the notebook's day of spending as a pie, as Months (that day, not the clock's: a run that passes
+         midnight would open on an empty day) */
+      await page.evaluate(day => {
+        summarySheet();
+        SM.end = day;
+        smRender();
+      }, seededDay);
       const pie = await pieLook();
       if (pie.length) summary[tag + " summary-days pie"] = pie;
     });
