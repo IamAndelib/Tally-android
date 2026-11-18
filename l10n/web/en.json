@@ -81,7 +81,8 @@
     "deleteQ": "Delete this account?",
     "deleteBody": "It has no entries, so nothing else changes.",
     "deleted": "Account deleted",
-    "archivedSt": "Archived"
+    "archivedSt": "Archived",
+    "usedByPlan": "A repeating item uses this account: delete that in Plan first to delete the account."
   },
   "asset": {
     "fallbackName": "Asset",
@@ -709,6 +710,7 @@
   },
   "nav": {
     "home": "Home",
+    "plan": "Plan",
     "assets": "Assets",
     "liabs": "Liabilities"
   },

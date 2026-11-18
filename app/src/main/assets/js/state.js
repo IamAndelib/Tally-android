@@ -8,16 +8,8 @@
 const LS = "tally:v1";
 function blank() {
   return {
-    /* 7: entries may have a payee. 8: charges and extras (docs/specs/charges.md): an add-on that moves money is an
-       entry linked both ways to its entry (feeOf on it, feeId on the entry: a charge on a transfer, a loan payment or a
-       purchase, a tip on a lending's payment, a lend's transfer charge), what only changes what is owed is a draw's
-       onTop; a new notebook has no Fees category; an entry may be archived (`archived: true`: hidden from History,
-       nothing else, docs/specs/history-archive.md), and search may find archived entries (`settings.searchArch`,
-       set only when true). An older Tally restoring a backup warns it's newer (restoreText)
-       and drops what it doesn't know: saved again there, the file comes back without onTop, a purchase's charge as a
-       plain expense in its category, a lend's transfer charge as a second draw, with Fees and every entry shown; every
-       balance (and what is owed, apart from onTop) stays right. */
-    v: 8,
+    /* 7: entries may have a payee. 8: charges and extras (docs/specs/charges.md). 9: repeating items (S.repeats, txn.rep/due). */
+    v: 9,
     settings: {
       /* the main currency, chosen when the notebook starts ("" until then); weeks start on Monday (0 = Sunday) and
          times show as 24-hour (ISO 8601) until changed in Settings → Region */
@@ -40,6 +32,7 @@ function blank() {
     txns: [],
     loans: [],
     assets: [],
+    repeats: [],
   };
 }
 /* a note Tally wrote itself on a balance fix or a fee (1.4.1 and earlier wrote "Balance fix", "Transfer fee", "Payment
@@ -296,6 +289,11 @@ function migrate(o) {
           if (p.trim()) t.payee = p;
         }
       } else return null;
+      /* v7: an entry written for a repeating item names it and the due date it settles (checked once repeats are read) */
+      if (t0.rep && isDay(t0.due) && (t.type === "expense" || t.type === "income" || t.type === "transfer")) {
+        t.rep = sid(t0.rep);
+        t.due = day(t0.due);
+      }
       return t;
     })
     .filter(Boolean);
@@ -378,6 +376,53 @@ function migrate(o) {
       currency: curOf(x.currency),
     }));
   uniq(s.assets);
+  /* v7: repeating items (plan.js): what each occurrence prefills and when they fall; one on a missing account, or a
+     transfer to itself, is left out, and an entry pointing at a series that's gone keeps its money but not the link */
+  const okCat = new Set(s.cats.map(c => c.id)),
+    int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+  s.repeats = (Array.isArray(o.repeats) ? o.repeats : [])
+    .filter(q => q && q.id && ["expense", "income", "transfer"].includes(q.type) && okAcc.has(sid(q.account)))
+    .filter(q => okNum(q.amount) && +q.amount > 0 && isDay(q.first))
+    .map(q => {
+      const x = {
+        id: sid(q.id),
+        ts: stamp(q.ts),
+        type: q.type,
+        account: sid(q.account),
+        amount: +q.amount,
+        note: str(q.note).slice(0, 80),
+        name: str(q.name).slice(0, 40),
+        every: int(q.every, 1, 99) ? q.every : 1,
+        unit: ["d", "w", "m", "y"].includes(q.unit) ? q.unit : "m",
+        first: day(q.first),
+        last: q.last === true,
+        skip: [...new Set((Array.isArray(q.skip) ? q.skip : []).filter(isDay).map(day))],
+        off: q.off === true,
+      };
+      if (isDay(q.until)) x.until = day(q.until);
+      if (isDay(q.from)) x.from = day(q.from); // resumed after a pause: what fell due before isn't owed
+      if (int(q.times, 1, 9999)) x.times = q.times;
+      if (q.type === "transfer") {
+        x.to = sid(q.to);
+        if (!okAcc.has(x.to) || x.to === x.account) return null;
+        if (okNum(q.toAmount) && +q.toAmount > 0) x.toAmount = +q.toAmount;
+      } else {
+        const c = sid(q.cat);
+        x.cat = okCat.has(c) ? c : q.type === "income" ? "otherin" : "other";
+        const p = str(q.payee).trim();
+        if (p) x.payee = p;
+      }
+      return x;
+    })
+    .filter(Boolean);
+  uniq(s.repeats);
+  const okRep = new Set(s.repeats.map(q => q.id));
+  s.txns.forEach(t => {
+    if (t.rep && !okRep.has(t.rep)) {
+      delete t.rep;
+      delete t.due;
+    }
+  });
   return s;
 }
 let S = blank();
@@ -784,7 +829,13 @@ const mainFirst = (a, b) => (a === S.settings.cur ? -1 : b === S.settings.cur ? 
 function withUndo(msg, change, fx, after) {
   applyNativeActions(); // a +1 day tapped meanwhile goes in first, so this Undo can't take it back
   const copy = list => list.map(x => ({ ...x })), // flat objects: a deep copy
-    before = { txns: copy(S.txns), loans: copy(S.loans), accounts: copy(S.accounts), assets: copy(S.assets) },
+    before = {
+      txns: copy(S.txns),
+      loans: copy(S.loans),
+      accounts: copy(S.accounts),
+      assets: copy(S.assets),
+      repeats: S.repeats.map(r => ({ ...r, skip: [...(r.skip || [])] })),
+    },
     row = fx && fx.row,
     drawn = () => !!$("#app").querySelector('.tx.en[data-v="' + CSS.escape(row) + '"]'),
     hist = V.screen === "history",
@@ -841,19 +892,22 @@ function tryChange(change) {
 function guardOverdraw(mutate, date, proceed) {
   const b0 = balances(),
     d0 = balances(addDays(date, 1)),
-    txs = S.txns,
-    L = S.loans;
+    txns = S.txns,
+    L = S.loans,
+    R = S.repeats;
   let b1, d1;
   /* entries and loans are flat objects: copying each is a deep copy, ~10x quicker than a JSON round trip */
-  S.txns = txs.map(t => ({ ...t }));
+  S.txns = txns.map(t => ({ ...t }));
   S.loans = L.map(l => ({ ...l }));
+  S.repeats = R.map(r => ({ ...r, skip: [...(r.skip || [])] })); // the trial may start a repeating item too (a new entry's Repeat)
   try {
     mutate();
     b1 = balances();
     d1 = balances(addDays(date, 1));
   } finally {
-    S.txns = txs;
+    S.txns = txns;
     S.loans = L;
+    S.repeats = R;
   }
   const low = (n, o) => n < -0.0005 && n < o - 0.0005;
   const bad = S.accounts.find(a => a.type !== "card" && (low(b1[a.id], b0[a.id]) || low(d1[a.id], d0[a.id])));

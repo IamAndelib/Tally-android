@@ -92,6 +92,7 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
 | `js/loans.js` | loans and lendings |
 | `js/sheets.js` | entry, transfer, balance-fix, account, category and asset forms, the entries sheet, the charge and extra card, name suggestions |
 | `js/summary.js` | the spending summary |
+| `js/plan.js` | the Plan tab: repeating items, what's due (`upcoming()`), recording one |
 | `js/screens.js` | `render()`; the Home, Assets, Liabilities and Settings screens; the rows they share (`txLine`, `txOpenView`, `dayList`, `dayGroups`); the fitting helpers (`fitFigures`, `fitWrapped`) |
 | `js/history.js` | History: its filters and kinds, the screen (period chip, Filters, months in chunks), the Filters sheet, the Archived screen, selection, and the pinned headings (Settings' too) |
 | `js/search.js` | Search, a mode of History: word, payee and amount filters, the field, suggestions, marks, recents |
@@ -103,7 +104,7 @@ tools/gen_i18n.py         regenerates js/i18n/ from l10n/web/
 ### The data
 
 All data is one object, `S`, saved as JSON in `localStorage` under `tally:v1`:
-`{v, settings, accounts, types, cats, txns, loans, assets}`. Each save is numbered (`tally:v1:seq`) and also kept by
+`{v, settings, accounts, types, cats, txns, loans, assets, repeats}`. Each save is numbered (`tally:v1:seq`) and also kept by
 the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (see `save()` in `js/state.js`).
 
 - An **entry** (`txns`) is `{id, ts, date: "YYYY-MM-DD", type, amount, account, note}` where `type` is `expense` /
@@ -130,6 +131,13 @@ the Android shell (`SavedCopy.java`); start-up loads whichever copy is newer (se
 - CSV (`exportCsv()` in `js/backup.js`): one line per entry in the same columns. A transfer's charge is
   `transfer-fee`, a loan payment's `loan-fee`, a purchase's `expense-fee`, a lend's transfer charge `lend-fee`, a
   tip `loan-extra`; an amount on top gets its own line after its draw: `lend-extra`, `borrow-fee`.
+- A **repeating item** (`repeats`) is what each occurrence prefills (`type`, `account`, `to`, `cat`, `payee`, `amount`, `note`)
+  and when they fall: `first`, `every` + `unit` (`d` / `w` / `m` / `y`), `last` (a month's last day), and an optional
+  end (`until` or `times`). Occurrence *k* is always worked out from `first` (`repDate()`), never from the one before.
+  An entry written for one carries `rep` and `due` (the occurrence it settles); what is open, overdue or next is derived
+  by `repInfo()` from those entries and the skipped dates (`skip`), never stored. Tally never writes an entry by
+  itself: Record opens the usual form, filled in.
+>>>>>>> 7bf0171 (Plan tab: repeating items and what's due (first dev build))
 - Balances are never stored either: `balances()` adds every entry to each account's opening balance.
 - A built-in category keeps its English default `name` until the user renames it; `catName()` shows such a name in
   Tally's language. Stored text is never translated.

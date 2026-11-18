@@ -133,7 +133,7 @@ function drawThrough(root, id) {
 }
 function drawScreen() {
   const app = $("#app");
-  RBC = LPC = null;
+  RBC = LPC = REPC = null;
   if (V.screen !== drawnScreen || V.sel || (V.open && !entry(V.open))) V.open = ""; // an opened row: that screen, that entry
   if (!histLike()) {
     V.sel = null;
@@ -143,7 +143,7 @@ function drawScreen() {
     HF = histBlank();
     histUnwatch();
   }
-  const tabs = ["home", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
+  const tabs = ["home", "plan", "assets", "liabs"].includes(V.screen) && S.accounts.length > 0; // archived ones too
   const land = phoneLand();
   document.body.classList.toggle("hasnav", tabs);
   document.body.classList.toggle("land", land);
@@ -168,6 +168,7 @@ function drawScreen() {
     histWatch();
   } else if (V.screen === "assets") app.innerHTML = assetsView();
   else if (V.screen === "liabs") app.innerHTML = liabsView();
+  else if (V.screen === "plan") app.innerHTML = planView();
   else if (V.screen === "settings") {
     app.innerHTML = settingsView();
     fitWeekSeg();
@@ -186,6 +187,7 @@ function drawScreen() {
     ? '<div class="in">' +
       [
         ["home", "home"],
+        ["plan", "event"],
         ["assets", "wallet"],
         ["liabs", "card"],
       ]
@@ -319,6 +321,7 @@ function homeView() {
       '">' +
       ic("add") +
       "</button></div>";
+  side += planLine(); // something due today or tomorrow: one line, to Plan
   /* one column: the balances (or the balance card) above the ring; two panes: beside it, with the period's entries */
   if (!wide) h += side;
   else {
@@ -884,6 +887,9 @@ function txLine(t) {
   HLW = null;
   const opened = isOpen ? txOpenView(t) : "";
   HLW = hw;
+  /* written for a repeating item: a small mark, named for screen readers */
+  if (t.rep && rep(t.rep))
+    sub = '<span class="repmark">' + ic("event") + '<span class="vh">Repeating. </span></span>' + sub;
   /* an archived entry that search lists (Settings → History): its second line starts with the archive box and the word
      "Archived", so it is said, not only seen (docs/specs/history-archive.md, C) */
   if (marked) sub = '<span class="tarch">' + icArchive() + TH("archive.mark") + "</span> \u00b7 " + sub;

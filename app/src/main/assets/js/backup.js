@@ -123,7 +123,7 @@ function restorePlan(t) {
   /* what will really be restored: an entry, account, loan or asset that can't be read (or on a missing account) is
      left out, and said so */
   const had = k => (Array.isArray(o[k]) ? o[k].length - n[k].length : 0),
-    lost = had("txns") + had("accounts") + had("loans") + had("assets"),
+    lost = had("txns") + had("accounts") + had("loans") + had("assets") + had("repeats"),
     newer = typeof o.v === "number" && o.v > blank().v;
   return {
     n,

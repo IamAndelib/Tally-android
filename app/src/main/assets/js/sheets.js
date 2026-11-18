@@ -258,9 +258,10 @@ function pickPayee(name) {
   $("#f-payee-sug").hidden = true;
 }
 /* draft: the form as it was before Add category / Add account (txQuickAdd), filled back in over everything else.
+   pre (a new entry made for a repeating item's due payment): {amount, cur, account, date, note, payee, link: {rep, due}}.
    Spent has "+ Add a charge" and its card under the account chips (docs/specs/charges.md, "The buttons"), open from
    the start for a purchase that has one; Received has none. */
-function txSheet(id, type, catId, draft) {
+function txSheet(id, type, catId, draft, pre) {
   if (!id && !activeAccounts().length) {
     snack(T("account.addFirst"));
     accForm(null, () => txSheet(id, type, catId));
@@ -298,14 +299,16 @@ function txSheet(id, type, catId, draft) {
     id,
     type,
     cat: d ? d.cat : t ? t.cat : catId || null, // a new entry, spent or received, starts with its categories to pick from
-    account: d ? d.account : t ? t.account : def,
+    account: d ? d.account : t ? t.account : pre ? pre.account : def,
+    pre,
+    rep: null,
   };
   const k = F.cat ? cat(F.cat) : null,
     a = acc(F.account),
     fee = inc ? null : addOnOf(t);
   let list = inc ? inCats() : outCats();
   if (k && !list.includes(k)) list = list.concat([k]);
-  const payee = (d ? d.payee : t ? t.payee : "") || "";
+  const payee = (d ? d.payee : t ? t.payee : pre ? pre.payee : "") || "";
   let h = "";
   h +=
     /* the picked category and who was paid, side by side (the box wraps below when the row is too narrow) */
@@ -327,12 +330,23 @@ function txSheet(id, type, catId, draft) {
     ">" +
     catBtns(list, F.cat) +
     "</div>";
-  h += amtField("f-amt", a ? a.currency : "", t ? amtPre(t.amount, a && a.currency) : "", { curId: "amt-cur" });
+  h += amtField(
+    "f-amt",
+    a ? a.currency : "",
+    t ? amtPre(t.amount, a && a.currency) : pre ? amtPre(pre.amount, a && a.currency) : "",
+    { curId: "amt-cur" }
+  );
   h +=
     '<div class="lbl">' +
     TH("common.account") +
     "</div>" +
-    accChips("f-acc", F.account, null, accChoices(F.account), "f-acc-new");
+    accChips(
+      "f-acc",
+      F.account,
+      null,
+      accChoices(F.account).filter(x => !pre || !pre.cur || x.currency === pre.cur),
+      "f-acc-new"
+    );
   /* the purchase's charge (the preview is in its card only: none while nothing is added) */
   if (!inc)
     h += addOnCard(
@@ -349,15 +363,16 @@ function txSheet(id, type, catId, draft) {
     '<div class="row notedate"><input id="f-note" placeholder="' +
     TH("entry.notePh") +
     '" maxlength="80" value="' +
-    esc(d ? d.note : t ? t.note : "") +
+    esc(d ? d.note : t ? t.note : pre ? pre.note : "") +
     '" aria-label="' +
     TH("common.note") +
     '"><div class="nd-date">' +
-    dateField("f-date", d ? (d.now ? entryDate() : d.date) : t ? t.date : entryDate(), {
+    dateField("f-date", d ? (d.now ? entryDate() : d.date) : t ? t.date : pre ? pre.date : entryDate(), {
       max: today(),
-      now: d ? d.now : !t,
+      now: d ? d.now : !t && !pre,
     }) +
     "</div></div>";
+  if (!id && !pre) h += repToggle();
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tx-save">' +
     ic("check") +
@@ -673,8 +688,9 @@ function formPreview() {
   else if (F && F.kind === "loanf") loanFormPreview();
   else if (F && F.kind === "tx") txPreview();
 }
-/* transfer between own accounts, with optional fee */
-function trSheet(id) {
+/* transfer between own accounts, with optional fee; pre fills a new one in (a repeating transfer that's due):
+   {account, to, amount, toAmount, date, note, link} */
+function trSheet(id, pre) {
   const act = activeAccounts();
   if (!id && act.length < 2) {
     snack(T("transfer.needTwo"));
@@ -683,9 +699,9 @@ function trSheet(id) {
   }
   const t = id ? entry(id) : null;
   const fee = addOnOf(t);
-  const f = t ? t.account : (act[0] || {}).id;
-  const to = t ? t.to : (act.find(a => a.id !== f) || {}).id;
-  F = { kind: "tr", id, from: f, to };
+  const f = t ? t.account : pre ? pre.account : (act[0] || {}).id;
+  const to = t ? t.to : pre ? pre.to : (act.find(a => a.id !== f) || {}).id;
+  F = { kind: "tr", id, from: f, to, pre, rep: null };
   const list = accChoices(f, to);
   let h =
     '<div class="lbl" style="margin-top:4px">' +
@@ -699,13 +715,14 @@ function trSheet(id) {
     ic("swapv") +
     "</button></div>";
   h += '<div class="lbl">' + TH("transfer.to") + "</div>" + accChips("tr-to", F.to, F.from, list);
-  h += amtField("f-amt", "", t ? amtPre(t.amount, (acc(t.account) || {}).currency) : "", {
+  h += amtField("f-amt", "", t ? amtPre(t.amount, (acc(t.account) || {}).currency) : pre ? amtPre(pre.amount, (acc(pre.account) || {}).currency) : "", {
     curId: "tr-cur",
     label: T("transfer.sent"),
   });
+  const got = t ? t.toAmount : pre ? pre.toAmount : null;
   h +=
     '<label class="field" id="recv-wrap" hidden><span id="recv-lbl"></span><input id="f-toamt" inputmode="decimal" autocomplete="off" placeholder="0" value="' +
-    esc(t && t.toAmount != null ? amtPre(t.toAmount, (acc(t.to) || {}).currency) : "") +
+    esc(got != null ? amtPre(got, (acc(F.to) || {}).currency) : "") +
     '"></label>';
   /* the preview under the amount (and what arrived), then "+ Transfer charge" and its card, which takes the preview */
   h += addOnLine();
@@ -717,12 +734,13 @@ function trSheet(id) {
     '<div class="row notedate"><input id="f-note" placeholder="' +
     TH("entry.notePh") +
     '" maxlength="80" value="' +
-    esc(t ? t.note : "") +
+    esc(t ? t.note : pre ? pre.note : "") +
     '" aria-label="' +
     TH("common.note") +
     '"><div class="nd-date">' +
-    dateField("f-date", t ? t.date : entryDate(), { max: today(), now: !t }) +
+    dateField("f-date", t ? t.date : pre ? pre.date : entryDate(), { max: today(), now: !t && !pre }) +
     "</div></div>";
+  if (!id && !pre) h += repToggle();
   h +=
     '<div class="gap"></div><div class="gap"></div><button class="btn" data-act="tr-save">' +
     ic("check") +
@@ -968,8 +986,11 @@ function accForm(id, then) {
     TH(id ? "common.save" : "account.add") +
     "</button>";
   if (id) {
-    if (!used)
-      h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">' + TH("account.delete") + "</button>";
+    if (!used) {
+      if (S.repeats.some(r => r.account === id || r.to === id))
+        h += '<p class="hint">' + TH("account.usedByPlan") + "</p>";
+      else h += '<div class="gap"></div><button class="btn danger" data-act="acc-del">' + TH("account.delete") + "</button>";
+    }
   }
   openSheet(T(id ? "account.edit" : "account.new"), h);
 }
@@ -1021,7 +1042,7 @@ function saveAccount() {
 /* only accounts without entries can be deleted (deleting would change other balances through transfers); the rest are archived */
 function deleteAccount() {
   const id = F.id;
-  if (S.txns.some(t => t.account === id || t.to === id)) return;
+  if (S.txns.some(t => t.account === id || t.to === id) || S.repeats.some(r => r.account === id || r.to === id)) return;
   askDialog(
     T("account.deleteQ"),
     T("account.deleteBody"),
@@ -1095,7 +1116,9 @@ function removeCat() {
     snack(T("category.keepOne"));
     return;
   }
-  if (CATS.some(d => d.id === c.id) || S.txns.some(t => t.cat === c.id)) c.hidden = true;
+  /* still in use (an entry or a repeating item): hidden, never deleted, so nothing loses its category */
+  if (CATS.some(d => d.id === c.id) || S.txns.some(t => t.cat === c.id) || S.repeats.some(r => r.cat === c.id))
+    c.hidden = true;
   else S.cats = S.cats.filter(x => x !== c);
   closeSheet();
   commit();
@@ -1161,7 +1184,10 @@ function saveTx() {
   if (payee) t.payee = payee;
   const id = F.id,
     nid = newId(),
-    ts = Date.now();
+    ts = Date.now(),
+    pre = F.pre || {},
+    series = repFromEntry(t); // the form's Repeat: this entry starts a repeating item
+  const link = pre.link || (series ? { rep: series.id, due: t.date } : {});
   /* the entry, then a purchase's charge (its account, day and category; false when it is refused) */
   const mutate = id
     ? () => {
@@ -1171,7 +1197,9 @@ function saveTx() {
         return inc || setAddOn(old, "charge", fee);
       }
     : () => {
-        const n = Object.assign({ id: nid, ts }, t);
+        if (pre.also) pre.also();
+        if (series) S.repeats.push(series);
+        const n = Object.assign({ id: nid, ts }, t, link);
         S.txns.push(n);
         return inc || setAddOn(n, "charge", fee);
       };
@@ -1236,11 +1264,26 @@ function saveTr() {
     date = v.date,
     note = (v.note || "").trim(),
     nid = newId(),
-    ts = Date.now();
+    ts = Date.now(),
+    link = (F.pre || {}).link,
+    series = repFromEntry({
+      type: "transfer",
+      account: from,
+      to,
+      amount: amt,
+      toAmount: diff ? got : null,
+      date,
+      note,
+    });
   const mutate = () => {
     let t = id ? entry(id) : null;
     if (!t) {
       t = { id: nid, ts };
+      if (link) Object.assign(t, link);
+      else if (series) {
+        S.repeats.push(series);
+        Object.assign(t, { rep: series.id, due: date });
+      }
       S.txns.push(t);
     }
     Object.assign(t, { type: "transfer", amount: amt, account: from, to, date, note });
