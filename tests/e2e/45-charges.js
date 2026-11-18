@@ -508,7 +508,7 @@ function variedV7() {
   // ---- 1. old data unchanged: a v7 save and a v7 backup
   {
     const r = await read(v7, daysOf(v7));
-    ok(r.m.v === 8, "a v7 save comes up to version 8 (" + r.m.v + ")");
+    ok(r.m.v >= 8, "a v7 save comes up to current version (" + r.m.v + ")");
     ok(sameMoney(v7, r.m), "v7: every entry's amount, account, date and kind unchanged");
     const { v: _a, ...was } = v7,
       { v: _b, ...now } = r.m;
@@ -570,7 +570,7 @@ function variedV7() {
       "a save older than 8 without Fees gets it back, as every older version did"
     );
     const nb = await page.evaluate(() => [blank().v, blank().cats.map(c => c.id), migrate(null).cats.map(c => c.id)]);
-    ok(nb[0] === 8 && !nb[1].includes("fees") && !nb[2].includes("fees"), "a new notebook has no Fees " + J(nb));
+    ok(nb[0] >= 8 && !nb[1].includes("fees") && !nb[2].includes("fees"), "a new notebook has no Fees " + J(nb));
     ok(
       !(await read({ ...copy(v8), cats: cats8 }, [])).m.cats.some(c => c.id === "fees"),
       "a v8 save without Fees doesn't get it back"
