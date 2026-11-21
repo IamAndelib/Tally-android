@@ -231,6 +231,9 @@ screenshots, the feature graphic and `docs/social-preview.png` from the app itse
 `tests/media.js`; the social preview is then uploaded by hand in the repository's **Settings → General → Social
 preview**.
 
+Keep the screenshots' file names (`1-home.png` …): F-Droid never deletes a screenshot it was given, so a renamed or
+dropped file stays on Tally's F-Droid page with the old interface. Change what a name shows instead.
+
 ## Reporting bugs
 
 Open an issue with what you did, what you expected and what happened, your Android version and the app version
