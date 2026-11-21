@@ -5,7 +5,7 @@
 <h1 align="center">Tally</h1>
 
 <p align="center">
-  <b>A pocket notebook for your money.</b> One tap per expense, every account in its own currency, all on your phone.
+  <b>A pocket notebook for your money.</b><br>One tap per expense, every currency, nothing leaves your phone.
 </p>
 
 <p align="center">
@@ -20,19 +20,79 @@
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
-Tally works like a paper notebook: each morning the balance of every money source sits at the top of the page, spending
-is written down through the day by category and account, and the balances roll over to the next day. It's built to be
-small, calm and fast — no budgets, no charts you have to study, no sign-up.
+Tally works like a paper notebook: your balances sit at the top of the page, each expense is written down with one
+tap, and the balances roll over to the next day. Small, calm and fast: no budgets to set up, no charts to study, no
+sign-up.
 
-## Highlights
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="200" alt="Home">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="200" alt="Writing down an expense">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="200" alt="History">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="200" alt="Spending summary">
+</p>
 
-| | | |
-|:-:|:-:|:-:|
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee, category and account |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week, month or year, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Received"><br>**Received**: with who it came from |  |
+## Why Tally
+
+- **One tap per expense.** Pick a category, type the amount, save. A calculator is built into every amount field.
+- **Every account, every currency.** Bank, cash, mobile wallet, credit card or savings, each in its own currency.
+- **Loans and lendings.** Who owes what, partial payments, due dates and reminders.
+- **Find anything.** Search and filter your history by payee, category, account, amount or month, and see where the
+  money went by day, week, month or year.
+- **Nothing leaves your phone.** No account, no ads, no tracking: Tally doesn't even have the internet permission.
+- **Your data stays yours.** Daily auto backup to a folder you pick, restore, CSV export and Undo for every change.
+
+Also: a home-screen widget, reminders, Material You colours, light and dark themes, tablets and foldables, and nine
+languages.
+
+## Install
+
+**From F-Droid** (recommended): [get Tally on F-Droid](https://f-droid.org/packages/app.tally.expenses) with the
+F-Droid app, which brings every update by itself.
+
+**From GitHub:**
+
+1. On your phone, open the [latest release](https://github.com/IamAndelib/Tally-android/releases/latest) and download
+   `Tally-vX.Y.Z.apk`.
+2. Open the file. If Android asks, allow your browser or file manager to *install unknown apps*.
+3. Open Tally, add the places your money lives with what each holds right now, and you're set.
+
+**With Obtainium:** add `https://github.com/IamAndelib/Tally-android` to get each GitHub release as an update.
+
+All three are the same APK with the same signature, so any one updates the other and keeps your data.
+
+<details>
+<summary>Verify your download (optional)</summary>
+
+Every release lists the APK's SHA-256 next to it (`Tally-vX.Y.Z.apk.sha256`). Release APKs are signed with this
+certificate — Android will also refuse an update that isn't:
+
+```
+SHA-256: 9D:B8:C8:9C:59:48:0E:D9:C6:73:D9:B9:6E:C3:F0:82:B2:83:6B:1C:ED:0E:07:A7:DD:41:8B:D1:8D:2F:AC:88
+```
+
+Check it with `apksigner verify --print-certs Tally-vX.Y.Z.apk` (Android SDK build-tools).
+</details>
+
+<details>
+<summary>Coming from a test build?</summary>
+
+Builds from before 1.0.0 were signed with a different key, so Android won't update them to a release. Move your data
+once: in the old app, **Settings → Backup**, uninstall it, install the release, then **Settings → Restore from backup**.
+Test builds from now on install as a separate app, *Tally Dev*.
+</details>
+
+## Support Tally
+
+Tally is made by one person in their free time. It's free, with no ads and nothing to sign up for, and it will stay
+that way. If it helps you, you can support it on [Ko-fi](https://ko-fi.com/iamandelib). **Settings → About → Buy me a
+coffee** opens the same page in your browser; Tally itself still sends nothing anywhere.
+
+Starring the repository, reporting bugs and helping with [translations](CONTRIBUTING.md#translations) also help.
 
 ## Features
+
+<details>
+<summary>Everything Tally does</summary>
 
 **Everyday**
 
@@ -114,7 +174,44 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
   uninstalled.
 - **Undo** for every change.
 
+| | | |
+|:-:|:-:|:-:|
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1-home.png" width="230" alt="Home"><br>**Home**: today's spending around the donut, every balance on top | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2-add.png" width="230" alt="Writing down an expense"><br>**One tap per expense**: category, who you paid, a calculator | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3-history.png" width="230" alt="History"><br>**History**: every entry with its payee, category and account |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4-summary.png" width="230" alt="Spending summary"><br>**Spending summary**: by day, week, month or year, per category | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5-assets.png" width="230" alt="Assets"><br>**Assets**: net worth per currency, and money owed to you | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6-loan.png" width="230" alt="A loan"><br>**Loans**: what's left, due dates and payments |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7-home-dark.png" width="230" alt="Home in the dark theme"><br>**Dark theme**: and your wallpaper's colours on Android 12+ | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8-income-dark.png" width="230" alt="Received"><br>**Received**: with who it came from |  |
+
+</details>
+
+## Privacy
+
+Your data is stored only inside the app on your phone. Tally has no servers and sends nothing anywhere; the page even
+carries a Content-Security-Policy that blocks any network request.
+
+<details>
+<summary>Backups, device backup and every permission</summary>
+
+Uninstalling the app deletes its data, so keep a backup (**Settings → Your data**). Backup files are plain JSON,
+readable by anything that can open their folder. If Android's own device backup is on, Android may include Tally's data
+in it, but only end-to-end encrypted; unencrypted copies (such as `adb backup`) leave it out. Notifications never show
+amounts on a lock screen that hides sensitive content.
+
+| Permission | Why |
+| --- | --- |
+| Notifications | the evening nudge, the balance check and loan and lending reminders (only if you keep them on), and a notice if the daily backup fails |
+| Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
+| Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
+| Run at startup | to re-arm reminders and the daily backup after the phone restarts |
+| Vibrate | short ticks as you tap, drag and save (Settings → Feel turns them off) |
+
+</details>
+
 ## Requirements
+
+Android 7.0 or newer, with Android System WebView 87 or newer (kept up to date on almost every phone). No internet
+needed.
+
+<details>
+<summary>The details</summary>
 
 | | |
 | --- | --- |
@@ -127,57 +224,12 @@ small, calm and fast — no budgets, no charts you have to study, no sign-up.
 
 Tally is made for phones and runs on tablets and foldables too, with a side rail and two panes on wide screens.
 
-## Install
-
-**From F-Droid** (recommended): [get Tally on F-Droid](https://f-droid.org/packages/app.tally.expenses) with the
-F-Droid app, which brings every update by itself.
-
-**From GitHub:**
-
-1. On your phone, open the [latest release](https://github.com/IamAndelib/Tally-android/releases/latest) and download
-   `Tally-vX.Y.Z.apk`.
-2. Open the file. If Android asks, allow your browser or file manager to *install unknown apps*.
-3. Open Tally, add the places your money lives with what each holds right now, and you're set.
-
-Both are the same APK with the same signature, so either one updates the other and keeps your data.
-
-<details>
-<summary>Verify your download (optional)</summary>
-
-Every release lists the APK's SHA-256 next to it (`Tally-vX.Y.Z.apk.sha256`). Release APKs are signed with this
-certificate — Android will also refuse an update that isn't:
-
-```
-SHA-256: 9D:B8:C8:9C:59:48:0E:D9:C6:73:D9:B9:6E:C3:F0:82:B2:83:6B:1C:ED:0E:07:A7:DD:41:8B:D1:8D:2F:AC:88
-```
-
-Check it with `apksigner verify --print-certs Tally-vX.Y.Z.apk` (Android SDK build-tools).
 </details>
 
-<details>
-<summary>Coming from a test build?</summary>
+## What's next
 
-Builds from before 1.0.0 were signed with a different key, so Android won't update them to a release. Move your data
-once: in the old app, **Settings → Backup**, uninstall it, install the release, then **Settings → Restore from backup**.
-Test builds from now on install as a separate app, *Tally Dev*.
-</details>
-
-## Privacy
-
-Your data is stored only inside the app on your phone. Tally has no servers and sends nothing anywhere; the page even
-carries a Content-Security-Policy that blocks any network request. Uninstalling the app deletes its data, so keep a
-backup (**Settings → Your data**). Backup files are plain JSON, readable by anything that can open their folder. If
-Android's own device backup is on, Android may include Tally's data in it, but only end-to-end encrypted; unencrypted
-copies (such as `adb backup`) leave it out. Notifications never show amounts on a lock screen that hides sensitive
-content.
-
-| Permission | Why |
-| --- | --- |
-| Notifications | the evening nudge, the balance check and loan and lending reminders (only if you keep them on), and a notice if the daily backup fails |
-| Alarms & reminders | so reminders and the daily backup happen at the exact time you chose (allowing unrestricted battery turns this on too) |
-| Run in background (battery) | asked on first open, so phones that put apps to sleep don't hold back reminders or the backup; Tally only wakes at the times you chose |
-| Run at startup | to re-arm reminders and the daily backup after the phone restarts |
-| Vibrate | short ticks as you tap, drag and save (Settings → Feel turns them off) |
+Planned work is in the [roadmap](docs/roadmap.md); ideas and bug reports are welcome in the
+[issues](https://github.com/IamAndelib/Tally-android/issues).
 
 ## Build from source
 
@@ -201,12 +253,6 @@ Bug reports, ideas, translations and pull requests are welcome: open an
 [issue](https://github.com/IamAndelib/Tally-android/issues) or read [CONTRIBUTING.md](CONTRIBUTING.md). Tally stays small
 on purpose, so new features are weighed against one tap per expense. Security problems go privately through
 [SECURITY.md](SECURITY.md).
-
-## Support
-
-Tally is free, with no ads and nothing to sign up for. If it helps you, you can buy me a coffee on
-[Ko-fi](https://ko-fi.com/iamandelib). **Settings → About → Buy me a coffee** opens the same page in your browser; Tally
-itself still sends nothing anywhere.
 
 ## License
 

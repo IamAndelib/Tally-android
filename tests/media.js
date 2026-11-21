@@ -119,7 +119,10 @@ function demo() {
   };
 }
 
-/* each picture: a file name, the theme, and what to do on the page before the shot */
+/* each picture: a file name, the theme, and what to do on the page before the shot. Never rename or drop a file name:
+   F-Droid's server keeps every screenshot it was ever given, so an old name stays on Tally's page with the old
+   interface (1.1.1's 3-assets, 4-history and 5-summary still do). Change what a name shows, or add a name after the
+   last; Google Play takes at most 8. */
 const SCREENS = [
   ["1-home", "light", () => {}],
   [
