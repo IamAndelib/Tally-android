@@ -25,11 +25,9 @@
     <!-- %1$s: человек, %2$s: сумма к возврату -->
     <string name="n_owes_you">%1$s: вам должны %2$s</string>
     <string name="n_you_owe">%1$s: вы должны %2$s</string>
-    <string name="n_payback_today">Срок сегодня</string>
     <!-- %1$s: дата, например «пн, 15 июн.» -->
-    <string name="n_payback_was">Срок был %1$s</string>
-    <string name="n_due_today">Вернуть сегодня</string>
-    <string name="n_due_was">Нужно было вернуть %1$s</string>
+    <string name="n_due_today">Срок сегодня</string>
+    <string name="n_due_was">Срок был %1$s</string>
     <!-- %1$s: вся сумма, которую ещё должны -->
     <string name="n_in_all">Всего %1$s</string>
     <string name="n_record">Записать платёж</string>

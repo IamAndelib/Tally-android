@@ -13,6 +13,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
   held it, now comes as soon as the phone is back instead of a month later (once, however long it was off).
 - A loan or lending written down after its monthly reminder time no longer sends that reminder a minute later.
 
+### Changed
+
+- Loan and lending reminders say "due" with the same word the app uses, in both directions: French, Turkish and
+  Chinese no longer mix in a second word for paying back (and "Set a due date" names a due date there too).
+
 ## [1.5.1] — 2026-11-14
 
 ### Changed

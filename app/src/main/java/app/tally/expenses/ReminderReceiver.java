@@ -272,9 +272,8 @@ public class ReminderReceiver extends BroadcastReceiver {
             };
         } else {
             title = ctx.getString(lend ? R.string.n_owes_you : R.string.n_you_owe, who, amount);
-            text = (lend
-                    ? (dueToday ? ctx.getString(R.string.n_payback_today) : ctx.getString(R.string.n_payback_was, pretty(ctx, date)))
-                    : (dueToday ? ctx.getString(R.string.n_due_today) : ctx.getString(R.string.n_due_was, pretty(ctx, date))))
+            // one wording both ways: the title already says who owes whom
+            text = (dueToday ? ctx.getString(R.string.n_due_today) : ctx.getString(R.string.n_due_was, pretty(ctx, date)))
                     + (total.isEmpty() ? "" : " · " + ctx.getString(R.string.n_in_all, total));
             actions = new Notification.Action[] {
                     action(ctx, ctx.getString(R.string.n_record), openApp(ctx, "loan:" + id + ":pay", base + 1)),

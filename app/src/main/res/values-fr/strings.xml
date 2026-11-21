@@ -25,11 +25,9 @@
     <!-- %1$s : la personne, %2$s : le montant dû -->
     <string name="n_owes_you">%1$s vous doit %2$s</string>
     <string name="n_you_owe">Vous devez %2$s à %1$s</string>
-    <string name="n_payback_today">Échéance aujourd’hui</string>
     <!-- %1$s : une date, comme « lun. 15 juin » -->
-    <string name="n_payback_was">Échéance du %1$s dépassée</string>
-    <string name="n_due_today">À rembourser aujourd’hui</string>
-    <string name="n_due_was">À rembourser depuis le %1$s</string>
+    <string name="n_due_today">Échéance aujourd’hui</string>
+    <string name="n_due_was">Échéance du %1$s dépassée</string>
     <!-- %1$s : tout ce qui reste dû -->
     <string name="n_in_all">%1$s au total</string>
     <string name="n_record">Noter le remboursement</string>
@@ -39,7 +37,7 @@
     <string name="n_you_still_owe">Vous devez encore %2$s à %1$s</string>
     <string name="n_lent_on">Prêté le %1$s · sans échéance</string>
     <string name="n_borrowed_on">Emprunté le %1$s · sans échéance</string>
-    <string name="n_set_due">Fixer une date</string>
+    <string name="n_set_due">Fixer une échéance</string>
     <string name="n_someone">Quelqu’un</string>
     <!-- sur un écran de verrouillage qui masque le contenu des notifications : seulement le type -->
     <string name="pub_check">Point sur les soldes</string>

@@ -25,9 +25,7 @@
     <!-- %1$s: a pessoa, %2$s: o valor devido -->
     <string name="n_owes_you">%1$s deve %2$s a você</string>
     <string name="n_you_owe">Você deve %2$s a %1$s</string>
-    <string name="n_payback_today">Vence hoje</string>
     <!-- %1$s: uma data, como "seg., 15 de jun." -->
-    <string name="n_payback_was">Venceu em %1$s</string>
     <string name="n_due_today">Vence hoje</string>
     <string name="n_due_was">Venceu em %1$s</string>
     <!-- %1$s: o valor total ainda devido -->
