@@ -1,0 +1,2 @@
+- Eine monatliche Erinnerung für Verliehenes oder Geliehenes ohne Frist, verpasst, weil das Handy aus war, kommt jetzt, sobald es wieder an ist.
+- Wird es erst nach der Erinnerungszeit eingetragen, kommt diese Erinnerung nicht mehr sofort.

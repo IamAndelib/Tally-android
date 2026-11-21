@@ -1,0 +1,2 @@
+- Un rappel mensuel d’un prêt ou d’un emprunt sans échéance, manqué téléphone éteint, arrive désormais dès que le téléphone est rallumé.
+- Un prêt ou un emprunt noté après l’heure du rappel ne déclenche plus ce rappel aussitôt.

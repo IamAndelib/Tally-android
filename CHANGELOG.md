@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.2] — not released yet
+
 ### Fixed
 
 - A monthly reminder for a loan or lending with no payback day, missed because the phone was off or a battery saver

@@ -1,0 +1,2 @@
+- Vadesi olmayan bir borç ya da alacak için telefon kapalıyken kaçırılan aylık hatırlatma, artık telefon açılır açılmaz gelir.
+- Hatırlatma saatinden sonra kaydedilen bir borç ya da alacak, o hatırlatmayı artık hemen göndermez.

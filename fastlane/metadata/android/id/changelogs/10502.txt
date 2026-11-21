@@ -1,0 +1,2 @@
+- Pengingat bulanan utang atau piutang tanpa jatuh tempo yang terlewat saat ponsel mati kini muncul begitu ponsel menyala lagi.
+- Utang atau piutang yang dicatat setelah jam pengingat tidak lagi langsung memicu pengingat itu.

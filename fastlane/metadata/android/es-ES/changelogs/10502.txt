@@ -1,0 +1,2 @@
+- Un recordatorio mensual de un préstamo o una deuda sin fecha de pago, perdido con el teléfono apagado, llega ahora en cuanto vuelve a encenderse.
+- Un préstamo o una deuda anotados después de la hora del recordatorio ya no lo envían al momento.

@@ -1,0 +1,2 @@
+- A monthly reminder for a loan or lending with no due date, missed while the phone was off, now comes as soon as the phone is back on.
+- A loan or lending written down after its reminder time no longer sends that reminder at once.
