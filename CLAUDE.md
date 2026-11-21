@@ -6,7 +6,7 @@ Guidance for Claude Code working in this repository. Read [README.md](README.md)
 this file only adds the rules and the easy-to-break details they don't cover. Each JS file starts with a comment saying
 what lives in it, and the code comments explain the rest: keep facts in one place and update that place.
 
-Current work: [the 1.5.0 plan](docs/plans/2026-11-01-release-1.5.0.md) (next: the first unticked box), then
+Current work: [the 1.5.2 plan](docs/plans/2026-11-22-release-1.5.2.md) (next: the first unticked box), then
 [the roadmap](docs/roadmap.md). Notes per feature are in `docs/specs/`, decisions and their reasons in
 [docs/decisions.md](docs/decisions.md); add to them as you go.
 
@@ -170,5 +170,6 @@ once paid back), and an extra you receive on top of what you lent is income.
 
 `cd tests && npm ci`, then `npm run lint` and `npm test` (`npm test -- 15` runs one suite). Here, use
 `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
+Java: `./gradlew testDebugUnitTest` (JUnit, `app/src/test/`), for the shell's plain-Java date rules (`MonthlyDue`).
 When the interface changes visibly, `npm run media` remakes the store screenshots, feature graphic and social preview
 (the README shows the same screenshots).

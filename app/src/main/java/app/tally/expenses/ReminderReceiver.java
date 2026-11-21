@@ -38,7 +38,8 @@ import java.util.Set;
  *   amount is what is due by date; total (only when larger) is the whole tab, shown after the date.
  *   The +N buttons move the stored date and queue {type:"extend",id,days} for the page (Android.takeActions()).
  *   A loan with no payback day comes with monthly (the day of the month it was lent) and since (that date) instead of
- *   a date: once a month at duesAt, with "Record payment" and "Set a due date" (see {@link #monthlyDate}).
+ *   a date: once a month at duesAt, with "Record payment" and "Set a due date"; one whose day passed while the phone
+ *   was off comes a minute after the next re-arm (see {@link MonthlyDue}).
  * Every alarm is exact when the phone allows it (see {@link #arm}); each daily notice shows at most once a day.
  */
 public class ReminderReceiver extends BroadcastReceiver {
@@ -184,18 +185,24 @@ public class ReminderReceiver extends BroadcastReceiver {
         JSONArray nowArmed = new JSONArray();
         Set<String> keep = new HashSet<>(Arrays.asList("shown:nudge", "shown:check"));
         JSONArray dues = cfg.optJSONArray("dues");
+        boolean past = now >= dayAt(0, dh, dm).getTimeInMillis(); // today's reminder time has gone by
+        SharedPreferences.Editor marks = p.edit();
         for (int i = 0; dues != null && i < dues.length(); i++) {
             JSONObject d = dues.optJSONObject(i);
             if (d == null) continue;
-            String id = d.optString("id"), date = dueDate(p, d, t);
+            String id = d.optString("id"), date = dueDate(p, d, t, past);
             Calendar c = parse(date);
             if (id.isEmpty() || c == null) continue;
+            boolean monthly = d.has("monthly");
+            String shown = p.getString("shown:" + id, ""), month = p.getString("month:" + id, "");
             long when;
-            if (date.compareTo(t) > 0) {
+            if (monthly && MonthlyDue.missed(t, shown, month)) {
+                when = now + 60_000; // its day passed while the phone was off: now, not at the set time or next month
+            } else if (date.compareTo(t) > 0) {
                 c.set(Calendar.HOUR_OF_DAY, Math.max(0, Math.min(23, dh)));
                 c.set(Calendar.MINUTE, Math.max(0, Math.min(59, dm)));
                 when = c.getTimeInMillis();
-            } else if (!t.equals(p.getString("shown:" + id, ""))) {
+            } else if (!t.equals(shown)) {
                 // due today or overdue and not shown yet today: at the set time, or in a minute if that has passed
                 when = Math.max(dayAt(0, dh, dm).getTimeInMillis(), now + 60_000);
             } else {
@@ -205,11 +212,16 @@ public class ReminderReceiver extends BroadcastReceiver {
             arm(am, when, broadcast(ctx, A_DUE, id, code(ctx, id)));
             nowArmed.put(id);
             keep.add("shown:" + id);
+            if (monthly) { // the day it is armed for, so a day that passes unshown is known as missed (MonthlyDue)
+                marks.putString("month:" + id, MonthlyDue.mark(t, shown, month, date));
+                keep.add("month:" + id);
+            }
         }
+        marks.apply();
         SharedPreferences.Editor e = p.edit().putString("armed", nowArmed.toString());
-        // "shown today" marks of loans no longer reminded about (cleared, deleted, due date removed) are dropped
+        // the marks of loans no longer reminded about (cleared, deleted, due date set or removed) are dropped
         for (String k : p.getAll().keySet()) {
-            if (k.startsWith("shown:") && !keep.contains(k)) e.remove(k);
+            if ((k.startsWith("shown:") || k.startsWith("month:")) && !keep.contains(k)) e.remove(k);
         }
         e.apply();
     }
@@ -462,31 +474,12 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     static String today() { return fmt().format(new Date()); }
 
-    /** When a due reminder is next due: its date, or for a loan with no payback day, its next monthly day. */
-    private static String dueDate(SharedPreferences p, JSONObject d, String t) {
+    /** When a due reminder is next due: its date, or for a loan with no payback day, its monthly day (MonthlyDue). */
+    private static String dueDate(SharedPreferences p, JSONObject d, String t, boolean past) {
         if (!d.has("monthly")) return d.optString("date");
-        return monthlyDate(d.optInt("monthly"), d.optString("since"), t, t.equals(p.getString("shown:" + d.optString("id"), "")));
-    }
-
-    /**
-     * A loan with no payback day is reminded once a month, on the day of the month it was lent ({@code day}; a month
-     * without that day, such as the 31st in April, uses its last day), from a month after {@code since}: today if
-     * that is such a day and it hasn't shown yet, else the next one. Worked out here, so it keeps coming every month
-     * while Tally stays closed.
-     */
-    private static String monthlyDate(int day, String since, String t, boolean shownToday) {
-        Calendar now = parse(t);
-        if (day < 1 || day > 31 || now == null) return "";
-        for (int k = 0; k < 24; k++) {
-            Calendar o = (Calendar) now.clone();
-            o.set(Calendar.DAY_OF_MONTH, 1);
-            o.add(Calendar.MONTH, k);
-            o.set(Calendar.DAY_OF_MONTH, Math.min(day, o.getActualMaximum(Calendar.DAY_OF_MONTH)));
-            String s = fmt().format(o.getTime());
-            if (s.compareTo(t) < 0 || (s.equals(t) && shownToday) || s.compareTo(since) <= 0) continue;
-            return s;
-        }
-        return "";
+        String id = d.optString("id");
+        return MonthlyDue.date(d.optInt("monthly"), d.optString("since"), t, p.getString("shown:" + id, ""),
+                p.getString("month:" + id, ""), past);
     }
 
     private static Calendar parse(String s) {

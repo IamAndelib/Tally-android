@@ -94,7 +94,7 @@ jobs:
           export TALLY_KEYSTORE="$RUNNER_TEMP/throwaway.p12" TALLY_KEYSTORE_PASSWORD=throwaway
           keytool -genkeypair -keystore "$TALLY_KEYSTORE" -storetype PKCS12 -storepass "$TALLY_KEYSTORE_PASSWORD" \
             -alias tally -keyalg RSA -keysize 4096 -sigalg SHA384withRSA -validity 1 -dname "CN=Tally CI throwaway"
-          gradle assembleDebug assembleRelease --no-daemon
+          gradle assembleDebug assembleRelease testDebugUnitTest --no-daemon
           rm -f "$TALLY_KEYSTORE"
       # exactly Tally's languages in the APK besides English (the default folder, '--_--'): one per values-xx folder
       # with a lang.xml, none of the libraries' own, none dropped by the build (resourceConfigurations, app/build.gradle)

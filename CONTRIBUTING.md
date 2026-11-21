@@ -193,6 +193,9 @@ suites starting with 15). They run on a fixed date, 2026-06-17, so results don't
 (`TALLY_TODAY=YYYY-MM-DD npm test` runs them on another; some suites assume a day in the middle of a month). Screenshots
 go to `tests/e2e/output/`. Add or extend a suite for every fix and feature.
 
+The Android shell's date rules live in plain-Java classes (no Android types, such as `MonthlyDue.java`), tested with
+JUnit in `app/src/test/` (`./gradlew testDebugUnitTest`; CI runs it with every build).
+
 ## Pull requests
 
 1. Branch from `main`, keep the change focused, and describe *why* in the PR.
