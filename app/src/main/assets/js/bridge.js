@@ -74,7 +74,7 @@ function syncReminders() {
     newest = c > maxDate ? c : maxDate,
     last = newest < now ? newest : now;
   /* an open tab with a payback day: on that day. One with none: monthly, on the day of the month the oldest money still
-     out moved (the shell works out each next day, see ReminderReceiver.monthlyDate) */
+     out moved (the shell works out each next day, see MonthlyDue.java) */
   const dues =
     r.dues === false
       ? []

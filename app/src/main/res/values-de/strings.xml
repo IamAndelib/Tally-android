@@ -25,9 +25,7 @@
     <!-- %1$s: die Person, %2$s: der fällige Betrag -->
     <string name="n_owes_you">%1$s schuldet dir %2$s</string>
     <string name="n_you_owe">Du schuldest %1$s %2$s</string>
-    <string name="n_payback_today">Heute fällig</string>
     <!-- %1$s: ein Datum, etwa „Mo., 15. Juni“ -->
-    <string name="n_payback_was">War am %1$s fällig</string>
     <string name="n_due_today">Heute fällig</string>
     <string name="n_due_was">War am %1$s fällig</string>
     <!-- %1$s: der gesamte noch offene Betrag -->

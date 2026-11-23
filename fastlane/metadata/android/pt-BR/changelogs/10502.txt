@@ -1,0 +1,2 @@
+- Um lembrete mensal de dívida ou empréstimo sem vencimento, perdido com o celular desligado, agora chega assim que ele é ligado de novo.
+- Uma dívida ou empréstimo anotado depois do horário do lembrete não dispara mais esse lembrete na hora.

@@ -25,9 +25,7 @@
     <!-- %1$s: the person, %2$s: the amount due -->
     <string name="n_owes_you">%1$s owes you %2$s</string>
     <string name="n_you_owe">You owe %1$s %2$s</string>
-    <string name="n_payback_today">Due today</string>
     <!-- %1$s: a date, such as "Mon, Jun 15" -->
-    <string name="n_payback_was">Was due %1$s</string>
     <string name="n_due_today">Due today</string>
     <string name="n_due_was">Was due %1$s</string>
     <!-- %1$s: the whole amount still owed -->

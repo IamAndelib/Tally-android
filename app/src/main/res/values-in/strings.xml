@@ -25,9 +25,7 @@
     <!-- %1$s: orangnya, %2$s: jumlah yang jatuh tempo -->
     <string name="n_owes_you">%1$s berutang %2$s padamu</string>
     <string name="n_you_owe">Kamu berutang %2$s pada %1$s</string>
-    <string name="n_payback_today">Jatuh tempo hari ini</string>
     <!-- %1$s: tanggal, misalnya "Sen, 15 Jun" -->
-    <string name="n_payback_was">Sudah jatuh tempo %1$s</string>
     <string name="n_due_today">Jatuh tempo hari ini</string>
     <string name="n_due_was">Sudah jatuh tempo %1$s</string>
     <!-- %1$s: seluruh jumlah yang masih terutang -->

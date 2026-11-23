@@ -95,4 +95,6 @@ androidComponents {
 
 dependencies {
     implementation 'androidx.webkit:webkit:1.11.0'
+    // plain-Java tests of the shell's date rules (app/src/test, `gradle testDebugUnitTest`); never in the APK
+    testImplementation 'junit:junit:4.13.2'
 }

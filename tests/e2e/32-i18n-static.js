@@ -208,13 +208,29 @@ for (const c of codes.filter(x => x !== "en")) {
   ok(!bad.length, f + " matches English" + (bad.length ? ":\n  " + bad.join("\n  ") : ""));
 }
 /* the due-day notifications say "due date", as the page does; the hidden version also fits a monthly reminder */
-const dueS = ["n_payback_today", "n_payback_was", "n_lent_on", "n_borrowed_on"].map(k => (enS[k] || {}).body || "");
+const dueS = ["n_due_today", "n_due_was", "n_lent_on", "n_borrowed_on"].map(k => (enS[k] || {}).body || "");
 ok(
   dueS.every(b => /\bdue\b/i.test(b) && !/payback/i.test(b)) &&
     dueS.slice(2).every(b => b.includes("no due date")) &&
     !/\bis due\b/.test((enS.pub_dues || {}).body || ""),
   "the due-day notifications say “due” (“no due date” without one), the hidden one not “is due” " + JSON.stringify(dueS)
 );
+/* one wording for a due day, in both directions (they owe you, you owe them), with the word the page uses for "due"
+   (l10n/glossary): no second "payback" pair, and "Set a due date" names a due date, not a payback day */
+{
+  const dueWord = { fr: "échéance", ru: "Срок", tr: "Vade", "b+zh+Hans": "到期" },
+    bad = [];
+  for (const [l, w] of Object.entries(dueWord)) {
+    const s = strings(RES + "values-" + l + "/strings.xml");
+    for (const k of ["n_due_today", "n_due_was"])
+      if (!(s[k] || { body: "" }).body.toLowerCase().includes(w.toLowerCase())) bad.push(l + " " + k);
+    if (!s.n_set_due.body.toLowerCase().includes(w.toLowerCase())) bad.push(l + " n_set_due");
+  }
+  ok(
+    !Object.keys(enS).some(k => /^n_payback/.test(k)) && !bad.length,
+    "due reminders use the page's word for due " + bad
+  );
+}
 const javaDir = path.join(ROOT, "app/src/main/java/app/tally/expenses");
 const java = fs
   .readdirSync(javaDir)
